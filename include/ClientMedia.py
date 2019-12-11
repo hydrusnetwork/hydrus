@@ -1703,7 +1703,7 @@ class MediaList( object ):
                         
                         physically_deleted = service_key in ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                         trashed = service_key in local_file_domains
-                        deleted_from_our_domain = service_key = self._file_service_key
+                        deleted_from_our_domain = service_key == self._file_service_key
                         
                         physically_deleted_and_local_view = physically_deleted and self._file_service_key in all_local_file_services
                         
@@ -2075,19 +2075,19 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    def RefreshFileInfo( self ):
+    def ResetService( self, service_key ):
         
-        for media in self._sorted_media:
-            
-            media.RefreshFileInfo()
-            
+        MediaList.ResetService( self, service_key )
         
         self._RecalcInternals()
         
     
-    def ResetService( self, service_key ):
+    def UpdateFileInfo( self, hashes_to_media_results ):
         
-        MediaList.ResetService( self, service_key )
+        for media in self._sorted_media:
+            
+            media.UpdateFileInfo( hashes_to_media_results )
+            
         
         self._RecalcInternals()
         
@@ -2431,13 +2431,13 @@ class MediaSingleton( Media ):
         return True
         
     
-    def RefreshFileInfo( self ):
+    def UpdateFileInfo( self, hashes_to_media_results ):
         
-        media_results = HG.client_controller.Read( 'media_results', ( self._media_result.GetHash(), ) )
+        hash = self.GetHash()
         
-        if len( media_results ) > 0:
+        if hash in hashes_to_media_results:
             
-            media_result = media_results[0]
+            media_result = hashes_to_media_results[ hash ]
             
             self._media_result = media_result
             

@@ -2,8 +2,6 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIFunctions
-from . import ClientGUIScrolledPanels
-from . import ClientGUITopLevelWindows
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -12,23 +10,46 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
+
+# ok, the problem here is that I get key codes that are converted, so if someone does shift+1 on a US keyboard, this ends up with Shift+! same with ctrl+alt+ to get accented characters
+# it isn't really a big deal since everything still lines up, but the QGuiApplicationPrivate::platformIntegration()->possibleKeys(e) to get some variant of 'yeah this is just !' seems unavailable for python
+# it is basically a display bug, but it'd be nice to have it working right
+def ConvertQtKeyToShortcutKey( key_qt ):
+    
+    if key_qt in CC.special_key_shortcut_enum_lookup:
+        
+        key_ord = CC.special_key_shortcut_enum_lookup[ key_qt ]
+        
+        return ( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, key_ord )
+        
+    else:
+        
+        try:
+            
+            key_ord = int( key_qt )
+            
+            key_chr = chr( key_ord )
+            
+            # this is turbo lower() that converts Scharfes S (beta) to 'ss'
+            key_chr = key_chr.casefold()[0]
+            
+            casefold_key_ord = ord( key_chr )
+            
+            return ( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, casefold_key_ord )
+            
+        except:
+            
+            return ( CC.SHORTCUT_TYPE_NOT_ALLOWED, key_ord )
+            
+        
     
 def ConvertKeyEventToShortcut( event ):
     
-    key = event.key()
+    key_qt = event.key()
     
-    if key in CC.special_key_shortcut_enum_lookup or ClientData.OrdIsSensibleASCII( key ):
-        
-        if key in CC.special_key_shortcut_enum_lookup:
-            
-            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
-            key = CC.special_key_shortcut_enum_lookup[ key ]
-            
-        else:
-            
-            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_ASCII
-            key = int( key )
-            
+    ( shortcut_type, key_ord ) = ConvertQtKeyToShortcutKey( key_qt )
+    
+    if shortcut_type != CC.SHORTCUT_TYPE_NOT_ALLOWED:
         
         modifiers = []
         
@@ -66,7 +87,7 @@ def ConvertKeyEventToShortcut( event ):
             modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
             
         
-        shortcut = Shortcut( shortcut_type, key, modifiers )
+        shortcut = Shortcut( shortcut_type, key_ord, modifiers )
         
         if HG.gui_report_mode:
             
@@ -158,7 +179,7 @@ def ConvertMouseEventToShortcut( event ):
     
     return None
     
-def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlp_classes_who_can_pass_up = None ):
+def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlw_classes_who_can_pass_up = None ):
     
     do_focus_test = True
     
@@ -170,13 +191,13 @@ def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlp_classes_who_
     
     if do_focus_test:
         
-        if not ClientGUIFunctions.TLPIsActive( evt_handler ):
+        if not ClientGUIFunctions.TLWIsActive( evt_handler ):
             
-            if child_tlp_classes_who_can_pass_up is not None:
+            if child_tlw_classes_who_can_pass_up is not None:
                 
-                child_tlp_has_focus = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( evt_handler ) and isinstance( QW.QApplication.activeWindow(), child_tlp_classes_who_can_pass_up )
+                child_tlw_has_focus = ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( evt_handler ) and isinstance( QW.QApplication.activeWindow(), child_tlw_classes_who_can_pass_up )
                 
-                if not child_tlp_has_focus:
+                if not child_tlw_has_focus:
                     
                     return False
                     
@@ -213,7 +234,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             modifiers = []
             
         
-        if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII and ClientData.OrdIsAlphaUpper( shortcut_key ):
+        if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER and ClientData.OrdIsAlphaUpper( shortcut_key ):
             
             shortcut_key += 32 # convert A to a
             
@@ -299,7 +320,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
                 330 : ord( '6' ),
                 331 : ord( '7' ),
                 332 : ord( '8' ),
-                332 : ord( '9' ),
+                333 : ord( '9' ),
                 388 : ord( '+' ),
                 392 : ord( '/' ),
                 390 : ord( '-' ),
@@ -322,7 +343,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             
             ( shortcut_type, shortcut_key, modifiers ) = old_serialisable_info
             
-            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII:
+            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
                 
                 if shortcut_key in wx_to_qt_flat_conversion:
                     
@@ -352,7 +373,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII:
+            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
                 
                 if ClientData.OrdIsAlphaUpper( shortcut_key ):
                     
@@ -403,7 +424,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             
             components.append( CC.special_key_shortcut_str_lookup[ self._shortcut_key ] )
             
-        elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII and ClientData.OrdIsSensibleASCII( self._shortcut_key ):
+        elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
             
             if ClientData.OrdIsAlphaUpper( self._shortcut_key ):
                 
@@ -658,7 +679,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 modifiers = []
                 
-                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_ASCII, key, modifiers )
+                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, key, modifiers )
                 
                 if serialisable_service_key is None:
                     

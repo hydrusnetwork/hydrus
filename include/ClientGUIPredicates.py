@@ -189,7 +189,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             self._predicate_panel = predicate_class( self )
             self._parent = parent
             
-            self._ok = QW.QPushButton( 'OK', self )
+            self._ok = QW.QPushButton( 'ok', self )
             self._ok.clicked.connect( self._DoOK )
             QP.SetForegroundColour( self._ok, (0,128,0) )
             
@@ -204,6 +204,19 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
         
         def _DoOK( self ):
+            
+            try:
+                
+                self._predicate_panel.CheckCanOK()
+                
+            except Exception as e:
+                
+                message = 'Cannot OK: {}'.format( e )
+                
+                QW.QMessageBox.warning( self, 'Warning', message )
+                
+                return
+                
             
             predicates = self._predicate_panel.GetPredicates()
             
@@ -249,6 +262,11 @@ class StaticSystemPredicateButton( QW.QPushButton ):
 class PanelPredicateSystem( QW.QWidget ):
     
     PREDICATE_TYPE = None
+    
+    def CheckCanOK( self ):
+        
+        pass
+        
     
     def GetInfo( self ):
         
@@ -866,18 +884,18 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
         
         if operator:
             
-            operator_description = 'has this url: '
+            operator_description = 'has url: '
             
         else:
             
-            operator_description = 'does not have this url: '
+            operator_description = 'does not have url: '
             
         
-        rule_type = 'regex'
+        rule_type = 'exact_match'
         
         exact_url = self._exact_url.text()
         
-        rule = re.escape( exact_url )
+        rule = exact_url
         
         description = operator_description + exact_url
         
@@ -927,11 +945,11 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
             operator_description = 'does not have a url with domain: '
             
         
-        rule_type = 'regex'
+        rule_type = 'domain'
         
         domain = self._domain.text()
         
-        rule = r'^https?\:\/\/(www[^\.]*\.)?' + re.escape( domain ) + r'\/.*'
+        rule = domain
         
         description = operator_description + domain
         
@@ -964,6 +982,20 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def CheckCanOK( self ):
+        
+        regex = self._regex.text()
+        
+        try:
+            
+            re.compile( regex )
+            
+        except Exception as e:
+            
+            raise Exception( 'Cannot compile that regex: {}'.format( e ) )
+            
         
     
     def GetInfo( self ):

@@ -541,8 +541,6 @@ class PopupMessageManager( QW.QWidget ):
         
         self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._last_best_size_i_fit_on = ( 0, 0 )
         
         self._max_messages_to_display = 10
@@ -660,9 +658,9 @@ class PopupMessageManager( QW.QWidget ):
                 
             
         
-        current_focus_tlp = QW.QApplication.activeWindow()
+        current_focus_tlw = QW.QApplication.activeWindow()
         
-        main_gui_is_active = current_focus_tlp in ( self, parent )
+        main_gui_is_active = current_focus_tlw in ( self, parent )
         
         if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) and not self._DisplayingError():
             
@@ -719,28 +717,11 @@ class PopupMessageManager( QW.QWidget ):
             
             going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
             
-            current_focus_tlp = QW.QApplication.activeWindow()
+            current_focus_tlw = QW.QApplication.activeWindow()
             
-            main_gui_is_active = current_focus_tlp in ( self, gui_frame )
+            self_is_active = current_focus_tlw == self
             
-            on_top_frame_is_active = False
-            
-            if not main_gui_is_active and current_focus_tlp is not None:
-                
-                c_f_tlp_is_resizing_frame = isinstance( current_focus_tlp, ClientGUITopLevelWindows.FrameThatResizes )
-                
-                frame_parent = current_focus_tlp.parentWidget()
-                
-                if c_f_tlp_is_resizing_frame and frame_parent is not None:
-                    
-                    c_f_tlp_is_child_frame_of_main_gui = frame_parent.window() == gui_frame
-                    
-                    if c_f_tlp_is_child_frame_of_main_gui:
-                        
-                        on_top_frame_is_active = True
-                        
-                    
-                
+            main_gui_or_child_window_is_active = ClientGUIFunctions.TLWOrChildIsActive( gui_frame )
             
             num_messages_displayed = self._message_vbox.count()
             
@@ -765,9 +746,8 @@ class PopupMessageManager( QW.QWidget ):
                         
                     
                 
-                # Unhiding tends to raise the main gui tlp, which is annoying if a media viewer window has focus
-                # Qt port note: the on_top_frame_is_active part was uncommented originally, but it IS annoying since it leads to flickering (e.g. open the options window with this uncommented to see it in action)
-                show_is_not_annoying = main_gui_is_active or self._DisplayingError() or on_top_frame_is_active
+                # Unhiding tends to raise the main gui tlw in some window managers, which is annoying if a media viewer window has focus
+                show_is_not_annoying = main_gui_or_child_window_is_active or self._DisplayingError()
                 
                 ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
                 
@@ -1189,7 +1169,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         # The problem is that when the window is created, the initial size is too small because all widgets are empty before the first update,
         # but after it updates it doesn't want to resize the window, rather it just adds scrollbars.
         # This is a manual fix. Need to find a better solution...
-
+        
         self.layout().update()
         self._message_window.adjustSize()
         self.adjustSize()

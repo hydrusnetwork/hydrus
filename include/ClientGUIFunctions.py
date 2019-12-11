@@ -283,9 +283,9 @@ def ClientToScreen( win, pos ):
     
     if isinstance( pos, tuple ): pos = QP.TupleToQPoint( pos )
     
-    tlp = win.window()
+    tlw = win.window()
     
-    if win.isVisible() and tlp.isVisible():
+    if win.isVisible() and tlw.isVisible():
         
         return win.mapToGlobal( pos )
         
@@ -307,22 +307,24 @@ def ConvertTextToPixelWidth( window, char_cols ):
     
     return int( window.fontMetrics().boundingRect( char_cols * 'x' ).width() * MAGIC_TEXT_PADDING )
     
-def GetTLPParents( window ):
+def GetTLWParents( widget ):
     
-    window = window.window()        
+    widget_tlw = widget.window()        
     
-    parents = []
+    parent_tlws = []
     
-    parent = window.parentWidget()
+    parent = widget_tlw.parentWidget()
     
     while parent is not None:
         
-        parents.append( parent )
+        parent_tlw = parent.window()
         
-        parent = parent.parentWidget()
+        parent_tlws.append( parent_tlw )
+        
+        parent = parent_tlw.parentWidget()
         
     
-    return parents
+    return parent_tlws
     
 def IsQtAncestor( child, ancestor, through_tlws = False ):
     
@@ -379,11 +381,32 @@ def SetBitmapButtonBitmap( button, bitmap ):
     
     button.last_bitmap = bitmap
     
-def TLPIsActive( window ):
+def TLWIsActive( window ):
     
     return window.window() == QW.QApplication.activeWindow()
     
-def WindowOrAnyTLPChildHasFocus( window ):
+def TLWOrChildIsActive( win ):
+    
+    current_focus_tlw = QW.QApplication.activeWindow()
+    
+    if current_focus_tlw is None:
+        
+        return False
+        
+    
+    if current_focus_tlw == win:
+        
+        return True
+        
+    
+    if win in GetTLWParents( current_focus_tlw ):
+        
+        return True
+        
+    
+    return False
+    
+def WidgetOrAnyTLWChildHasFocus( window ):
     
     active_window = QW.QApplication.activeWindow()
     
@@ -396,6 +419,7 @@ def WindowOrAnyTLPChildHasFocus( window ):
     
     if widget is None:
         
+        # take active window in lieu of focus, if it is unavailable
         widget = active_window
         
     

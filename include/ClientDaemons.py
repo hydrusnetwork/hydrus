@@ -162,7 +162,7 @@ def DAEMONSynchroniseRepositories( controller ):
                 return
                 
             
-            time.sleep( 3 )
+            time.sleep( 1 )
             
         
     

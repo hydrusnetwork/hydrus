@@ -178,8 +178,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             QW.QWidget.__init__( self, parent )
             
-            QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-            
             self._services = services
             
             self._media = media

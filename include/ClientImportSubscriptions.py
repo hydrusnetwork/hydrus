@@ -1746,13 +1746,25 @@ class SubscriptionsManager( object ):
         
         with self._lock:
             
-            message = '{} subs: {}'.format( HydrusData.ToHumanInt( len( self._current_subscription_names ) ), ', '.join( self._current_subscription_names ) )
+            subs = list( self._current_subscription_names )
+            subs.sort()
+            
+            running = list( self._running_subscriptions.keys() )
+            running.sort()
+            
+            cannot_run = list( self._names_that_cannot_run )
+            cannot_run.sort()
+            
+            next_times = list( self._names_to_next_work_time.items() )
+            next_times.sort( key = lambda n, nwt: nwt )
+            
+            message = '{} subs: {}'.format( HydrusData.ToHumanInt( len( self._current_subscription_names ) ), ', '.join( subs ) )
             message += os.linesep * 2
-            message += '{} running: {}'.format( HydrusData.ToHumanInt( len( self._running_subscriptions ) ), ', '.join( self._running_subscriptions.keys() ) )
+            message += '{} running: {}'.format( HydrusData.ToHumanInt( len( self._running_subscriptions ) ), ', '.join( running ) )
             message += os.linesep * 2
-            message += '{} not runnable: {}'.format( HydrusData.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( self._names_that_cannot_run ) )
+            message += '{} not runnable: {}'.format( HydrusData.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( cannot_run ) )
             message += os.linesep * 2
-            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, HydrusData.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in self._names_to_next_work_time.items() ) ) )
+            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, HydrusData.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
             
             HydrusData.ShowText( message )
             

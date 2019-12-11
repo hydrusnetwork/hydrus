@@ -400,6 +400,14 @@ class MediaResultCache( object ):
             
         
     
+    def HasFile( self, hash_id ):
+        
+        with self._lock:
+            
+            return hash_id in self._hash_ids_to_media_results
+            
+        
+    
     def NewForceRefreshTags( self ):
         
         # repo sync or tag migration occurred, so we need complete refresh

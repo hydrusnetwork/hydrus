@@ -2101,7 +2101,6 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         #
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         
     
     def _Copy( self ):
@@ -2184,7 +2183,14 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
     
-    def EventShowMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         menu = QW.QMenu()
 

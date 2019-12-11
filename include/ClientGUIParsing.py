@@ -532,8 +532,6 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._formulae = QW.QListWidget( edit_panel )
         self._formulae.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         self._formulae.itemDoubleClicked.connect( self.Edit )
@@ -559,8 +557,6 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -771,8 +767,6 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._variable_name = QW.QLineEdit( edit_panel )
         
         ( variable_name, string_match, string_converter ) = formula.ToTuple()
@@ -784,8 +778,6 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -1225,8 +1217,6 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._tag_rules = QW.QListWidget( edit_panel )
         self._tag_rules.setSelectionMode( QW.QAbstractItemView.SingleSelection )
 
@@ -1261,8 +1251,6 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -1585,8 +1573,6 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._parse_rules = QW.QListWidget( edit_panel )
         self._parse_rules.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         self._parse_rules.itemDoubleClicked.connect( self.Edit )
@@ -1616,8 +1602,6 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -1825,15 +1809,11 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
         #
         
         self._edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
-        
-        QP.SetBackgroundColour( self._edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._name = QW.QLineEdit( self._edit_panel )
         
@@ -2644,8 +2624,6 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = QW.QWidget( notebook )
         
-        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._name = QW.QLineEdit( edit_panel )
         
         get_example_parsing_context = lambda: {}
@@ -2659,8 +2637,6 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = QW.QWidget( notebook )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._example_data = QW.QPlainTextEdit( test_panel )
         
@@ -2912,8 +2888,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         main_panel = QW.QWidget( edit_notebook )
         
-        QP.SetBackgroundColour( main_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._name = QW.QLineEdit( main_panel )
         
         #
@@ -2942,8 +2916,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sub_page_parsers_notebook_panel = QW.QWidget( edit_notebook )
         
-        QP.SetBackgroundColour( sub_page_parsers_notebook_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         #
         
         sub_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( sub_page_parsers_notebook_panel )
@@ -2961,8 +2933,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         test_url_fetch_panel = ClientGUICommon.StaticBox( test_panel, 'fetch test data from url' )
         
@@ -2983,8 +2953,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         content_parsers_panel = QW.QWidget( edit_notebook )
-        
-        QP.SetBackgroundColour( content_parsers_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         #
         
@@ -3461,8 +3429,6 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = QW.QWidget( notebook )
         
-        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._name = QW.QLineEdit( edit_panel )
         
         query_panel = ClientGUICommon.StaticBox( edit_panel, 'query' )
@@ -3498,8 +3464,6 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         test_panel = QW.QWidget( notebook )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_script_management = ScriptManagementControl( test_panel )
         
@@ -4246,6 +4210,7 @@ class ScriptManagementControl( QW.QWidget ):
         menu = QW.QMenu()
         
         for url in urls:
+            
             ClientGUIMenus.AppendMenuItem( menu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
             
         
@@ -4273,8 +4238,6 @@ class TestPanel( QW.QWidget ):
             
             test_context = ( {}, '' )
             
-        
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._object_callable = object_callable
         

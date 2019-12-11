@@ -296,7 +296,6 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         self.setToolTip( 'open detailed gallery log--right-click for quick actions, if applicable' )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         
     
     def _ClearGallerySeeds( self, statuses_to_remove ):
@@ -471,9 +470,9 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
-        tlp = self.window()
+        tlw = self.window()
         
-        if isinstance( tlp, QP.Dialog ):
+        if isinstance( tlw, QP.Dialog ):
             
             if self._gallery_seed_log_set_callable is None: # throw up a dialog that edits the gallery_seed log in place
                 
@@ -516,7 +515,14 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
-    def EventShowMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            ClientGUICommon.BetterBitmapButton.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         menu = QW.QMenu()
         

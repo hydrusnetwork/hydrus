@@ -345,7 +345,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
     
     def EventColumnClick( self, col ):
-                
+        
         if col == self._sort_column:
             
             self._sort_asc = not self._sort_asc

@@ -336,8 +336,6 @@ class NewDialog( QP.Dialog ):
         
         self._new_options = HG.client_controller.new_options
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
         HG.client_controller.ResetIdleTimer()
@@ -483,28 +481,35 @@ class NewDialog( QP.Dialog ):
         
         if event_object is not None:
             
-            tlp = event_object.window()
+            tlw = event_object.window()
             
-            if tlp != self:
+            if tlw != self:
                 
                 return
                 
+            
+        
         self._TryEndModal( QW.QDialog.Accepted )
-
+        
 
     def EventDialogButtonCancel( self ):
 
         if not self or not QP.isValid( self ):
+            
             return
+            
 
         event_object = self.sender()
 
         if event_object is not None:
 
-            tlp = event_object.window()
+            tlw = event_object.window()
 
-            if tlp != self:
+            if tlw != self:
+                
                 return
+                
+            
 
         self._TryEndModal( QW.QDialog.Rejected )
         
@@ -784,8 +789,6 @@ class Frame( QW.QWidget ):
         
         self._last_move_pub = 0.0
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
@@ -828,8 +831,6 @@ class MainFrame( QW.QMainWindow ):
         self.setWindowTitle( title )
         
         self._new_options = HG.client_controller.new_options
-        
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         

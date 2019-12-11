@@ -108,9 +108,9 @@ class Dialog( QP.Dialog ):
         
         if parent is not None and position == 'topleft':
             
-            parent_tlp = self.parentWidget().window()                
+            parent_tlw = self.parentWidget().window()                
             
-            ( pos_x, pos_y ) = parent_tlp.pos().toTuple()
+            ( pos_x, pos_y ) = parent_tlw.pos().toTuple()
             
             pos = QC.QPoint( pos_x + 50, pos_y + 50 )
             
@@ -124,8 +124,6 @@ class Dialog( QP.Dialog ):
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
         
         self._new_options = HG.client_controller.new_options
-        
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
@@ -974,7 +972,7 @@ class DialogSelectFromURLTree( Dialog ):
     def __init__( self, parent, url_tree ):
         
         Dialog.__init__( self, parent, 'select items' )
-               
+        
         self._tree = QP.TreeWidgetWithInheritedCheckState( self )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
@@ -996,7 +994,7 @@ class DialogSelectFromURLTree( Dialog ):
         self._tree.addTopLevelItem( root_item )
         
         self._AddDirectory( root_item, children )
-               
+        
         root_item.setExpanded( True )
         
         #

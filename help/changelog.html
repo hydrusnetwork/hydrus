@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 377</h3></li>
+				<ul>
+					<li>qt:</li>
+					<li>all non-menubar menus across the program now launch on click release. some previously launched on click press. a variety of related click event behaviour is cleaned up, particularly with thumbnail/tag selection on the click down. this also fixes some users' menus immediately activating the first entry on slow clicks in some ui styles</li>
+					<li>I think I fixed the annoying single-frame delayed size-down resize on media viewer hover frames when changing media!</li>
+					<li>the vast majority of old wx panel background colour hacks are removed, so custom stylesheets should now cover much more of the UI</li>
+					<li>improved the new custom style and stylesheet setting, resetting, and error handling code, particularly for not re-applying the same style or stylesheet twice, and for handling un-re-settable styles (seems to be defaults initialised by third-party OS-wide Qt style) gracefully</li>
+					<li>fixed hyperlinks not using the custom web browser launch path as set in the options</li>
+					<li>fixed the 'migrate entire db' and 'set thumb location' buttons in the migrate database dialog</li>
+					<li>fixed a typo bug when launching the url selection tree after adding an ipfs directory to download</li>
+					<li>fixed two typo bugs when editing regex favourites and simple downloader formulae</li>
+					<li>fixed an issue where custom shortcut sets could not be deleted</li>
+					<li>fixed a typo in the edit account type panel</li>
+					<li>fixed sorting the login listctrl when there are session logins mixed with non-session logins</li>
+					<li>removed some old media viewer hover window display/raise hacks</li>
+					<li>retired the 'always show hover windows' debug mode</li>
+					<li>the media viewer will no longer perform any drag calculations on anything but left-click drag</li>
+					<li>misc Qt code refactoring/cleanup</li>
+					<li>.</li>
+					<li>url searching:</li>
+					<li>the database now stores 'known url' domain information more efficiently. it will take a few moments/minutes to reshape the db when updating</li>
+					<li>system:known url's exact url search now runs extremely fast. this will only affect new predicates of this type, not those in existing sessions</li>
+					<li>system:known url's domain search now runs much faster and matches subdomains of the given domain. this will only affect new predicates of this type, not those in existing sessions</li>
+					<li>system:known url's url class search now runs much faster. this will only affect new predicates of this type, not those in existing sessions</li>
+					<li>when entering a regex system:known url predicate, the dialog will now not OK (throwing up an error dialog) if the regex is invalid</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the shortcut system now allows all text characters. if it has text, it should work, but it is the wild west in terms of modifier labelling. anything unusual on your keyboard like ctrl+alt+e to make æ will _display_ as ctrl+alt+æ, but the same key combination will match up in the program all correct</li>
+					<li>added shortcut actions 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge' to the media viewer shortcut set that will move the current image so the respective edge is aligned with the larger canvas's</li>
+					<li>added shortcut actions 'pan_horizontal_center' and 'pan_vertical_center' to do as above but center on that axis</li>
+					<li>session save now hangs the UI significantly less, whether triggered by user command or auto-saving 'last session'</li>
+					<li>saving of last/exit sessions on client close is a little faster</li>
+					<li>the call to refresh thumbnail file info (and redraw if needed) when a file is imported or has metadata-regenererating file maintenance done will now only call for files that are actually loaded, run faster per file, run faster when the client has large collections in its session, and not hang the ui thread when waiting for the new media info to arrive</li>
+					<li>like regular popups, modal popups (like those created when big vacuum/analyze jobs jump in) will now only appear if the main gui or an on-parent child has OS focus</li>
+					<li>the main gui/on-parent child OS focus test now includes misc child windows like the autocomplete results hover window</li>
+					<li>network jobs that fail for one reason or another will now be more reliably cleaned up, and their connections returned to the connection pool. this may fix the 'too many open file handles' errors some users were seeing after long term unreliable network traffic</li>
+					<li>fixed an issue where some thumbnails that were trashed or physically deleted were being removed from 'all known files' and file repository views when it was not appropriate</li>
+					<li>connection and downloader retry time options now have a wider min/max range when in advanced mode, with an accompanying warning label for the connection panel</li>
+					<li>checker options times now have a wider min/max range when in advanced mode, with an accompanying warning label</li>
+					<li>cleaned up some shutdown reporting text</li>
+					<li>misc debug improvements</li>
+				</ul>
 				<li><h3>version 376</h3></li>
 				<ul>
 					<li>subscriptions:</li>

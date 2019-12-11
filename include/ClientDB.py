@@ -1473,8 +1473,10 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.texts ( text_id INTEGER PRIMARY KEY, text TEXT UNIQUE );' )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain TEXT, url TEXT UNIQUE );' )
-        self._CreateIndex( 'external_master.urls', [ 'domain' ] )
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.url_domains ( domain_id INTEGER PRIMARY KEY, domain TEXT UNIQUE );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain_id INTEGER, url TEXT UNIQUE );' )
+        self._CreateIndex( 'external_master.urls', [ 'domain_id' ] )
         
         # inserts
         
@@ -3724,16 +3726,22 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( new_file_info ) > 0:
             
-            hashes = set()
+            hashes_that_need_refresh = set()
             
             for ( hash_id, hash ) in new_file_info:
                 
-                self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
-                
-                hashes.add( hash )
+                if self._weakref_media_result_cache.HasFile( hash_id ):
+                    
+                    self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+                    
+                    hashes_that_need_refresh.add( hash )
+                    
                 
             
-            self._controller.pub( 'new_file_info', hashes )
+            if len( hashes_that_need_refresh ) > 0:
+                
+                self._controller.pub( 'new_file_info', hashes_that_need_refresh )
+                
             
         
     
@@ -5087,7 +5095,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # start with some quick ways to populate query_hash_ids
         
-        def update_qhi( query_hash_ids, some_hash_ids, force_create_new_set = False ):
+        def intersection_update_qhi( query_hash_ids, some_hash_ids, force_create_new_set = False ):
             
             if query_hash_ids is None:
                 
@@ -5148,7 +5156,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                query_hash_ids = update_qhi( query_hash_ids, or_query_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, or_query_hash_ids )
                 
             
             return query_hash_ids
@@ -5185,7 +5193,7 @@ class DB( HydrusDB.HydrusDB ):
             
             specific_hash_ids = self._GetHashIds( matching_sha256_hashes )
             
-            query_hash_ids = update_qhi( query_hash_ids, specific_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, specific_hash_ids )
             
         
         #
@@ -5201,7 +5209,7 @@ class DB( HydrusDB.HydrusDB ):
             
             modified_timestamp_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM file_modified_timestamps WHERE {};'.format( pred_string ) ) )
             
-            query_hash_ids = update_qhi( query_hash_ids, modified_timestamp_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
             
         
         #
@@ -5223,7 +5231,7 @@ class DB( HydrusDB.HydrusDB ):
                 all_similar_hash_ids.update( similar_hash_ids )
                 
             
-            query_hash_ids = update_qhi( query_hash_ids, all_similar_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, all_similar_hash_ids )
             
         
         for ( operator, value, rating_service_key ) in system_predicates.GetRatingsPredicates():
@@ -5239,7 +5247,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 rating_hash_ids = self._STI( self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) )
                 
-                query_hash_ids = update_qhi( query_hash_ids, rating_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                 
             else:
                 
@@ -5287,13 +5295,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 rating_hash_ids = self._STI( self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )
                 
-                query_hash_ids = update_qhi( query_hash_ids, rating_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                 
             
         
         if system_predicates.MustBeInbox():
             
-            query_hash_ids = update_qhi( query_hash_ids, self._inbox_hash_ids, force_create_new_set = True )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, self._inbox_hash_ids, force_create_new_set = True )
             
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
@@ -5313,7 +5321,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 dupe_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( file_service_key, operator, num_relationships, dupe_type )
                 
-                query_hash_ids = update_qhi( query_hash_ids, dupe_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, dupe_hash_ids )
                 
             
         
@@ -5334,7 +5342,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 viewing_hash_ids = self._GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, operator, viewing_value )
                 
-                query_hash_ids = update_qhi( query_hash_ids, viewing_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, viewing_hash_ids )
                 
             
         
@@ -5355,7 +5363,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids )
                 
-                query_hash_ids = update_qhi( query_hash_ids, tag_query_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, tag_query_hash_ids )
                 
                 if query_hash_ids == set():
                     
@@ -5367,14 +5375,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) for namespace in namespaces_to_include ) )
                 
-                query_hash_ids = update_qhi( query_hash_ids, namespace_query_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, namespace_query_hash_ids )
                 
             
             if len( wildcards_to_include ) > 0:
                 
                 wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
                 
-                query_hash_ids = update_qhi( query_hash_ids, wildcard_query_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, wildcard_query_hash_ids )
                 
             
         
@@ -5419,7 +5427,7 @@ class DB( HydrusDB.HydrusDB ):
             
             king_hash_ids = self._DuplicatesFilterKingHashIds( query_hash_ids )
             
-            query_hash_ids = update_qhi( query_hash_ids, king_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, king_hash_ids )
             
         
         if not done_files_info_predicates and ( need_file_domain_cross_reference or there_are_simple_files_info_preds_to_search_for ):
@@ -5428,13 +5436,13 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
-                query_hash_ids = update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                 
             else:
                 
                 files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
-                query_hash_ids = update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                 
             
             done_files_info_predicates = True
@@ -5498,14 +5506,14 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            query_hash_ids = update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ) )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ) )
             
         
         for service_key in file_services_to_include_pending:
             
             service_id = self._GetServiceId( service_key )
             
-            query_hash_ids = update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ) )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ) )
             
         
         for service_key in file_services_to_exclude_current:
@@ -5562,7 +5570,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
-                query_hash_ids = update_qhi( query_hash_ids, hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, hash_ids )
                 
             
         
@@ -5587,7 +5595,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
-                query_hash_ids = update_qhi( query_hash_ids, hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, hash_ids )
                 
             
         
@@ -5614,7 +5622,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if must_be_local:
                 
-                query_hash_ids = update_qhi( query_hash_ids, local_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, local_hash_ids )
                 
             elif must_not_be_local:
                 
@@ -5632,7 +5640,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if operator: # inclusive
                     
-                    query_hash_ids = update_qhi( query_hash_ids, url_hash_ids )
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, url_hash_ids )
                     
                 else:
                     
@@ -5702,7 +5710,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             elif num_tags_nonzero:
                 
-                query_hash_ids = update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
                 
             
         
@@ -5719,7 +5727,7 @@ class DB( HydrusDB.HydrusDB ):
                 good_tag_count_hash_ids.update( zero_hash_ids )
                 
             
-            query_hash_ids = update_qhi( query_hash_ids, good_tag_count_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, good_tag_count_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -5735,7 +5743,7 @@ class DB( HydrusDB.HydrusDB ):
             
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags )
             
-            query_hash_ids = update_qhi( query_hash_ids, good_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
             
         
         if 'max_tag_as_number' in simple_preds:
@@ -5744,7 +5752,7 @@ class DB( HydrusDB.HydrusDB ):
             
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags )
             
-            query_hash_ids = update_qhi( query_hash_ids, good_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -5984,34 +5992,155 @@ class DB( HydrusDB.HydrusDB ):
         
         if hash_ids is None:
             
-            query = self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls;' )
+            search_hash_ids = None
             
         else:
             
-            query = self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id in {};', hash_ids )
-            
-        
-        result_hash_ids = set()
-        
-        for ( hash_id, url ) in query:
-            
-            if rule_type in ( 'url_class', 'url_match' ):
+            if len( hash_ids ) <= 1000:
                 
-                if rule.Matches( url ):
-                    
-                    result_hash_ids.add( hash_id )
-                    
+                search_hash_ids = hash_ids
                 
             else:
                 
-                if re.search( rule, url ) is not None:
-                    
-                    result_hash_ids.add( hash_id )
-                    
+                search_hash_ids = None
                 
             
         
-        return result_hash_ids
+        if rule_type == 'exact_match':
+            
+            url = rule
+            
+            result_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM url_map NATURAL JOIN urls WHERE url = ?;', ( url, ) ) )
+            
+            if hash_ids is not None:
+                
+                result_hash_ids.intersection_update( hash_ids )
+                
+            
+            return result_hash_ids
+            
+        elif rule_type in ( 'url_class', 'url_match' ):
+            
+            url_class = rule
+            
+            domain = url_class.GetDomain()
+            
+            if url_class.MatchesSubdomains():
+                
+                domain_ids = self._GetURLDomainAndSubdomainIds( domain )
+                
+            else:
+                
+                domain_ids = ( self._GetURLDomainId( domain ), )
+                
+            
+            result_hash_ids = set()
+            
+            for domain_id in domain_ids:
+                
+                domain_result_hash_ids = set()
+                
+                if search_hash_ids is None:
+                    
+                    query = self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE domain_id = ?;', ( domain_id, ) )
+                    
+                else:
+                    
+                    query = self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE domain_id = ' + str( domain_id ) + ' AND hash_id in {};', search_hash_ids )
+                    
+                
+                for ( hash_id, url ) in query:
+                    
+                    if url_class.Matches( url ):
+                        
+                        domain_result_hash_ids.add( hash_id )
+                        
+                    
+                
+                result_hash_ids.update( domain_result_hash_ids )
+                
+            
+            if hash_ids is not None and search_hash_ids is None:
+                
+                result_hash_ids.intersection_update( hash_ids )
+                
+            
+            return result_hash_ids
+            
+        elif rule_type in 'domain':
+            
+            domain = rule
+            
+            # if we search for site.com, we also want artist.site.com or www.site.com or cdn2.site.com
+            domain_ids = self._GetURLDomainAndSubdomainIds( domain )
+            
+            result_hash_ids = set()
+            
+            for domain_id in domain_ids:
+                
+                if search_hash_ids is None:
+                    
+                    query = self._c.execute( 'SELECT DISTINCT hash_id FROM url_map NATURAL JOIN urls WHERE domain_id = ?;', ( domain_id, ) )
+                    
+                else:
+                    
+                    query = self._SelectFromList( 'SELECT DISTINCT hash_id FROM url_map NATURAL JOIN urls WHERE domain_id = ' + str( domain_id ) + ' AND hash_id in {};', search_hash_ids )
+                    
+                
+                domain_result_hash_ids = self._STS( query )
+                
+                result_hash_ids.update( domain_result_hash_ids )
+                
+            
+            if hash_ids is not None and search_hash_ids is None:
+                
+                result_hash_ids.intersection_update( hash_ids )
+                
+            
+            return result_hash_ids
+            
+        else:
+            
+            if search_hash_ids is None:
+                
+                query = self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls;' )
+                
+            else:
+                
+                query = self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id in {};', search_hash_ids )
+                
+            
+            result_hash_ids = set()
+            
+            for ( hash_id, url ) in query:
+                
+                if rule_type in ( 'url_class', 'url_match' ):
+                    
+                    url_class = rule
+                    
+                    if url_class.Matches( url ):
+                        
+                        result_hash_ids.add( hash_id )
+                        
+                    
+                else:
+                    
+                    regex = rule
+                    
+                    if re.search( regex, url ) is not None:
+                        
+                        result_hash_ids.add( hash_id )
+                        
+                    
+                
+            
+            if hash_ids is not None and search_hash_ids is None:
+                
+                result_hash_ids.intersection_update( hash_ids )
+                
+            
+            return result_hash_ids
+            
         
     
     def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ):
@@ -7866,6 +7995,38 @@ class DB( HydrusDB.HydrusDB ):
         return self._GetHashes( hash_ids )
         
     
+    def _GetURLDomainId( self, domain ):
+        
+        result = self._c.execute( 'SELECT domain_id FROM url_domains WHERE domain = ?;', ( domain, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO url_domains ( domain ) VALUES ( ? );', ( domain, ) )
+            
+            domain_id = self._c.lastrowid
+            
+        else:
+            
+            ( domain_id, ) = result
+            
+        
+        return domain_id
+        
+    
+    def _GetURLDomainAndSubdomainIds( self, domain ):
+        
+        domain_ids = set()
+        
+        domain_ids.add( self._GetURLDomainId( domain ) )
+        
+        for ( domain_id, ) in self._c.execute( 'SELECT domain_id FROM url_domains WHERE domain LIKE ?;', ( '%.{}'.format( domain ), ) ):
+            
+            domain_ids.add( domain_id )
+            
+        
+        return domain_ids
+        
+    
     def _GetURLId( self, url ):
         
         result = self._c.execute( 'SELECT url_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
@@ -7881,7 +8042,9 @@ class DB( HydrusDB.HydrusDB ):
                 domain = 'unknown.com'
                 
             
-            self._c.execute( 'INSERT INTO urls ( domain, url ) VALUES ( ?, ? );', ( domain, url ) )
+            domain_id = self._GetURLDomainId( domain )
+            
+            self._c.execute( 'INSERT INTO urls ( domain_id, url ) VALUES ( ?, ? );', ( domain_id, url ) )
             
             url_id = self._c.lastrowid
             
@@ -8071,9 +8234,12 @@ class DB( HydrusDB.HydrusDB ):
             
             status = CC.STATUS_SUCCESSFUL_AND_NEW
             
-            self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
-            
-            self._controller.pub( 'new_file_info', set( ( hash, ) ) )
+            if self._weakref_media_result_cache.HasFile( hash_id ):
+                
+                self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+                
+                self._controller.pub( 'new_file_info', set( ( hash, ) ) )
+                
             
         
         if HG.file_import_report_mode:
@@ -13218,6 +13384,50 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 376:
+            
+            result = self._c.execute( 'SELECT 1 FROM external_master.sqlite_master WHERE name = ?;', ( 'url_domains', ) ).fetchone()
+            
+            try:
+                
+                if result is None:
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'compressing url storage--creating' )
+                    
+                    self._c.execute( 'ALTER TABLE urls RENAME TO urls_old;' )
+                    
+                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.url_domains ( domain_id INTEGER PRIMARY KEY, domain TEXT UNIQUE );' )
+                    
+                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain_id INTEGER, url TEXT UNIQUE );' )
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'compressing url storage--populating domains' )
+                    
+                    self._c.execute( 'INSERT INTO url_domains ( domain ) SELECT DISTINCT domain FROM urls_old;' )
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'compressing url storage--populating urls' )
+                    
+                    self._c.execute( 'INSERT INTO urls ( url_id, domain_id, url ) SELECT url_id, domain_id, url FROM urls_old NATURAL JOIN url_domains;' )
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'compressing url storage--indexing' )
+                    
+                    self._CreateIndex( 'external_master.urls', [ 'domain_id' ] )
+                    
+                    self._c.execute( 'DROP TABLE urls_old;' )
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'compressing url storage--optimising' )
+                    
+                    self._c.execute( 'ANALYZE external_master.urls;' )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Could not update URL storage!' )
+                HydrusData.PrintException( e )
+                
+                raise
                 
             
         

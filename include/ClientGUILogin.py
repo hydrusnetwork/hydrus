@@ -670,7 +670,16 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             sort_validity += ' - ' + validity_error_text
             
         
-        sort_logged_in = ( logged_in, login_expiry )
+        if login_expiry is None:
+            
+            sort_login_expiry = HydrusData.GetNow() + 45 * 60
+            
+        else:
+            
+            sort_login_expiry = login_expiry
+            
+        
+        sort_logged_in = ( logged_in, sort_login_expiry )
         
         if HydrusData.TimeHasPassed( no_work_until ):
             

@@ -236,8 +236,6 @@ class ReviewServicePanel( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._service = service
         
         service_type = self._service.GetServiceType()

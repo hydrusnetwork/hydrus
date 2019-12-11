@@ -374,7 +374,6 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         self.setToolTip( 'open detailed file import status--right-click for quick actions, if applicable' )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         
     
     def _ClearFileSeeds( self, statuses_to_remove ):
@@ -533,9 +532,9 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
-        tlp = self.window()
+        tlw = self.window()
         
-        if isinstance( tlp, QP.Dialog ):
+        if isinstance( tlw, QP.Dialog ):
             
             if self._file_seed_cache_set_callable is None: # throw up a dialog that edits the file_seed cache in place
                 
@@ -578,7 +577,14 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
-    def EventShowMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            ClientGUICommon.BetterBitmapButton.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         menu = QW.QMenu()
         

@@ -783,13 +783,13 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def _ShouldShow( self ):
         
-        tlp_active = self.window().isActiveWindow() or self._dropdown_window.isActiveWindow()
+        tlw_active = self.window().isActiveWindow() or self._dropdown_window.isActiveWindow()
         
         visible = self._text_ctrl.isVisible()
         
-        focus_remains_on_self_or_children = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( self )
+        focus_remains_on_self_or_children = ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( self )
         
-        return tlp_active and visible and focus_remains_on_self_or_children
+        return tlw_active and visible and focus_remains_on_self_or_children
         
     
     def _ShouldTakeResponsibilityForEnter( self ):

@@ -6,22 +6,20 @@ from qtpy import QtWidgets as QW
 
 STYLESHEET_DIR = os.path.join( HC.BASE_DIR, 'static', 'qss' )
 
-ORIGINAL_STYLE = None
+ORIGINAL_STYLE_NAME = None
+CURRENT_STYLE_NAME = None
 ORIGINAL_STYLESHEET = None
+CURRENT_STYLESHEET = None
 
 def ClearStylesheet():
     
-    QW.QApplication.instance().setStyleSheet( ORIGINAL_STYLESHEET )
+    SetStyleSheet( ORIGINAL_STYLESHEET )
     
 def GetAvailableStyles():
     
     # so eventually expand this to do QStylePlugin or whatever we are doing to add more QStyles
     
     return list( QW.QStyleFactory.keys() )
-    
-def GetCurrentStyleName():
-    
-    return QW.QApplication.instance().style().objectName()
     
 def GetAvailableStylesheets():
     
@@ -46,33 +44,57 @@ def GetAvailableStylesheets():
     
 def InitialiseDefaults():
     
-    global ORIGINAL_STYLE
+    global ORIGINAL_STYLE_NAME
+    global CURRENT_STYLE_NAME
     
-    ORIGINAL_STYLE = GetCurrentStyleName()
+    ORIGINAL_STYLE_NAME = QW.QApplication.instance().style().objectName()
+    CURRENT_STYLE_NAME = ORIGINAL_STYLE_NAME
     
     global ORIGINAL_STYLESHEET
+    global CURRENT_STYLESHEET
     
     ORIGINAL_STYLESHEET = QW.QApplication.instance().styleSheet()
+    CURRENT_STYLESHEET = ORIGINAL_STYLESHEET
     
-def SetStyle( name ):
+def SetStyleFromName( name ):
     
-    current_name = GetCurrentStyleName()
+    global CURRENT_STYLE_NAME
     
-    if name == current_name:
+    if name == CURRENT_STYLE_NAME:
         
         return
         
     
-    if name in QW.QStyleFactory.keys():
+    if name in GetAvailableStyles():
         
-        QW.QApplication.instance().setStyle( QW.QStyleFactory.create( name ) )
+        try:
+            
+            QW.QApplication.instance().setStyle( name )
+            
+            CURRENT_STYLE_NAME = name
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.DataMissing( 'Style "{}" could not be generated/applied. If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it. Extra error info: {}'.format( name, e ) )
+            
         
     else:
         
-        raise HydrusExceptions.DataMissing( 'Style "{}" does not exist!'.format( name ) )
+        raise HydrusExceptions.DataMissing( 'Style "{}" does not exist! If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it.'.format( name ) )
         
     
-def SetStylesheet( filename ):
+def SetStyleSheet( stylesheet ):
+    
+    global CURRENT_STYLESHEET
+    
+    if CURRENT_STYLESHEET != stylesheet:
+        
+        QW.QApplication.instance().setStyleSheet( stylesheet )
+        
+        CURRENT_STYLESHEET = stylesheet
+        
+    
+def SetStylesheetFromPath( filename ):
     
     path = os.path.join( STYLESHEET_DIR, filename )
     
@@ -86,5 +108,5 @@ def SetStylesheet( filename ):
         qss = f.read()
         
     
-    QW.QApplication.instance().setStyleSheet( qss )
+    SetStyleSheet( qss )
     

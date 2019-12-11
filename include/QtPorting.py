@@ -216,17 +216,22 @@ class DirPickerCtrl( QW.QWidget ):
         
         self.setLayout( layout )
         
+    
     def SetPath( self, path ):
         
         self._path_edit.setText( path )
         
+    
     def GetPath( self ):
         
         return self._path_edit.text()
+        
     
     def _Browse( self ):
         
-        path = QW.QFileDialog.getExistingDirectory( None, '', self._path_edit.text() )
+        existing_path = self._path_edit.text()
+        
+        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path )
         
         if path == '':
             
@@ -295,27 +300,29 @@ class FilePickerCtrl( QW.QWidget ):
         
 
     def _Browse( self ):
-
+        
+        existing_path = self._path_edit.text()
+        
         if self._save_mode:
             
             if self._wildcard:
             
-                path = QW.QFileDialog.getSaveFileName( None, '', self._path_edit.text(), filter = self._wildcard, selectedFilter = self._wildcard )[0]
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard )[0]
                 
             else:
 
-                path = QW.QFileDialog.getSaveFileName( None, '', self._path_edit.text() )[0]
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path )[0]
                 
             
         else:
 
             if self._wildcard:
                 
-                path = QW.QFileDialog.getOpenFileName( None, '', self._path_edit.text(), filter = self._wildcard, selectedFilter = self._wildcard )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard )[0]
                 
             else:
 
-                path = QW.QFileDialog.getOpenFileName( None, '', self._path_edit.text() )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path )[0]
                 
             
         
@@ -1249,7 +1256,6 @@ def GetSystemColour( colour ):
     
     return QG.QPalette().color( colour )
 
-
 def CenterOnWindow( parent, window ):
     
     parent_window = parent.window()
@@ -1402,7 +1408,7 @@ def SetBackgroundColour( widget, colour ):
     if isinstance( colour, QG.QColor ):
         
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, colour.name()) )
-
+        
     elif isinstance( colour, tuple ):
 
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, TupleToQColor( colour ).name() ) )
@@ -1410,8 +1416,8 @@ def SetBackgroundColour( widget, colour ):
     else:
 
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, QG.QColor( colour ).name() ) )
-
-
+        
+    
 def SetForegroundColour( widget, colour ):
     
     widget.setAutoFillBackground( True )
@@ -1421,8 +1427,9 @@ def SetForegroundColour( widget, colour ):
     if not object_name:
         
         object_name = str( id( widget ) )
-    
+        
         widget.setObjectName( object_name )
+        
 
     if isinstance( colour, QG.QColor ):
 
@@ -1735,7 +1742,7 @@ class CheckListBox( QW.QListWidget ):
         if event.button() == QC.Qt.RightButton:
 
             self.rightClicked.emit()
-
+            
         else:
 
             QW.QListWidget.mousePressEvent( self, event )
@@ -2139,14 +2146,16 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
     
     def __init__( self, *args, **kwargs ):
         
-        QW.QTreeWidget.__init__( *args, **kwargs )
+        QW.QTreeWidget.__init__( self, *args, **kwargs )
         
         self.itemClicked.connect( self._UpdateCheckState )
         
+    
     def _HandleItemClickedForCheckStateUpdate( self, item, column ):
         
         self._UpdateCheckState( item, item.checkState() )
         
+    
     def _UpdateCheckState( self, item, check_state ):
         
         item.setCheckState( check_state )

@@ -1021,12 +1021,14 @@ class NetworkJob( object ):
             
             while not request_completed:
                 
-                try:
+                if self._IsCancelled():
                     
-                    if self._IsCancelled():
-                        
-                        return
-                        
+                    return
+                    
+                
+                response = None
+                
+                try:
                     
                     response = self._SendRequestAndGetResponse()
                     
@@ -1162,6 +1164,15 @@ class NetworkJob( object ):
                         
                     
                     self._WaitOnConnectionError( 'read timed out' )
+                    
+                finally:
+                    
+                    if response is not None:
+                        
+                        # if full data was not read, the response will hang around in connection pool longer than we want
+                        # so just an explicit close here
+                        response.close()
+                        
                     
                 
             

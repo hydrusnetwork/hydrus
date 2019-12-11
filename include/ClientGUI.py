@@ -384,7 +384,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventFrameNewPage )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventFrameNewPage )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventFrameNotebookMenu )
         self._widget_event_filter.EVT_SET_FOCUS( self.EventFocus )
         self._widget_event_filter.EVT_ICONIZE( self.EventIconize )
         
@@ -834,11 +833,15 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if result == QW.QDialog.Accepted:
             
-            self._notebook.SaveGUISession( 'last session' )
-            self._notebook.SaveGUISession( 'exit session' )
+            session = self._notebook.GetCurrentGUISession( 'last session' )
             
-            # session save causes a db read in the menu refresh, so let's put this off just a bit
-            self._controller.CallLater( 1.5, self._controller.Write, 'backup', path )
+            self._controller.SaveGUISession( session )
+            
+            session.SetName( 'exit session' )
+            
+            self._controller.SaveGUISession( session )
+            
+            self._controller.Write( 'backup', path )
             
         
     
@@ -2301,22 +2304,36 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         qt_style_name = self._controller.new_options.GetNoneableString( 'qt_style_name' )
         qt_stylesheet_name = self._controller.new_options.GetNoneableString( 'qt_stylesheet_name' )
         
-        if qt_style_name is None:
+        try:
             
-            ClientGUIStyle.SetStyle( ClientGUIStyle.ORIGINAL_STYLE )
+            if qt_style_name is None:
+                
+                ClientGUIStyle.SetStyleFromName( ClientGUIStyle.ORIGINAL_STYLE_NAME )
+                
+            else:
+                
+                ClientGUIStyle.SetStyleFromName( qt_style_name )
+                
             
-        else:
+        except Exception as e:
             
-            ClientGUIStyle.SetStyle( qt_style_name )
+            HydrusData.ShowException( e )
             
         
-        if qt_stylesheet_name is None:
+        try:
             
-            ClientGUIStyle.ClearStylesheet()
+            if qt_stylesheet_name is None:
+                
+                ClientGUIStyle.ClearStylesheet()
+                
+            else:
+                
+                ClientGUIStyle.SetStylesheetFromPath( qt_stylesheet_name )
+                
             
-        else:
+        except Exception as e:
             
-            ClientGUIStyle.SetStylesheet( qt_stylesheet_name )
+            HydrusData.ShowException( e )
             
         
         self._controller.pub( 'wake_daemons' )
@@ -3562,9 +3579,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        if self.isMinimized() or dialog_open:
+        if self.isMinimized() or dialog_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
             
-            self._controller.CallLaterQtSafe(self, 2, self.AddModalMessage, job_key)
+            self._controller.CallLaterQtSafe( self, 0.5, self.AddModalMessage, job_key )
             
         else:
             
@@ -3594,21 +3611,30 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if only_save_last_session_during_idle and not self._controller.CurrentlyIdle():
             
-            next_call_delay = 60
+            self._controller.CallLaterQtSafe( self, 60, self.AutoSaveLastSession )
             
         else:
             
             if HC.options[ 'default_gui_session' ] == 'last session':
                 
-                self._notebook.SaveGUISession( 'last session' )
+                session = self._notebook.GetCurrentGUISession( 'last session' )
+                
+                callable = self.AutoSaveLastSession
+                
+                last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
+                
+                next_call_delay = last_session_save_period_minutes * 60
+                
+                def do_it( controller, session, win, next_call_delay, callable ):
+                    
+                    controller.SaveGUISession( session )
+                    
+                    controller.CallLaterQtSafe( win, next_call_delay, callable )
+                    
+                
+                self._controller.CallToThread( do_it, self._controller, session, self, next_call_delay, callable )
                 
             
-            last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
-            
-            next_call_delay = last_session_save_period_minutes * 60
-            
-        
-        self._controller.CallLaterQtSafe( self, next_call_delay, self.AutoSaveLastSession )
         
     
     def DeleteAllClosedPages( self ):
@@ -3706,11 +3732,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.EventNewPageFromScreenPosition( screen_position )
         
     
-    def EventFrameNotebookMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            ClientGUITopLevelWindows.MainFrameThatResizes.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         screen_position = QG.QCursor.pos()
         
-        self._notebook.EventMenuFromScreenPosition( screen_position )
+        self._notebook.ShowMenuFromScreenPosition( screen_position )
         
     
     def EventIconize( self, event ):
@@ -3849,13 +3882,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            self._notebook.SaveGUISession( 'last session' )
-            self._notebook.SaveGUISession( 'exit session' )
-            
-            self._DestroyTimers()
-            
-            self.DeleteAllClosedPages() # Obsolote comment, preserved just in case: wx crashes if any are left in here, wew
-            
             if self._message_manager:
                 
                 self._message_manager.CleanBeforeDestroy()
@@ -3863,7 +3889,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._message_manager.hide()
                 
             
-            self._notebook.CleanBeforeDestroy()
+            #
             
             if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
                 
@@ -3872,6 +3898,29 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
             
+            for tlw in QW.QApplication.topLevelWidgets():
+                
+                tlw.hide()
+                
+            
+            #
+            
+            session = self._notebook.GetCurrentGUISession( 'last session' )
+            
+            self._controller.SaveGUISession( session )
+            
+            session.SetName( 'exit session' )
+            
+            self._controller.SaveGUISession( session )
+            
+            #
+            
+            self._DestroyTimers()
+            
+            self.DeleteAllClosedPages() # Obsolote comment, preserved just in case: wx crashes if any are left in here, wew
+            
+            self._notebook.CleanBeforeDestroy()
+            
             self._controller.WriteSynchronous( 'save_options', HC.options )
             
             self._controller.WriteSynchronous( 'serialisable', self._new_options )
@@ -3879,11 +3928,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         except Exception as e:
             
             HydrusData.PrintException( e )
-            
-        
-        for tlw in QW.QApplication.topLevelWidgets():
-            
-            tlw.hide()
             
         
         if HG.emergency_exit:
@@ -4451,7 +4495,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, 'last session' )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
             
             ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
@@ -4697,10 +4741,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 continue
                 
             
-            ClientGUIMenus.AppendMenuItem( save, name, 'Save the existing open pages as a session.', self._notebook.SaveGUISession, name )
+            ClientGUIMenus.AppendMenuItem( save, name, 'Save the existing open pages as a session.', self.ProposeSaveGUISession, name )
             
         
-        ClientGUIMenus.AppendMenuItem( save, 'as new session', 'Save the existing open pages as a session.', self._notebook.SaveGUISession )
+        ClientGUIMenus.AppendMenuItem( save, 'as new session', 'Save the existing open pages as a session.', self.ProposeSaveGUISession )
         
         ClientGUIMenus.AppendMenu( sessions, save, 'save' )
         
@@ -5262,6 +5306,76 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         return command_processed
+        
+    
+    def ProposeSaveGUISession( self, name = None, suggested_name = '', notebook = None ):
+        
+        if notebook is None:
+            
+            notebook = self._notebook
+            
+        
+        if name is None:
+            
+            while True:
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.', default = suggested_name ) as dlg:
+                    
+                    if dlg.exec() == QW.QDialog.Accepted:
+                        
+                        name = dlg.GetValue()
+                        
+                        if name in ClientGUIPages.RESERVED_SESSION_NAMES:
+                            
+                            QW.QMessageBox.critical( self, 'Error', 'Sorry, you cannot have that name! Try another.' )
+                            
+                        else:
+                            
+                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+                            
+                            if name in existing_session_names:
+                                
+                                message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
+                                
+                                result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
+                                
+                                if closed_by_user:
+                                    
+                                    return
+                                    
+                                elif result == QW.QDialog.Rejected:
+                                    
+                                    continue
+                                    
+                                
+                            
+                            break
+                            
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            
+        elif name not in ClientGUIPages.RESERVED_SESSION_NAMES: # i.e. a human asked to do this
+            
+            message = 'Overwrite this session?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+        
+        #
+        
+        session = notebook.GetCurrentGUISession( name )
+        
+        self._controller.CallToThread( self._controller.SaveGUISession, session )
         
     
     def RefreshMenu( self ):

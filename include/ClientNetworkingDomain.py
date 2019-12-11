@@ -3127,6 +3127,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def MatchesSubdomains( self ):
+        
+        return self._match_subdomains
+        
+    
     def Normalise( self, url ):
         
         p = urllib.parse.urlparse( url )

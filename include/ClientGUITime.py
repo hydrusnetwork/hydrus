@@ -5,6 +5,7 @@ from . import ClientGUITopLevelWindows
 from . import ClientImporting
 from . import ClientImportOptions
 from . import HydrusData
+from . import HydrusGlobals as HG
 import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -51,19 +52,34 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            never_faster_than_min = 1
+            never_slower_than_min = 1
+            
+            flat_check_period_min = 1
+            
+        else:
+            
+            never_faster_than_min = 30
+            never_slower_than_min = 600
+            
+            flat_check_period_min = 180
+            
+        
         self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
         
         self._intended_files_per_check = QP.MakeQSpinBox( self._reactive_check_panel, min=1, max=1000 )
         
-        self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
+        self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )
         
-        self._never_slower_than = TimeDeltaCtrl( self._reactive_check_panel, min = 600, days = True, hours = True, minutes = True )
+        self._never_slower_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_slower_than_min, days = True, hours = True, minutes = True, seconds = True )
         
         #
         
         self._static_check_panel = ClientGUICommon.StaticBox( self, 'static checking' )
         
-        self._flat_check_period = TimeDeltaCtrl( self._static_check_panel, min = 180, days = True, hours = True, minutes = True )
+        self._flat_check_period = TimeDeltaCtrl( self._static_check_panel, min = flat_check_period_min, days = True, hours = True, minutes = True, seconds = True )
         
         #
         
@@ -76,6 +92,8 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         defaults_panel.Add( defaults_3, CC.FLAGS_EXPAND_PERPENDICULAR )
         defaults_panel.Add( defaults_4, CC.FLAGS_EXPAND_PERPENDICULAR )
         defaults_panel.Add( defaults_5, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
         
         #
         
@@ -113,6 +131,20 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
         QP.AddToLayout( vbox, defaults_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            label = 'As you are in advanced mode, these options have extremely low limits. This is intended only for testing and small scale private network tasks. Do not use very fast check times for real world use on public websites, as it is wasteful and rude, hydrus will be overloaded with high-CPU parsing work, and you may get your IP banned.'
+            
+            st = ClientGUICommon.BetterStaticText( self, label = label )
+            
+            QP.SetForegroundColour( st, ( 127, 0, 0 ) )
+            
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
         QP.AddToLayout( vbox, self._reactive_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._static_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         

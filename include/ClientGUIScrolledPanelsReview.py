@@ -548,7 +548,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             with QP.DirDialog( self, message = 'Choose new database location.' ) as dlg:
                 
-                dlg.SetPath( source )
+                dlg.setDirectory( source )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
@@ -728,7 +728,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if self._ideal_thumbnails_location_override is not None:
                 
-                dlg.SetPath( self._ideal_thumbnails_location_override )
+                dlg.setDirectory( self._ideal_thumbnails_location_override )
                 
             
             if dlg.exec() == QW.QDialog.Accepted:

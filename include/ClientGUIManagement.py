@@ -685,8 +685,6 @@ class ManagementPanel( QW.QScrollArea ):
         
         self.verticalScrollBar().valueChanged.connect( managementScrollbarValueChanged )
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._controller = controller
         self._management_controller = management_controller
         
@@ -3039,7 +3037,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 
                 if dlg_2.exec() == QW.QDialog.Accepted:
                     
-                    name = dlg_2.value()
+                    name = dlg_2.GetValue()
                     
                 else:
                     

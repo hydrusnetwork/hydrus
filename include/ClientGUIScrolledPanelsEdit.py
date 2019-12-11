@@ -102,7 +102,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._title.SetValue( title )
+        self._title.setText( title )
         
         #
         
@@ -142,7 +142,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        title = self._title.GetValue()
+        title = self._title.text()
         
         permissions = {}
         
@@ -3275,7 +3275,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                         
                         if dlg_2.exec() == QW.QDialog.Accepted:
                             
-                            description = dlg_2.value()
+                            description = dlg_2.GetValue()
                             
                             edited_row = ( regex_phrase, description )
                             

@@ -864,6 +864,7 @@ class ListBox( QW.QScrollArea ):
         self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
         
         self._widget_event_filter.EVT_LEFT_DOWN( self.EventMouseSelect )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMouseSelect )
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventDClick )
         
     
@@ -1571,7 +1572,6 @@ class ListBoxTags( ListBox ):
         
         self._UpdateBackgroundColour()
         
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMouseRightClick )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseMiddleClick )
         
         HG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
@@ -1835,9 +1835,14 @@ class ListBoxTags( ListBox ):
             
         
     
-    def EventMouseRightClick( self, event ):
+    def mouseReleaseEvent( self, event ):
         
-        self._HandleClick( event )
+        if event.button() != QC.Qt.RightButton:
+            
+            ListBox.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         if len( self._ordered_terms ) > 0:
             
@@ -2077,6 +2082,7 @@ class ListBoxTags( ListBox ):
                 
             
             HG.client_controller.PopupMenu( self, menu )
+            
         
     
     def GetSelectedTags( self ):

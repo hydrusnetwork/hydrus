@@ -897,15 +897,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._closed_pages = []
         
-        self._last_last_session_hash = None
-        
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventLeftDoubleClick )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMiddleClick )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMenu )
         self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
         self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
         
@@ -1468,6 +1465,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             ClientGUIMenus.AppendMenuItem( menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
+        
         ClientGUIMenus.AppendMenuItem( menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
         
         if click_over_tab:
@@ -1511,8 +1509,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             ClientGUIMenus.AppendMenuItem( menu, 'send this page down to a new page of pages', 'Make a new page of pages and put this page in it.', self._SendPageToNewNotebook, tab_index )
             
             if can_go_right:
-                ClientGUIMenus.AppendMenuItem( menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
+                ClientGUIMenus.AppendMenuItem( menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
             if click_over_page_of_pages and page.count() > 0:
                 
@@ -1534,6 +1532,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             submenu = QW.QMenu( menu )
             
             for name in existing_session_names:
+                
                 ClientGUIMenus.AppendMenuItem( submenu, name, 'Load this session here.', self.AppendGUISession, name )
                 
             
@@ -1550,9 +1549,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     continue
                     
-                ClientGUIMenus.AppendMenuItem( submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
                 
-            ClientGUIMenus.AppendMenuItem( submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name=page.GetName() )
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Save this page of pages to the session.', self._controller.gui.ProposeSaveGUISession, notebook = page, name = name )
+                
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'create a new session', 'Save this page of pages to the session.', self._controller.gui.ProposeSaveGUISession, notebook = page, suggested_name = page.GetName() )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
             
@@ -1796,14 +1797,21 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         
     
-    def EventMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            QP.TabWidgetWithDnD.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         screen_position = ClientGUIFunctions.ClientToScreen( self, event.pos() )
         
         self._ShowMenu( screen_position )
         
     
-    def EventMenuFromScreenPosition( self, position ):
+    def ShowMenuFromScreenPosition( self, position ):
         
         notebook = self._GetNotebookFromScreenPosition( position )
         
@@ -1867,6 +1875,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     def GetAPIInfoDict( self, simple ):
         
         return {}
+        
+    
+    def GetCurrentGUISession( self, name ):
+        
+        session = GUISession( name )
+        
+        for page in self._GetPages():
+            
+            session.AddPageTuple( page )
+            
+        
+        return session
         
     
     def GetCurrentMediaPage( self ):
@@ -2726,92 +2746,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                 
             
-        
-    
-    def SaveGUISession( self, name = None, suggested_name = '' ):
-        
-        if name is None:
-            
-            while True:
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.', default = suggested_name ) as dlg:
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        name = dlg.GetValue()
-                        
-                        if name in RESERVED_SESSION_NAMES:
-                            
-                            QW.QMessageBox.critical( self, 'Error', 'Sorry, you cannot have that name! Try another.' )
-                            
-                        else:
-                            
-                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-                            
-                            if name in existing_session_names:
-                                
-                                message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
-                                
-                                result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
-                                
-                                if closed_by_user:
-                                    
-                                    return
-                                    
-                                elif result == QW.QDialog.Rejected:
-                                    
-                                    continue
-                                    
-                                
-                            
-                            break
-                            
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            
-        elif name not in RESERVED_SESSION_NAMES: # i.e. a human asked to do this
-            
-            message = 'Overwrite this session?'
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' )
-            
-            if result != QW.QDialog.Accepted:
-                
-                return
-                
-            
-        
-        #
-        
-        session = GUISession( name )
-        
-        for page in self._GetPages():
-            
-            session.AddPageTuple( page )
-            
-        
-        #
-        
-        if name == 'last session':
-            
-            session_hash = hashlib.sha256( bytes( session.DumpToString(), 'utf-8' ) ).digest()
-            
-            if session_hash == self._last_last_session_hash:
-                
-                return
-                
-            
-            self._last_last_session_hash = session_hash
-            
-        
-        self._controller.WriteSynchronous( 'serialisable', session )
-        
-        self._controller.pub( 'notify_new_sessions' )
         
     
     def SetName( self, name ):

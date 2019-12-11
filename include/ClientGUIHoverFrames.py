@@ -43,7 +43,6 @@ class FullscreenHoverFrame( QW.QFrame ):
         
         self._last_ideal_position = None
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
         self._hide_until =  None
@@ -60,22 +59,15 @@ class FullscreenHoverFrame( QW.QFrame ):
         raise NotImplementedError()
         
     
-    def _SizeAndPosition( self ):
+    def _SizeAndPosition( self, force = False ):
         
-        if self.parentWidget().isVisible():
+        if self.parentWidget().isVisible() or force:
             
             ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
             
             if should_resize:
                 
                 self.resize( QP.TupleToQSize( my_ideal_size ) )
-                
-            
-            changes_occurred = should_resize or self.pos() != QP.TupleToQPoint( my_ideal_position )
-            
-            if HC.PLATFORM_MACOS and changes_occurred and self._always_on_top:
-                
-                self.raise_()
                 
             
             self.move( QP.TupleToQPoint( my_ideal_position ) )
@@ -99,37 +91,20 @@ class FullscreenHoverFrame( QW.QFrame ):
     
     def TIMERUIUpdate( self ):
         
-        current_focus_tlp = QW.QApplication.activeWindow()
+        current_focus_tlw = QW.QApplication.activeWindow()
         
-        focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlp, self._my_canvas.window(), through_tlws = True )
-        focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
+        focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlw, self._my_canvas.window(), through_tlws = True )
+        focus_has_right_window_type = isinstance( current_focus_tlw, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
         
         focus_is_good = focus_is_on_descendant and focus_has_right_window_type
         
         new_options = HG.client_controller.new_options
         
-        if self._always_on_top or new_options.GetBoolean( 'always_show_hover_windows' ):
+        if self._always_on_top:
             
             self._SizeAndPosition()
             
             self.show()
-            
-            if HC.PLATFORM_MACOS:
-                
-                ( mouse_x, mouse_y ) = QG.QCursor.pos().toTuple()
-                
-                ( my_x, my_y ) = self.mapToGlobal( self.pos() ).toTuple()
-                
-                ( my_width, my_height ) = self.size().toTuple()
-                
-                in_actual_x = my_x <= mouse_x and mouse_x <= my_x + my_width
-                in_actual_y = my_y <= mouse_y and mouse_y <= my_y + my_height
-                
-                if in_actual_x and in_actual_y and focus_is_good:
-                    
-                    self.raise_()
-                    
-                
             
             return
             
@@ -195,11 +170,11 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             dialog_open = False
             
-            tlps = QW.QApplication.topLevelWidgets()
+            tlws = QW.QApplication.topLevelWidgets()
             
-            for tlp in tlps:
+            for tlw in tlws:
                 
-                if isinstance( tlp, QW.QDialog ) and not isinstance( tlp, ClientGUICanvas.CanvasFrame ) and tlp.isModal():
+                if isinstance( tlw, QW.QDialog ) and not isinstance( tlw, ClientGUICanvas.CanvasFrame ) and tlw.isModal():
                     
                     dialog_open = True
                     
@@ -211,7 +186,7 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             mouse_is_over_something_important = mouse_is_near_animation_bar # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
             
-            hide_focus_is_good = focus_is_good or current_focus_tlp is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
+            hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
             
             ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
             ready_to_hide = not menu_open and ( not in_position or dialog_open or not hide_focus_is_good )
@@ -231,7 +206,7 @@ class FullscreenHoverFrame( QW.QFrame ):
                 tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
                 tuples.append( ( 'focus is good: ', focus_is_good ) )
                 tuples.append( ( 'focus is on descendant: ', focus_is_on_descendant ) )
-                tuples.append( ( 'current focus tlp: ', current_focus_tlp ) )
+                tuples.append( ( 'current focus tlw: ', current_focus_tlw ) )
                 
                 message = os.linesep * 2 + os.linesep.join( ( a + str( b ) for ( a, b ) in tuples ) )
                 
@@ -250,20 +225,6 @@ class FullscreenHoverFrame( QW.QFrame ):
                         
                     
                     self.show()
-                    
-                    # in case focus jumps around from the show, let's test it and raise as needed
-                    
-                    current_focus_tlp = QW.QApplication.activeWindow()
-                    
-                    focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlp, self._my_canvas.window(), through_tlws = True )
-                    focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
-                    
-                    focus_is_good = focus_is_on_descendant and focus_has_right_window_type
-                    
-                    if not focus_is_good:
-                        
-                        self.raise_()
-                        
                     
                 
             elif ready_to_hide:
@@ -605,6 +566,8 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
     def _GetIdealSizeAndPosition( self ):
         
+        # clip this and friends to availableScreenGeometry for size and position, not rely 100% on parent
+        
         parent_window = self.parentWidget().window()
         
         ( parent_width, parent_height ) = parent_window.size().toTuple()
@@ -743,8 +706,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
                 self._delete_button.show()
                 self._undelete_button.show()
                 
-            
-            self._SizeAndPosition()
             
         
     
@@ -914,6 +875,11 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             self._ResetText()
             
             self._ResetButtons()
+            
+            # minimumsize is not immediately updated without this
+            self.layout().activate()
+            
+            self._SizeAndPosition( force = True )
             
         
     
@@ -1222,6 +1188,11 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
             self._ResetData()
+            
+            # minimumsize is not immediately updated without this
+            self.layout().activate()
+            
+            self._SizeAndPosition( force = True )
             
         
     

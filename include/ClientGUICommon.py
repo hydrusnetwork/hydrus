@@ -268,7 +268,6 @@ class BetterColourControl( QP.ColourPickerCtrl ):
         QP.ColourPickerCtrl.__init__( self, *args, **kwargs )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMenu )
         
     
     def _ImportHexFromClipboard( self ):
@@ -314,7 +313,14 @@ class BetterColourControl( QP.ColourPickerCtrl ):
         self.SetColour( colour )
         
     
-    def EventMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            QP.ColourPickerCtrl.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         menu = QW.QMenu()
         
@@ -446,9 +452,15 @@ class BetterHyperLink( BetterStaticText ):
 
         self.setTextFormat( QC.Qt.RichText )
         self.setTextInteractionFlags( QC.Qt.TextBrowserInteraction )
-        self.setOpenExternalLinks( True )
         
         self.setText( '<a href="{}">{}</a>'.format( url, label ) )
+        
+        self.linkActivated.connect( self.Activated )
+        
+    
+    def Activated( self ):
+        
+        ClientPaths.LaunchURLInWebBrowser( self._url )
         
 
 class BufferedWindow( QW.QWidget ):
@@ -1057,8 +1069,6 @@ class ListBook( QW.QWidget ):
         
         QW.QWidget.__init__( self, *args, **kwargs )
         
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
-        
         self._keys_to_active_pages = {}
         self._keys_to_proto_pages = {}
         
@@ -1066,8 +1076,6 @@ class ListBook( QW.QWidget ):
         self._list_box.setSelectionMode( QW.QListWidget.SingleSelection )
         
         self._empty_panel = QW.QWidget( self )
-        
-        QP.SetBackgroundColour( self._empty_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._current_key = None
         
@@ -2383,6 +2391,7 @@ class RegexButton( BetterButton ):
         ClientGUIMenus.AppendSeparator( submenu )
         
         for ( regex_phrase, description ) in HC.options[ 'regex_favourites' ]:
+            
             ClientGUIMenus.AppendMenuItem( submenu, description, 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', regex_phrase )
             
         
@@ -2423,8 +2432,6 @@ class StaticBox( QW.QFrame ):
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Minimum, QW.QSizePolicy.MinimumExpanding )
-        
-        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._sizer = QP.VBoxLayout()
         

@@ -124,6 +124,8 @@ class Controller( HydrusController.HydrusController ):
         self._alive_page_keys = set()
         self._closed_page_keys = set()
         
+        self._last_last_session_hash = None
+        
         self._last_mouse_position = None
         self._menu_open = False
         self._previously_idle = False
@@ -919,7 +921,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 try:
                     
-                    ClientGUIStyle.SetStyle( qt_style_name )
+                    ClientGUIStyle.SetStyleFromName( qt_style_name )
                     
                 except Exception as e:
                     
@@ -933,7 +935,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 try:
                     
-                    ClientGUIStyle.SetStylesheet( qt_stylesheet_name )
+                    ClientGUIStyle.SetStylesheetFromPath( qt_stylesheet_name )
                     
                 except Exception as e:
                     
@@ -1364,6 +1366,27 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def SaveGUISession( self, session ):
+        
+        name = session.GetName()
+        
+        if name == 'last session':
+            
+            session_hash = hashlib.sha256( bytes( session.DumpToString(), 'utf-8' ) ).digest()
+            
+            if session_hash == self._last_last_session_hash:
+                
+                return
+                
+            
+            self._last_last_session_hash = session_hash
+            
+        
+        self.WriteSynchronous( 'serialisable', session )
+        
+        self.pub( 'notify_new_sessions' )
+        
+    
     def SetRunningTwistedServices( self, services ):
         
         def TWISTEDDoIt():
@@ -1510,6 +1533,8 @@ class Controller( HydrusController.HydrusController ):
                     
                     self.DoIdleShutdownWork()
                     
+                    self.pub( 'splash_set_status_subtext', '' )
+                    
                 except:
                     
                     self._ReportShutdownException()
@@ -1519,6 +1544,8 @@ class Controller( HydrusController.HydrusController ):
             self.files_maintenance_manager.Shutdown()
             
             try:
+                
+                self.pub( 'splash_set_status_text', 'waiting for twisted to exit' )
                 
                 self.SetRunningTwistedServices( [] )
                 

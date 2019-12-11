@@ -2790,8 +2790,6 @@ class MediaPanelThumbnails( MediaPanel ):
         self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
-        self._widget_event_filter.EVT_LEFT_DOWN( self.EventLeftDown )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventMouseFullScreen )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseFullScreen )
         
@@ -2807,7 +2805,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._UpdateScrollBars()
         
         HG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
-        HG.client_controller.sub( self, 'NewFileInfo', 'new_file_info' )
+        HG.client_controller.sub( self, 'NotifyNewFileInfo', 'new_file_info' )
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         HG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
         HG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
@@ -3507,17 +3505,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def EventLeftDown( self, event ):
-        
-        self._drag_init_coordinates = QG.QCursor.pos()
-        
-        self._HitMedia( self._GetThumbnailUnderMouse( event ), event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
-        
-        # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
-        
-        return True # was: event.ignore()
-        
-    
     def EventMouseFullScreen( self, event ):
         
         t = self._GetThumbnailUnderMouse( event )
@@ -3549,6 +3536,15 @@ class MediaPanelThumbnails( MediaPanel ):
             QW.QWidget.__init__( self, parent )
             
             self._parent = parent
+            
+        
+        def mousePressEvent( self, event ):
+            
+            self._parent._drag_init_coordinates = QG.QCursor.pos()
+            
+            self._parent._HitMedia( self._parent._GetThumbnailUnderMouse( event ), event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
+            
+            # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
             
         
         def paintEvent( self, event ):
@@ -3647,20 +3643,20 @@ class MediaPanelThumbnails( MediaPanel ):
         self._last_client_size = QP.ScrollAreaVisibleRect( self ).size().toTuple()
         
     
-    def EventShowMenu( self, event ):
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            QW.QScrollArea.mouseReleaseEvent( self, event )
+            
+            return
+            
         
         new_options = HG.client_controller.new_options
         
         advanced_mode = new_options.GetBoolean( 'advanced_mode' )
         
         services_manager = HG.client_controller.services_manager
-        
-        thumbnail = self._GetThumbnailUnderMouse( event )
-        
-        if thumbnail is not None:
-            
-            self._HitMedia( thumbnail, event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
-            
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         selected_locations_managers = [ media.GetLocationsManager() for media in self._selected_media ]
@@ -4581,18 +4577,6 @@ class MediaPanelThumbnails( MediaPanel ):
         self._DeleteAllDirtyPages()
         
     
-    def NewFileInfo( self, hashes ):
-        
-        affected_media = self._GetMedia( hashes )
-        
-        for media in affected_media:
-            
-            media.RefreshFileInfo()
-            
-        
-        self._RedrawMedia( affected_media )
-        
-    
     def NewThumbnails( self, hashes ):
         
         affected_thumbnails = self._GetMedia( hashes )
@@ -4601,6 +4585,34 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._RedrawMedia( affected_thumbnails )
             
+        
+    
+    def NotifyNewFileInfo( self, hashes ):
+        
+        def qt_do_update( hashes_to_media_results ):
+            
+            affected_media = self._GetMedia( set( hashes_to_media_results.keys() ) )
+            
+            for media in affected_media:
+                
+                media.UpdateFileInfo( hashes_to_media_results )
+                
+            
+            self._RedrawMedia( affected_media )
+            
+        
+        def do_it( win, callable, affected_hashes ):
+            
+            media_results = HG.client_controller.Read( 'media_results', affected_hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            HG.client_controller.CallLaterQtSafe( win, 0, qt_do_update, hashes_to_media_results )
+            
+        
+        affected_hashes = self._hashes.intersection( hashes )
+        
+        HG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
         
     
     def RedrawAllThumbnails( self ):
@@ -4628,6 +4640,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 child.setParent( None )
                 child.deleteLater()
+                
+            
         
         def ctrl_space_callback( self ):
 

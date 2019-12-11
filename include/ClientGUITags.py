@@ -1270,17 +1270,17 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             elif action == 'focus_media_viewer':
                 
-                tlps = ClientGUIFunctions.GetTLPParents( self )
+                tlws = ClientGUIFunctions.GetTLWParents( self )
                 
                 from . import ClientGUICanvas
                 
                 command_processed = False
                 
-                for tlp in tlps:
+                for tlw in tlws:
                     
-                    if isinstance( tlp, ClientGUICanvas.CanvasFrame ):
+                    if isinstance( tlw, ClientGUICanvas.CanvasFrame ):
                         
-                        tlp.TakeFocusForUser()
+                        tlw.TakeFocusForUser()
                         
                         command_processed = True
                         

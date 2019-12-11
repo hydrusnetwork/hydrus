@@ -1707,21 +1707,48 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
+            self._new_options = HG.client_controller.new_options
+            
             general = ClientGUICommon.StaticBox( self, 'general' )
             
             self._verify_regular_https = QW.QCheckBox( general )
             
-            self._network_timeout = QP.MakeQSpinBox( general, min = 3, max = 600 )
+            if self._new_options.GetBoolean( 'advanced_mode' ):
+                
+                network_timeout_min = 1
+                network_timeout_max = 86400 * 30
+                
+                error_wait_time_min = 1
+                error_wait_time_max = 86400 * 30
+                
+                max_network_jobs_max = 1000
+                
+                max_network_jobs_per_domain_max = 100
+                
+            else:
+                
+                network_timeout_min = 3
+                network_timeout_max = 600
+                
+                error_wait_time_min = 3
+                error_wait_time_max = 1800
+                
+                max_network_jobs_max = 30
+                
+                max_network_jobs_per_domain_max = 5
+                
+            
+            self._network_timeout = QP.MakeQSpinBox( general, min = network_timeout_min, max = network_timeout_max )
             self._network_timeout.setToolTip( 'If a network connection cannot be made in this duration or, if once started, it experiences uninterrupted inactivity for six times this duration, it will be abandoned.' )
             
-            self._connection_error_wait_time = QP.MakeQSpinBox( general, min = 3, max = 1800 )
+            self._connection_error_wait_time = QP.MakeQSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
             self._connection_error_wait_time.setToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' )
             
-            self._serverside_bandwidth_wait_time = QP.MakeQSpinBox( general, min = 3, max = 1800 )
+            self._serverside_bandwidth_wait_time = QP.MakeQSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
             self._serverside_bandwidth_wait_time.setToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' )
             
-            self._max_network_jobs = QP.MakeQSpinBox( general, min = 1, max = 30 )
-            self._max_network_jobs_per_domain = QP.MakeQSpinBox( general, min = 1, max = 5 )
+            self._max_network_jobs = QP.MakeQSpinBox( general, min = 1, max = max_network_jobs_max )
+            self._max_network_jobs_per_domain = QP.MakeQSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
             
             #
             
@@ -1731,8 +1758,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._https_proxy = ClientGUICommon.NoneableTextCtrl( proxy_panel )
             
             #
-            
-            self._new_options = HG.client_controller.new_options
             
             self._verify_regular_https.setChecked( self._new_options.GetBoolean( 'verify_regular_https' ) )
             
@@ -1748,6 +1773,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            if self._new_options.GetBoolean( 'advanced_mode' ):
+                
+                label = 'As you are in advanced mode, these options have very low and high limits. Be very careful about lowering delay time or raising max number of connections too far, as things will break.'
+                
+                st = ClientGUICommon.BetterStaticText( general, label = label )
+                
+                QP.SetForegroundColour( st, ( 127, 0, 0 ) )
+                
+                st.setWordWrap( True )
+                
+                general.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
             rows = []
             
             rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
@@ -1759,7 +1797,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
             
-            general.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            general.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             text = 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port". It should take affect immediately on dialog ok.'
             text += os.linesep * 2
@@ -1775,7 +1813,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 text += 'It does not look like you have socks support! If you want it, try adding "pysocks" (or "requests[socks]")!'
                 
             
-            proxy_panel.Add( QW.QLabel( text, proxy_panel ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            st = ClientGUICommon.BetterStaticText( proxy_panel, text )
+            
+            st.setWordWrap( True )
+            
+            proxy_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
@@ -1784,7 +1826,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( proxy_panel, rows )
             
-            proxy_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            proxy_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -1869,9 +1911,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_new_on_file_seed_short_summary = QW.QCheckBox( misc )
             self._show_deleted_on_file_seed_short_summary = QW.QCheckBox( misc )
             
-            self._subscription_network_error_delay = ClientGUITime.TimeDeltaButton( misc, min = 600, days = True, hours = True, minutes = True )
-            self._subscription_other_error_delay = ClientGUITime.TimeDeltaButton( misc, min = 600, days = True, hours = True, minutes = True )
-            self._downloader_network_error_delay = ClientGUITime.TimeDeltaButton( misc, min = 600, days = True, hours = True, minutes = True )
+            if self._new_options.GetBoolean( 'advanced_mode' ):
+                
+                delay_min = 1
+                
+            else:
+                
+                delay_min = 600
+                
+            
+            self._subscription_network_error_delay = ClientGUITime.TimeDeltaButton( misc, min = delay_min, days = True, hours = True, minutes = True, seconds = True )
+            self._subscription_other_error_delay = ClientGUITime.TimeDeltaButton( misc, min = delay_min, days = True, hours = True, minutes = True, seconds = True )
+            self._downloader_network_error_delay = ClientGUITime.TimeDeltaButton( misc, min = delay_min, days = True, hours = True, minutes = True, seconds = True )
             
             #
             
@@ -2580,9 +2631,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._secret_discord_dnd_fix = QW.QCheckBox( self )
             self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
             
-            self._always_show_hover_windows = QW.QCheckBox( self )
-            self._always_show_hover_windows.setToolTip( 'If your window manager doesn\'t like showing the hover windows on mouse-over (typically on some Linux flavours), please try this out and give the dev feedback on this forced size and position accuracy!' )
-            
             self._hide_message_manager_on_gui_iconise = QW.QCheckBox( self )
             self._hide_message_manager_on_gui_iconise.setToolTip( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
             
@@ -2619,8 +2667,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
             
-            self._always_show_hover_windows.setChecked( self._new_options.GetBoolean( 'always_show_hover_windows' ) )
-            
             self._hide_message_manager_on_gui_iconise.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
             self._hide_message_manager_on_gui_deactive.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) )
             
@@ -2647,7 +2693,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
-            rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
             
@@ -2726,7 +2771,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
-            self._new_options.SetBoolean( 'always_show_hover_windows', self._always_show_hover_windows.isChecked() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.isChecked() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.isChecked() )
             
@@ -3324,6 +3368,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
+        
         def EventZoomsChanged( self, text ):
             
             try:
@@ -3833,7 +3878,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._qt_style_name = ClientGUICommon.BetterChoice( self )
             self._qt_stylesheet_name = ClientGUICommon.BetterChoice( self )
             
-            self._qt_style_name.addItem( 'use default ("{}")'.format( ClientGUIStyle.ORIGINAL_STYLE ), None )
+            self._qt_style_name.addItem( 'use default ("{}")'.format( ClientGUIStyle.ORIGINAL_STYLE_NAME ), None )
             
             try:
                 
@@ -3900,22 +3945,36 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             qt_style_name = self._qt_style_name.GetValue()
             qt_stylesheet_name = self._qt_stylesheet_name.GetValue()
             
-            if qt_style_name is None:
+            try:
                 
-                ClientGUIStyle.SetStyle( ClientGUIStyle.ORIGINAL_STYLE )
+                if qt_style_name is None:
+                    
+                    ClientGUIStyle.SetStyleFromName( ClientGUIStyle.ORIGINAL_STYLE_NAME )
+                    
+                else:
+                    
+                    ClientGUIStyle.SetStyleFromName( qt_style_name )
+                    
                 
-            else:
+            except Exception as e:
                 
-                ClientGUIStyle.SetStyle( qt_style_name )
+                QW.QMessageBox.critical( self, 'Critical', 'Could not apply style: {}'.format( str( e ) ) )
                 
             
-            if qt_stylesheet_name is None:
+            try:
                 
-                ClientGUIStyle.ClearStylesheet()
+                if qt_stylesheet_name is None:
+                    
+                    ClientGUIStyle.ClearStylesheet()
+                    
+                else:
+                    
+                    ClientGUIStyle.SetStylesheetFromPath( qt_stylesheet_name )
+                    
                 
-            else:
+            except Exception as e:
                 
-                ClientGUIStyle.SetStylesheet( qt_stylesheet_name )
+                QW.QMessageBox.critical( self, 'Critical', 'Could not apply stylesheet: {}'.format( str( e ) ) )
                 
             
         
@@ -4891,7 +4950,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if result == QW.QDialog.Accepted:
             
-            self._custom_shortcuts.RemoveAllSelected()
+            self._custom_shortcuts.DeleteSelected()
             
         
     

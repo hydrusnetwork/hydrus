@@ -1221,6 +1221,51 @@ class Canvas( QW.QWidget ):
         return True
         
     
+    def _DoEdgePan( self, pan_type ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        my_size = self.size()
+        media_size = self._media_container.size()
+        
+        delta_x = 0
+        delta_y = 0
+        
+        if pan_type == 'pan_top_edge':
+            
+            delta_y = - self._media_window_pos.y()
+            
+        elif pan_type == 'pan_left_edge':
+            
+            delta_x = - self._media_window_pos.x()
+            
+        elif pan_type == 'pan_bottom_edge':
+            
+            delta_y = my_size.height() - ( self._media_window_pos.y() + media_size.height() )
+            
+        elif pan_type == 'pan_right_edge':
+            
+            delta_x = my_size.width() - ( self._media_window_pos.x() + media_size.width() )
+            
+        elif pan_type == 'pan_vertical_center':
+            
+            delta_y = ( my_size.height() / 2 ) - ( self._media_window_pos.y() + ( media_size.height() / 2 ) )
+            
+        elif pan_type == 'pan_horizontal_center':
+            
+            delta_x = ( my_size.width() / 2 ) - ( self._media_window_pos.x() + ( media_size.width() / 2 ) )
+            
+        
+        delta = QC.QPoint( delta_x, delta_y )
+        
+        self._media_window_pos += delta
+        
+        self._DrawCurrentMedia()
+        
+    
     def _DoManualPan( self, delta_x_step, delta_y_step ):
         
         if self._current_media is None:
@@ -1355,7 +1400,7 @@ class Canvas( QW.QWidget ):
     
     def _IShouldCatchShortcutEvent( self, event = None ):
         
-        return ClientGUIShortcuts.IShouldCatchShortcutEvent( self, event = event, child_tlp_classes_who_can_pass_up = ( ClientGUIHoverFrames.FullscreenHoverFrame, ) )
+        return ClientGUIShortcuts.IShouldCatchShortcutEvent( self, event = event, child_tlw_classes_who_can_pass_up = ( ClientGUIHoverFrames.FullscreenHoverFrame, ) )
         
     
     def _MaintainZoom( self, previous_media ):
@@ -2167,6 +2212,10 @@ class Canvas( QW.QWidget ):
                 
                 self._DoManualPan( 1, 0 )
                 
+            elif action in ( 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center' ):
+                
+                self._DoEdgePan( action )
+                
             elif action == 'pause_media':
                 
                 self._PauseCurrentMedia()
@@ -2332,11 +2381,11 @@ class CanvasPanel( Canvas ):
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     
-    def mousePressEvent( self, event ):
+    def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
             
-            event.ignore()
+            Canvas.mouseReleaseEvent( self, event )
             
             return
             
@@ -2804,6 +2853,11 @@ class CanvasWithHovers( CanvasWithDetails ):
     
     def EventDragBegin( self, event ):
         
+        if event.button() != QC.Qt.LeftButton:
+            
+            return True
+            
+        
         point = event.pos()
         
         self.BeginDrag( point = point )
@@ -2812,6 +2866,11 @@ class CanvasWithHovers( CanvasWithDetails ):
         
     
     def EventDragEnd( self, event ):
+        
+        if event.button() != QC.Qt.LeftButton:
+            
+            return True
+            
         
         self._last_drag_pos = None
         
@@ -2826,7 +2885,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         show_mouse = self.cursor() == QG.QCursor( QC.Qt.ArrowCursor )
         
-        is_dragging = ( event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton ) and self._last_drag_pos is not None
+        is_dragging = ( event.type() == QC.QEvent.MouseMove and event.buttons() == QC.Qt.LeftButton ) and self._last_drag_pos is not None
         has_moved = event_pos != self._last_motion_pos
         
         if is_dragging:
@@ -2888,6 +2947,8 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
             
+        
+        return True
         
     
     def FullscreenSwitch( self, canvas_key ):
@@ -4683,11 +4744,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def mousePressEvent( self, event ):
+    def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
             
-            event.ignore()
+            CanvasMediaListNavigable.mouseReleaseEvent( self, event )
             
             return
             
