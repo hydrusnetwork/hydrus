@@ -6047,18 +6047,23 @@ class DB( HydrusDB.HydrusDB ):
                 hash_ids.update( self._STI( self._c.execute( select ) ) )
                 
             
-            if allowed_hash_ids is not None:
-                
-                hash_ids.intersection_update( allowed_hash_ids )
-                
-            
         else:
             
-            selects = [ select.replace( ';', ' AND hash_id = ?;' ) for select in selects ]
-            
-            for select in selects:
+            if len( allowed_hash_ids ) > 20000:
                 
-                hash_ids.update( self._STI( self._ExecuteManySelectSingleParam( select, allowed_hash_ids ) ) )
+                for select in selects:
+                    
+                    hash_ids.update( self._STI( self._c.execute( select ) ) )
+                    
+                
+            else:
+                
+                selects = [ select.replace( ';', ' AND hash_id = ?;' ) for select in selects ]
+                
+                for select in selects:
+                    
+                    hash_ids.update( self._STI( self._ExecuteManySelectSingleParam( select, allowed_hash_ids ) ) )
+                    
                 
             
         
@@ -6347,7 +6352,7 @@ class DB( HydrusDB.HydrusDB ):
         
         nonzero_tag_hash_ids = set()
         
-        if hash_ids is None:
+        if hash_ids is None or len( hash_ids ) > 20000:
             
             for search_tag_service_id in search_tag_service_ids:
                 
