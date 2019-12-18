@@ -426,18 +426,25 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             
         elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
             
-            if ClientData.OrdIsAlphaUpper( self._shortcut_key ):
+            try:
                 
-                components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
+                if ClientData.OrdIsAlphaUpper( self._shortcut_key ):
+                    
+                    components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
+                    
+                else:
+                    
+                    components.append( chr( self._shortcut_key ) )
+                    
                 
-            else:
+            except:
                 
-                components.append( chr( self._shortcut_key ) )
+                components.append( 'unknown key: {}'.format( repr( self._shortcut_key ) ) )
                 
             
         else:
             
-            components.append( 'unknown key' )
+            components.append( 'unknown key: {}'.format( repr( self._shortcut_key ) ) )
             
         
         s = '+'.join( components )

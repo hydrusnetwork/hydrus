@@ -398,7 +398,12 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             message = 'Of the ' + HydrusData.ToHumanInt( num_urls ) + ' URLs you mean to add, ' + HydrusData.ToHumanInt( num_removed ) + ' are already in the gallery log. Would you like to only add new URLs or add everything (which will force a re-check of the duplicates)?'
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates' )
+            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates', check_for_cancelled = True )
+            
+            if was_cancelled:
+                
+                return
+                
             
             if result == QW.QDialog.Accepted:
                 
@@ -416,9 +421,9 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             message = 'Would you like these urls to only check for new files, or would you like them to also generate subsequent gallery pages, like a regular search would?'
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' )
+            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added', check_for_cancelled = True )
             
-            if result == QW.QDialog.Rejected:
+            if was_cancelled:
                 
                 return
                 

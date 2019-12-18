@@ -277,6 +277,14 @@ class HydrusDB( object ):
             
         
     
+    def _AnalyzeTempTable( self, temp_table_name ):
+        
+        # this is useful to do after populating a temp table so the query planned can decide which index to use in a big join that uses it
+        
+        self._c.execute( 'ANALYZE {};'.format( temp_table_name ) )
+        self._c.execute( 'ANALYZE mem.sqlite_master;' ) # this reloads the current stats into the query planner, may no longer be needed
+        
+    
     def _AttachExternalDatabases( self ):
         
         for ( name, filename ) in list(self._db_filenames.items()):
@@ -388,6 +396,30 @@ class HydrusDB( object ):
         message += text
         
         HydrusData.DebugPrint( message )
+        
+    
+    def _ExecuteManySelectSingleParam( self, query, single_param_iterator ):
+        
+        select_args_iterator = ( ( param, ) for param in single_param_iterator )
+        
+        return self._ExecuteManySelect( query, select_args_iterator )
+        
+    
+    def _ExecuteManySelect( self, query, select_args_iterator ):
+        
+        # back in python 2, we did batches of 256 hash_ids/whatever at a time in big "hash_id IN (?,?,?,?,...)" predicates.
+        # this was useful to get over some 100,000 x fetchall() call overhead, but it would sometimes throw the SQLite query planner off and do non-optimal queries
+        # (basically, the "hash_id in (256)" would weight the hash_id index request x 256 vs another when comparing the sqlite_stat1 tables, which could lead to WEWLAD for some indices with low median very-high mean skewed distribution
+        # python 3 is better about call overhead, so we'll go back to what is pure
+        # cursor.executemany SELECT when
+        
+        for select_args in select_args_iterator:
+            
+            for result in self._c.execute( query, select_args ):
+                
+                yield result
+                
+            
         
     
     def _GetRowCount( self ):
@@ -682,49 +714,6 @@ class HydrusDB( object ):
         self._c.execute( 'RELEASE hydrus_savepoint;' )
         
         self._c.execute( 'SAVEPOINT hydrus_savepoint;' )
-        
-    
-    def _SelectFromList( self, select_statement, xs ):
-        
-        # issue here is that doing a simple blah_id = ? is real quick and cacheable but doing a lot of fetchone()s is slow
-        # blah_id IN ( 1, 2, 3 ) is fast to execute but not cacheable and doing the str() list splay takes time so there is initial lag
-        # doing the temporaryintegertable trick works well for gigantic lists you refer to frequently but it is super laggy when you sometimes are only selecting four things
-        # blah_id IN ( ?, ?, ? ) is fast and cacheable but there's a small limit (1024 is too many) to the number of params sql can handle
-        # so lets do the latter but break it into 256-strong chunks to get a good medium
-        
-        # this will take a select statement with {} like so:
-        # SELECT blah_id, blah FROM blahs WHERE blah_id IN {};
-        
-        MAX_CHUNK_SIZE = 256
-        
-        # do this just so we aren't always reproducing this long string for gigantic lists
-        # and also so we aren't overmaking it when this gets spammed with a lot of len() == 1 calls
-        if len( xs ) >= MAX_CHUNK_SIZE:
-            
-            max_statement = select_statement.format( '({})'.format( ','.join( '?' * MAX_CHUNK_SIZE ) ) )
-            
-        
-        for chunk in HydrusData.SplitListIntoChunks( xs, MAX_CHUNK_SIZE ):
-            
-            if len( chunk ) == MAX_CHUNK_SIZE:
-                
-                chunk_statement = max_statement
-                
-            else:
-                
-                chunk_statement = select_statement.format( '({})'.format( ','.join( '?' * len( chunk ) ) ) )
-                
-            
-            for row in self._c.execute( chunk_statement, chunk ):
-                
-                yield row
-                
-            
-        
-    
-    def _SelectFromListFetchAll( self, select_statement, xs ):
-        
-        return [ row for row in self._SelectFromList( select_statement, xs ) ]
         
     
     def _ShrinkMemory( self ):

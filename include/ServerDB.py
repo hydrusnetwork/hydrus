@@ -1,3 +1,4 @@
+import collections
 import hashlib
 from . import HydrusConstants as HC
 from . import HydrusDB
@@ -790,9 +791,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashes( self, master_hash_ids ):
         
-        select_statement = 'SELECT hash FROM hashes WHERE master_hash_id IN {};'
+        select_statement = 'SELECT hash FROM hashes WHERE master_hash_id = ?;'
         
-        return [ hash for ( hash, ) in self._SelectFromList( select_statement, master_hash_ids ) ]
+        return [ hash for ( hash, ) in self._ExecuteManySelectSingleParam( select_statement, master_hash_ids ) ]
         
     
     def _GetMasterHashId( self, hash ):
@@ -1336,9 +1337,9 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            select_statement = 'SELECT service_hash_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id IN {};'
+            select_statement = 'SELECT service_hash_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ?;'
             
-            deleted_service_hash_ids = self._STI( self._SelectFromList( select_statement, service_hash_ids ) )
+            deleted_service_hash_ids = self._STI( self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) )
             
             service_hash_ids = set( service_hash_ids ).difference( deleted_service_hash_ids )
             
@@ -1582,9 +1583,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id IN {};'
+        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;'
         
-        valid_service_hash_ids = self._STL( self._SelectFromList( select_statement, service_hash_ids ) )
+        valid_service_hash_ids = self._STL( self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) )
         
         self._RepositoryRewardFilePetitioners( service_id, valid_service_hash_ids, 1 )
         
@@ -1598,9 +1599,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id IN {};'
+        select_statement = 'SELECT service_hash_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ?;'
         
-        valid_service_hash_ids = self._STL( self._SelectFromList( select_statement, service_hash_ids ) )
+        valid_service_hash_ids = self._STL( self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) )
         
         self._RepositoryRewardMappingPetitioners( service_id, service_tag_id, valid_service_hash_ids, 1 )
         
@@ -2117,9 +2118,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
         
-        select_statement = 'SELECT master_hash_id FROM ' + hash_id_map_table_name + ' WHERE service_hash_id IN {};'
+        select_statement = 'SELECT master_hash_id FROM ' + hash_id_map_table_name + ' WHERE service_hash_id = ?;'
         
-        master_hash_ids = [ master_hash_id for ( master_hash_id, ) in self._SelectFromList( select_statement, service_hash_ids ) ]
+        master_hash_ids = [ master_hash_id for ( master_hash_id, ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) ]
         
         if len( service_hash_ids ) != len( master_hash_ids ):
             
@@ -2613,9 +2614,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id IN {};'
+        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;'
         
-        valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._SelectFromList( select_statement, service_hash_ids ) ]
+        valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) ]
         
         self._c.executemany( 'REPLACE INTO ' + petitioned_files_table_name + ' ( service_hash_id, account_id, reason_id ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, reason_id ) for service_hash_id in valid_service_hash_ids ) )
         
@@ -2624,9 +2625,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id IN {};'
+        select_statement = 'SELECT service_hash_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ?;'
         
-        valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._SelectFromList( select_statement, service_hash_ids ) ]
+        valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) ]
         
         self._c.executemany( 'REPLACE INTO ' + petitioned_mappings_table_name + ' ( service_tag_id, service_hash_id, account_id, reason_id ) VALUES ( ?, ?, ?, ? );', [ ( service_tag_id, service_hash_id, account_id, reason_id ) for service_hash_id in valid_service_hash_ids ] )
         
@@ -2968,9 +2969,16 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_files_table_name + ' WHERE service_hash_id IN {} GROUP BY account_id;'
+        select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_files_table_name + ' WHERE service_hash_id = ? GROUP BY account_id;'
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._SelectFromList( select_statement, service_hash_ids ) ]
+        count = collections.Counter()
+        
+        for ( account_id, count ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ):
+            
+            count[ account_id ] += count
+            
+        
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in count.items() ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
@@ -2979,9 +2987,16 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id IN {} GROUP BY account_id;'
+        select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ? GROUP BY account_id;'
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._SelectFromList( select_statement, service_hash_ids ) ]
+        count = collections.Counter()
+        
+        for ( account_id, count ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ):
+            
+            count[ account_id ] += count
+            
+        
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in count.items() ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
@@ -3094,9 +3109,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE account_id IN {};'
+        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE account_id = ?;'
         
-        service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._SelectFromList( select_statement, subject_account_ids ) ]
+        service_hash_ids = self._STL( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
         
         if len( service_hash_ids ) > 0:
             
@@ -3105,9 +3120,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT service_tag_id, service_hash_id FROM ' + current_mappings_table_name + ' WHERE account_id IN {};'
+        select_statement = 'SELECT service_tag_id, service_hash_id FROM ' + current_mappings_table_name + ' WHERE account_id = ?;'
         
-        mappings_dict = HydrusData.BuildKeyToListDict( self._SelectFromList( select_statement, subject_account_ids ) )
+        mappings_dict = HydrusData.BuildKeyToListDict( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
         
         if len( mappings_dict ) > 0:
             
@@ -3119,9 +3134,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        select_statement = 'SELECT child_service_tag_id, parent_service_tag_id FROM ' + current_tag_parents_table_name + ' WHERE account_id IN {};'
+        select_statement = 'SELECT child_service_tag_id, parent_service_tag_id FROM ' + current_tag_parents_table_name + ' WHERE account_id = ?;'
         
-        pairs = self._SelectFromListFetchAll( select_statement, subject_account_ids )
+        pairs = list( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
         
         if len( pairs ) > 0:
             
@@ -3133,9 +3148,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        select_statement = 'SELECT bad_service_tag_id, good_service_tag_id FROM ' + current_tag_siblings_table_name + ' WHERE account_id IN {};'
+        select_statement = 'SELECT bad_service_tag_id, good_service_tag_id FROM ' + current_tag_siblings_table_name + ' WHERE account_id = ?;'
         
-        pairs = self._SelectFromListFetchAll( select_statement, subject_account_ids )
+        pairs = list( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
         
         if len( pairs ) > 0:
             

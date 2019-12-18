@@ -5709,15 +5709,6 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list = QW.QListWidget( self )
         self._list.itemDoubleClicked.connect( self.EventSelect )
         
-        max_width = max( ( len( label ) for ( label, value ) in choice_tuples ) )
-        
-        width_chars = min( 36, max_width )
-        height_chars = max( 6, len( choice_tuples ) )
-        
-        l_size = ClientGUIFunctions.ConvertTextToPixels( self._list, ( width_chars, height_chars ) )
-        
-        QP.SetMinClientSize( self._list, l_size )
-        
         #
         
         selected_a_value = False
@@ -5762,6 +5753,24 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         #
+        
+        max_label_width_chars = max( ( len( label ) for ( label, value ) in choice_tuples ) )
+        
+        width_chars = min( 64, max_label_width_chars + 2 )
+        height_chars = min( max( 6, len( choice_tuples ) ), 36 )
+        
+        ( width_px, height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._list, ( width_chars, height_chars ) )
+        
+        row_height_px = self._list.sizeHintForRow( 0 )
+        
+        if row_height_px != -1:
+            
+            height_px = row_height_px * height_chars
+            
+        
+        # wew lad, but it 'works'
+        # formalise this and make a 'stretchy qlistwidget' class
+        self._list.sizeHint = lambda: QC.QSize( width_px, height_px )
         
         vbox = QP.VBoxLayout()
         

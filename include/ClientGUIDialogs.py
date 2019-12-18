@@ -1029,7 +1029,7 @@ class DialogSelectFromURLTree( Dialog ):
                 
                 item = QW.QTreeWidgetItem()
                 item.setText( 0, item_name )
-                item.setCheckState( root.checkState() )
+                item.setCheckState( 0, root.checkState( 0 ) )
                 item.setData( 0, QC.Qt.UserRole, data )
                 root.addChild( item )
                 
@@ -1037,7 +1037,7 @@ class DialogSelectFromURLTree( Dialog ):
                 
                 subroot = QW.QTreeWidgetItem()
                 subroot.setText( 0, item_name )
-                subroot.setCheckState( root.checkState() )
+                subroot.setCheckState( 0, root.checkState( 0 ) )
                 root.addChild( subroot )
                 
                 self._AddDirectory( subroot, data )
@@ -1048,25 +1048,24 @@ class DialogSelectFromURLTree( Dialog ):
     def _GetSelectedChildrenData( self, parent_item ):
         
         result = []
-
-        child_iterator = QW.QTreeWidgetItemIterator( parent_item )
-               
-        for child_item in child_iterator:
+        
+        for i in range( parent_item.childCount() ):
             
-            data = child_item.data( 0, QC.Qt.UserRole )
+            child_item = parent_item.child( i )
             
-            if data is None:
+            if child_item.checkState( 0 ) == QC.Qt.Checked:
                 
-                result.extend( self._GetSelectedChildrenData( child_item ) )
+                data = child_item.data( 0, QC.Qt.UserRole )
                 
-            else:
-                
-                if child_item.checkState() == QC.Qt.Checked:
+                if data is not None:
                     
                     result.append( data )
                     
                 
             
+            result.extend( self._GetSelectedChildrenData( child_item ) )
+            
+        
         return result
         
     

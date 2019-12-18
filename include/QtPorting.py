@@ -1756,7 +1756,7 @@ class RadioBox( QW.QFrame ):
     
         QW.QFrame.__init__( self, parent )
         
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         if vertical:
             
@@ -2148,17 +2148,18 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
         
         QW.QTreeWidget.__init__( self, *args, **kwargs )
         
-        self.itemClicked.connect( self._UpdateCheckState )
+        self.itemClicked.connect( self._HandleItemClickedForCheckStateUpdate )
         
     
     def _HandleItemClickedForCheckStateUpdate( self, item, column ):
         
-        self._UpdateCheckState( item, item.checkState() )
+        self._UpdateCheckState( item, item.checkState( 0 ) )
         
     
     def _UpdateCheckState( self, item, check_state ):
         
-        item.setCheckState( check_state )
+        # this is an int, should be a checkstate
+        item.setCheckState( 0, check_state )
         
         for i in range( item.childCount() ):
             

@@ -2430,7 +2430,6 @@ class StaticBox( QW.QFrame ):
         QW.QFrame.__init__( self, parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
-        
         self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Minimum, QW.QSizePolicy.MinimumExpanding )
         
         self._sizer = QP.VBoxLayout()

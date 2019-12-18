@@ -536,7 +536,8 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._dropdown_window = QW.QFrame( self )
             
-            self._dropdown_window.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
+            self._dropdown_window.setFrameShape( QW.QFrame.NoFrame )
+            #self._dropdown_window.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
             
         
         self._dropdown_notebook = QW.QTabWidget( self._dropdown_window )

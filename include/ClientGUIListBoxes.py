@@ -832,7 +832,7 @@ class ListBox( QW.QScrollArea ):
     def __init__( self, parent, height_num_chars = 10 ):
         
         QW.QScrollArea.__init__( self, parent )
-        self.setFrameShape( QW.QFrame.StyledPanel )
+        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
         self.setWidget( ListBox._InnerWidget( self ) )
@@ -849,17 +849,12 @@ class ListBox( QW.QScrollArea ):
         
         self._last_view_start = None
         
+        self._height_num_chars = height_num_chars
+        self._minimum_height_num_chars = 8
+        
         self._num_rows_per_page = 0
         
         self.setFont( QW.QApplication.font() )
-        
-        text_height = self.fontMetrics().height()
-        
-        self.verticalScrollBar().setSingleStep( text_height )
-        
-        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 16, height_num_chars ) )
-        
-        QP.SetMinClientSize( self, ( min_width, min_height ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
         
@@ -878,17 +873,6 @@ class ListBox( QW.QScrollArea ):
         return QP.isValid( self )
         
     
-    def sizeHint( self ):
-        
-        size_hint = QW.QScrollArea.sizeHint( self )
-        
-        text_height = self.fontMetrics().height()
-        
-        size_hint.setHeight( 9 * text_height + self.height() - self.viewport().height()  )
-        
-        return size_hint
-        
-        
     def _Activate( self ):
         
         pass
@@ -1529,6 +1513,19 @@ class ListBox( QW.QScrollArea ):
         return len( self._ordered_terms ) > 0
         
     
+    def minimumSizeHint( self ):
+        
+        size_hint = QW.QScrollArea.minimumSizeHint( self )
+        
+        text_height = self.fontMetrics().height()
+        
+        minimum_height = self._minimum_height_num_chars * text_height + ( self.frameWidth() * 2 )
+        
+        size_hint.setHeight( minimum_height )
+        
+        return size_hint
+        
+    
     def MoveSelectionDown( self ):
         
         if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
@@ -1551,6 +1548,24 @@ class ListBox( QW.QScrollArea ):
             
             self._Hit( False, False, hit_index )
             
+        
+    
+    def SetMinimumHeightNumChars( self, minimum_height_num_chars ):
+        
+        self._minimum_height_num_chars = minimum_height_num_chars
+        
+    
+    def sizeHint( self ):
+        
+        size_hint = QW.QScrollArea.sizeHint( self )
+        
+        text_height = self.fontMetrics().height()
+        
+        ideal_height = self._height_num_chars * text_height + ( self.frameWidth() * 2 )
+        
+        size_hint.setHeight( ideal_height )
+        
+        return size_hint
         
     
 class ListBoxTags( ListBox ):
@@ -2921,7 +2936,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def __init__( self, parent, tag_display_type, include_counts = True, show_sibling_description = False ):
         
-        ListBoxTags.__init__( self, parent, height_num_chars = 12 )
+        ListBoxTags.__init__( self, parent, height_num_chars = 24 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
@@ -3234,6 +3249,8 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     def __init__( self, parent, page_key, tag_display_type, predicates_callable = None ):
         
         ListBoxTagsSelection.__init__( self, parent, tag_display_type, include_counts = True )
+        
+        self._minimum_height_num_chars = 15
         
         self._page_key = page_key
         self._get_current_predicates_callable = predicates_callable

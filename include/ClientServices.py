@@ -2134,19 +2134,51 @@ class ServiceIPFS( ServiceRemote ):
         self._nocopy_abs_path_translations = dictionary[ 'nocopy_abs_path_translations' ]
         
     
-    def _ConvertMultihashToURLTree( self, name, size, multihash ):
+    def _GetAPIBaseURL( self ):
         
-        api_base_url = self._GetAPIBaseURL()
+        ( host, port ) = self._credentials.GetAddress()
+        
+        api_base_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
+        
+        return api_base_url
+        
+    
+    def ConvertMultihashToURLTree( self, name, size, multihash, job_key = None ):
+        
+        with self._lock:
+            
+            api_base_url = self._GetAPIBaseURL()
+            
         
         links_url = api_base_url + 'object/links/' + multihash
         
         network_job = ClientNetworkingJobs.NetworkJob( 'GET', links_url )
         
-        network_job.OverrideBandwidth()
+        if job_key is not None:
+            
+            job_key.SetVariable( 'popup_network_job', network_job )
+            
         
-        HG.client_controller.network_engine.AddJob( network_job )
-        
-        network_job.WaitUntilDone()
+        try:
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
+            
+        finally:
+            
+            if job_key is not None:
+                
+                job_key.SetVariable( 'popup_network_job', None )
+                
+                if job_key.IsCancelled():
+                    
+                    raise HydrusExceptions.CancelledException( 'Multihash parsing cancelled by user.' )
+                    
+                
+            
         
         parsing_text = network_job.GetContentText()
         
@@ -2175,7 +2207,7 @@ class ServiceIPFS( ServiceRemote ):
                 subsize = link[ 'Size' ]
                 submultihash = link[ 'Hash' ]
                 
-                children.append( self._ConvertMultihashToURLTree( subname, subsize, submultihash ) )
+                children.append( self.ConvertMultihashToURLTree( subname, subsize, submultihash, job_key = job_key ) )
                 
             
             if size is None:
@@ -2191,15 +2223,6 @@ class ServiceIPFS( ServiceRemote ):
             
             return ( 'file', name, size, url )
             
-        
-    
-    def _GetAPIBaseURL( self ):
-        
-        ( host, port ) = self._credentials.GetAddress()
-        
-        api_base_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
-        
-        return api_base_url
         
     
     def EnableNoCopy( self, value ):
@@ -2305,28 +2328,37 @@ class ServiceIPFS( ServiceRemote ):
         
         def on_qt_select_tree( job_key, url_tree ):
             
-            from . import ClientGUIDialogs
-            
-            with ClientGUIDialogs.DialogSelectFromURLTree( HG.client_controller.gui, url_tree ) as dlg:
+            try:
                 
-                urls_good = False
+                from . import ClientGUIDialogs
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                with ClientGUIDialogs.DialogSelectFromURLTree( HG.client_controller.gui, url_tree ) as dlg:
                     
-                    urls = dlg.GetURLs()
+                    urls_good = False
                     
-                    if len( urls ) > 0:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
-                        HG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_key, urls, multihash )
+                        urls = dlg.GetURLs()
                         
-                        urls_good = True
+                        if len( urls ) > 0:
+                            
+                            HG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_key, urls, multihash )
+                            
+                            urls_good = True
+                            
+                        
+                    
+                    if not urls_good:
+                        
+                        job_key.Delete()
                         
                     
                 
-                if not urls_good:
-                    
-                    job_key.Delete()
-                    
+            except:
+                
+                job_key.Delete()
+                
+                raise
                 
             
         
@@ -2341,11 +2373,11 @@ class ServiceIPFS( ServiceRemote ):
                 HG.client_controller.pub( 'message', job_key )
                 
             
-            with self._lock:
+            try:
                 
                 try:
                     
-                    url_tree = self._ConvertMultihashToURLTree( multihash, None, multihash )
+                    url_tree = self.ConvertMultihashToURLTree( multihash, None, multihash, job_key = job_key )
                     
                 except HydrusExceptions.NotFoundException:
                     
@@ -2360,18 +2392,24 @@ class ServiceIPFS( ServiceRemote ):
                     return
                     
                 
-            
-            if url_tree[0] == 'file':
+                if url_tree[0] == 'file':
+                    
+                    url = url_tree[3]
+                    
+                    HG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_key, url, multihash )
+                    
+                else:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'Waiting for user selection' )
+                    
+                    QP.CallAfter( on_qt_select_tree, job_key, url_tree )
+                    
                 
-                url = url_tree[3]
+            except:
                 
-                HG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_key, url, multihash )
+                job_key.Delete()
                 
-            else:
-                
-                job_key.SetVariable( 'popup_text_1', 'Waiting for user selection' )
-                
-                QP.CallAfter( on_qt_select_tree, job_key, url_tree )
+                raise
                 
             
         

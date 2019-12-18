@@ -289,7 +289,7 @@ class MenuUpdaterPages( ClientGUIAsync.AsyncQtUpdater ):
             gui_session_names_to_backup_timestamps = {}
             
         
-        return gui_session_names_to_backup_timestamps
+        return ( gui_session_names, gui_session_names_to_backup_timestamps )
         
     
     def _publishLoading( self ):
@@ -299,9 +299,9 @@ class MenuUpdaterPages( ClientGUIAsync.AsyncQtUpdater ):
     
     def _publishResult( self, result ):
         
-        gui_session_names_to_backup_timestamps = result
+        ( gui_session_names, gui_session_names_to_backup_timestamps ) = result
         
-        ( menu, label ) = self._win.GenerateMenuInfoPages( gui_session_names_to_backup_timestamps )
+        ( menu, label ) = self._win.GenerateMenuInfoPages( gui_session_names, gui_session_names_to_backup_timestamps )
         
         self._win.ReplaceMenu( 'pages', menu, label )
         
@@ -507,9 +507,16 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         aboutinfo.SetDescription( description )
         
-        with open( HC.LICENSE_PATH, 'r', encoding = 'utf-8' ) as f:
+        if os.path.exists( HC.LICENSE_PATH ):
             
-            license = f.read()
+            with open( HC.LICENSE_PATH, 'r', encoding = 'utf-8' ) as f:
+                
+                license = f.read()
+                
+            
+        else:
+            
+            license = 'no licence file found!'
             
         
         aboutinfo.SetLicense( license )
@@ -547,7 +554,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         message += os.linesep * 2
         message += 'A \'full\' analyze will force a run over every index in the database. This can take substantially longer. If you do not have a specific reason to select this, it is probably pointless.'
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full' )
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full', check_for_cancelled = True )
+        
+        if was_cancelled:
+            
+            return
+            
         
         if result == QW.QDialog.Accepted:
             
@@ -960,7 +972,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             client_files_manager = self._controller.client_files_manager
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them' )
+            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them', check_for_cancelled = True )
+            
+            if was_cancelled:
+                
+                return
+                
             
             if result == QW.QDialog.Accepted:
                 
@@ -3498,7 +3515,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         text += os.linesep * 2
         text += 'A \'full\' vacuum will immediately force a vacuum for the entire database. This can take substantially longer.'
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose how thorough your vacuum will be.', yes_label = 'soft', no_label = 'full' )
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose how thorough your vacuum will be.', yes_label = 'soft', no_label = 'full', check_for_cancelled = True )
+        
+        if was_cancelled:
+            
+            return
+            
         
         if result == QW.QDialog.Accepted:
             
@@ -4648,7 +4670,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return ( menu, '&file' )
         
     
-    def GenerateMenuInfoPages( self, gui_session_names_to_backup_timestamps ):
+    def GenerateMenuInfoPages( self, gui_session_names, gui_session_names_to_backup_timestamps ):
         
         menu = QW.QMenu( self )
         
@@ -4685,7 +4707,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         sessions = QW.QMenu( menu )
         
-        gui_session_names = list( gui_session_names_to_backup_timestamps.keys() )
+        gui_session_names = list( gui_session_names )
         
         gui_session_names.sort()
         
@@ -4722,6 +4744,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     submenu = QW.QMenu( append_backup )
                     
                     for timestamp in timestamps:
+                        
                         ClientGUIMenus.AppendMenuItem( submenu, HydrusData.ConvertTimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
                         
                     
@@ -5337,7 +5360,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                                 
                                 message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
                                 
-                                result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
+                                ( result, closed_by_user ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
                                 
                                 if closed_by_user:
                                     

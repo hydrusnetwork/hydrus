@@ -275,6 +275,11 @@ def THREADDownloadURLs( job_key, urls, title ):
                     presentation_hashes_fast.add( hash )
                     
                 
+                if len( presentation_hashes ) > 0:
+                    
+                    job_key.SetVariable( 'popup_files', ( presentation_hashes, 'downloads' ) )
+                    
+                
             elif status == CC.STATUS_DELETED:
                 
                 num_deleted += 1

@@ -337,11 +337,19 @@ class Controller( HydrusController.HydrusController ):
     
     def CatchSignal( self, sig, frame ):
         
-        if sig == signal.SIGINT:
+        if sig in ( signal.SIGINT, signal.SIGTERM ):
             
-            event = QG.QCloseEvent()
+            if sig == signal.SIGTERM:
+                
+                HG.emergency_exit = True
+                
             
-            QW.QApplication.postEvent( self.gui, event )
+            if hasattr( self, 'gui' ):
+                
+                event = QG.QCloseEvent()
+                
+                QW.QApplication.postEvent( self.gui, event )
+                
             
         
     
@@ -1279,6 +1287,7 @@ class Controller( HydrusController.HydrusController ):
         self.CreateSplash()
         
         signal.signal( signal.SIGINT, self.CatchSignal )
+        signal.signal( signal.SIGTERM, self.CatchSignal )
         
         self.CallToThreadLongRunning( self.THREADBootEverything )
         

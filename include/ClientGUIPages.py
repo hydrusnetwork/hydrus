@@ -734,7 +734,14 @@ class Page( QW.QSplitter ):
     
     def SetMediaResults( self, media_results ):
         
-        file_service_key = self._management_controller.GetKey( 'file_service' )
+        if self._management_controller.IsImporter():
+            
+            file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        else:
+            
+            file_service_key = self._management_controller.GetKey( 'file_service' )
+            
         
         media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, media_results )
         

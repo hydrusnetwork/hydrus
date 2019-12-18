@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 378</h3></li>
+				<ul>
+					<li>if a search has system:limit, the current sort is now sent down to the database. if the sort is simple, results are now sorted before system:limit is applied, meaning you will now get the largest/longest/whateverest sample of the search! supported sorts are: import time, filesize, duration, width, height, resolution ratio, media views, media viewtime, num pixels, approx bitrate, and modified time. this does not apply to searches in the 'all known files' file domain.</li>
+					<li>after identifying a sometimes-unoptimal db access routine, wrote a new more reliable one and replaced the 60-odd places it is used in both client and server. a variety of functions will now have less 'spiky' job time, including certain combinations of regular tag and system search predicates. some jobs will have slightly higher average job time, some will be much faster in all common situations</li>
+					<li>added additional database analysis to some complicated duplicate file system jobs that adds some overhead but should reduce extreme spikes in job time for very large databases</li>
+					<li>converted some legacy db code to new access methods</li>
+					<li>fixed a bug in the new menu generation code that was not showing sessions in the 'pages' menu if there were no backups for these sessions (i.e. they have only been saved once, or are old enough to have been last saved before the backup system was added)</li>
+					<li>fixed the 'click window close button should back out, not choose the red no button' bug in the yes/no confirmation dialogs for analyze, vacuum, clear orphan, and gallery log button url import</li>
+					<li>fixed some checkbox select and data retrieval logic in the checkbox tree control and completely cleared out the buggy ipfs directory download workflow. I apologise for the delay</li>
+					<li>fixed some inelegant multihash->urls resolution in the ipfs service code that would often mean a large folder would lock the client while parsing was proceeding</li>
+					<li>when the multihash->urls resolution is going on, the popup now exposes the underlying network control. cancelling the whole job mid-parse/download is now also quicker and prettier</li>
+					<li>when a 'downloader multiple urls' popup is working, it will publish its ongoing presented files to a files button as it works, rather than just once the job is finished</li>
+					<li>improved some unusual taglist height calculations that were turning up</li>
+					<li>improved how taglists set their minimum height--the 'selection tags' list should now always have at least 15 rows, even when bunched up in a tall gallery panel</li>
+					<li>if the system clock is rewound, new objects that are saved in the backup system (atm, gui sessions) will now detect that existing backups are from the future and increase their save time to ensure they count as the newest object</li>
+					<li>short version: 'remove files from view when trashed' now works on downloader thumbs that are loaded in from a session. long version: downloader thumb pages now force 'my files' file domain for now (previously it was 'all local files')</li>
+					<li>the downloader/thread watcher right-click menus for 'show all downloaders xxx files' now has a new 'all files and trash' entry. this will show absolutely everything still in your db, for quick access to accidental deletes</li>
+					<li>the 'select a downloader' list dialog _should_ size itself better, with no double scrollbars, when there are many many downloaders and/or very long-named downloaders. if this layout works, I'll replicated it in other areas</li>
+					<li>if an unrenderable key enters a shortcut, the shortcut will now display an 'unknown key: blah' statement instead of throwing an error. this affected both the manage shortcuts dialog and the media viewer(!)</li>
+					<li>SIGTERM is now caught in non-windows systems and will initiate a fast forced shutdown</li>
+					<li>unified and played with some border styles around the program</li>
+					<li>added a user-written guide to updating to the 'getting started - installing' help page</li>
+					<li>misc small code cleanup</li>
+				</ul>
 				<li><h3>version 377</h3></li>
 				<ul>
 					<li>qt:</li>

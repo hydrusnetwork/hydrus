@@ -678,8 +678,8 @@ class ManagementPanel( QW.QScrollArea ):
         self.setFrameShape( QW.QFrame.NoFrame )
         self.setWidget( QW.QWidget() )
         self.setWidgetResizable( True )
-        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
-        self.setLineWidth( 2 )
+        #self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
+        #self.setLineWidth( 2 )
         #self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
         
@@ -1815,6 +1815,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' presented files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='presented' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' new files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='new' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )
+        ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' files (including trash)', 'Gather the presented files (including trash) for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='all_and_trash' )
         
         if self._CanRetryFailed():
             
@@ -2061,7 +2062,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
                 gallery_hashes = gallery_import.GetNewHashes()
                 
-            elif show == 'all':
+            elif show in ( 'all', 'all_and_trash' ):
                 
                 gallery_hashes = gallery_import.GetHashes()
                 
@@ -2072,7 +2073,16 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             seen_hashes.update( new_hashes )
             
         
-        hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+        if show == 'all_and_trash':
+            
+            filter_file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            
+        else:
+            
+            filter_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        
+        hashes = HG.client_controller.Read( 'filter_hashes', hashes, filter_file_service_key )
         
         if len( hashes ) > 0:
             
@@ -2489,6 +2499,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' presented files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='presented' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' new files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='new' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )
+        ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files (including trash)', 'Gather the presented files (including trash) for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all_and_trash' )
         
         if self._CanRetryFailed():
             
@@ -2731,7 +2742,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 watcher_hashes = watcher.GetNewHashes()
                 
-            elif show == 'all':
+            elif show in ( 'all', 'all_and_trash' ):
                 
                 watcher_hashes = watcher.GetHashes()
                 
@@ -2742,7 +2753,16 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             seen_hashes.update( new_hashes )
             
         
-        hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+        if show == 'all_and_trash':
+            
+            filter_file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            
+        else:
+            
+            filter_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        
+        hashes = HG.client_controller.Read( 'filter_hashes', hashes, filter_file_service_key )
         
         if len( hashes ) > 0:
             
@@ -4326,7 +4346,9 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     self._query_job_key = ClientThreading.JobKey()
                     
-                    self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context )
+                    sort_by = self._media_sort.GetSort()
+                    
+                    self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
@@ -4480,7 +4502,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def THREADDoQuery( self, controller, page_key, query_job_key, search_context ):
+    def THREADDoQuery( self, controller, page_key, query_job_key, search_context, sort_by ):
         
         def qt_code():
             
@@ -4498,7 +4520,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         HG.client_controller.file_viewing_stats_manager.Flush()
         
-        query_hash_ids = controller.Read( 'file_query_ids', search_context, job_key = query_job_key )
+        query_hash_ids = controller.Read( 'file_query_ids', search_context, job_key = query_job_key, limit_sort_by = sort_by )
         
         if query_job_key.IsCancelled():
             
