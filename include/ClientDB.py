@@ -7979,13 +7979,18 @@ class DB( HydrusDB.HydrusDB ):
             service_predicate = ' AND service_id = ' + str( service_id )
             
         
-        good_select = 'SELECT good_tag_id FROM tag_siblings WHERE bad_tag_id = ?' + service_predicate + ';'
-        bad_select = 'SELECT bad_tag_id FROM tag_siblings WHERE good_tag_id = ?' + service_predicate + ';'
-        
         while len( search_tag_ids ) > 0:
             
-            goods = self._STS( self._ExecuteManySelectSingleParam( good_select, search_tag_ids ) )
-            bads = self._STS( self._ExecuteManySelectSingleParam( bad_select, search_tag_ids ) )
+            with HydrusDB.TemporaryIntegerTable( self._c, search_tag_ids, 'tag_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                good_select = 'SELECT good_tag_id FROM tag_siblings, {} ON ( bad_tag_id = tag_id );'.format( temp_table_name )
+                bad_select = 'SELECT bad_tag_id FROM tag_siblings, {} ON ( good_tag_id = tag_id );'.format( temp_table_name )
+                
+                goods = self._STS( self._c.execute( good_select ) )
+                bads = self._STS( self._c.execute( bad_select ) )
+                
             
             searched_tag_ids.update( search_tag_ids )
             
