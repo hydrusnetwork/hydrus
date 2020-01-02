@@ -1711,13 +1711,15 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
-        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.pause, self.PauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.file_pause, self.PauseFiles )
+        self._files_pause_button.setToolTip( 'pause/play files' )
         
         self._gallery_panel = ClientGUICommon.StaticBox( self, 'gallery parser' )
         
         self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, ellipsize_end = True )
         
-        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.GlobalPixmaps.pause, self.PauseGallery )
+        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.GlobalPixmaps.gallery_pause, self.PauseGallery )
+        self._gallery_pause_button.setToolTip( 'pause/play search' )
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, page_key = self._page_key )
         
@@ -1854,20 +1856,20 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             if files_paused:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_pause )
                 
             
             if gallery_paused:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.gallery_play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.gallery_pause )
                 
             
             if gallery_paused:
@@ -2245,7 +2247,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'file imports' )
         
-        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalPixmaps.pause, self.PauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalPixmaps.file_pause, self.PauseFiles )
+        self._files_pause_button.setToolTip( 'pause/play files' )
         
         self._file_status = ClientGUICommon.BetterStaticText( imports_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
@@ -2257,7 +2260,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, ellipsize_end = True )
         
-        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.GlobalPixmaps.pause, self.PauseChecking )
+        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.GlobalPixmaps.gallery_pause, self.PauseChecking )
+        self._checking_pause_button.setToolTip( 'pause/play checking' )
         
         self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, ellipsize_end = True )
         
@@ -2436,11 +2440,11 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                     file_status = 'pausing, ' + file_status
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_pause )
                 
             
             self._file_status.setText( file_status )
@@ -2454,7 +2458,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                     watcher_status = 'paused'
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.gallery_play )
                 
             else:
                 
@@ -2470,7 +2474,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                         
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.gallery_pause )
                 
             
             self._watcher_status.setText( watcher_status )

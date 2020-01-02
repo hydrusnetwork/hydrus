@@ -7,6 +7,7 @@ from . import ClientSearch
 from . import ClientTags
 from . import HydrusConstants as HC
 from . import HydrusTags
+from . import HydrusText
 import os
 import random
 import time
@@ -1138,6 +1139,7 @@ class MediaList( object ):
         self._media_collect = MediaCollect()
         
         self._sorted_media = SortedList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
+        self._selected_media = set()
         
         self._singleton_media = set( self._sorted_media )
         self._collected_media = set()
@@ -1195,9 +1197,29 @@ class MediaList( object ):
         return MediaSingleton( media_result )
         
     
-    def _GetFirst( self ): return self._sorted_media[ 0 ]
+    def _GetFirst( self ):
+        
+        if len( self._sorted_media ) > 0:
+            
+            return self._sorted_media[ 0 ]
+            
+        else:
+            
+            return None
+            
+        
     
-    def _GetLast( self ): return self._sorted_media[ -1 ]
+    def _GetLast( self ):
+        
+        if len( self._sorted_media ) > 0:
+            
+            return self._sorted_media[ -1 ]
+            
+        else:
+            
+            return None
+            
+        
     
     def _GetMedia( self, hashes, discriminator = None ):
         
@@ -1422,6 +1444,147 @@ class MediaList( object ):
         for media in self._collected_media:
             
             media.DeletePending( service_key )
+            
+        
+    
+    def GetFilteredHashes( self, file_filter ):
+        
+        if file_filter.filter_type == FILE_FILTER_ALL:
+            
+            return self._hashes
+            
+        elif file_filter.filter_type == FILE_FILTER_SELECTED:
+            
+            hashes = set()
+            
+            for m in self._selected_media:
+                
+                hashes.update( m.GetHashes() )
+                
+            
+            return hashes
+            
+        elif file_filter.filter_type == FILE_FILTER_NOT_SELECTED:
+            
+            hashes = set()
+            
+            for m in self._sorted_media:
+                
+                if m not in self._selected_media:
+                    
+                    hashes.update( m.GetHashes() )
+                    
+                
+            
+            return hashes
+            
+        elif file_filter.filter_type == FILE_FILTER_NONE:
+            
+            return set()
+            
+        else:
+            
+            flat_media = self.GetFlatMedia()
+            
+            if file_filter.filter_type == FILE_FILTER_INBOX:
+                
+                filtered_media = [ m for m in flat_media if m.HasInbox() ]
+                
+            elif file_filter.filter_type == FILE_FILTER_ARCHIVE:
+                
+                filtered_media = [ m for m in flat_media if not m.HasInbox() ]
+                
+            elif file_filter.filter_type == FILE_FILTER_FILE_SERVICE:
+                
+                file_service_key = file_filter.filter_data
+                
+                filtered_media = [ m for m in flat_media if file_service_key in m.GetLocationsManager().GetCurrent() ]
+                
+            elif file_filter.filter_type == FILE_FILTER_LOCAL:
+                
+                filtered_media = [ m for m in flat_media if m.GetLocationsManager().IsLocal() ]
+                
+            elif file_filter.filter_type == FILE_FILTER_REMOTE:
+                
+                filtered_media = [ m for m in flat_media if m.GetLocationsManager().IsRemote() ]
+                
+            elif file_filter.filter_type == FILE_FILTER_TAGS:
+                
+                ( and_or_or, select_tags ) = file_filter.filter_data
+                
+                if and_or_or == 'AND':
+                    
+                    filtered_media = [ m for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) == len( select_tags ) ]
+                    
+                elif and_or_or == 'OR':
+                    
+                    filtered_media = [ m for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) > 0 ]
+                    
+                
+            
+            hashes = { m.GetHash() for m in filtered_media }
+            
+            return hashes
+            
+        
+    
+    def GetFilteredMedia( self, file_filter ):
+        
+        if file_filter.filter_type == FILE_FILTER_ALL:
+            
+            return set( self._sorted_media )
+            
+        elif file_filter.filter_type == FILE_FILTER_SELECTED:
+            
+            return self._selected_media
+            
+        elif file_filter.filter_type == FILE_FILTER_NOT_SELECTED:
+            
+            return { m for m in self._sorted_media if m not in self._selected_media }
+            
+        elif file_filter.filter_type == FILE_FILTER_NONE:
+            
+            return set()
+            
+        else:
+            
+            if file_filter.filter_type == FILE_FILTER_INBOX:
+                
+                filtered_media = { m for m in self._sorted_media if m.HasInbox() }
+                
+            elif file_filter.filter_type == FILE_FILTER_ARCHIVE:
+                
+                filtered_media = { m for m in self._sorted_media if not m.HasInbox() }
+                
+            elif file_filter.filter_type == FILE_FILTER_FILE_SERVICE:
+                
+                file_service_key = file_filter.filter_data
+                
+                filtered_media = { m for m in self._sorted_media if file_service_key in m.GetLocationsManager().GetCurrent() }
+                
+            elif file_filter.filter_type == FILE_FILTER_LOCAL:
+                
+                filtered_media = { m for m in self._sorted_media if file_service_key in m.GetLocationsManager().IsLocal() }
+                
+            elif file_filter.filter_type == FILE_FILTER_REMOTE:
+                
+                filtered_media = { m for m in self._sorted_media if file_service_key in m.GetLocationsManager().IsRemote() }
+                
+            elif file_filter.filter_type == FILE_FILTER_TAGS:
+                
+                ( and_or_or, select_tags ) = file_filter.filter_data
+                
+                if and_or_or == 'AND':
+                    
+                    filtered_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) == len( select_tags ) }
+                    
+                elif and_or_or == 'OR':
+                    
+                    filtered_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) > 0 }
+                    
+                
+            
+            return filtered_media
             
         
     
@@ -1780,6 +1943,152 @@ class MediaList( object ):
         self._sorted_media.sort( sort_key = sort_key, reverse = reverse )
         
     
+FILE_FILTER_ALL = 0
+FILE_FILTER_NOT_SELECTED = 1
+FILE_FILTER_NONE = 2
+FILE_FILTER_INBOX = 3
+FILE_FILTER_ARCHIVE = 4
+FILE_FILTER_FILE_SERVICE = 5
+FILE_FILTER_LOCAL = 6
+FILE_FILTER_REMOTE = 7
+FILE_FILTER_TAGS = 8
+FILE_FILTER_SELECTED = 9
+
+file_filter_str_lookup = {}
+
+file_filter_str_lookup[ FILE_FILTER_ALL ] = 'all'
+file_filter_str_lookup[ FILE_FILTER_NOT_SELECTED ] = 'not selected'
+file_filter_str_lookup[ FILE_FILTER_SELECTED ] = 'selected'
+file_filter_str_lookup[ FILE_FILTER_NONE ] = 'none'
+file_filter_str_lookup[ FILE_FILTER_INBOX ] = 'inbox'
+file_filter_str_lookup[ FILE_FILTER_ARCHIVE ] = 'archive'
+file_filter_str_lookup[ FILE_FILTER_FILE_SERVICE ] = 'file service'
+file_filter_str_lookup[ FILE_FILTER_LOCAL ] = 'local'
+file_filter_str_lookup[ FILE_FILTER_REMOTE ] = 'remote'
+file_filter_str_lookup[ FILE_FILTER_TAGS ] = 'tags'
+
+class FileFilter( object ):
+    
+    def __init__( self, filter_type, filter_data = None ):
+        
+        self.filter_type = filter_type
+        self.filter_data = filter_data
+        
+    
+    def __hash__( self ):
+        
+        if self.filter_data is None:
+            
+            return self.filter_type.__hash__()
+            
+        else:
+            
+            return ( self.filter_type, self.filter_data ).__hash__()
+            
+        
+    
+    def PopulateFilterCounts( self, media_list: MediaList, filter_counts: dict ):
+        
+        if self not in filter_counts:
+            
+            if self.filter_type == FILE_FILTER_NONE:
+                
+                filter_counts[ self ] = 0
+                
+                return
+                
+            
+            quick_calculations = {}
+            
+            quick_calculations[ FileFilter( FILE_FILTER_INBOX ) ] = FileFilter( FILE_FILTER_ARCHIVE )
+            quick_calculations[ FileFilter( FILE_FILTER_ARCHIVE ) ] = FileFilter( FILE_FILTER_INBOX )
+            quick_calculations[ FileFilter( FILE_FILTER_SELECTED ) ] = FileFilter( FILE_FILTER_NOT_SELECTED )
+            quick_calculations[ FileFilter( FILE_FILTER_NOT_SELECTED ) ] = FileFilter( FILE_FILTER_SELECTED )
+            quick_calculations[ FileFilter( FILE_FILTER_LOCAL ) ] = FileFilter( FILE_FILTER_REMOTE )
+            quick_calculations[ FileFilter( FILE_FILTER_REMOTE ) ] = FileFilter( FILE_FILTER_LOCAL )
+            
+            if self in quick_calculations:
+                
+                inverse = quick_calculations[ self ]
+                
+                all_filter = FileFilter( FILE_FILTER_ALL )
+                
+                if all_filter in filter_counts and inverse in filter_counts:
+                    
+                    filter_counts[ self ] = filter_counts[ all_filter ] - filter_counts[ inverse ]
+                    
+                    return
+                    
+                
+            
+            count = len( media_list.GetFilteredHashes( self ) )
+            
+            filter_counts[ self ] = count
+            
+        
+    
+    def GetCount( self, media_list: MediaList, filter_counts: dict ):
+        
+        self.PopulateFilterCounts( media_list, filter_counts )
+        
+        return filter_counts[ self ]
+        
+    
+    def ToString( self, media_list: MediaList, filter_counts: dict ):
+        
+        if self.filter_type == FILE_FILTER_FILE_SERVICE:
+            
+            file_service_key = self.filter_data
+            
+            s = HG.client_controller.services_manager.GetName( file_service_key )
+            
+        elif self.filter_type == FILE_FILTER_TAGS:
+            
+            ( and_or_or, select_tags ) = self.filter_data
+            
+            s = and_or_or.join( select_tags )
+            
+            s = HydrusText.ElideText( s, 64 )
+            
+        else:
+            
+            s = file_filter_str_lookup[ self.filter_type ]
+            
+        
+        self.PopulateFilterCounts( media_list, filter_counts )
+        
+        my_count = filter_counts[ self ]
+        
+        s += ' ({})'.format( HydrusData.ToHumanInt( my_count ) )
+        
+        if self.filter_type == FILE_FILTER_ALL:
+            
+            inbox_filter = FileFilter( FILE_FILTER_INBOX )
+            archive_filter = FileFilter( FILE_FILTER_ARCHIVE )
+            
+            inbox_filter.PopulateFilterCounts( media_list, filter_counts )
+            archive_filter.PopulateFilterCounts( media_list, filter_counts )
+            
+            inbox_count = filter_counts[ inbox_filter ]
+            
+            if inbox_count > 0 and inbox_count == my_count:
+                
+                s += ' (all in inbox)'
+                
+            else:
+                
+                archive_count = filter_counts[ archive_filter ]
+                
+                if archive_count > 0 and archive_count == my_count:
+                    
+                    s += ' (all in archive)'
+                    
+                
+            
+        
+        return s
+        
+    
 class ListeningMediaList( MediaList ):
     
     def __init__( self, file_service_key, media_results ):
@@ -1862,10 +2171,10 @@ class MediaCollection( MediaList, Media ):
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         
-        current = HydrusData.IntelligentMassIntersect( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
-        deleted = HydrusData.IntelligentMassIntersect( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
-        pending = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
-        petitioned = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
+        current = HydrusData.MassUnion( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
+        deleted = HydrusData.MassUnion( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
+        pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
+        petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
         self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
         

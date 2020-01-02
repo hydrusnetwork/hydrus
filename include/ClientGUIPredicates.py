@@ -80,9 +80,9 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
             
-            label = 'Please note that, for now, system:limit generally samples randomly from the full search results.'
-            label += os.linesep
-            label += 'It will not clip the n largest/longest/most tagged files given a particular file sort.'
+            label = 'system:limit clips a large search result down to the given number of files. It is very useful for processing in smaller batches.'
+            label += os.linesep * 2
+            label += 'For all the simpler sorts (filesize, duration, etc...), it will select the n largest/smallest in the result set appropriate for that sort. For complicated sorts like tags, it will sample randomly.'
             
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
@@ -145,7 +145,9 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             st = ClientGUICommon.BetterStaticText( self, label = label )
             
-            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         for button in static_pred_buttons:

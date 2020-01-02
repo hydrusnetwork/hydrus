@@ -684,7 +684,22 @@ class HydrusController( object ):
             HydrusPaths.DeletePath( self.temp_dir )
             
         
+        with self._call_to_thread_lock:
+            
+            for call_to_thread in self._call_to_threads:
+                
+                call_to_thread.shutdown()
+                
+            
+            for long_running_call_to_thread in self._long_running_call_to_threads:
+                
+                long_running_call_to_thread.shutdown()
+                
+            
+        
         HG.model_shutdown = True
+        
+        self._pubsub.Wake()
         
     
     def ShutdownView( self ):

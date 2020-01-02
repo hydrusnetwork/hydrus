@@ -310,14 +310,15 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
         warning += os.linesep * 2
-        warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus!'
+        warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv recently changed their login system and now require this!'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        warning_st.setWordWrap( True )
         
         QP.SetForegroundColour( warning_st, (128,0,0) )
         
-        QP.AddToLayout( vbox, warning_st, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )

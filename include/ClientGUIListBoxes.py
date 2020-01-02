@@ -2167,6 +2167,13 @@ class ListBoxTagsPredicates( ListBoxTags ):
         return [ term.ToString( with_counts ) for term in self._terms ]
         
     
+    def _GetMutuallyExclusivePredicates( self, predicate ):
+        
+        m_e_predicates = { existing_predicate for existing_predicate in self._terms if existing_predicate.IsMutuallyExclusive( predicate ) }
+        
+        return m_e_predicates
+        
+    
     def _GetNamespaceFromTerm( self, term ):
         
         predicate = term
@@ -2311,12 +2318,7 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
                     
                     predicates_to_be_added.add( predicate )
                     
-                    inverse_predicate = predicate.GetInverseCopy()
-                    
-                    if self._HasPredicate( inverse_predicate ):
-                        
-                        predicates_to_be_removed.add( inverse_predicate )
-                        
+                    predicates_to_be_removed.update( self._GetMutuallyExclusivePredicates( predicate ) )
                     
                 
             

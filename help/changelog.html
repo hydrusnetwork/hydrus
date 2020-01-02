@@ -8,6 +8,57 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 379</h3></li>
+				<ul>
+					<li>downloaders:</li>
+					<li>the right-click menus from gallery and watcher page lists now provide a 'remove' option</li>
+					<li>gallery and watchers now provide buttons and menu actions for 'retry ignored'</li>
+					<li>activating a file import status list (double-clicking or hitting enter on a selection of rows) now opens the selection in a new page</li>
+					<li>file import status buttons now have show new/all files on their right-click menus</li>
+					<li>on gallery and watcher pages, the highlight, clear highlight, pause files, and pause search/check buttons are now smaller bitmap buttons</li>
+					<li>as the old default pixiv login script is completely broken, any client with this active will have it deactivated and receive an update popup explaining the situation and suggesting to use Hydrus Companion for login instead</li>
+					<li>updated the derpibooru downloader</li>
+					<li>.</li>
+					<li>search:</li>
+					<li>when search predicates are added to the active search list, they are now better able to remove existing mutually exclusive/redundant predicates:</li>
+					<li>- system:limit, hash, and similar to predicates now remove other instances of their type</li>
+					<li>- system:has audio now removes system:no audio and vice versa</li>
+					<li>- any search predicate will remove system:everything (see how you feel about this)</li>
+					<li>improved 378's db optimisation to do tag searches in large file domains faster</li>
+					<li>namespace search predicates ('character:anything' etc...) now take advantage of the same set of temporary file domain optimisations that tag predicates do, so mixing them with other search predicates will radically improve their speed</li>
+					<li>wildcard search predicates, which have been notoriously slow in some cases, now take full advantage of the new tag search optimisations and are radically faster when mixed with other search predicates</li>
+					<li>simple tag, namespace, or wildcard searches that are mixed with a very large system:inbox predicate are now much faster</li>
+					<li>a variety of searches that include simple system predicates are now faster</li>
+					<li>integer tag searches also now use the new tag search optimisation tech, and are radically faster when mixed with other search predicates</li>
+					<li>system:known url queries now use the same temporary file domain search optimisation, and a web-domain search optimisation. this particularly improves domain and url class searches</li>
+					<li>fixed an issue with the new system:limit sorting where sort types with non-comprehensive data (like media views/viewtime, where files may not yet have records) were not delivering the 'missing' file results</li>
+					<li>improved the limit/sort_by logic to only do sort when absolutely needed</li>
+					<li>fixed the system:limit panel label to talk about the new sorted clipping</li>
+					<li>refactored tag searching code</li>
+					<li>refactored namespace searching code</li>
+					<li>refactored wildcard searching code and its related subfunctions</li>
+					<li>cleaned all mappings searching code further</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>m4a files (and m4b) are now supported and recognised as separate audio-only mp4 files. files with a single jpeg frame for their video stream (such as an album cover) should also be recognised as audio only m4a for hydrus purposes for now. better single-frame audio support, including functional thumbnails and display, is planned for the future. please send in any m4a or m4b files that detect incorrectly</li>
+					<li>the remove thumbnail menu has been moved to a new, cleaner file filtering system. it now presents remove options for different file services and local/remote when available (most of the time, this will be 'my files'/'trash' appearing when there is a mix), including with counts for all options</li>
+					<li>the select thumbnail menu is also moved to this same file filtering system. it has a neater menu, with counts for each entry. also, when there is no current focus, or it is to be deselected, the first file to be selected is now focused and scrolled to</li>
+					<li>for thumbnail icon display and internal calculations, collections now _merge_ the locations of their members, rather than intersecting. if a collection includes any trash, or any ipfs members, it will have the appropriate icon. this also fixes some selection-by-file-service logic for collections</li>
+					<li>import folders, export folders, and subscriptions now explicitly only start after the first session has been loaded (so as well as freeing up some boot CPU competition, a quick import folder will now not miss publishing a file or two to a long-loading session)</li>
+					<li>the subscription manager now only waits 15s before starting first work (previously, the buffer was 60 seconds)</li>
+					<li>rearranged migrate tags panel so action comes before destination and added another help text line to clarify how it works. the 'go' confirmation dialog now summarises tag filtering as well</li>
+					<li>tag filter buttons now have a prefix on their labels and tooltips to better explain what they are doing</li>
+					<li>the duplicate filter right-center hover window should now shorten its height appropriately when the pairs change</li>
+					<li>fixed a couple of bugs that could appear when shutting down the duplicate filter</li>
+					<li>hackily 'fixed' an issue with duplicates processing that could cause too many 'commit and continue?' dialogs to open. a better fix here will come with a pending rewrite</li>
+					<li>dejanked a little of how migrate tags frame is launched from the manage tags dialog</li>
+					<li>updated the backup help a little and added a note about backing up to the first-start popup</li>
+					<li>improved shutdown time for a variety of situations and added a couple more text notifications to shutdown splash</li>
+					<li>cleaned up some exit code</li>
+					<li>removed the old 'service info fatten' maintenance job, which is not really needed any more</li>
+					<li>misc code cleanup</li>
+					<li>updated to Qt 5.14 on Windows and Linux builds, OpenCV 4.1.2 on all builds</li>
+				</ul>
 				<li><h3>version 378</h3></li>
 				<ul>
 					<li>if a search has system:limit, the current sort is now sent down to the database. if the sort is simple, results are now sorted before system:limit is applied, meaning you will now get the largest/longest/whateverest sample of the search! supported sorts are: import time, filesize, duration, width, height, resolution ratio, media views, media viewtime, num pixels, approx bitrate, and modified time. this does not apply to searches in the 'all known files' file domain.</li>

@@ -1814,8 +1814,6 @@ class ServiceRepository( ServiceRestricted ):
             job_key.Finish()
             job_key.Delete( 3 )
             
-            time.sleep( 3 ) # stop daemon restarting instantly if it is being spammed to wake up, just add a break mate
-            
         
     
     def CanDoIdleShutdownWork( self ):

@@ -554,6 +554,8 @@ class JobScheduler( threading.Thread ):
         
         ShutdownThread( self )
         
+        self._new_job_arrived.set()
+        
     
     def WorkTimesHaveChanged( self ):
         

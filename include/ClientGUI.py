@@ -366,6 +366,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._last_total_page_weight = None
         
+        self._first_session_loaded = False
+        
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
         self._garbage_snapshot = collections.Counter()
@@ -1885,22 +1887,34 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
             
         
-        if load_a_blank_page:
+        def do_it( default_gui_session, load_a_blank_page ):
             
-            self._controller.CallLaterQtSafe(self, 0.25, self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True)
-            
-        else:
-            
-            self._controller.CallLaterQtSafe(self, 0.25, self._notebook.LoadGUISession, default_gui_session)
+            try:
+                
+                if load_a_blank_page:
+                    
+                    self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True )
+                    
+                else:
+                    
+                    self._notebook.LoadGUISession( default_gui_session )
+                    
+                
+            finally:
+                
+                last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
+                
+                #self._controller.CallLaterQtSafe(self, 1.0, self.adjustSize ) # some i3 thing--doesn't layout main gui on init for some reason
+                
+                self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, self.AutoSaveLastSession)
+                
+                self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGClipboardWatcher)
+                
+                self._controller.ReportFirstSessionLoaded()
+                
             
         
-        last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
-        
-        #self._controller.CallLaterQtSafe(self, 1.0, self.adjustSize ) # some i3 thing--doesn't layout main gui on init for some reason
-        
-        self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, self.AutoSaveLastSession)
-        
-        self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGClipboardWatcher)
+        self._controller.CallLaterQtSafe( self, 0.25, do_it, default_gui_session, load_a_blank_page )
         
     
     def _LockServer( self, service_key, lock ):
@@ -2850,7 +2864,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it', check_for_cancelled = True )
         
         if result == QW.QDialog.Accepted:
             
@@ -3729,12 +3743,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def closeEvent( self, event ):
         
-        exit_allowed = self.Exit()
+        exit_allowed = self.TryToSaveAndClose()
         
-        if not exit_allowed:
-            
-            event.ignore()
-            
+        event.ignore()
         
     
     def EventFocus( self, event ):
@@ -3858,7 +3869,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def Exit( self, restart = False, force_shutdown_maintenance = False ):
+    def TryToSaveAndClose( self, restart = False, force_shutdown_maintenance = False ):
         
         # the return value here is 'exit allowed'
         
@@ -3901,6 +3912,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.do_idle_shutdown_work = True
             
+        
+        self.SaveAndClose()
+        
+        return True
+        
+    
+    def SaveAndClose( self ):
         
         try:
             
@@ -3966,8 +3984,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self.deleteLater()
             
-        
-        return True
         
     
     def FlipDarkmode( self ):
@@ -4660,12 +4676,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if not we_borked_linux_pyinstaller:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.Exit, restart=True )
+            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.TryToSaveAndClose, restart = True )
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.Exit, force_shutdown_maintenance=True )
+        ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.TryToSaveAndClose, force_shutdown_maintenance = True )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.Exit )
+        ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.TryToSaveAndClose )
         
         return ( menu, '&file' )
         

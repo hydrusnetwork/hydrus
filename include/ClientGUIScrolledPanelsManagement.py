@@ -719,7 +719,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         return
                         
                     
-                    QW.QMessageBox.critical( self, 'Error', message )
+                    QW.QMessageBox.information( self, 'Information', message )
                     
                     self._test_address_button.setEnabled( True )
                     self._test_address_button.setText( 'test address' )
@@ -748,7 +748,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     except HydrusExceptions.NetworkException as e:
                         
-                        QP.CallAfter( qt_done, 'Problem with that address: '+str(e) )
+                        QP.CallAfter( qt_done, 'Problem with that address: ' + str(e) )
                         
                     
                 
@@ -3281,7 +3281,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_PSD, HC.APPLICATION_ZIP, HC.APPLICATION_RAR, HC.APPLICATION_7Z, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_PSD, HC.APPLICATION_ZIP, HC.APPLICATION_RAR, HC.APPLICATION_7Z, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_M4A, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
             
             for mime in mimes_in_correct_order:
                 

@@ -5408,11 +5408,11 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'This filters which tags will show on \'single\' file views such as the media viewer and thumbnail banners.'
             
-            self._single_tag_filter_button = ClientGUITags.TagFilterButton( self, message, single_tag_filter )
+            self._single_tag_filter_button = ClientGUITags.TagFilterButton( self, message, single_tag_filter, label_prefix = 'tags shown: ' )
             
             message = 'This filters which tags will show on \'selection\' file views such as the \'selection tags\' list on regular search pages.'
             
-            self._selection_tag_filter_button = ClientGUITags.TagFilterButton( self, message, selection_tag_filter )
+            self._selection_tag_filter_button = ClientGUITags.TagFilterButton( self, message, selection_tag_filter, label_prefix = 'tags shown: ' )
             
             #
             
@@ -5497,7 +5497,6 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the simple blacklist and hit ok. It is worth doing a small test, just to make sure it is all set up how you want.'
         
         self._tag_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, is_blacklist = True )
-        self._tag_filter_button.setToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
         
         self._services_vbox = QP.VBoxLayout()
         
@@ -5875,7 +5874,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += 'Once you are happy, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'. This tag filter can get complicated if you want it to--check the help button in the top-right for more information.'
             
         
-        self._get_tags_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, get_tags_filter )
+        self._get_tags_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, get_tags_filter, label_prefix = 'adding: ' )
         
         hbox = QP.HBoxLayout()
         

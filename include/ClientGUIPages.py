@@ -17,6 +17,7 @@ import hashlib
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusSerialisable
+from . import HydrusText
 from . import HydrusThreading
 import inspect
 import os
@@ -1290,10 +1291,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         page_name = page_name.replace( os.linesep, '' )
         
-        if len( page_name ) > max_page_name_chars:
-            
-            page_name = page_name[ : max_page_name_chars ] + '\u2026'
-            
+        page_name = HydrusText.ElideText( page_name, max_page_name_chars )
         
         num_string = ''
         

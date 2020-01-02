@@ -290,7 +290,7 @@ class HydrusTagArchive( object ):
             return set()
             
         
-        result = { tag for ( tag, ) in self._c.execute( 'SELECT tag FROM mappings NATURAL JOIN tags WHERE hash_id = ?;', ( hash_id, ) ) }
+        result = { tag for ( tag, ) in self._c.execute( 'SELECT DISTINCT tag FROM mappings NATURAL JOIN tags WHERE hash_id = ?;', ( hash_id, ) ) }
         
         return result
         

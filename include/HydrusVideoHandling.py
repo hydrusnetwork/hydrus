@@ -222,7 +222,9 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
     first_second_lines = GetFFMPEGInfoLines( path, count_frames_manually = True, only_first_second = True )
     
-    if not ParseFFMPEGHasVideo( first_second_lines ):
+    ( has_video, video_format ) = ParseFFMPEGVideoFormat( first_second_lines )
+    
+    if not has_video:
         
         raise HydrusExceptions.MimeException( 'File did not appear to have a video stream!' )
         
@@ -303,6 +305,9 @@ def GetMime( path ):
         return HC.APPLICATION_UNKNOWN
         
     
+    ( has_video, video_format ) = ParseFFMPEGVideoFormat( lines )
+    ( has_audio, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( lines )
+    
     if 'matroska' in mime_text or 'webm' in mime_text:
         
         # a webm has at least vp8/vp9 video and optionally vorbis audio
@@ -310,16 +315,12 @@ def GetMime( path ):
         has_webm_video = False
         has_webm_audio = False
         
-        if ParseFFMPEGHasVideo( lines ):
-            
-            video_format = ParseFFMPEGVideoFormat( lines )
+        if has_video:
             
             webm_video_formats = ( 'vp8', 'vp9' )
             
             has_webm_video = True in ( webm_video_format in video_format for webm_video_format in webm_video_formats )
             
-        
-        ( has_audio, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( lines )
         
         if has_audio:
             
@@ -356,7 +357,14 @@ def GetMime( path ):
         
     elif 'mp4' in mime_text:
         
-        return HC.VIDEO_MP4
+        if has_audio and ( not has_video or 'mjpeg' in video_format ):
+            
+            return HC.AUDIO_M4A
+            
+        else:
+            
+            return HC.VIDEO_MP4
+            
         
     elif mime_text == 'ogg':
         
@@ -591,7 +599,14 @@ def ParseFFMPEGNumFramesManually( lines ):
     
 def ParseFFMPEGVideoFormat( lines ):
     
-    line = ParseFFMPEGVideoLine( lines )
+    try:
+        
+        line = ParseFFMPEGVideoLine( lines )
+        
+    except HydrusExceptions.MimeException:
+        
+        return ( False, 'unknown' )
+        
     
     try:
         
@@ -604,7 +619,7 @@ def ParseFFMPEGVideoFormat( lines ):
         video_format = 'unknown'
         
     
-    return video_format
+    return ( True, video_format )
     
 def ParseFFMPEGVideoLine( lines ):
     

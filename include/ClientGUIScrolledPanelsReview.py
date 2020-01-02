@@ -47,6 +47,7 @@ from . import HydrusNATPunch
 from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusTagArchive
+from . import HydrusText
 import os
 import queue
 import stat
@@ -816,7 +817,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     def qt_code( job_key ):
         
-        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, controller.gui.Exit )
+        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, controller.gui.SaveAndClose )
         
         # no parent because this has to outlive the gui, obvs
         
@@ -981,9 +982,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = ClientTags.TagFilter()
         
-        self._migration_source_tag_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter )
-        
-        self._migration_source_tag_filter.setToolTip( 'This filters the tags that can be migrated.' )
+        self._migration_source_tag_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'tags taken: ' )
         
         message = 'The left side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
         message += os.linesep * 2
@@ -991,9 +990,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = ClientTags.TagFilter()
         
-        self._migration_source_left_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter )
-        
-        self._migration_source_left_tag_pair_filter.setToolTip( 'This filters the tags on the left side of the pair that can be migrated.' )
+        self._migration_source_left_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'left: ' )
         
         message = 'The right side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
         message += os.linesep * 2
@@ -1001,9 +998,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = ClientTags.TagFilter()
         
-        self._migration_source_right_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter )
-        
-        self._migration_source_right_tag_pair_filter.setToolTip( 'This filters the tags on the right side of the pair that can be migrated.' )
+        self._migration_source_right_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'right: ' )
         
         self._migration_destination = ClientGUICommon.BetterChoice( self._migration_panel )
         
@@ -1053,29 +1048,29 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'content' ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'source' ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'filter' ), CC.FLAGS_CENTER )
-        QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'destination' ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'action' ), CC.FLAGS_CENTER )
+        QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'destination' ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
         
         QP.AddToLayout( gridbox, self._migration_content_type, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._migration_source, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._migration_source_content_status_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_destination, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._migration_action, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._migration_destination, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._migration_go, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, self._migration_source_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, file_left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_destination_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
+        QP.AddToLayout( gridbox, self._migration_destination_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
         
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, self._migration_source_hash_type_st, CC.FLAGS_VCENTER )
         QP.AddToLayout( gridbox, tag_right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( gridbox, dest_hash_type_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
+        QP.AddToLayout( gridbox, dest_hash_type_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER )
         
         self._migration_panel.Add( gridbox )
@@ -1095,7 +1090,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             message += HydrusData.ToHumanInt( len( self._hashes ) )
             
         
-        message = 'These migrations can be powerful, so be very careful that you understand what you are doing and choose what you want. Large jobs may have a significant initial setup time, during which case the client may hang briefly, but once they start they are pausable or cancellable. If you do want to perform a large action, it is a good idea to back up your database first, just in case you get a result you did not intend.'
+        message = 'The content from the SOURCE that the FILTER ALLOWS is applied using the ACTION to the DESTINATION.'
+        message += os.linesep * 2
+        message += 'To delete content en masse from one location, select what you want to delete with the filter and set the source and destination the same.'
+        message += os.linesep * 2
+        message += 'These migrations can be powerful, so be very careful that you understand what you are doing and choose what you want. Large jobs may have a significant initial setup time, during which case the client may hang briefly, but once they start they are pausable or cancellable. If you do want to perform a large action, it is a good idea to back up your database first, just in case you get a result you did not intend.'
         message += os.linesep * 2
         message += 'You may need to restart your client to see their effect.' 
         
@@ -1196,6 +1195,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             tag_filter = self._migration_source_tag_filter.GetValue()
             
+            extra_info += ' and for tags "{}"'.format( HydrusText.ElideText( tag_filter.ToPermittedString(), 96 ) )
+            
             if source_service_key == self.HTA_SERVICE_KEY:
                 
                 if self._source_archive_path is None:
@@ -1237,6 +1238,18 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             left_tag_pair_filter = self._migration_source_left_tag_pair_filter.GetValue()
             right_tag_pair_filter = self._migration_source_right_tag_pair_filter.GetValue()
             
+            left_s = left_tag_pair_filter.ToPermittedString()
+            right_s = right_tag_pair_filter.ToPermittedString()
+            
+            if left_s == right_s:
+                
+                extra_info = ' for "{}" on both sides'.format( left_s )
+                
+            else:
+                
+                extra_info = ' for "{}" on the left and "{}" on the right'.format( left_s, right_s )
+                
+            
             if source_service_key == self.HTPA_SERVICE_KEY:
                 
                 if self._source_archive_path is None:
@@ -1254,7 +1267,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        title = 'taking {} {} from "{}"{} and {} "{}"'.format( source_content_statuses_strings[ content_statuses ], HC.content_type_string_lookup[ content_type ], source.GetName(), extra_info, destination_action_strings[ content_action ], destination.GetName() )
+        title = 'taking {} {}{} from "{}" and {} "{}"'.format( source_content_statuses_strings[ content_statuses ], HC.content_type_string_lookup[ content_type ], extra_info, source.GetName(), destination_action_strings[ content_action ], destination.GetName() )
         
         message = 'Migrations can make huge changes. They can be cancelled early, but any work they do cannot always be undone. Please check that this summary looks correct:'
         message += os.linesep * 2

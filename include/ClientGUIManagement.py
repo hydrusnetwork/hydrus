@@ -1448,7 +1448,8 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.pause, self.Pause )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.file_pause, self.Pause )
+        self._pause_button.setToolTip( 'pause/play imports' )
         
         self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
@@ -1489,11 +1490,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_pause )
             
         
         if paused:
@@ -1552,7 +1553,6 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         #
         
-        
         self._gallery_importers_status_st_top = ClientGUICommon.BetterStaticText( self._gallery_downloader_panel, ellipsize_end = True )
         self._gallery_importers_status_st_bottom = ClientGUICommon.BetterStaticText( self._gallery_downloader_panel, ellipsize_end = True )
         
@@ -1564,18 +1564,16 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
-        self._gallery_importers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
-        self._gallery_importers_listctrl_panel.AddButton( 'highlight', self._HighlightSelectedGalleryImport, enabled_check_func = self._CanHighlight )
-        
-        self._gallery_importers_listctrl_panel.NewButtonRow()
-        
-        self._gallery_importers_listctrl_panel.AddButton( 'pause/play files', self._PausePlayFiles, enabled_only_on_selection = True )
-        self._gallery_importers_listctrl_panel.AddButton( 'pause/play search', self._PausePlayGallery, enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.highlight, self._HighlightSelectedGalleryImport, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
         self._gallery_importers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
-        self._gallery_importers_listctrl_panel.AddButton( 'remove', self._RemoveGalleryImports, enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
+        self._gallery_importers_listctrl_panel.AddButton( 'remove selected', self._RemoveGalleryImports, enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
@@ -1676,6 +1674,19 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
             
             if gallery_import.CanRetryFailed():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _CanRetryIgnored( self ):
+        
+        for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
+            
+            if gallery_import.CanRetryIgnored():
                 
                 return True
                 
@@ -1811,21 +1822,33 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         ClientGUIMenus.AppendMenuItem( menu, 'copy queries', 'Copy all the selected downloaders\' queries to clipboard.', self._CopySelectedQueries )
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' presented files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='presented' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' new files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='new' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' files (including trash)', 'Gather the presented files (including trash) for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='all_and_trash' )
         
-        if self._CanRetryFailed():
+        if self._CanRetryFailed() or self._CanRetryIgnored():
             
             ClientGUIMenus.AppendSeparator( menu )
-
-            ClientGUIMenus.AppendMenuItem( menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
+            
+            if self._CanRetryFailed():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
+                
+            
+            if self._CanRetryIgnored():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'retry ignored', 'Retry all the failed downloads.', self._RetryIgnored )
+                
             
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'remove', 'Remove the selected queries.', self._RemoveGalleryImports )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
         ClientGUIMenus.AppendMenuItem( menu, 'pause/play files', 'Pause/play all the selected downloaders\' file queues.', self._PausePlayFiles )
         ClientGUIMenus.AppendMenuItem( menu, 'pause/play search', 'Pause/play all the selected downloaders\' gallery searches.', self._PausePlayGallery )
         
@@ -1977,6 +2000,14 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
             
             gallery_import.RetryFailed()
+            
+        
+    
+    def _RetryIgnored( self ):
+        
+        for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
+            
+            gallery_import.RetryIgnored()
             
         
     
@@ -2234,18 +2265,16 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
-        self._watchers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
-        self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightSelectedWatcher, enabled_check_func = self._CanHighlight )
-        
-        self._watchers_listctrl_panel.NewButtonRow()
-        
-        self._watchers_listctrl_panel.AddButton( 'pause/play files', self._PausePlayFiles, enabled_only_on_selection = True )
-        self._watchers_listctrl_panel.AddButton( 'pause/play checking', self._PausePlayChecking, enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.highlight, self._HighlightSelectedWatcher, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
         
         self._watchers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
+        self._watchers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
         self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
@@ -2355,6 +2384,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         for watcher in self._watchers_listctrl.GetData( only_selected = True ):
             
             if watcher.CanRetryFailed():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _CanRetryIgnored( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            if watcher.CanRetryIgnored():
                 
                 return True
                 
@@ -2501,15 +2543,27 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files (including trash)', 'Gather the presented files (including trash) for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all_and_trash' )
         
-        if self._CanRetryFailed():
+        if self._CanRetryFailed() or self._CanRetryIgnored():
             
             ClientGUIMenus.AppendSeparator( menu )
-
-            ClientGUIMenus.AppendMenuItem( menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
+            
+            if self._CanRetryFailed():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
+                
+            
+            if self._CanRetryIgnored():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'retry ignored', 'Retry all the ignored downloads.', self._RetryIgnored )
+                
             
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'remove selected', 'Remove the selected watchers.', self._RemoveWatchers )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
         ClientGUIMenus.AppendMenuItem( menu, 'pause/play files', 'Pause/play all the selected watchers\' file queues.', self._PausePlayFiles )
         ClientGUIMenus.AppendMenuItem( menu, 'pause/play checking', 'Pause/play all the selected watchers\' checking routines.', self._PausePlayChecking )
         
@@ -2689,6 +2743,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         for watcher in self._watchers_listctrl.GetData( only_selected = True ):
             
             watcher.RetryFailed()
+            
+        
+    
+    def _RetryIgnored( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            watcher.RetryIgnored()
             
         
     
@@ -2915,7 +2977,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'imports' )
         
-        self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.pause, self.PauseFiles )
+        self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.file_pause, self.PauseFiles )
+        self._pause_files_button.setToolTip( 'pause/play files' )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
@@ -2927,7 +2990,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'simple parsing urls' )
         
-        self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.GlobalPixmaps.pause, self.PauseQueue )
+        self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.GlobalPixmaps.gallery_pause, self.PauseQueue )
+        self._pause_queue_button.setToolTip( 'pause/play queue' )
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel, ellipsize_end = True )
         
@@ -3225,22 +3289,22 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._current_action.setText( current_action )
         
-        if queue_paused:
-            
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalPixmaps.play )
-            
-        else:
-            
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalPixmaps.pause )
-            
-        
         if files_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalPixmaps.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalPixmaps.file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalPixmaps.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalPixmaps.file_pause )
+            
+        
+        if queue_paused:
+            
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalPixmaps.gallery_play )
+            
+        else:
+            
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalPixmaps.gallery_pause )
             
         
         ( file_network_job, page_network_job ) = self._simple_downloader_import.GetNetworkJobs()
@@ -3346,7 +3410,8 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_panel = ClientGUICommon.StaticBox( self, 'url downloader' )
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalPixmaps.pause, self.Pause )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalPixmaps.file_pause, self.Pause )
+        self._pause_button.setToolTip( 'pause/play files' )
         
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
         
@@ -3425,11 +3490,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_pause )
             
         
         ( file_network_job, gallery_network_job ) = self._urls_import.GetNetworkJobs()
@@ -4223,7 +4288,10 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def RefreshQuery( self, page_key ):
         
-        if page_key == self._page_key: self._DrawCurrentPetition()
+        if page_key == self._page_key:
+            
+            self._DrawCurrentPetition()
+            
         
     
     def Start( self ):
@@ -4328,7 +4396,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_job_key.Cancel()
         
-        if self._management_controller.GetVariable( 'search_enabled' ):
+        if self._search_enabled:
             
             if self._management_controller.GetVariable( 'synchronised' ):
                 

@@ -205,6 +205,11 @@ class HydrusPubSub( object ):
         self._pub_event.clear()
         
     
+    def Wake( self ):
+        
+        self._pub_event.set()
+        
+    
     def WorkToDo( self ):
         
         with self._lock:

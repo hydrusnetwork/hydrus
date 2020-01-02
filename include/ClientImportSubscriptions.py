@@ -1466,8 +1466,6 @@ class SubscriptionsManager( object ):
         
         self._ReinitialiseNames()
         
-        self._controller.CallToThreadLongRunning( self.MainLoop )
-        
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         
     
@@ -1635,7 +1633,7 @@ class SubscriptionsManager( object ):
         
         try:
             
-            self._wake_event.wait( 60 )
+            self._wake_event.wait( 15 )
             
             while not ( HG.view_shutdown or self._shutdown ):
                 
@@ -1719,8 +1717,6 @@ class SubscriptionsManager( object ):
                         
                     
                 
-                time.sleep( 0.1 )
-                
             
             self._mainloop_finished = True
             
@@ -1775,6 +1771,11 @@ class SubscriptionsManager( object ):
         self._shutdown = True
         
         self._wake_event.set()
+        
+    
+    def Start( self ):
+        
+        self._controller.CallToThreadLongRunning( self.MainLoop )
         
     
     def SubscriptionsRunning( self ):

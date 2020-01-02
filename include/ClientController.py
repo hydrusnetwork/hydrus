@@ -85,9 +85,9 @@ class App( QW.QApplication ):
             
             HG.emergency_exit = True
             
-            if hasattr( HG.client_controller, 'gui' ):
+            if hasattr( HG.client_controller, 'gui' ) and HG.client_controller.gui is not None:
                 
-                HG.client_controller.gui.Exit()
+                HG.client_controller.gui.SaveAndClose()
                 
             
         
@@ -526,6 +526,8 @@ class Controller( HydrusController.HydrusController ):
     
     def DoIdleShutdownWork( self ):
         
+        self.pub( 'splash_set_status_subtext', 'db' )
+        
         stop_time = HydrusData.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
         
         self.MaintainDB( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
@@ -540,6 +542,8 @@ class Controller( HydrusController.HydrusController ):
                     
                     return
                     
+                
+                self.pub( 'splash_set_status_subtext', '{} processing'.format( service.GetName() ) )
                 
                 service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
                 
@@ -974,18 +978,6 @@ class Controller( HydrusController.HydrusController ):
         
         self.files_maintenance_manager.Start()
         
-        job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
-        job.WakeOnPubSub( 'notify_restart_import_folders_daemon' )
-        job.WakeOnPubSub( 'notify_new_import_folders' )
-        job.ShouldDelayOnWakeup( True )
-        self._daemon_jobs[ 'import_folders' ] = job
-        
-        job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckExportFolders )
-        job.WakeOnPubSub( 'notify_restart_export_folders_daemon' )
-        job.WakeOnPubSub( 'notify_new_export_folders' )
-        job.ShouldDelayOnWakeup( True )
-        self._daemon_jobs[ 'export_folders' ] = job
-        
         job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjects )
         job.WakeOnPubSub( 'important_dirt_to_clean' )
         self._daemon_jobs[ 'save_dirty_objects' ] = job
@@ -995,14 +987,14 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'notify_unknown_accounts' )
         self._daemon_jobs[ 'synchronise_accounts' ] = job
         
-        job = self.CallRepeatingQtSafe(self, 10.0, 10.0, self.CheckMouseIdle)
+        job = self.CallRepeatingQtSafe( self, 10.0, 10.0, self.CheckMouseIdle )
         self._daemon_jobs[ 'check_mouse_idle' ] = job
         
         if self.db.IsFirstStart():
             
             message = 'Hi, this looks like the first time you have started the hydrus client.'
             message += os.linesep * 2
-            message += 'Don\'t forget to check out the help if you haven\'t already--it has an extensive \'getting started\' section.'
+            message += 'Don\'t forget to check out the help if you haven\'t already--it has an extensive \'getting started\' section, including on the importance of backing up your database.'
             message += os.linesep * 2
             message += 'To dismiss popup messages like this, right-click them.'
             
@@ -1087,28 +1079,6 @@ class Controller( HydrusController.HydrusController ):
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
             
             return
-            
-        
-        if HydrusData.TimeHasPassed( self._timestamps[ 'last_service_info_cache_fatten' ] + ( 60 * 20 ) ):
-            
-            self.pub( 'splash_set_status_text', 'fattening service info' )
-            
-            services = self.services_manager.GetServices()
-            
-            for service in services:
-                
-                self.pub( 'splash_set_status_subtext', service.GetName() )
-                
-                try: self.Read( 'service_info', service.GetServiceKey() )
-                except: pass # sometimes this breaks when a service has just been removed and the client is closing, so ignore the error
-                
-                if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
-                    
-                    return
-                    
-                
-            
-            self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
             
         
     
@@ -1215,6 +1185,23 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def ReportFirstSessionLoaded( self ):
+        
+        job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
+        job.WakeOnPubSub( 'notify_restart_import_folders_daemon' )
+        job.WakeOnPubSub( 'notify_new_import_folders' )
+        job.ShouldDelayOnWakeup( True )
+        self._daemon_jobs[ 'import_folders' ] = job
+        
+        job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckExportFolders )
+        job.WakeOnPubSub( 'notify_restart_export_folders_daemon' )
+        job.WakeOnPubSub( 'notify_new_export_folders' )
+        job.ShouldDelayOnWakeup( True )
+        self._daemon_jobs[ 'export_folders' ] = job
+        
+        self.subscriptions_manager.Start()
+        
+    
     def ResetPageChangeTimer( self ):
         
         self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
@@ -1268,7 +1255,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     self.CallToThreadLongRunning( THREADRestart )
                     
-                    QP.CallAfter( self.gui.Exit )
+                    QP.CallAfter( self.gui.SaveAndClose )
                     
                 
             
@@ -1328,10 +1315,14 @@ class Controller( HydrusController.HydrusController ):
             
             if len( dirty_services ) > 0:
                 
+                self.pub( 'splash_set_status_subtext', 'services' )
+                
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
             
             if self.client_api_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'client api manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.client_api_manager )
                 
@@ -1340,12 +1331,16 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.bandwidth_manager.IsDirty():
                 
+                self.pub( 'splash_set_status_subtext', 'bandwidth manager' )
+                
                 self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
                 
                 self.network_engine.bandwidth_manager.SetClean()
                 
             
             if self.network_engine.domain_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'domain manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.domain_manager )
                 
@@ -1354,6 +1349,8 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.login_manager.IsDirty():
                 
+                self.pub( 'splash_set_status_subtext', 'login manager' )
+                
                 self.WriteSynchronous( 'serialisable', self.network_engine.login_manager )
                 
                 self.network_engine.login_manager.SetClean()
@@ -1361,12 +1358,16 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.session_manager.IsDirty():
                 
+                self.pub( 'splash_set_status_subtext', 'session manager' )
+                
                 self.WriteSynchronous( 'serialisable', self.network_engine.session_manager )
                 
                 self.network_engine.session_manager.SetClean()
                 
             
             if self.tag_display_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'tag display manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.tag_display_manager )
                 
@@ -1512,7 +1513,11 @@ class Controller( HydrusController.HydrusController ):
         
         if self._is_booted:
             
+            self.pub( 'splash_set_status_subtext', 'file viewing stats flush' )
+            
             self.file_viewing_stats_manager.Flush()
+            
+            self.pub( 'splash_set_status_subtext', '' )
             
             self.SaveDirtyObjects()
             
@@ -1550,7 +1555,15 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
+            self.pub( 'splash_set_status_subtext', 'files maintenance manager' )
+            
             self.files_maintenance_manager.Shutdown()
+            
+            self.pub( 'splash_set_status_subtext', 'download manager' )
+            
+            self.quick_download_manager.Shutdown()
+            
+            self.pub( 'splash_set_status_subtext', '' )
             
             try:
                 
@@ -1699,11 +1712,11 @@ class Controller( HydrusController.HydrusController ):
             
         finally:
             
-            self._DestroySplash()
-
             QW.QApplication.instance().setProperty( 'normal_exit', True )
-
-            QW.QApplication.exit()
+            
+            self._DestroySplash()
+            
+            QP.CallAfter( QW.QApplication.exit )
             
         
     

@@ -436,10 +436,11 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         ( my_width, my_height ) = self.size().toTuple()
         
         my_ideal_width = int( parent_width * 0.2 )
+        my_ideal_height = self.minimumSizeHint().height()
         
-        should_resize = my_ideal_width != my_width
+        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        ideal_size = ( my_ideal_width, my_height )
+        ideal_size = ( my_ideal_width, my_ideal_height )
         ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) ) )
         
         return ( should_resize, ideal_size, ideal_position.toTuple() )
@@ -500,6 +501,11 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
             self._comparison_media = comparison_media
             
             self._ResetComparisonStatements()
+            
+            # minimumsize is not immediately updated without this
+            self.layout().activate()
+            
+            self._SizeAndPosition( force = True )
             
         
     
@@ -1064,7 +1070,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         my_ideal_width = int( parent_width * 0.2 )
         
-        my_ideal_height = self.sizeHint().height()
+        my_ideal_height = self.minimumSizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         

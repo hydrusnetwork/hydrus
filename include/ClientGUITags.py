@@ -1756,11 +1756,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 hashes.update( m.GetHashes() )
                 
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'tag migration' )
+            def do_it( tag_service_key, hashes ):
+                
+                frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'tag migration' )
+                
+                panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
+                
+                frame.SetPanel( panel )
+                
             
-            panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
-            
-            frame.SetPanel( panel )
+            QP.CallAfter( do_it, self._tag_service_key, hashes )
             
             self.OK()
             
@@ -3861,13 +3866,14 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
 class TagFilterButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, message, tag_filter, is_blacklist = False ):
+    def __init__( self, parent, message, tag_filter, is_blacklist = False, label_prefix = None ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
         
         self._message = message
         self._tag_filter = tag_filter
         self._is_blacklist = is_blacklist
+        self._label_prefix = label_prefix
         
         self._UpdateLabel()
         
@@ -3902,16 +3908,14 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
             tt = self._tag_filter.ToPermittedString()
             
         
-        if len( tt ) > 45:
+        if self._label_prefix is not None:
             
-            text = tt[:45] + '\u2026'
-            
-        else:
-            
-            text = tt
+            tt = self._label_prefix + tt
             
         
-        self.setText( text )
+        button_text = HydrusText.ElideText( tt, 45 )
+        
+        self.setText( button_text )
         
         self.setToolTip( tt )
         

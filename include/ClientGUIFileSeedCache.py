@@ -9,6 +9,7 @@ from . import ClientGUISerialisable
 from . import ClientGUIScrolledPanels
 from . import ClientGUITopLevelWindows
 from . import ClientImportFileSeeds
+from . import ClientImportOptions
 from . import ClientPaths
 from . import ClientSerialisable
 from . import ClientThreading
@@ -40,7 +41,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( '#', 3 ), ( 'source', -1 ), ( 'status', 12 ), ( 'added', 23 ), ( 'last modified', 23 ), ( 'source time', 23 ), ( 'note', 20 ) ]
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'file_seed_cache', 30, 30, columns, self._ConvertFileSeedToListCtrlTuples, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'file_seed_cache', 30, 30, columns, self._ConvertFileSeedToListCtrlTuples, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
         
         #
         
@@ -577,6 +578,29 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
+    def _ShowFilesInNewPage( self, show = 'all' ):
+        
+        file_seed_cache = self._file_seed_cache_get_callable()
+        
+        if show == 'all':
+            
+            hashes = file_seed_cache.GetHashes()
+            
+        elif show == 'new':
+            
+            file_import_options = ClientImportOptions.FileImportOptions()
+            
+            file_import_options.SetPresentationOptions( True, False, False )
+            
+            hashes = file_seed_cache.GetPresentedHashes( file_import_options )
+            
+        
+        if len( hashes ) > 0:
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            
+        
+    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -598,10 +622,12 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
         
         if num_errors > 0:
+            
             ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
             
         
         if num_vetoed > 0:
+            
             ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
             
         
@@ -627,6 +653,11 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
 
             ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_ERROR, CC.STATUS_SKIPPED) )
             
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', self._ShowFilesInNewPage, show = 'new' )
+        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', self._ShowFilesInNewPage )
         
         ClientGUIMenus.AppendSeparator( menu )
         

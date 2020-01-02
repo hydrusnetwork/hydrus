@@ -35,6 +35,15 @@ def DeserialiseNewlinedTexts( text ):
     
     return texts
     
+def ElideText( text, max_length ):
+    
+    if len( text ) > max_length:
+        
+        text = '{}\u2026'.format( text[:max_length - 1] )
+        
+    
+    return text
+    
 def LooksLikeHTML( file_data ):
     # this will false-positive if it is json that contains html, ha ha
     

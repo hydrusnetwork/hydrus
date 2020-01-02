@@ -3042,7 +3042,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions?'
             
-            result, cancelled = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+            ( result, cancelled ) = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
             
             if cancelled:
                 
@@ -3066,7 +3066,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         HG.client_controller.pub( 'refresh_dupe_page_numbers' )
         
-        return True
+        return CanvasWithHovers.TryToDoPreClose( self )
         
     
     def _CommitProcessed( self, blocking = True ):
@@ -3280,7 +3280,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         normal_colour = self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
         
-        if self._current_media is None:
+        if self._current_media is None or len( self._media_list ) == 0:
             
             return normal_colour
             
@@ -3303,7 +3303,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetIndexString( self ):
         
-        if self._current_media is None:
+        if self._current_media is None or len( self._media_list ) == 0:
             
             return '-'
             
@@ -3459,6 +3459,21 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             return
             
+        
+        # hackery dackery doo to quick solve something that is calling this a bunch of times while the 'and continue?' dialog is open, making like 16 of them
+        # a full rewrite is needed on this awful workflow
+        
+        tlws = QW.QApplication.topLevelWidgets()
+        
+        for tlw in tlws:
+            
+            if isinstance( tlw, ClientGUITopLevelWindows.DialogCustomButtonQuestion ) and tlw.isModal():
+                
+                return
+                
+            
+        
+        #
         
         num_committable = self._GetNumCommittableDecisions()
         
@@ -4565,10 +4580,6 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             elif action == 'view_next':
                 
                 self._ShowNext()
-                
-            elif action == 'remove_file_from_view':
-                
-                self._Remove()
                 
             else:
                 

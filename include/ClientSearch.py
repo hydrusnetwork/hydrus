@@ -1102,6 +1102,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, self._value, not self._inclusive )
             
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
+            
+            return Predicate( self._predicate_type, not self._value )
+            
         else:
             
             return None
@@ -1144,6 +1148,32 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def IsInclusive( self ):
         
         return self._inclusive
+        
+    
+    def IsMutuallyExclusive( self, predicate ):
+        
+        if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING:
+            
+            return True
+            
+        
+        if predicate == self.GetInverseCopy():
+            
+            return True
+            
+        
+        my_type = self._predicate_type
+        other_type = predicate.GetType()
+        
+        if my_type == other_type:
+            
+            if my_type in ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO ):
+                
+                return True
+                
+            
+        
+        return False
         
     
     def ToString( self, with_count = True, sibling_service_key = None, render_for_user = False, or_under_construction = False ):

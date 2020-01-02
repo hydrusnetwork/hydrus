@@ -210,7 +210,6 @@ with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
         HydrusData.Print( 'hydrus client shut down' )
         
     
-
 HG.shutdown_complete = True
 
 if HG.restart:

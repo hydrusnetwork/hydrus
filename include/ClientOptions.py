@@ -502,6 +502,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'media_view' ][ HC.VIDEO_MKV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_WEBM ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_WMV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_M4A ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         self._dictionary[ 'media_view' ][ HC.AUDIO_MP3 ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         self._dictionary[ 'media_view' ][ HC.AUDIO_OGG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         self._dictionary[ 'media_view' ][ HC.AUDIO_FLAC ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )

@@ -279,7 +279,7 @@ class HydrusDB( object ):
     
     def _AnalyzeTempTable( self, temp_table_name ):
         
-        # this is useful to do after populating a temp table so the query planned can decide which index to use in a big join that uses it
+        # this is useful to do after populating a temp table so the query planner can decide which index to use in a big join that uses it
         
         self._c.execute( 'ANALYZE {};'.format( temp_table_name ) )
         self._c.execute( 'ANALYZE mem.sqlite_master;' ) # this reloads the current stats into the query planner, may no longer be needed

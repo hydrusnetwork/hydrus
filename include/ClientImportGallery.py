@@ -407,6 +407,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def CanRetryIgnored( self ):
+        
+        with self._lock:
+            
+            return self._file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED ) > 0
+            
+        
+    
     def CurrentlyWorking( self ):
         
         with self._lock:
@@ -711,6 +719,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._file_seed_cache.RetryFailures()
+            
+        
+    
+    def RetryIgnored( self ):
+        
+        with self._lock:
+            
+            self._file_seed_cache.RetryIgnored()
             
         
     

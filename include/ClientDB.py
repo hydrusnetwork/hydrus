@@ -4901,7 +4901,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = False ):
+    def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = False, hash_ids_table_name = None ):
         
         if not self._NamespaceExists( namespace ):
             
@@ -4909,11 +4909,10 @@ class DB( HydrusDB.HydrusDB ):
             
         
         file_service_id = self._GetServiceId( file_service_key )
-        tag_service_id = self._GetServiceId( tag_service_key )
+        
         namespace_id = self._GetNamespaceId( namespace )
         
-        current_selects = []
-        pending_selects = []
+        predicate_string = 'namespace_id = {}'.format( namespace_id )
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -4921,43 +4920,29 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
+            tag_service_id = self._GetServiceId( tag_service_key )
+            
             search_tag_service_ids = [ tag_service_id ]
             
         
-        for search_tag_service_id in search_tag_service_ids:
+        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
+        
+        tables = [ table + ' NATURAL JOIN tags' for table in tables ]
+        
+        if hash_ids_table_name is not None:
             
-            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
-                current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
-                
-            else:
-                
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                
-                current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
-                
+            tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
             
+        
+        #
         
         hash_ids = set()
         
-        if include_current_tags:
+        for table in tables:
             
-            for current_select in current_selects:
-                
-                hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
-                
+            select = 'SELECT hash_id FROM {} WHERE {};'.format( table, predicate_string )
             
-        
-        if include_pending_tags:
-            
-            for pending_select in pending_selects:
-                
-                hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
-                
+            hash_ids.update( self._STI( self._c.execute( select ) ) )
             
         
         if include_siblings:
@@ -4975,7 +4960,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromNamespaceIdsSubtagIds( self, file_service_key, tag_service_key, namespace_ids, subtag_ids, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromNamespaceIdsSubtagIds( self, file_service_key, tag_service_key, namespace_ids, subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
         
         file_service_id = self._GetServiceId( file_service_key )
         
@@ -4988,42 +4973,31 @@ class DB( HydrusDB.HydrusDB ):
             search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
             
         
-        current_selects = []
-        pending_selects = []
-        
-        for search_tag_service_id in search_tag_service_ids:
-            
-            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
-                current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                
-            else:
-                
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                
-                current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                
-            
+        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
         
         hash_ids = set()
         
-        if include_current_tags:
+        with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as namespace_temp_table_name:
             
-            for current_select in current_selects:
-                
-                hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
-                
+            self._AnalyzeTempTable( namespace_temp_table_name )
             
-        
-        if include_pending_tags:
-            
-            for pending_select in pending_selects:
+            with HydrusDB.TemporaryIntegerTable( self._c, subtag_ids, 'subtag_id' ) as subtag_temp_table_name:
                 
-                hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
+                self._AnalyzeTempTable( subtag_temp_table_name )
+                
+                tables = [ table + ' NATURAL JOIN tags NATURAL JOIN {} NATURAL JOIN {}'.format( namespace_temp_table_name, subtag_temp_table_name ) for table in tables ]
+                
+                if hash_ids_table_name is not None:
+                    
+                    tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
+                    
+                
+                for table in tables:
+                    
+                    select = 'SELECT DISTINCT hash_id FROM {};'.format( table )
+                    
+                    hash_ids.update( self._STI( self._c.execute( select ) ) )
+                    
                 
             
         
@@ -5392,7 +5366,9 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if system_predicates.MustBeInbox():
+        is_inbox = system_predicates.MustBeInbox()
+        
+        if is_inbox:
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, self._inbox_hash_ids, force_create_new_set = True )
             
@@ -5454,7 +5430,23 @@ class DB( HydrusDB.HydrusDB ):
             
             for tag in tags_to_include:
                 
-                tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids )
+                if query_hash_ids is None:
+                    
+                    tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags )
+                    
+                elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
+                    
+                    tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = 'file_inbox' )
+                    
+                else:
+                    
+                    with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                        
+                        self._AnalyzeTempTable( temp_table_name )
+                        
+                        tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                        
+                    
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, tag_query_hash_ids )
                 
@@ -5464,18 +5456,60 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            if len( namespaces_to_include ) > 0:
+            for namespace in namespaces_to_include:
                 
-                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) for namespace in namespaces_to_include ) )
+                if query_hash_ids is None:
+                    
+                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True )
+                    
+                elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
+                    
+                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True, hash_ids_table_name = 'file_inbox' )
+                    
+                else:
+                    
+                    with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                        
+                        self._AnalyzeTempTable( temp_table_name )
+                        
+                        namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True, hash_ids_table_name = temp_table_name )
+                        
+                    
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, namespace_query_hash_ids )
                 
-            
-            if len( wildcards_to_include ) > 0:
+                if query_hash_ids == set():
+                    
+                    return query_hash_ids
+                    
                 
-                wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
+            
+            for wildcard in wildcards_to_include:
+                
+                if query_hash_ids is None:
+                    
+                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags )
+                    
+                elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
+                    
+                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = 'file_inbox' )
+                    
+                else:
+                    
+                    with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                        
+                        self._AnalyzeTempTable( temp_table_name )
+                        
+                        wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                        
+                    
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, wildcard_query_hash_ids )
+                
+                if query_hash_ids == set():
+                    
+                    return query_hash_ids
+                    
                 
             
         
@@ -5525,17 +5559,37 @@ class DB( HydrusDB.HydrusDB ):
         
         if not done_files_info_predicates and ( need_file_domain_cross_reference or there_are_simple_files_info_preds_to_search_for ):
             
-            files_info_predicates.append( 'hash_id = ?' )
-            
-            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, self._STI( self._ExecuteManySelectSingleParam( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                self._AnalyzeTempTable( temp_table_name )
                 
-            else:
+                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    table = 'files_info'
+                    
+                else:
+                    
+                    table = 'current_files NATURAL JOIN files_info'
+                    
+                    files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
+                    
                 
-                files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
+                table += ' NATURAL JOIN {}'.format( temp_table_name )
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, self._STI( self._ExecuteManySelectSingleParam( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                if there_are_simple_files_info_preds_to_search_for:
+                    
+                    predicate_string = ' WHERE {}'.format( ' AND '.join( files_info_predicates ) )
+                    
+                else:
+                    
+                    predicate_string = ''
+                    
+                
+                select = 'SELECT hash_id FROM {}{};'.format( table, predicate_string )
+                
+                files_info_hash_ids = self._STI( self._c.execute( select ) )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, files_info_hash_ids )
                 
             
             done_files_info_predicates = True
@@ -5567,24 +5621,56 @@ class DB( HydrusDB.HydrusDB ):
         
         # now subtract bad results
         
-        exclude_query_hash_ids = set()
-        
         for tag in tags_to_exclude:
             
-            exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids ) )
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                unwanted_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                
+                query_hash_ids.difference_update( unwanted_hash_ids )
+                
+            
+            if len( query_hash_ids ) == 0:
+                
+                return query_hash_ids
+                
             
         
         for namespace in namespaces_to_exclude:
             
-            exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) )
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                unwanted_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True, hash_ids_table_name = temp_table_name )
+                
+                query_hash_ids.difference_update( unwanted_hash_ids )
+                
+            
+            if len( query_hash_ids ) == 0:
+                
+                return query_hash_ids
+                
             
         
         for wildcard in wildcards_to_exclude:
             
-            exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                unwanted_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                
+                query_hash_ids.difference_update( unwanted_hash_ids )
+                
             
-        
-        query_hash_ids.difference_update( exclude_query_hash_ids )
+            if len( query_hash_ids ) == 0:
+                
+                return query_hash_ids
+                
+            
         
         if job_key.IsCancelled():
             
@@ -5729,7 +5815,19 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( operator, rule_type, rule ) in simple_preds[ 'known_url_rules' ]:
                 
-                url_hash_ids = self._GetHashIdsFromURLRule( rule_type, rule, hash_ids = query_hash_ids )
+                if rule_type == 'exact_match':
+                    
+                    url_hash_ids = self._GetHashIdsFromURLRule( rule_type, rule )
+                    
+                else:
+                    
+                    with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                        
+                        self._AnalyzeTempTable( temp_table_name )
+                        
+                        url_hash_ids = self._GetHashIdsFromURLRule( rule_type, rule, hash_ids_table_name = temp_table_name )
+                        
+                    
                 
                 if operator: # inclusive
                     
@@ -5834,7 +5932,12 @@ class DB( HydrusDB.HydrusDB ):
             
             ( namespace, num ) = simple_preds[ 'min_tag_as_number' ]
             
-            good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags )
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
             
@@ -5843,7 +5946,12 @@ class DB( HydrusDB.HydrusDB ):
             
             ( namespace, num ) = simple_preds[ 'max_tag_as_number' ]
             
-            good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags )
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
             
@@ -5861,7 +5969,9 @@ class DB( HydrusDB.HydrusDB ):
         
         limit = system_predicates.GetLimit( apply_implicit_limit = apply_implicit_limit )
         
-        if limit is not None and sort_by is None and limit_sort_by is not None:
+        we_are_applying_limit = limit is not None and limit < len( query_hash_ids )
+        
+        if we_are_applying_limit and limit_sort_by is not None and sort_by is None:
             
             sort_by = limit_sort_by
             
@@ -5875,7 +5985,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        if limit is not None and limit <= len( query_hash_ids ):
+        if we_are_applying_limit:
             
             if not did_sort:
                 
@@ -5890,7 +6000,7 @@ class DB( HydrusDB.HydrusDB ):
         return query_hash_ids
         
     
-    def _GetHashIdsFromSubtagIds( self, file_service_key, tag_service_key, subtag_ids, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromSubtagIds( self, file_service_key, tag_service_key, subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
         
         file_service_id = self._GetServiceId( file_service_key )
         
@@ -5903,67 +6013,39 @@ class DB( HydrusDB.HydrusDB ):
             search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
             
         
-        current_selects = []
-        pending_selects = []
-        
-        for search_tag_service_id in search_tag_service_ids:
-            
-            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
-                current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                
-            else:
-                
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                
-                current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
-                
-            
+        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
         
         hash_ids = set()
         
-        if include_current_tags:
+        with HydrusDB.TemporaryIntegerTable( self._c, subtag_ids, 'subtag_id' ) as subtag_temp_table_name:
             
-            for current_select in current_selects:
+            self._AnalyzeTempTable( subtag_temp_table_name )
+            
+            tables = [ table + ' NATURAL JOIN tags NATURAL JOIN {}'.format( subtag_temp_table_name ) for table in tables ]
+            
+            if hash_ids_table_name is not None:
                 
-                hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
+                tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
                 
             
-        
-        if include_pending_tags:
-            
-            for pending_select in pending_selects:
+            for table in tables:
                 
-                hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
+                select = 'SELECT DISTINCT hash_id FROM {};'.format( table )
+                
+                hash_ids.update( self._STI( self._c.execute( select ) ) )
                 
             
         
         return hash_ids
         
     
-    def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = None ):
+    def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
         
         siblings_manager = self._controller.tag_siblings_manager
         
         tags = siblings_manager.GetAllSiblings( tag_service_key, tag )
         
-        file_service_id = self._GetServiceId( file_service_key )
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
-            
-        else:
-            
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
-            
-        
-        current_selects = []
-        pending_selects = []
+        predicate_strings = []
         
         for tag in tags:
             
@@ -5979,23 +6061,7 @@ class DB( HydrusDB.HydrusDB ):
                 namespace_id = self._GetNamespaceId( namespace )
                 subtag_id = self._GetSubtagId( subtag )
                 
-                for search_tag_service_id in search_tag_service_ids:
-                    
-                    if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                        
-                        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                        
-                        current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
-                        pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
-                        
-                    else:
-                        
-                        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                        
-                        current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
-                        pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
-                        
-                    
+                predicate_strings.append( 'namespace_id = {} AND subtag_id = {}'.format( namespace_id, subtag_id ) )
                 
             else:
                 
@@ -6006,100 +6072,60 @@ class DB( HydrusDB.HydrusDB ):
                 
                 subtag_id = self._GetSubtagId( subtag )
                 
-                for search_tag_service_id in search_tag_service_ids:
-                    
-                    if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                        
-                        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                        
-                        current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
-                        pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
-                        
-                    else:
-                        
-                        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                        
-                        current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
-                        pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
-                        
-                    
+                predicate_strings.append( 'subtag_id = {}'.format( subtag_id ) )
                 
             
         
-        hash_ids = set()
+        file_service_id = self._GetServiceId( file_service_key )
         
-        selects = []
-        
-        if include_current_tags:
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            selects.extend( current_selects )
-            
-        
-        if include_pending_tags:
-            
-            selects.extend( pending_selects )
-            
-        
-        if allowed_hash_ids is None:
-            
-            for select in selects:
-                
-                hash_ids.update( self._STI( self._c.execute( select ) ) )
-                
+            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
             
         else:
             
-            if len( allowed_hash_ids ) > 20000:
-                
-                for select in selects:
-                    
-                    hash_ids.update( self._STI( self._c.execute( select ) ) )
-                    
-                
-            else:
-                
-                selects = [ select.replace( ';', ' AND hash_id = ?;' ) for select in selects ]
-                
-                for select in selects:
-                    
-                    hash_ids.update( self._STI( self._ExecuteManySelectSingleParam( select, allowed_hash_ids ) ) )
-                    
-                
+            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            
+        
+        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
+        
+        tables = [ table + ' NATURAL JOIN tags' for table in tables ]
+        
+        if hash_ids_table_name is not None:
+            
+            tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
+            
+        
+        #
+        
+        hash_ids = set()
+        
+        for ( table, predicate_string ) in itertools.product( tables, predicate_strings ):
+            
+            select = 'SELECT hash_id FROM {} WHERE {};'.format( table, predicate_string )
+            
+            hash_ids.update( self._STI( self._c.execute( select ) ) )
             
         
         return hash_ids
         
     
-    def _GetHashIdsFromURLRule( self, rule_type, rule, hash_ids = None ):
-        
-        if hash_ids is None:
-            
-            search_hash_ids = None
-            
-        else:
-            
-            # instead of this, ultimately do the temp table deal with hash_ids and natural join
-            
-            if len( hash_ids ) <= 1000:
-                
-                search_hash_ids = hash_ids
-                
-            else:
-                
-                search_hash_ids = None
-                
-            
+    def _GetHashIdsFromURLRule( self, rule_type, rule, hash_ids_table_name = None ):
         
         if rule_type == 'exact_match':
             
             url = rule
             
-            result_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM url_map NATURAL JOIN urls WHERE url = ?;', ( url, ) ) )
+            table = 'url_map NATURAL JOIN urls'
             
-            if hash_ids is not None:
+            if hash_ids_table_name is not None:
                 
-                result_hash_ids.intersection_update( hash_ids )
+                table += ' NATURAL JOIN {}'.format( hash_ids_table_name )
                 
+            
+            select = 'SELECT hash_id FROM {} WHERE url = ?;'.format( table )
+            
+            result_hash_ids = self._STS( self._c.execute( select, ( url, ) ) )
             
             return result_hash_ids
             
@@ -6118,37 +6144,30 @@ class DB( HydrusDB.HydrusDB ):
                 domain_ids = ( self._GetURLDomainId( domain ), )
                 
             
+            table = 'url_map NATURAL JOIN urls'
+            
+            if hash_ids_table_name is not None:
+                
+                table += ' NATURAL JOIN {}'.format( hash_ids_table_name )
+                
+            
             result_hash_ids = set()
             
-            for domain_id in domain_ids:
+            with HydrusDB.TemporaryIntegerTable( self._c, domain_ids, 'domain_id' ) as domain_temp_table_name:
                 
-                domain_result_hash_ids = set()
+                self._AnalyzeTempTable( domain_temp_table_name )
                 
-                if search_hash_ids is None:
-                    
-                    query = self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE domain_id = ?;', ( domain_id, ) )
-                    
-                else:
-                    
-                    select_args_iterator = ( ( domain_id, hash_id ) for hash_id in search_hash_ids )
-                    
-                    query = self._ExecuteManySelect( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE domain_id = ? AND hash_id = ?;', select_args_iterator )
-                    
+                table += ' NATURAL JOIN {}'.format( domain_temp_table_name )
                 
-                for ( hash_id, url ) in query:
+                select = 'SELECT hash_id, url FROM {};'.format( table )
+                
+                for ( hash_id, url ) in self._c.execute( select ):
                     
                     if url_class.Matches( url ):
                         
-                        domain_result_hash_ids.add( hash_id )
+                        result_hash_ids.add( hash_id )
                         
                     
-                
-                result_hash_ids.update( domain_result_hash_ids )
-                
-            
-            if hash_ids is not None and search_hash_ids is None:
-                
-                result_hash_ids.intersection_update( hash_ids )
                 
             
             return result_hash_ids
@@ -6162,76 +6181,54 @@ class DB( HydrusDB.HydrusDB ):
             
             result_hash_ids = set()
             
-            for domain_id in domain_ids:
+            table = 'url_map NATURAL JOIN urls'
+            
+            if hash_ids_table_name is not None:
                 
-                if search_hash_ids is None:
-                    
-                    query = self._c.execute( 'SELECT hash_id FROM url_map NATURAL JOIN urls WHERE domain_id = ?;', ( domain_id, ) )
-                    
-                else:
-                    
-                    select_args_iterator = ( ( domain_id, hash_id ) for hash_id in search_hash_ids )
-                    
-                    query = self._ExecuteManySelect( 'SELECT hash_id FROM url_map NATURAL JOIN urls WHERE domain_id = ? AND hash_id = ?;', select_args_iterator )
-                    
-                
-                domain_result_hash_ids = self._STS( query )
-                
-                result_hash_ids.update( domain_result_hash_ids )
+                table += ' NATURAL JOIN {}'.format( hash_ids_table_name )
                 
             
-            if hash_ids is not None and search_hash_ids is None:
+            with HydrusDB.TemporaryIntegerTable( self._c, domain_ids, 'domain_id' ) as domain_temp_table_name:
                 
-                result_hash_ids.intersection_update( hash_ids )
+                self._AnalyzeTempTable( domain_temp_table_name )
+                
+                table += ' NATURAL JOIN {}'.format( domain_temp_table_name )
+                
+                select = 'SELECT hash_id FROM {};'.format( table )
+                
+                result_hash_ids = self._STS( self._c.execute( select ) )
                 
             
             return result_hash_ids
             
         else:
             
-            if search_hash_ids is None:
+            regex = rule
+            
+            table = 'url_map NATURAL JOIN urls'
+            
+            if hash_ids_table_name is not None:
                 
-                query = self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls;' )
+                table += ' NATURAL JOIN {}'.format( hash_ids_table_name )
                 
-            else:
-                
-                query = self._ExecuteManySelectSingleParam( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id = ?;', search_hash_ids )
-                
+            
+            select = 'SELECT hash_id, url FROM {};'.format( table )
             
             result_hash_ids = set()
             
-            for ( hash_id, url ) in query:
+            for ( hash_id, url ) in self._c.execute( select ):
                 
-                if rule_type in ( 'url_class', 'url_match' ):
+                if re.search( regex, url ) is not None:
                     
-                    url_class = rule
+                    result_hash_ids.add( hash_id )
                     
-                    if url_class.Matches( url ):
-                        
-                        result_hash_ids.add( hash_id )
-                        
-                    
-                else:
-                    
-                    regex = rule
-                    
-                    if re.search( regex, url ) is not None:
-                        
-                        result_hash_ids.add( hash_id )
-                        
-                    
-                
-            
-            if hash_ids is not None and search_hash_ids is None:
-                
-                result_hash_ids.intersection_update( hash_ids )
                 
             
             return result_hash_ids
             
         
     
-    def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
         
         def GetNamespaceIdsFromWildcard( w ):
             
@@ -6287,11 +6284,11 @@ class DB( HydrusDB.HydrusDB ):
             
             possible_namespace_ids = GetNamespaceIdsFromWildcard( namespace_wildcard )
             
-            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags )
+            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
             
         else:
             
-            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags )
+            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
             
         
     
@@ -6396,13 +6393,13 @@ class DB( HydrusDB.HydrusDB ):
         return nonzero_tag_hash_ids
         
     
-    def _GetHashIdsThatHaveTagAsNum( self, file_service_key, tag_service_key, namespace, num, operator, include_current_tags, include_pending_tags ):
+    def _GetHashIdsThatHaveTagAsNum( self, file_service_key, tag_service_key, namespace, num, operator, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
         
         possible_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM integer_subtags WHERE integer_subtag ' + operator + ' ' + str( num ) + ';' ) )
         
         if namespace == '':
             
-            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags )
+            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
             
         else:
             
@@ -6410,7 +6407,7 @@ class DB( HydrusDB.HydrusDB ):
             
             possible_namespace_ids = { namespace_id }
             
-            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags )
+            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
             
         
     
@@ -6820,6 +6817,44 @@ class DB( HydrusDB.HydrusDB ):
         ( last_shutdown_work_time, ) = result
         
         return last_shutdown_work_time
+        
+    
+    def _GetMappingTables( self, file_service_id, tag_service_ids, include_current, include_pending ):
+        
+        current_tables = []
+        pending_tables = []
+        
+        for tag_service_id in tag_service_ids:
+            
+            if file_service_id == self._combined_file_service_id:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+                
+                current_tables.append( current_mappings_table_name )
+                pending_tables.append( pending_mappings_table_name )
+                
+            else:
+                
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                
+                current_tables.append( cache_current_mappings_table_name )
+                pending_tables.append( cache_pending_mappings_table_name )
+                
+            
+        
+        tables = []
+        
+        if include_current:
+            
+            tables.extend( current_tables )
+            
+        
+        if include_pending:
+            
+            tables.extend( pending_tables )
+            
+        
+        return tables
         
     
     def _GetMediaResults( self, hash_ids ):
@@ -10900,8 +10935,6 @@ class DB( HydrusDB.HydrusDB ):
             
             time.sleep( 0.01 )
             
-            self._CacheLocalTagIdsGenerate()
-            
             for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
                 
                 if job_key.IsCancelled():
@@ -10939,6 +10972,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._CacheCombinedFilesMappingsGenerate( tag_service_id )
                 
+            
+            self._CacheLocalTagIdsGenerate()
             
         finally:
             
@@ -11838,7 +11873,14 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_and_other_data.sort( key = key, reverse = reverse )
             
+            original_hash_ids = set( hash_ids )
+            
             hash_ids = [ row[0] for row in hash_ids_and_other_data ]
+            
+            # some stuff like media views won't have rows
+            missing_hash_ids = original_hash_ids.difference( hash_ids )
+            
+            hash_ids.extend( missing_hash_ids )
             
             did_sort = True
             
@@ -11849,467 +11891,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 320:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.DeleteGUGs( [ 'rule.34.paheal tag search' ] )
-                domain_manager.OverwriteDefaultGUGs( [ 'rule34.paheal tag search' ] )
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'newgrounds artist lookup', 'hentai foundry artist lookup', 'danbooru & gelbooru tag search' ] )
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'derpibooru gallery page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'derpibooru gallery page parser' ] )
-                
-                #
-                
-                boorus = self._STL( self._c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_REMOTE_BOORU, ) ) )
-                
-                default_names = { 'derpibooru', 'gelbooru', 'safebooru', 'e621', 'rule34@paheal', 'danbooru', 'rule34@booru.org', 'furry@booru.org', 'xbooru', 'konachan', 'yande.re', 'tbib', 'sankaku chan', 'sankaku idol', 'rule34hentai' }
-                
-                new_gugs = []
-                new_parsers = []
-                
-                from . import ClientDownloading
-                
-                for booru in boorus:
-                    
-                    name = booru.GetName()
-                    
-                    if name in default_names:
-                        
-                        continue # we already have an update in place, so no need for legacy update
-                        
-                    
-                    try:
-                        
-                        ( gug, gallery_parser, post_parser ) = ClientDownloading.ConvertBooruToNewObjects( booru )
-                        
-                        new_gugs.append( gug )
-                        
-                        new_parsers.extend( ( gallery_parser, post_parser ) )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.PrintException( e )
-                        
-                    
-                
-                if len( new_gugs ) > 0:
-                    
-                    try:
-                        
-                        domain_manager.AddGUGs( new_gugs )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.PrintException( e )
-                        
-                    
-                
-                if len( new_parsers ) > 0:
-                    
-                    try:
-                        
-                        domain_manager.AddParsers( new_parsers )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.PrintException( e )
-                        
-                    
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-                message = 'The final big step of the downloader overhaul has just occurred! It looks like it went well. All of your default downloaders and subs should have updated smoothly, but if you use any \'custom\' boorus that you created or imported yourself, these will need more work to get going again. The subs using these old boorus will notice the problem and safely pause on their next sync attempt. Please see my v321 release post for more information.'
-                
-                self.pub_initial_message( message )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 322:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search - no filter' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'gfycat file page', 'gfycat file page api', 'gfycat file page - gif url', 'gfycat file page - detail url' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'gfycat file page api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 323:
-            
-            self._c.execute( 'DROP TABLE IF EXISTS hydrus_sessions;' )
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS last_shutdown_work_time ( last_shutdown_work_time INTEGER );' )
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                # pixiv changed how artist lookup works, so let's rename the old objects
-                
-                gugs = domain_manager.GetGUGs()
-                
-                new_gugs = []
-                
-                for gug in gugs:
-                    
-                    if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ):
-                        
-                        if 'pixiv.net' in gug.GetExampleURL() and 'zzz' not in gug.GetName():
-                            
-                            gug.SetName( 'zzz - old gug - ' + gug.GetName() )
-                            
-                            gug.RegenerateGUGKey() # completely disassociate existing subs from these gugs
-                            
-                        
-                    
-                    new_gugs.append( gug )
-                    
-                
-                domain_manager.SetGUGs( new_gugs )
-                
-                url_classes = domain_manager.GetURLClasses()
-                
-                new_url_classes = []
-                
-                for url_class in url_classes:
-                    
-                    if url_class.GetURLType() == HC.URL_TYPE_GALLERY and 'pixiv.net' in url_class.GetExampleURL() and 'zzz' not in url_class.GetName():
-                        
-                        url_class.SetName( 'zzz - old url class - ' + url_class.GetName() )
-                        
-                    
-                    new_url_classes.append( url_class )
-                    
-                
-                domain_manager.SetURLClasses( new_url_classes )
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'twitter username lookup', 'pixiv artist lookup' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'twitter tweets api', 'pixiv artist page', 'pixiv artist gallery page api' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'twitter tweets api parser', 'gelbooru 0.1.11 file page parser (simple)', 'pixiv artist gallery page api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-                message = 'Pixiv should be fixed this week with a new downloader. Your pixiv subscriptions may be able to move to it automatically, or you may need to edit and manually correct them.'
-                
-                self.pub_initial_message( message )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 324:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'twitter tweet parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 325:
-            
-            try:
-            
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'pixiv tag search' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'pixiv file page', 'pixiv file page api', 'pixiv tag search gallery page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'pixiv file page api parser', 'pixiv tag search gallery page parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 326:
-            
-            login_manager = ClientNetworkingLogin.NetworkLoginManager()
-            
-            ClientDefaults.SetDefaultLoginManagerScripts( login_manager )
-            
-            try:
-                
-                result = self._GetJSONSimple( 'pixiv_account' )
-                
-                if result is not None:
-                    
-                    ( pixiv_id, password ) = result
-                    
-                    credentials = {}
-                    
-                    credentials[ 'pixiv_id' ] = pixiv_id
-                    credentials[ 'password' ] = password
-                    
-                    login_manager.SetCredentialsAndActivate( 'www.pixiv.net', credentials )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update pixiv login info failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            self._SetJSONDump( login_manager )
-            
-        
-        if version == 327:
-            
-            try:
-            
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'pixiv file page api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 328:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'imgur single media page gifv format', 'pixiv manga page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'deviant art file page parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-                #
-                
-                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.OverwriteDefaultLoginScripts( [ 'pixiv login', 'danbooru login', 'gelbooru 0.2.x login', 'deviant art login (only works on a client that has already done some downloading)' ] )
-                
-                #
-                
-                self._SetJSONDump( login_manager )
-                
-                self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( 'pixiv_account', ) )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 329:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'deviant art file page parser', 'pixiv file page api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-                #
-                
-                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.DeleteLoginDomain( 'safebooru.com' ) # typo in last week's script
-                
-                #
-                
-                login_manager.OverwriteDefaultLoginScripts( [ 'hentai foundry login', 'gelbooru 0.2.x login', 'pixiv login', 'shimmie login', 'danbooru login', 'sankakucomplex login 2018.11.08', 'e-hentai login 2018.11.08' ] )
-                
-                #
-                
-                self._SetJSONDump( login_manager )
-                
-                self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( 'pixiv_account', ) )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 330:
             
@@ -13730,6 +13311,81 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 raise
+                
+            
+        
+        if version == 378:
+            
+            try:
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                domains_to_login_info = login_manager.GetDomainsToLoginInfo()
+                
+                for ( login_domain, ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) ) in list( domains_to_login_info.items() ):
+                    
+                    ( login_script_key, login_script_name ) = login_script_key_and_name
+                    
+                    if login_domain == 'www.pixiv.net' and login_script_name == 'pixiv login' and active:
+                        
+                        active = False
+                        
+                        domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+                        
+                        login_manager.SetDomainsToLoginInfo( domains_to_login_info )
+                        
+                        self._SetJSONDump( login_manager )
+                        
+                        self.pub_initial_message( 'The default Pixiv login script no longer works. It appeared to be active for you, so it has been deactivated. Please use the Hydrus Companion web browser addon to log in to Pixiv.' )
+                        
+                        break
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to deactivate pixiv login failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search', 'derpibooru tag search - no filter' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'derpibooru gallery page', 'derpibooru file page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'derpibooru.org file page parser', 'derpibooru gallery page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update derpibooru failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
                 
             
         
