@@ -976,7 +976,7 @@ class ServiceRestricted( ServiceRemote ):
             
             if content_type is not None:
                 
-                network_job.AddAdditionalHeader( 'Content-Type', HC.mime_string_lookup[ content_type ] )
+                network_job.AddAdditionalHeader( 'Content-Type', HC.mime_mimetype_string_lookup[ content_type ] )
                 
             
             HG.client_controller.network_engine.AddJob( network_job )
@@ -2645,7 +2645,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 url = api_base_url + 'add'
                 
-                mime_string = HC.mime_string_lookup[ mime ]
+                mime_string = HC.mime_mimetype_string_lookup[ mime ]
                 
                 files = { 'path' : ( hash.hex(), f, mime_string ) }
                 

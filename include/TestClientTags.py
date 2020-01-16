@@ -528,13 +528,13 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
         
-        self.assertEqual( p.ToString(), 'system:filetype is video/webm' )
+        self.assertEqual( p.ToString(), 'system:filetype is webm' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
-        self.assertEqual( p.ToString(), 'system:filetype is video/webm, image/gif' )
+        self.assertEqual( p.ToString(), 'system:filetype is webm, gif' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         

@@ -390,7 +390,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._url_class_keys_to_display = set()
         self._url_class_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
         
-        self._domains_to_url_classes = collections.defaultdict( list )
+        self._second_level_domains_to_url_classes = collections.defaultdict( list )
         
         from . import ClientImportOptions
         
@@ -552,9 +552,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         domain = ConvertDomainIntoSecondLevelDomain( ConvertURLIntoDomain( url ) )
         
-        if domain in self._domains_to_url_classes:
+        if domain in self._second_level_domains_to_url_classes:
             
-            url_classes = self._domains_to_url_classes[ domain ]
+            url_classes = self._second_level_domains_to_url_classes[ domain ]
             
             for url_class in url_classes:
                 
@@ -635,16 +635,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _RecalcCache( self ):
         
-        self._domains_to_url_classes = collections.defaultdict( list )
+        self._second_level_domains_to_url_classes = collections.defaultdict( list )
         
         for url_class in self._url_classes:
             
-            domain = url_class.GetDomain()
+            domain = ConvertDomainIntoSecondLevelDomain( url_class.GetDomain() )
             
-            self._domains_to_url_classes[ domain ].append( url_class )
+            self._second_level_domains_to_url_classes[ domain ].append( url_class )
             
         
-        for url_classes in list(self._domains_to_url_classes.values()):
+        for url_classes in self._second_level_domains_to_url_classes.values():
             
             NetworkDomainManager.STATICSortURLClassesDescendingComplexity( url_classes )
             
@@ -1148,6 +1148,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
         self.SetGUGs( gugs )
+        
+    
+    def DeleteURLClasses( self, deletee_names ):
+        
+        with self._lock:
+            
+            url_classes = [ url_class for url_class in self._url_classes if url_class.GetName() not in deletee_names ]
+            
+        
+        self.SetURLClasses( url_classes )
         
     
     def GenerateValidationPopupProcess( self, network_contexts ):
@@ -2936,7 +2946,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetDomain( self ):
         
-        return ConvertDomainIntoSecondLevelDomain( self._netloc )
+        return self._netloc
         
     
     def GetExampleURL( self ):

@@ -933,7 +933,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             new_options = HG.client_controller.new_options
             
-            media_show_action = new_options.GetMediaShowAction( display_media.GetMime() )
+            ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( display_media.GetMime() )
             
             if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
@@ -3433,7 +3433,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._parent._drag_init_coordinates = QG.QCursor.pos()
             
-            self._parent._HitMedia( self._parent._GetThumbnailUnderMouse( event ), event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
+            thumb = self._parent._GetThumbnailUnderMouse( event )
+            
+            right_on_whitespace = event.button() == QC.Qt.RightButton and thumb is None
+            
+            if not right_on_whitespace:
+                
+                self._parent._HitMedia( thumb, event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
+                
             
             # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
             

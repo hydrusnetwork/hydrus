@@ -5527,17 +5527,17 @@ class DB( HydrusDB.HydrusDB ):
         
         done_files_info_predicates = False
         
-        if query_hash_ids is None:
+        if query_hash_ids is None or ( is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ) ):
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
-                query_hash_ids = self._GetHashIdsThatHaveTags( tag_service_key, include_current_tags, include_pending_tags )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self._GetHashIdsThatHaveTags( tag_service_key, include_current_tags, include_pending_tags ) )
                 
             else:
                 
                 files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
-                query_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) ) )
                 
                 done_files_info_predicates = True
                 
@@ -6869,27 +6869,30 @@ class DB( HydrusDB.HydrusDB ):
             
             self._PopulateHashIdsToHashesCache( hash_ids )
             
-            hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._ExecuteManySelectSingleParam( 'SELECT * FROM files_info WHERE hash_id = ?;', hash_ids ) }
-            
-            hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._ExecuteManySelectSingleParam( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id = ?;', hash_ids ) ) )
-            
-            hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._ExecuteManySelectSingleParam( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id = ?;', hash_ids ) )
-            
-            hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._ExecuteManySelectSingleParam( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id = ?;', hash_ids ) )
-            
-            hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._ExecuteManySelectSingleParam( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id = ?;', hash_ids ) )
-            
-            hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._ExecuteManySelectSingleParam( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id = ?;', hash_ids ) )
-            
-            hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._ExecuteManySelectSingleParam( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id = ?;', hash_ids ) ) )
-            
-            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._ExecuteManySelectSingleParam( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id = ?;', hash_ids ) ) )
-            
-            hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._ExecuteManySelectSingleParam( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats WHERE hash_id = ?;', hash_ids ) }
-            
-            hash_ids_to_file_modified_timestamps = dict( self._ExecuteManySelectSingleParam( 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps WHERE hash_id = ?;', hash_ids ) )
-            
-            #
+            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._c.execute( 'SELECT * FROM files_info NATURAL JOIN {};'.format( temp_table_name ) ) }
+                
+                hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._c.execute( 'SELECT hash_id, service_id, timestamp FROM current_files NATURAL JOIN {};'.format( temp_table_name ) ) ) )
+                
+                hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM deleted_files NATURAL JOIN {};'.format( temp_table_name ) ) )
+                
+                hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM file_transfers NATURAL JOIN {};'.format( temp_table_name ) ) )
+                
+                hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM file_petitions NATURAL JOIN {};'.format( temp_table_name ) ) )
+                
+                hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls NATURAL JOIN {};'.format( temp_table_name ) ) )
+                
+                hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._c.execute( 'SELECT hash_id, service_id, filename FROM service_filenames NATURAL JOIN {};'.format( temp_table_name ) ) ) )
+                
+                hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings NATURAL JOIN {};'.format( temp_table_name ) ) ) )
+                
+                hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._c.execute( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats NATURAL JOIN {};'.format( temp_table_name ) ) }
+                
+                hash_ids_to_file_modified_timestamps = dict( self._c.execute( 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps NATURAL JOIN {};'.format( temp_table_name ) ) )
+                
             
             hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in list(hash_ids_to_current_file_service_ids_and_timestamps.items()) }
             
@@ -13384,6 +13387,42 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update derpibooru failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 379:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'pixiv artist page', '8kun thread', '8kun thread json api', 'vch.moe thread', 'vch.moe thread json api' ] )
+                
+                domain_manager.DeleteURLClasses( [ 'pixiv artist gallery page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ '4chan-style thread api parser', '8kun thread api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

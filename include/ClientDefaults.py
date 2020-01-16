@@ -394,6 +394,8 @@ def GetDefaultShortcuts():
     
     media_viewer = ClientGUIShortcuts.ShortcutSet( 'media_viewer' )
     
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_SPACE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
+    
     media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'B' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_previous_frame' ) )
     media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'N' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_next_frame' ) )
     

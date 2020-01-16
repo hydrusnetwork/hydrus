@@ -30,17 +30,24 @@ class OptionsPanelMimes( OptionsPanel ):
         
         OptionsPanel.__init__( self, parent )
         
+        self._selectable_mimes = set( selectable_mimes )
+        
         self._mimes_to_checkboxes = {}
         self._mime_groups_to_checkboxes = {}
         self._mime_groups_to_values = {}
         
-        mime_groups = [ HC.APPLICATIONS, HC.AUDIO, HC.IMAGES, HC.VIDEO ]
+        mime_groups = []
+        
+        mime_groups.append( ( HC.APPLICATIONS, HC.GENERAL_APPLICATION ) )
+        mime_groups.append( ( HC.AUDIO, HC.GENERAL_AUDIO ) )
+        mime_groups.append( ( HC.IMAGES, HC.GENERAL_IMAGE ) )
+        mime_groups.append( ( HC.VIDEO, HC.GENERAL_VIDEO ) )
         
         mime_groups_to_mimes = collections.defaultdict( list )
         
-        for mime in selectable_mimes:
+        for mime in self._selectable_mimes:
             
-            for mime_group in mime_groups:
+            for ( mime_group, mime_group_type ) in mime_groups:
                 
                 if mime in mime_group:
                     
@@ -55,11 +62,11 @@ class OptionsPanelMimes( OptionsPanel ):
         
         gridbox.setColumnStretch( 1, 1 )
         
-        for mime_group in mime_groups:
+        for ( mime_group, mime_group_type ) in mime_groups:
             
             mimes = mime_groups_to_mimes[ mime_group ]
             
-            mg_checkbox = QW.QCheckBox( HC.mime_string_lookup[mime_group], self )
+            mg_checkbox = QW.QCheckBox( HC.mime_string_lookup[ mime_group_type ], self )
             mg_checkbox.clicked.connect( self.EventMimeGroupCheckbox )
             
             self._mime_groups_to_checkboxes[ mime_group ] = mg_checkbox
@@ -71,8 +78,10 @@ class OptionsPanelMimes( OptionsPanel ):
             
             for mime in mimes:
                 
-                m_checkbox = QW.QCheckBox( HC.mime_string_lookup[mime], self )
+                m_checkbox = QW.QCheckBox( HC.mime_string_lookup[ mime ], self )
                 m_checkbox.clicked.connect( self.EventMimeCheckbox )
+                
+                #m_checkbox.hide()
                 
                 self._mimes_to_checkboxes[ mime ] = m_checkbox
                 
@@ -84,18 +93,46 @@ class OptionsPanelMimes( OptionsPanel ):
         
         self.setLayout( gridbox )
         
+        self._HideShowSubCheckboxes()
+        
+    
+    def _HideShowSubCheckboxes( self ):
+        
+        pass
+        
+        # this is insufficient. we need to have mime groups done by three-state checkboxes or something.
+        # and it'd be nice to have a border around groups or something.
+        
+        '''
+        for ( mime_group, all_true ) in self._mime_groups_to_values.items():
+            
+            should_show = not all_true
+            
+            for mime in mime_group:
+                
+                if mime not in self._selectable_mimes:
+                    
+                    continue
+                    
+                
+                self._mimes_to_checkboxes[ mime ].setVisible( should_show )
+                
+            
+        '''
     
     def _UpdateMimeGroupCheckboxes( self ):
         
-        for ( mime_group, mg_checkbox ) in list(self._mime_groups_to_checkboxes.items()):
+        for ( mime_group, mg_checkbox ) in self._mime_groups_to_checkboxes.items():
             
-            respective_checkbox_values = [m_checkbox.isChecked() for (mime, m_checkbox) in list( self._mimes_to_checkboxes.items() ) if mime in mime_group]
+            respective_checkbox_values = [ m_checkbox.isChecked() for ( mime, m_checkbox ) in list( self._mimes_to_checkboxes.items() ) if mime in mime_group ]
             
             all_true = False not in respective_checkbox_values
             
             mg_checkbox.setChecked( all_true )
             self._mime_groups_to_values[ mime_group ] = all_true
             
+        
+        self._HideShowSubCheckboxes()
         
     
     def EventMimeCheckbox( self ):
@@ -127,10 +164,12 @@ class OptionsPanelMimes( OptionsPanel ):
                 
             
         
+        self._HideShowSubCheckboxes()
+        
     
     def GetValue( self ):
         
-        mimes = tuple( [mime for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()) if checkbox.isChecked() == True] )
+        mimes = tuple( [ mime for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()) if checkbox.isChecked() == True ] )
         
         return mimes
         

@@ -85,7 +85,7 @@ class App( QW.QApplication ):
             
             HG.emergency_exit = True
             
-            if hasattr( HG.client_controller, 'gui' ) and HG.client_controller.gui is not None:
+            if hasattr( HG.client_controller, 'gui' ) and HG.client_controller.gui is not None and QP.isValid( HG.client_controller.gui ):
                 
                 HG.client_controller.gui.SaveAndClose()
                 

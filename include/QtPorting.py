@@ -938,6 +938,7 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
             
             item.setSizePolicy( sizePolicy[0], sizePolicy[1] )
     
+    expand_both_ways = flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
     zero_border = False
     
     # This is kind of a mess right now, adjustments might be needed
@@ -957,30 +958,30 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
     elif flag == CC.FLAGS_EXPAND_PERPENDICULAR:
-        pass
-        #if isinstance( item, QW.QWidget ): item.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
+        
+        if isinstance( item, QW.QWidget ):
+            
+            if isinstance( layout, QW.QHBoxLayout ):
+                
+                h_policy = QW.QSizePolicy.Fixed
+                v_policy = QW.QSizePolicy.Expanding
+                
+            else:
+                
+                h_policy = QW.QSizePolicy.Expanding
+                v_policy = QW.QSizePolicy.Fixed
+                
+            
+            item.setSizePolicy( h_policy, v_policy )
+            
+        
         #wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
         #item.setContentsMargins( 2, 2, 2, 2 )
-    elif flag == CC.FLAGS_EXPAND_BOTH_WAYS:
-        #if isinstance( item, QW.QWidget ): item.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Expand()
     elif flag == CC.FLAGS_EXPAND_DEPTH_ONLY:
         #if isinstance( item, QW.QWidget ): item.setSizePolicy( item.sizePolicy().verticalPolicy(), QW.QSizePolicy.Expanding )
         if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-    elif flag == CC.FLAGS_EXPAND_BOTH_WAYS_POLITE:
-        if isinstance( item, QW.QWidget ): item.setSizePolicy( item.sizePolicy().verticalPolicy(), QW.QSizePolicy.Expanding )
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 3 )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 3 ).Border( wx.ALL, 2 ).Expand()
-    elif flag == CC.FLAGS_EXPAND_BOTH_WAYS_SHY:
-        if isinstance( item, QW.QWidget ): item.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 1 )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 1 ).Border( wx.ALL, 2 ).Expand()
     elif flag == CC.FLAGS_SIZER_CENTER:
         if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
         layout.setAlignment( item, QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
@@ -992,7 +993,7 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         #wx.SizerFlags( 0 ).Expand()
         #item.setContentsMargins( 0, 0, 0, 0 )
     elif flag == CC.FLAGS_EXPAND_SIZER_BOTH_WAYS:
-        
+        zero_border = True
         if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
             
             layout.setStretchFactor( item, 5 )
@@ -1034,9 +1035,33 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         zero_border = True
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-    else:
+    
+    if expand_both_ways:
         
-        raise ValueError( 'Unknown legacy sizer flag' )
+        if isinstance( item, QW.QWidget ):
+            
+            item.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
+            
+        
+        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
+            
+            if flag == CC.FLAGS_EXPAND_BOTH_WAYS:
+                
+                stretch_factor = 5
+                
+            elif flag == CC.FLAGS_EXPAND_BOTH_WAYS_POLITE:
+                
+                stretch_factor = 3
+                
+            elif flag == CC.FLAGS_EXPAND_BOTH_WAYS_SHY:
+                
+                stretch_factor = 1
+                
+            
+            layout.setStretchFactor( item, stretch_factor )
+            
+        
+        
         
     
     if zero_border:

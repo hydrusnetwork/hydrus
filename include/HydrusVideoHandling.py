@@ -355,6 +355,10 @@ def GetMime( path ):
         
         return HC.AUDIO_MP3
         
+    elif mime_text == 'tta':
+        
+        return HC.AUDIO_TRUEAUDIO
+        
     elif 'mp4' in mime_text:
         
         if has_audio and ( not has_video or 'mjpeg' in video_format ):
@@ -369,6 +373,18 @@ def GetMime( path ):
     elif mime_text == 'ogg':
         
         return HC.AUDIO_OGG
+        
+        
+    elif 'rm' in mime_text:
+        
+        if ParseFFMPEGHasVideo( lines ):
+            
+            return HC.VIDEO_REALMEDIA
+            
+        else:
+            
+            return HC.AUDIO_REALMEDIA
+            
         
     elif mime_text == 'asf':
         

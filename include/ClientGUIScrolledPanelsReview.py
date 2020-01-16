@@ -2823,6 +2823,14 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
+            average_filesize = size_total // num_total
+            
+            summary_label = 'Total: {} files, totalling {}, averaging {}'.format( HydrusData.ToHumanInt( num_total ), HydrusData.ToHumanBytes( size_total ), HydrusData.ToHumanBytes( average_filesize ) )
+            
+            summary_st = ClientGUICommon.BetterStaticText( self, label = summary_label )
+            
+            QP.AddToLayout( vbox, summary_st, CC.FLAGS_CENTER )
+            
             num_archive_percent = num_archive / num_total
             size_archive_percent = size_archive / size_total
             

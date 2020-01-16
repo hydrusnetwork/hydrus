@@ -1564,11 +1564,11 @@ class MediaList( object ):
                 
             elif file_filter.filter_type == FILE_FILTER_LOCAL:
                 
-                filtered_media = { m for m in self._sorted_media if file_service_key in m.GetLocationsManager().IsLocal() }
+                filtered_media = { m for m in self._sorted_media if m.GetLocationsManager().IsLocal() }
                 
             elif file_filter.filter_type == FILE_FILTER_REMOTE:
                 
-                filtered_media = { m for m in self._sorted_media if file_service_key in m.GetLocationsManager().IsRemote() }
+                filtered_media = { m for m in self._sorted_media if m.GetLocationsManager().IsRemote() }
                 
             elif file_filter.filter_type == FILE_FILTER_TAGS:
                 
@@ -1666,7 +1666,7 @@ class MediaList( object ):
                     
                     new_options = HG.client_controller.new_options
                     
-                    media_show_action = new_options.GetMediaShowAction( media.GetMime() )
+                    ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( media.GetMime() )
                     
                     if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
                         
@@ -1953,6 +1953,7 @@ FILE_FILTER_LOCAL = 6
 FILE_FILTER_REMOTE = 7
 FILE_FILTER_TAGS = 8
 FILE_FILTER_SELECTED = 9
+FILE_FILTER_MIME = 10
 
 file_filter_str_lookup = {}
 
@@ -1966,6 +1967,7 @@ file_filter_str_lookup[ FILE_FILTER_FILE_SERVICE ] = 'file service'
 file_filter_str_lookup[ FILE_FILTER_LOCAL ] = 'local'
 file_filter_str_lookup[ FILE_FILTER_REMOTE ] = 'remote'
 file_filter_str_lookup[ FILE_FILTER_TAGS ] = 'tags'
+file_filter_str_lookup[ FILE_FILTER_MIME ] = 'filetype'
 
 class FileFilter( object ):
     
@@ -1998,18 +2000,18 @@ class FileFilter( object ):
                 return
                 
             
-            quick_calculations = {}
+            quick_inverse_lookups= {}
             
-            quick_calculations[ FileFilter( FILE_FILTER_INBOX ) ] = FileFilter( FILE_FILTER_ARCHIVE )
-            quick_calculations[ FileFilter( FILE_FILTER_ARCHIVE ) ] = FileFilter( FILE_FILTER_INBOX )
-            quick_calculations[ FileFilter( FILE_FILTER_SELECTED ) ] = FileFilter( FILE_FILTER_NOT_SELECTED )
-            quick_calculations[ FileFilter( FILE_FILTER_NOT_SELECTED ) ] = FileFilter( FILE_FILTER_SELECTED )
-            quick_calculations[ FileFilter( FILE_FILTER_LOCAL ) ] = FileFilter( FILE_FILTER_REMOTE )
-            quick_calculations[ FileFilter( FILE_FILTER_REMOTE ) ] = FileFilter( FILE_FILTER_LOCAL )
+            quick_inverse_lookups[ FileFilter( FILE_FILTER_INBOX ) ] = FileFilter( FILE_FILTER_ARCHIVE )
+            quick_inverse_lookups[ FileFilter( FILE_FILTER_ARCHIVE ) ] = FileFilter( FILE_FILTER_INBOX )
+            quick_inverse_lookups[ FileFilter( FILE_FILTER_SELECTED ) ] = FileFilter( FILE_FILTER_NOT_SELECTED )
+            quick_inverse_lookups[ FileFilter( FILE_FILTER_NOT_SELECTED ) ] = FileFilter( FILE_FILTER_SELECTED )
+            quick_inverse_lookups[ FileFilter( FILE_FILTER_LOCAL ) ] = FileFilter( FILE_FILTER_REMOTE )
+            quick_inverse_lookups[ FileFilter( FILE_FILTER_REMOTE ) ] = FileFilter( FILE_FILTER_LOCAL )
             
-            if self in quick_calculations:
+            if self in quick_inverse_lookups:
                 
-                inverse = quick_calculations[ self ]
+                inverse = quick_inverse_lookups[ self ]
                 
                 all_filter = FileFilter( FILE_FILTER_ALL )
                 
@@ -2049,6 +2051,12 @@ class FileFilter( object ):
             s = and_or_or.join( select_tags )
             
             s = HydrusText.ElideText( s, 64 )
+            
+        elif self.filter_type == FILE_FILTER_MIME:
+            
+            mime = self.filter_data
+            
+            s = HC.mime_string_lookup[ mime ]
             
         else:
             
@@ -2231,7 +2239,16 @@ class MediaCollection( MediaList, Media ):
     
     def GetDisplayMedia( self ):
         
-        return self._GetFirst().GetDisplayMedia()
+        first = self._GetFirst()
+        
+        if first is None:
+            
+            return None
+            
+        else:
+            
+            return first.GetDisplayMedia()
+            
         
     
     def GetDuration( self ):

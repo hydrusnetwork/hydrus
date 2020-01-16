@@ -1570,6 +1570,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -1680,7 +1681,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, coloursets_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, coloursets_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -1834,6 +1836,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, general, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -1976,7 +1979,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( gallery_downloader, rows )
             
-            gallery_downloader.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            gallery_downloader.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -1989,7 +1992,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
             
-            subscriptions.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            subscriptions.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             subscriptions.Add( self._subscription_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -2001,7 +2004,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
             
-            watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             watchers.Add( self._watcher_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -2028,6 +2031,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, watchers, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -2134,6 +2139,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -2186,9 +2192,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, self._always_show_system_everything, CC.FLAGS_VCENTER )
-            QP.AddToLayout( vbox, self._filter_inbox_and_archive_predicates, CC.FLAGS_VCENTER )
-            QP.AddToLayout( vbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._always_show_system_everything, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._filter_inbox_and_archive_predicates, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2201,6 +2206,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -2810,6 +2816,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._default_new_page_goes.addItem( CC.new_page_goes_string_lookup[ value], value )
                 
             
+            self._activate_window_on_tag_search_page_activation = QW.QCheckBox( self )
+            
+            tt = 'Middle-clicking one or more tags in a taglist will cause the creation of a new search page for those tags. If you do this from the media viewer or a child manage tags dialog, do you want to switch immediately to the main gui?'
+            
+            self._activate_window_on_tag_search_page_activation.setToolTip( tt )
+            
             self._notebook_tabs_on_left = QW.QCheckBox( self )
             
             self._max_page_name_chars = QP.MakeQSpinBox( self, min=1, max=256 )
@@ -2863,6 +2875,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_new_page_goes.SetValue( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
+            self._activate_window_on_tag_search_page_activation.setChecked( self._new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' ) )
+            
             self._notebook_tabs_on_left.setChecked( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
             
             self._max_page_name_chars.setValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
@@ -2887,6 +2901,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
             rows.append( ( 'By default, put new page tabs on (requires restart): ', self._default_new_page_goes ) )
             rows.append( ( 'When switching to a page, focus its input field (if any): ', self._set_search_focus_on_page_change ) )
+            rows.append( ( 'Switch to main window when opening tag search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
             rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
             rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
@@ -2906,6 +2921,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'default_gui_session' ] = self._default_gui_session.currentText()
+            
+            self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
             
             self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.isChecked() )
             
@@ -2970,6 +2987,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -3161,6 +3179,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._vacuum_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -3196,6 +3215,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._shutdown_work_period.setEnabled( True )
                 self._idle_shutdown_max_minutes.setEnabled( True )
                 
+            
+        
         def UpdateOptions( self ):
             
             HC.options[ 'idle_normal' ] = self._idle_normal.isChecked()
@@ -3281,7 +3302,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_PSD, HC.APPLICATION_ZIP, HC.APPLICATION_RAR, HC.APPLICATION_7Z, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_M4A, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_PSD, HC.APPLICATION_ZIP, HC.APPLICATION_RAR, HC.APPLICATION_7Z, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.VIDEO_MPEG, HC.VIDEO_REALMEDIA, HC.AUDIO_MP3, HC.AUDIO_M4A, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA, HC.AUDIO_REALMEDIA, HC.AUDIO_TRUEAUDIO )
             
             for mime in mimes_in_correct_order:
                 
@@ -3292,7 +3313,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._media_viewer_options.AddDatas( ( data, ) )
                 
             
-            #self._media_viewer_options.SortListItems( col = 0 )
+            self._media_viewer_options.Sort()
             
             #
             
@@ -3324,13 +3345,47 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _GetListCtrlData( self, data ):
             
-            ( mime, media_show_action, preview_show_action, zoom_info ) = data
+            ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = data
             
             pretty_mime = HC.mime_string_lookup[ mime ]
+            
+            for general_mime in HC.GENERAL_FILETYPES:
+                
+                mime_group = HC.general_mimetypes_to_mime_groups[ general_mime ]
+                
+                if mime in mime_group:
+                    
+                    pretty_mime = '{}: {}'.format( HC.mime_string_lookup[ general_mime ], pretty_mime )
+                    
+                    break
+                    
+                
+            
             pretty_media_show_action = CC.media_viewer_action_string_lookup[ media_show_action ]
+            
+            if media_start_paused:
+                
+                pretty_media_show_action += ', start paused'
+                
+            
+            if media_start_with_embed:
+                
+                pretty_media_show_action += ', start with embed button'
+                
+            
             pretty_preview_show_action = CC.media_viewer_action_string_lookup[ preview_show_action ]
             
-            no_show = media_show_action in CC.no_support and preview_show_action in CC.no_support
+            if preview_start_paused:
+                
+                pretty_preview_show_action += ', start paused'
+                
+            
+            if preview_start_with_embed:
+                
+                pretty_preview_show_action += ', start with embed button'
+                
+            
+            no_show = len( set( ( media_show_action, preview_show_action ) ).intersection( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV } ) ) == 0
             
             if no_show:
                 
@@ -3777,6 +3832,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
+            
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -5112,7 +5169,19 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._name,self,'name: '), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            if name in CC.shortcut_names_to_descriptions:
+                
+                description_text = CC.shortcut_names_to_descriptions[ name ]
+                
+                description = ClientGUICommon.BetterStaticText( self, description_text, description_text )
+                
+                description.setWordWrap( True )
+                
+                QP.AddToLayout( vbox, description, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
             QP.AddToLayout( vbox, self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, action_buttons, CC.FLAGS_BUTTON_SIZER )
             

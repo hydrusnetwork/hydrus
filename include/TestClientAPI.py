@@ -306,7 +306,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # fail
         
-        headers = { 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         hash = os.urandom( 32 )
         hash_hex = hash.hex()
@@ -359,7 +359,7 @@ class TestClientAPI( unittest.TestCase ):
         
         session_key_hex = body_dict[ 'session_key' ]
         
-        headers = { 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         hash = os.urandom( 32 )
         hash_hex = hash.hex()
@@ -455,7 +455,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
         
         path = '/add_files/add_file'
         
@@ -486,7 +486,7 @@ class TestClientAPI( unittest.TestCase ):
             HYDRUS_PNG_BYTES = f.read()
             
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
         
         path = '/add_files/add_file'
         
@@ -510,7 +510,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # do hydrus png as path
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         path = '/add_files/add_file'
         
@@ -600,7 +600,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # add tags
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         hash = os.urandom( 32 )
         hash_hex = hash.hex()
@@ -900,9 +900,6 @@ class TestClientAPI( unittest.TestCase ):
         expected_answer[ 'normalised_url' ] = normalised_url
         expected_answer[ 'url_file_statuses' ] = json_url_file_statuses
         
-        HydrusData.Print( d )
-        HydrusData.Print( expected_answer )
-        
         self.assertEqual( d, expected_answer )
         
         # get url info
@@ -1006,7 +1003,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearWrites( 'import_url_test' )
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         url = 'http://8ch.net/tv/res/1846574.html'
         
@@ -1258,7 +1255,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         path = '/manage_cookies/set_cookies'
         
@@ -1304,7 +1301,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         path = '/manage_cookies/set_cookies'
         
@@ -1382,7 +1379,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         path = '/manage_pages/focus_page'
         
@@ -1626,7 +1623,7 @@ class TestClientAPI( unittest.TestCase ):
             metadata_row[ 'file_id' ] = file_info_manager.hash_id
             metadata_row[ 'hash' ] = file_info_manager.hash.hex()
             metadata_row[ 'size' ] = file_info_manager.size
-            metadata_row[ 'mime' ] = HC.mime_string_lookup[ file_info_manager.mime ]
+            metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
             metadata_row[ 'width' ] = file_info_manager.width
             metadata_row[ 'height' ] = file_info_manager.height
             metadata_row[ 'duration' ] = file_info_manager.duration

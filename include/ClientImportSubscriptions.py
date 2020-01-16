@@ -1263,25 +1263,33 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             only_these_queries = set( only_these_queries )
             
         
+        my_queries = self._queries
+        
+        self._queries = []
+        
+        base_sub = self.Duplicate()
+        
+        self._queries = my_queries
+        
         subscriptions = []
         
-        for query in self._queries:
+        for query in my_queries:
             
             if query not in only_these_queries:
                 
                 continue
                 
             
-            subscription = self.Duplicate()
+            subscription = base_sub.Duplicate()
             
-            subscription._queries = [ query.Duplicate() ]
+            subscription._queries = [ query ]
             
             subscription.SetName( base_name + ': ' + query.GetHumanName() )
             
             subscriptions.append( subscription )
             
         
-        self._queries = [ query for query in self._queries if query not in only_these_queries ]
+        self._queries = [ query for query in my_queries if query not in only_these_queries ]
         
         return subscriptions
         

@@ -8,6 +8,72 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 380</h3></li>
+				<ul>
+					<li>basic mpv support is added. it comes with the windows build this week, and is a prototype meant for initial testing. the library is optional. users who run from source will want 'python-mpv' added via pip and libmpv available on their PATH, more details in running_from_source help</li>
+					<li>took an qt-mpv example kindly provided by a user, updated it to work with the hydrus environment, and integrated it into the client as a new choosable view type under audio/video filetypes under options->media for advanced users</li>
+					<li>reworked how the 'start paused' and 'start with embed button' media viewer options work under options->media. these are now separate checkboxes, not combined with the underlying 'show action'. existing embed/paused show actions should be converted automatically to the correct new values</li>
+					<li>unfortunately, due to some python/qt/libmpv wrapper mouse interaction issues, mpv's 'on screen controller' overlay is not available</li>
+					<li>for now, left click pause/plays the mpv window, just like the native mpv window.</li>
+					<li>preview/next frame shortcuts should work for the mpv window when playing video</li>
+					<li>no volume/mute controls yet, these will come in the coming weeks, including global mute settings</li>
+					<li>updated media show and sizing code to account for mpv widgets</li>
+					<li>reworked my animation scanbar to talk to mpv, and for my mpv window to talk back to it</li>
+					<li>improved the animation scanbar to be more flexible when frame position and num_frames are not available, both in displaying info and calculating scanbar seek clicks</li>
+					<li>mpv api version added to help->about</li>
+					<li>.</li>
+					<li>new downloader objects:</li>
+					<li>thanks to a user, updated the 'pixiv artist page' url class to a new object that covers more situations. the defunct 'pixiv artist gallery page' url class is removed</li>
+					<li>added 8kun and vch.moe download support. I got started on julay, smug, and endchan, but they were a little more tricky and I couldn't finish them in time--fingers crossed, next week</li>
+					<li>.</li>
+					<li>menu quality of life:</li>
+					<li>a right-click on thumbnail whitespace will now not send a 'deselect all' event! feel free to right-click in empty space to do an easy remove->selected</li>
+					<li>remorked the tag menu layout to move less frequently used actions down:</li>
+					<li>- moved the discard/require/permit/exclude search predicate actions down</li>
+					<li>- moved 'open in a new page' below select and copy</li>
+					<li>- moved copy above select</li>
+					<li>and some misc menu layout improvement on this menu</li>
+					<li>fixed some labelling with the discard/require/permit/exclude verbs on negated tags</li>
+					<li>right-clicking on system search predicates now shows the 'copy' menu correctly</li>
+					<li>system predicates that offer easy inverse versions (like inbox/archive) should now offer the 'exclude' verb</li>
+					<li>when right-clicking on a single tag that has siblings, its siblings and those siblings' subtags will now be listed in the copy menu!</li>
+					<li>copying 'all' tags from a list menu, with or without counts, will now always copy them in the list order</li>
+					<li>across the program, all menu 'labels' (menu text items that do not have a submenu and have no associated action, like 'imported 3 years 7 months ago') will now copy their text to the clipboard. let's see how it goes</li>
+					<li>.</li>
+					<li>other ui quality of life:</li>
+					<li>across the program's UI, filetypes are now referred to with simpler terms rather than technical mimetypes. instead of 'image/jpg', it is now typically just 'jpeg'</li>
+					<li>the 'remove selected' buttons on the gallery and watcher pages are now smaller trash icon buttons</li>
+					<li>the new page chooser will now auto-dismiss if it loses focus--so if you accidentally launch it with a middle-/double-click somewhere, just click again and it'll go away</li>
+					<li>hitting enter or return on the new page chooser now picks the 'first' button, scanning from the top-left. hitting enter twice now typically opens a new 'my files' search page</li>
+					<li>added pause_media and pause_play_media shortcuts to the media_viewer shortcut set. new clients will start with space keypress performing pause_play_media</li>
+					<li>added pause_play_slideshow shortcut to the media_viewer_browser shortcut set. this shortcut is no longer hardcoded by space keypress</li>
+					<li>the six default shortcut sets now have a small description text on their edit panels</li>
+					<li>the options->media edit panels now enable/disable widgets better based on current media/preview action</li>
+					<li>added a checkbox to _options->gui pages_ to set whether middle-clicking a tag in the media viewer or a child tag manager to open a tag search page will switch to the main gui. default is false</li>
+					<li>mr bones now reports total files, total filesize, and average filesize</li>
+					<li>mr bones now loads your fate asynchronously</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added tentative and simple realvideo (.rm) and realaudio (.ra) support--seems to work ok, but some weirder variable bit rate formats may not, and I have collapsed the various different extensions just down to .rm or .ra</li>
+					<li>added trueaudio (.tta) audio support</li>
+					<li>fixed a bug from the recent search optimisations where a bare inbox search would not cross-reference with the file domain (so some trash could show up in a simple inbox/'my files' query)</li>
+					<li>fixed an issue with searching for known urls by url class where the class was for a third-or-higher-level domain and was not set to match subdomains (this hit 4chan file urls for a few users)</li>
+					<li>fixed the issue with 'open externally' button panel not clearing their backgrounds properly</li>
+					<li>fixed some of the new unusual stretchy layouts in the options dialog</li>
+					<li>removed overhead from subscriptions' 'separate' operation, which should stop super CPU hang when trying to split a subscription with hundreds of thousands of urls</li>
+					<li>fixed an issue where the advanced file delete dialog would not show the simple 'permanent delete' option when launched from the media viewer's right-click menu</li>
+					<li>fixed the select/remove actions for local/remote</li>
+					<li>fixed 'set_media_focus' from manage tags to correctly activate the underlying media viewer as well as set focus</li>
+					<li>stopped the 'file lookup script' status control from resizing so wide when it fetches a url</li>
+					<li>fixed a rare mouse wheel event handling bug in the media viewer</li>
+					<li>reduced db overhead of the 'loading x/y' results generation routine. this _may_ help some users who had very slow media result loading</li>
+					<li>cleaned up how the server reports a bootup-action error such as 'cannot shut down server since it is not running'--this is now a simple statement to console, not a full error with trace</li>
+					<li>improved client shutdown when a system session shutdown call arrives at the same time as a user shutdown request--the core shutdown routine should now only occur once</li>
+					<li>fixed an issue with thumbnail presentation on collections that have their contents deleted during the thumbnail generation call</li>
+					<li>misc wx->Qt layout conversion improvements</li>
+					<li>updated the github readme to reflect some new links and so on</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 379</h3></li>
 				<ul>
 					<li>downloaders:</li>

@@ -290,7 +290,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( written_note, '' )
         self.assertEqual( file_import_job.GetHash(), hash )
         
-        time.sleep( 1 )
+        time.sleep( 1.1 ) # to get timestamps right
         
         #
         
@@ -413,6 +413,8 @@ class TestClientDB( unittest.TestCase ):
         service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
+        
+        time.sleep( 0.5 )
         
         #
         

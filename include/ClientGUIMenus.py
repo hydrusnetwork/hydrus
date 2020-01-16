@@ -7,7 +7,6 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
-from . import QtPorting as QP
 
 def AppendMenu( menu, submenu, label ):
     
@@ -111,6 +110,8 @@ def AppendMenuLabel( menu, label, description = '' ):
     menu_item.setWhatsThis( description )
 
     menu.addAction( menu_item )
+    
+    BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', label )
     
     return menu_item
     

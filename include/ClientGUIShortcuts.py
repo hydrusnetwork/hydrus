@@ -117,15 +117,15 @@ def ConvertMouseEventToShortcut( event ):
     
     key = None
     
-    if (event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.LeftButton) or (event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.LeftButton):
+    if ( event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.LeftButton ) or ( event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.LeftButton ):
         
         key = CC.SHORTCUT_MOUSE_LEFT
         
-    elif (event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.MiddleButton) or (event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.MiddleButton):
+    elif ( event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.MiddleButton ) or ( event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.MiddleButton ):
         
         key = CC.SHORTCUT_MOUSE_MIDDLE
         
-    elif (event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.RightButton) or (event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.RightButton):
+    elif ( event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.RightButton ) or ( event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.RightButton ):
         
         key = CC.SHORTCUT_MOUSE_RIGHT
         

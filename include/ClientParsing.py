@@ -2356,7 +2356,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         
         for search_url in search_urls:
             
-            job_key.SetVariable( 'script_status', 'fetching ' + search_url )
+            job_key.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( search_url, 32 ) )
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', search_url, referral_url = referral_url )
             
@@ -2386,7 +2386,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                     
                     job_key.SetVariable( 'script_status', 'Network error! Details written to log.' )
                     
-                    HydrusData.Print( 'Problem fetching ' + search_url + ':' )
+                    HydrusData.Print( 'Problem fetching ' + HydrusText.ElideText( search_url, 32 ) + ':' )
                     HydrusData.PrintException( e )
                     
                     time.sleep( 2 )
@@ -2605,7 +2605,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             full_request_url = self._url + '?' + ClientNetworkingDomain.ConvertQueryDictToText( request_args )
             
-            job_key.SetVariable( 'script_status', 'fetching ' + full_request_url )
+            job_key.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( full_request_url, 32 ) )
             
             job_key.AddURL( full_request_url )
             

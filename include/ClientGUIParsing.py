@@ -4067,6 +4067,8 @@ class ScriptManagementControl( QW.QWidget ):
         self._status = ClientGUICommon.BetterStaticText( main_panel )
         self._gauge = ClientGUICommon.Gauge( main_panel )
         
+        self._status.setWordWrap( True )
+        
         self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalPixmaps.link, self.LinkButton )
         self._link_button.setToolTip( 'urls found by the script' )
         

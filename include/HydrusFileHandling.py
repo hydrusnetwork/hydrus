@@ -180,7 +180,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
-    elif mime in ( HC.IMAGE_APNG, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
+    elif mime in ( HC.IMAGE_APNG, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_REALMEDIA, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         

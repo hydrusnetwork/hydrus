@@ -436,7 +436,7 @@ class HydrusResource( Resource ):
             
             mime = response_context.GetMime()
             
-            content_type = HC.mime_string_lookup[ mime ]
+            content_type = HC.mime_mimetype_string_lookup[ mime ]
             
             content_length = size
             
@@ -465,7 +465,7 @@ class HydrusResource( Resource ):
             
             body_bytes = response_context.GetBodyBytes()
             
-            content_type = HC.mime_string_lookup[ mime ]
+            content_type = HC.mime_mimetype_string_lookup[ mime ]
             
             content_length = len( body_bytes )
             

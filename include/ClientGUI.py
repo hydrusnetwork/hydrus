@@ -17,6 +17,7 @@ from . import ClientGUIImport
 from . import ClientGUILogin
 from . import ClientGUIManagement
 from . import ClientGUIMenus
+from . import ClientGUIMPV
 from . import ClientGUIPages
 from . import ClientGUIParsing
 from . import ClientGUIPopupMessages
@@ -250,6 +251,37 @@ def THREADUploadPending( service_key ):
         HG.client_controller.pub( 'notify_new_pending' )
         
     
+class BonedUpdater( ClientGUIAsync.AsyncQtUpdater ):
+    
+    def _getResult( self ):
+        
+        boned_stats = HG.client_controller.Read( 'boned_stats' )
+        
+        return boned_stats
+        
+    
+    def _publishLoading( self ):
+        
+        self._job_key = ClientThreading.JobKey()
+        
+        self._job_key.SetVariable( 'popup_text_1', 'Loading Statistics\u2026' )
+        
+        HG.client_controller.pub( 'message', self._job_key )
+        
+    
+    def _publishResult( self, result ):
+        
+        self._job_key.Delete()
+        
+        boned_stats = result
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self._win, 'review your fate' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
+        
+        frame.SetPanel( panel )
+        
+    
 class MenuUpdaterFile( ClientGUIAsync.AsyncQtUpdater ):
     
     def _getResult( self ):
@@ -368,6 +400,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._first_session_loaded = False
         
+        self._done_save_and_close = False
+        
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
         self._garbage_snapshot = collections.Counter()
@@ -461,9 +495,15 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'OpenCV', cv2.__version__ ) )
         library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
         library_versions.append( ( 'Pillow', PIL.__version__ ) )
-        library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
-        library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
-        library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
+        
+        if ClientGUIMPV.MPV_IS_AVAILABLE:
+            
+            library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
+            
+        else:
+            
+            library_versions.append( ( 'mpv', 'not available' ) )
+            
         
         # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
         v = sys.version
@@ -494,6 +534,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             library_versions.append( ( 'sip', SIP_VERSION_STR ) )
         
         library_versions.append( ( 'Qt', QC.__version__ ) )
+        
+        library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
+        library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
+        library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
         library_versions.append( ( 'temp dir', HydrusPaths.GetCurrentTempDir() ) )
         
         import locale
@@ -1584,13 +1628,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._controller.file_viewing_stats_manager.Flush()
         
-        boned_stats = self._controller.Read( 'boned_stats' )
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review your fate' )
-        
-        panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
-        
-        frame.SetPanel( panel )
+        self._boned_updater.update()
         
     
     def _ImportDownloaders( self ):
@@ -1830,6 +1868,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._menu_updater_file = MenuUpdaterFile( self )
         self._menu_updater_pages = MenuUpdaterPages( self )
         self._menu_updater_pending = MenuUpdaterPending( self )
+        
+        self._boned_updater = BonedUpdater( self )
         
         self.setMenuBar( self._menubar )
         
@@ -3869,123 +3909,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def TryToSaveAndClose( self, restart = False, force_shutdown_maintenance = False ):
-        
-        # the return value here is 'exit allowed'
-        
-        if not HG.emergency_exit:
-            
-            able_to_close_statement = self._notebook.GetTestAbleToCloseStatement()
-            
-            if HC.options[ 'confirm_client_exit' ] or able_to_close_statement is not None:
-                
-                if restart:
-                    
-                    text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
-                    
-                else:
-                    
-                    text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
-                    
-                
-                if able_to_close_statement is not None:
-                    
-                    text += os.linesep * 2
-                    text += able_to_close_statement
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, text, auto_yes_time = 15 )
-                
-                if result == QW.QDialog.Rejected:
-                    
-                    return False
-                    
-                
-            
-        
-        if restart:
-            
-            HG.restart = True
-            
-        
-        if force_shutdown_maintenance:
-            
-            HG.do_idle_shutdown_work = True
-            
-        
-        self.SaveAndClose()
-        
-        return True
-        
-    
-    def SaveAndClose( self ):
-        
-        try:
-            
-            if self._message_manager:
-                
-                self._message_manager.CleanBeforeDestroy()
-                
-                self._message_manager.hide()
-                
-            
-            #
-            
-            if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
-                
-                self._SaveSplitterPositions()
-                
-            
-            ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
-            
-            for tlw in QW.QApplication.topLevelWidgets():
-                
-                tlw.hide()
-                
-            
-            #
-            
-            session = self._notebook.GetCurrentGUISession( 'last session' )
-            
-            self._controller.SaveGUISession( session )
-            
-            session.SetName( 'exit session' )
-            
-            self._controller.SaveGUISession( session )
-            
-            #
-            
-            self._DestroyTimers()
-            
-            self.DeleteAllClosedPages() # Obsolote comment, preserved just in case: wx crashes if any are left in here, wew
-            
-            self._notebook.CleanBeforeDestroy()
-            
-            self._controller.WriteSynchronous( 'save_options', HC.options )
-            
-            self._controller.WriteSynchronous( 'serialisable', self._new_options )
-            
-        except Exception as e:
-            
-            HydrusData.PrintException( e )
-            
-        
-        if HG.emergency_exit:
-            
-            self.deleteLater()
-            
-            self._controller.Exit()
-            
-        else:
-            
-            self._controller.CreateSplash()
-            
-            QP.CallAfter( self._controller.Exit )
-            
-            self.deleteLater()
-            
-        
-    
     def FlipDarkmode( self ):
         
         current_colourset = self._new_options.GetString( 'current_colourset' )
@@ -5106,7 +5029,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         
     
-    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None, do_sort = False ):
+    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None, do_sort = False, select_page = True, activate_window = False ):
         
         if initial_hashes is None:
             
@@ -5118,7 +5041,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True, do_sort = do_sort )
+        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True, do_sort = do_sort, select_page = select_page )
+        
+        if activate_window and not self.isActiveWindow():
+            
+            self.activateWindow()
+            
         
     
     def NotifyClosedPage( self, page ):
@@ -5738,6 +5666,81 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def SaveAndClose( self ):
+        
+        if self._done_save_and_close:
+            
+            return
+            
+        
+        try:
+            
+            if QP.isValid( self._message_manager ):
+                
+                self._message_manager.CleanBeforeDestroy()
+                
+                self._message_manager.hide()
+                
+            
+            #
+            
+            if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
+                
+                self._SaveSplitterPositions()
+                
+            
+            ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
+            
+            for tlw in QW.QApplication.topLevelWidgets():
+                
+                tlw.hide()
+                
+            
+            #
+            
+            session = self._notebook.GetCurrentGUISession( 'last session' )
+            
+            self._controller.SaveGUISession( session )
+            
+            session.SetName( 'exit session' )
+            
+            self._controller.SaveGUISession( session )
+            
+            #
+            
+            self._DestroyTimers()
+            
+            self.DeleteAllClosedPages()
+            
+            self._notebook.CleanBeforeDestroy()
+            
+            self._controller.WriteSynchronous( 'save_options', HC.options )
+            
+            self._controller.WriteSynchronous( 'serialisable', self._new_options )
+            
+            self._done_save_and_close = True
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+        
+        if HG.emergency_exit:
+            
+            self.deleteLater()
+            
+            self._controller.Exit()
+            
+        else:
+            
+            self._controller.CreateSplash()
+            
+            QP.CallAfter( self._controller.Exit )
+            
+            self.deleteLater()
+            
+        
+    
     def SetMediaFocus( self ):
         
         self._SetMediaFocus()
@@ -5758,6 +5761,55 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._notebook.ShowPage( page )
+        
+    
+    def TryToSaveAndClose( self, restart = False, force_shutdown_maintenance = False ):
+        
+        # the return value here is 'exit allowed'
+        
+        if not HG.emergency_exit:
+            
+            able_to_close_statement = self._notebook.GetTestAbleToCloseStatement()
+            
+            if HC.options[ 'confirm_client_exit' ] or able_to_close_statement is not None:
+                
+                if restart:
+                    
+                    text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
+                    
+                else:
+                    
+                    text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
+                    
+                
+                if able_to_close_statement is not None:
+                    
+                    text += os.linesep * 2
+                    text += able_to_close_statement
+                    
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, text, auto_yes_time = 15 )
+                
+                if result == QW.QDialog.Rejected:
+                    
+                    return False
+                    
+                
+            
+        
+        if restart:
+            
+            HG.restart = True
+            
+        
+        if force_shutdown_maintenance:
+            
+            HG.do_idle_shutdown_work = True
+            
+        
+        self.SaveAndClose()
+        
+        return True
         
     
     def UnregisterAnimationUpdateWindow( self, window ):

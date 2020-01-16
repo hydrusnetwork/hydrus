@@ -41,6 +41,8 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         self._controller = controller
         
+        self._action_picked = False
+        
         self._result = None
         
         # spawn and add to layout in this order, so focus precipitates from the graphical top
@@ -126,10 +128,6 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         self._button_1.clicked.connect( lambda: self._HitButton( 1 ) )
         self._button_2.clicked.connect( lambda: self._HitButton( 2 ) )
         self._button_3.clicked.connect( lambda: self._HitButton( 3 ) )
-        
-        #
-        
-        self.show()
         
     
     def _AddEntry( self, button, entry ):
@@ -242,6 +240,8 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerPetitions( petition_service_key ) )
                     
                 
+                self._action_picked = True
+                
                 self.done( QW.QDialog.Accepted )
                 
             
@@ -335,6 +335,20 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
         
     
+    def event( self, event ):
+        
+        if event.type() == QC.QEvent.WindowDeactivate and not self._action_picked:
+            
+            self.done( QW.QDialog.Rejected )
+            
+            return True
+            
+        else:
+            
+            return ClientGUIDialogs.Dialog.event( self, event )
+            
+        
+    
     def keyPressEvent( self, event ):
         
         id = None
@@ -354,6 +368,20 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         elif key == QC.Qt.Key_7 and modifier == QC.Qt.KeypadModifier: id = 7
         elif key == QC.Qt.Key_8 and modifier == QC.Qt.KeypadModifier: id = 8
         elif key == QC.Qt.Key_9 and modifier == QC.Qt.KeypadModifier: id = 9
+        elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+            
+            # get the 'first', scanning from top-left
+            
+            for possible_id in ( 7, 8, 9, 4, 5, 6, 1, 2, 3 ):
+                
+                if possible_id in self._command_dict:
+                    
+                    id = possible_id
+                    
+                    break
+                    
+                
+            
         elif key == QC.Qt.Key_Escape:
             
             self.done( QW.QDialog.Rejected )
@@ -885,6 +913,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         QP.TabWidgetWithDnD.__init__( self, parent )
         
+        # this is disabled for now because it seems borked in Qt
         if controller.new_options.GetBoolean( 'notebook_tabs_on_left' ):
             
             self.setTabPosition( QW.QTabWidget.West )

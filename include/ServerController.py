@@ -68,6 +68,8 @@ def ProcessStartingAction( db_dir, action ):
             
         else:
             
+            HydrusData.Print( 'Did not find an already running instance of the server--changing boot command from \'restart\' to \'start\'.' )
+            
             return 'start'
             
         

@@ -15,6 +15,7 @@ from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
 from . import ClientGUIFileSeedCache
 from . import ClientGUIGallerySeedLog
+from . import ClientGUIMPV
 from . import ClientGUITags
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
@@ -844,7 +845,17 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if suggested_file_service_key is None:
             
+            suggested_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        
+        if suggested_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            
             possible_file_service_keys.append( CC.LOCAL_FILE_SERVICE_KEY )
+            possible_file_service_keys.append( CC.TRASH_SERVICE_KEY )
+            possible_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+        elif suggested_file_service_key == CC.TRASH_SERVICE_KEY:
+            
             possible_file_service_keys.append( CC.TRASH_SERVICE_KEY )
             possible_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
@@ -914,8 +925,14 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( hashes ) > 0:
                 
-                if num_to_delete == 1: text = 'Permanently delete this file and do not save a deletion record?'
-                else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
+                if num_to_delete == 1:
+                    
+                    text = 'Permanently delete this file and do not save a deletion record?'
+                    
+                else:
+                    
+                    text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
+                    
                 
                 self._permitted_action_choices.append( ( text, ( 'clear_delete', hashes, text ) ) )
                 
@@ -2652,20 +2669,31 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_info = info
         
-        ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) ) = self._original_info
+        ( self._mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) ) = self._original_info
         
-        possible_actions = CC.media_viewer_capabilities[ self._mime ]
+        ( possible_show_actions, can_start_paused, can_start_with_embed ) = CC.media_viewer_capabilities[ self._mime ]
         
         self._media_show_action = ClientGUICommon.BetterChoice( self )
+        self._media_start_paused = QW.QCheckBox( self )
+        self._media_start_with_embed = QW.QCheckBox( self )
         self._preview_show_action = ClientGUICommon.BetterChoice( self )
+        self._preview_start_paused = QW.QCheckBox( self )
+        self._preview_start_with_embed = QW.QCheckBox( self )
         
-        for action in possible_actions:
+        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        for action in possible_show_actions:
             
-            self._media_show_action.addItem( CC.media_viewer_action_string_lookup[ action], action )
+            if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and ( not advanced_mode or not ClientGUIMPV.MPV_IS_AVAILABLE ):
+                
+                continue
+                
+            
+            self._media_show_action.addItem( CC.media_viewer_action_string_lookup[ action ], action )
             
             if action != CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                self._preview_show_action.addItem( CC.media_viewer_action_string_lookup[ action], action )
+                self._preview_show_action.addItem( CC.media_viewer_action_string_lookup[ action ], action )
                 
             
         
@@ -2708,7 +2736,12 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._media_show_action.SetValue( media_show_action )
+        self._media_start_paused.setChecked( media_start_paused )
+        self._media_start_with_embed.setChecked( media_start_with_embed )
+        
         self._preview_show_action.SetValue( preview_show_action )
+        self._preview_start_paused.setChecked( preview_start_paused )
+        self._preview_start_with_embed.setChecked( preview_start_with_embed )
         
         self._media_scale_up.SetValue( media_scale_up )
         self._media_scale_down.SetValue( media_scale_down )
@@ -2726,11 +2759,32 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         text = 'Setting media view options for ' + HC.mime_string_lookup[ self._mime ] + '.'
         
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._media_show_action,self,'media viewer show action:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._preview_show_action,self,'preview show action:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        if not ClientGUIMPV.MPV_IS_AVAILABLE:
+            
+            text += ' MPV is not available for this client.'
+            
         
-        if possible_actions == CC.no_support:
+        if not advanced_mode:
+            
+            text += ' Only advanced mode users can select MPV for now.'
+            
+        
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'media viewer show action: ', self._media_show_action ) )
+        rows.append( ( 'media starts paused: ', self._media_start_paused ) )
+        rows.append( ( 'media starts covered with an embed button: ', self._media_start_with_embed ) )
+        rows.append( ( 'preview viewer show action: ', self._preview_show_action ) )
+        rows.append( ( 'preview starts paused: ', self._preview_start_paused ) )
+        rows.append( ( 'preview starts covered with an embed button: ', self._preview_start_with_embed ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        if len( set( possible_show_actions ).intersection( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV } ) ) == 0:
             
             self._media_scale_up.hide()
             self._media_scale_down.hide()
@@ -2771,45 +2825,78 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
-    
-    def EventActionChange( self, index ):
+        self._UpdateControls()
         
-        if self._media_show_action.GetValue() in CC.no_support and self._preview_show_action.GetValue() in CC.no_support:
-            
-            self._media_scale_up.setEnabled( False )
-            self._media_scale_down.setEnabled( False )
-            self._preview_scale_up.setEnabled( False )
-            self._preview_scale_down.setEnabled( False )
-            
-            self._exact_zooms_only.setEnabled( False )
-            
-            self._scale_up_quality.setEnabled( False )
-            self._scale_down_quality.setEnabled( False )
-            
-        else:
-            
-            self._media_scale_up.setEnabled( True )
-            self._media_scale_down.setEnabled( True )
-            self._preview_scale_up.setEnabled( True )
-            self._preview_scale_down.setEnabled( True )
+    
+    def _UpdateControls( self ):
+        
+        media_ok = self._media_show_action.GetValue() not in CC.unsupported_media_actions
+        preview_ok = self._preview_show_action.GetValue() not in CC.unsupported_media_actions
+        
+        if media_ok or preview_ok:
             
             self._exact_zooms_only.setEnabled( True )
             
             self._scale_up_quality.setEnabled( True )
             self._scale_down_quality.setEnabled( True )
             
-        
-        if self._mime == HC.APPLICATION_FLASH:
+        else:
+            
+            self._exact_zooms_only.setEnabled( False )
             
             self._scale_up_quality.setEnabled( False )
             self._scale_down_quality.setEnabled( False )
             
         
+        if media_ok:
+            
+            self._media_scale_up.setEnabled( True )
+            self._media_scale_down.setEnabled( True )
+            
+            self._media_start_paused.setEnabled( True )
+            self._media_start_with_embed.setEnabled( True )
+            
+        else:
+            
+            self._media_scale_up.setEnabled( False )
+            self._media_scale_down.setEnabled( False )
+            
+            self._media_start_paused.setEnabled( False )
+            self._media_start_with_embed.setEnabled( False )
+            
+        
+        if preview_ok:
+            
+            self._preview_scale_up.setEnabled( True )
+            self._preview_scale_down.setEnabled( True )
+            
+            self._preview_start_paused.setEnabled( True )
+            self._preview_start_with_embed.setEnabled( True )
+            
+        else:
+            
+            self._preview_scale_up.setEnabled( False )
+            self._preview_scale_down.setEnabled( False )
+            
+            self._preview_start_paused.setEnabled( False )
+            self._preview_start_with_embed.setEnabled( False )
+            
+        
+    
+    def EventActionChange( self, index ):
+        
+        self._UpdateControls()
+        
     
     def GetValue( self ):
         
         media_show_action = self._media_show_action.GetValue()
+        media_start_paused = self._media_start_paused.isChecked()
+        media_start_with_embed = self._media_start_with_embed.isChecked()
+        
         preview_show_action = self._preview_show_action.GetValue()
+        preview_start_paused = self._preview_start_paused.isChecked()
+        preview_start_with_embed = self._preview_start_with_embed.isChecked()
         
         media_scale_up = self._media_scale_up.GetValue()
         media_scale_down = self._media_scale_down.GetValue()
@@ -2821,7 +2908,9 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         scale_up_quality = self._scale_up_quality.GetValue()
         scale_down_quality = self._scale_down_quality.GetValue()
         
-        return ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
+        zoom_info = ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality )
+        
+        return ( self._mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info )
         
     
 class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -6351,9 +6440,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._normalised_url = QW.QLineEdit( self )
         self._normalised_url.setReadOnly( True )
         
-        tt = 'The same url can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/some-changing-tags-here" can be appended and then altered at a later date. In order to collapse all the different expressions of a url down to a single comparable form, the client will \'normalise\' them based on the essential definitions in their url class. Parameters will be alphebatised and non-defined elements will be removed.'
+        tt = 'The same url can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-samus_aran" can be altered at a later date, say to "/123456/bodysuit-green_eyes-samus_aran". In order to collapse all the different expressions of a url down to a single comparable form, the client will \'normalise\' them based on the essential definitions in their url class. Parameters will be alphebatised and non-defined elements will be removed.'
         tt += os.linesep * 2
-        tt += 'All normalisation will switch to the preferred scheme, but the alphabetisation of parameters and stripping out of non-defined elements will only occur if this url is associated with files or uses an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex transformation into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
+        tt += 'All normalisation will switch to the preferred scheme (http/https). The alphabetisation of parameters and stripping out of non-defined elements will occur for all URLs except Gallery URLs or Watchable URLs that do not use an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex transformation into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
         
         self._normalised_url.setToolTip( tt )
         

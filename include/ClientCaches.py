@@ -967,8 +967,16 @@ class ThumbnailCache( object ):
             
             display_media = media.GetDisplayMedia()
             
-            magic_score = self._magic_mime_thumbnail_ease_score_lookup[ display_media.GetMime() ]
-            hash = display_media.GetHash()
+            if display_media is None:
+                
+                magic_score = self._magic_mime_thumbnail_ease_score_lookup[ None ]
+                hash = ''
+                
+            else:
+                
+                magic_score = self._magic_mime_thumbnail_ease_score_lookup[ display_media.GetMime() ]
+                hash = display_media.GetHash()
+                
             
             return ( magic_score, hash )
             
@@ -1230,9 +1238,12 @@ class ThumbnailCache( object ):
                 
                 ( page_key, media ) = result
                 
-                self.GetThumbnail( media )
-                
-                page_keys_to_rendered_medias[ page_key ].append( media )
+                if media.GetDisplayMedia() is not None:
+                    
+                    self.GetThumbnail( media )
+                    
+                    page_keys_to_rendered_medias[ page_key ].append( media )
+                    
                 
             
             if len( page_keys_to_rendered_medias ) > 0:

@@ -157,58 +157,63 @@ import_folder_string_lookup[ IMPORT_FOLDER_DELETE ] = 'delete the file'
 import_folder_string_lookup[ IMPORT_FOLDER_IGNORE ] = 'leave the file alone, do not reattempt it'
 import_folder_string_lookup[ IMPORT_FOLDER_MOVE ] = 'move the file'
 
-MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL = 0
-MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED = 1
+MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE = 0
+MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE_PAUSED = 1
 MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED = 2
 MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED = 3
 MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON = 4
 MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY = 5
 MEDIA_VIEWER_ACTION_DO_NOT_SHOW = 6
+MEDIA_VIEWER_ACTION_SHOW_WITH_MPV = 7
 
 media_viewer_action_string_lookup = {}
 
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL ] = 'show as normal'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED ] = 'show as normal, but start paused'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED ] = 'show, but initially behind an embed button'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ] = 'show, but initially behind an embed button, and start paused'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] = 'show with native hydrus viewer'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE_PAUSED ] = 'show as normal, but start paused -- obselete'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED ] = 'show, but initially behind an embed button -- obselete'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ] = 'show, but initially behind an embed button, and start paused -- obselete'
 media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON ] = 'show an \'open externally\' button'
 media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY ] = 'do not show in the media viewer. on thumbnail activation, open externally'
 media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_DO_NOT_SHOW ] = 'do not show at all'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV ] = 'show using mpv'
 
-static_full_support = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY ]
-animated_full_support = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY ]
-no_support = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
+unsupported_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
+static_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
+animated_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV ] + static_media_actions
+audio_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV ] + unsupported_media_actions
+
+# actions, can_start_paused, can_start_with_embed
+static_full_support = ( static_media_actions, False, True )
+animated_full_support = ( animated_media_actions, True, True )
+audio_full_support = ( audio_media_actions, True, True )
+no_support = ( unsupported_media_actions, False, False )
 
 media_viewer_capabilities = {}
 
-media_viewer_capabilities[ HC.IMAGE_JPEG ] = static_full_support
-media_viewer_capabilities[ HC.IMAGE_PNG ] = static_full_support
-media_viewer_capabilities[ HC.IMAGE_WEBP ] = static_full_support
-media_viewer_capabilities[ HC.IMAGE_TIFF ] = static_full_support
-media_viewer_capabilities[ HC.IMAGE_ICON ] = static_full_support
-media_viewer_capabilities[ HC.IMAGE_APNG ] = animated_full_support
-media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
-media_viewer_capabilities[ HC.APPLICATION_FLASH ] = no_support
+for mime in HC.SEARCHABLE_MIMES:
+    
+    if mime in HC.IMAGES_THAT_CAN_HAVE_ANIMATION:
+        
+        media_viewer_capabilities[ mime ] = animated_full_support
+        
+    elif mime in HC.IMAGES:
+        
+        media_viewer_capabilities[ mime ] = static_full_support
+        
+    elif mime in HC.VIDEO:
+        
+        media_viewer_capabilities[ mime ] = animated_full_support
+        
+    elif mime in HC.AUDIO:
+        
+        media_viewer_capabilities[ mime ] = audio_full_support
+        
+    else:
+        
+        media_viewer_capabilities[ mime ] = no_support
+        
     
 
-media_viewer_capabilities[ HC.APPLICATION_PDF ] = no_support
-media_viewer_capabilities[ HC.APPLICATION_PSD ] = no_support
-media_viewer_capabilities[ HC.APPLICATION_ZIP ] = no_support
-media_viewer_capabilities[ HC.APPLICATION_7Z ] = no_support
-media_viewer_capabilities[ HC.APPLICATION_RAR ] = no_support
-media_viewer_capabilities[ HC.VIDEO_AVI ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_FLV ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_MOV ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_MP4 ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_MKV ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_WEBM ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_MPEG ] = animated_full_support
-media_viewer_capabilities[ HC.VIDEO_WMV ] = animated_full_support
-media_viewer_capabilities[ HC.AUDIO_M4A ] = no_support
-media_viewer_capabilities[ HC.AUDIO_MP3 ] = no_support
-media_viewer_capabilities[ HC.AUDIO_OGG ] = no_support
-media_viewer_capabilities[ HC.AUDIO_FLAC ] = no_support
-media_viewer_capabilities[ HC.AUDIO_WMA ] = no_support
 media_viewer_capabilities[ HC.APPLICATION_HYDRUS_UPDATE_CONTENT ] = no_support
 media_viewer_capabilities[ HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = no_support
 
@@ -406,11 +411,20 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
 
 SHORTCUTS_RESERVED_NAMES = [ 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
 
+shortcut_names_to_descriptions = {}
+
+shortcut_names_to_descriptions[ 'archive_delete_filter' ] = 'Navigation actions for the media viewer during an archive/delete filter. Mouse shortcuts should work.'
+shortcut_names_to_descriptions[ 'duplicate_filter' ] = 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.'
+shortcut_names_to_descriptions[ 'media' ] = 'Actions to alter metadata for media in the media viewer or the thumbnail grid.'
+shortcut_names_to_descriptions[ 'main_gui' ] = 'Actions to control pages in the main window of the program.'
+shortcut_names_to_descriptions[ 'media_viewer_browser' ] = 'Navigation actions for the regular browsable media viewer.'
+shortcut_names_to_descriptions[ 'media_viewer' ] = 'Zoom and pan actions for any media viewer.'
+
 # shortcut commands
 
 SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'export_files', 'export_files_quick_auto_export', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_set_alternate', 'duplicate_media_set_alternate_collections', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_focused_king', 'duplicate_media_set_same_quality', 'open_known_url' ]
-SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode' ]
-SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous' ]
+SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'pause_media', 'pause_play_media', 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode' ]
+SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous', 'pause_play_slideshow' ]
 SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'refresh_all_pages', 'refresh_page_of_pages_pages', 'new_page', 'new_page_of_pages', 'new_duplicate_filter_page', 'new_gallery_downloader_page', 'new_url_downloader_page', 'new_simple_downloader_page', 'new_watcher_downloader_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders', 'flip_debug_force_idle_mode_do_not_set_this', 'show_and_focus_manage_tags_favourite_tags', 'show_and_focus_manage_tags_related_tags', 'show_and_focus_manage_tags_file_lookup_script_tags', 'show_and_focus_manage_tags_recent_tags', 'focus_media_viewer' ]
 SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better_and_delete_other', 'duplicate_filter_this_is_better_but_keep_both', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_false_positive', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back' ]
 SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archive_delete_filter_delete', 'archive_delete_filter_skip', 'archive_delete_filter_back' ]

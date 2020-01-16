@@ -1568,12 +1568,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
         self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
         self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
         self._gallery_importers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
         self._gallery_importers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
-        self._gallery_importers_listctrl_panel.AddButton( 'remove selected', self._RemoveGalleryImports, enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
@@ -2269,13 +2269,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
         self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
         
         self._watchers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
         self._watchers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
-        self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
         

@@ -115,7 +115,16 @@ try:
     
     #
     
-    action = ServerController.ProcessStartingAction( db_dir, action )
+    try:
+        
+        action = ServerController.ProcessStartingAction( db_dir, action )
+        
+    except HydrusExceptions.ShutdownException as e:
+        
+        HydrusData.Print( e )
+        
+        action = 'exit'
+        
     
     if action == 'exit':
         
