@@ -633,7 +633,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             media = self._focused_media.GetDisplayMedia()
             
-            if media.GetMime() in HC.IMAGES and media.GetDuration() is None:
+            if media.GetMime() in HC.IMAGES:
                 
                 HG.client_controller.pub( 'clipboard', 'bmp', media )
                 
@@ -1181,6 +1181,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 return 'image'
                 
+            elif len( classes.difference( HC.ANIMATIONS ) ) == 0:
+                
+                return 'animation'
+                
             elif len( classes.difference( HC.VIDEO ) ) == 0:
                 
                 return 'video'
@@ -1436,6 +1440,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             self.setFocus( QC.Qt.OtherFocusReason )
             
+        
+    
+    def _MediaIsVisible( self, media ):
+        
+        return True
         
     
     def _ModifyUploaders( self, file_service_key ):
@@ -1777,18 +1786,25 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             else:
                 
-                for m in self._sorted_media:
+                # let's not focus if one of the selectees is already visible
+                
+                media_visible = True in ( self._MediaIsVisible( media ) for media in self._selected_media )
+                
+                if not media_visible:
                     
-                    if m in self._selected_media:
+                    for m in self._sorted_media:
                         
-                        ctrl = False
-                        shift = False
-                        
-                        self._HitMedia( m, ctrl, shift )
-                        
-                        self._ScrollToMedia( m )
-                        
-                        break
+                        if m in self._selected_media:
+                            
+                            ctrl = False
+                            shift = False
+                            
+                            self._HitMedia( m, ctrl, shift )
+                            
+                            self._ScrollToMedia( m )
+                            
+                            break
+                            
                         
                     
                 
@@ -3006,6 +3022,52 @@ class MediaPanelThumbnails( MediaPanel ):
         return y_start
         
     
+    def _MediaIsInCleanPage( self, thumbnail ):
+        
+        try:
+            
+            index = self._sorted_media.index( thumbnail )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
+        
+        if self._GetPageIndexFromThumbnailIndex( index ) in self._clean_canvas_pages:
+            
+            return True
+            
+        else:
+            
+            return False
+            
+        
+    
+    def _MediaIsVisible( self, media ):
+        
+        if media is not None:
+            
+            ( x, y ) = self._GetMediaCoordinates( media )
+            
+            visible_rect = QP.ScrollAreaVisibleRect( self )
+            
+            visible_rect_y = visible_rect.y()
+            
+            visible_rect_height = visible_rect.height()
+            
+            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+            
+            bottom_edge_below_top_of_view = visible_rect_y < y + thumbnail_span_height
+            top_edge_above_bottom_of_view = y < visible_rect_y + visible_rect_height
+            
+            is_visible = bottom_edge_below_top_of_view and top_edge_above_bottom_of_view
+            
+            return is_visible
+            
+        
+        return True
+        
+    
     def _MoveFocusedThumbnail( self, rows, columns, shift ):
         
         if self._focused_media is not None:
@@ -3106,7 +3168,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _RedrawMedia( self, thumbnails ):
         
-        visible_thumbnails = [ thumbnail for thumbnail in thumbnails if self._ThumbnailIsVisible( thumbnail ) ]
+        visible_thumbnails = [ thumbnail for thumbnail in thumbnails if self._MediaIsInCleanPage( thumbnail ) ]
         
         thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
         
@@ -3260,27 +3322,6 @@ class MediaPanelThumbnails( MediaPanel ):
             ( bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames ) = self._thumbnails_being_faded_in[ hash ]
             
             del self._thumbnails_being_faded_in[ hash ]
-            
-        
-    
-    def _ThumbnailIsVisible( self, thumbnail ):
-        
-        try:
-            
-            index = self._sorted_media.index( thumbnail )
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-        if self._GetPageIndexFromThumbnailIndex( index ) in self._clean_canvas_pages:
-            
-            return True
-            
-        else:
-            
-            return False
             
         
     
@@ -4371,7 +4412,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if focused_is_local:
                 
-                if self._focused_media.GetMime() in HC.IMAGES and self._focused_media.GetDuration() is None:
+                if self._focused_media.GetMime() in HC.IMAGES:
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
                     
@@ -4929,6 +4970,11 @@ class Thumbnail( Selectable ):
         self._dump_status = CC.DUMPER_NOT_DUMPED
         self._file_service_key = file_service_key
         
+        self._last_tags = None
+        
+        self._last_upper_summary = None
+        self._last_lower_summary = None
+        
     
     def _ScaleUpThumbnailDimensions( self, thumbnail_dimensions, scale_up_dimensions ):
         
@@ -5044,12 +5090,24 @@ class Thumbnail( Selectable ):
         if len( tags ) > 0:
             
             upper_tag_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_top' )
-            
-            upper_summary = upper_tag_summary_generator.GenerateSummary( tags )
-            
             lower_tag_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
             
-            lower_summary = lower_tag_summary_generator.GenerateSummary( tags )
+            if self._last_tags is not None and self._last_tags == tags:
+                
+                upper_summary = self._last_upper_summary
+                lower_summary = self._last_lower_summary
+                
+            else:
+                
+                upper_summary = upper_tag_summary_generator.GenerateSummary( tags )
+                
+                lower_summary = lower_tag_summary_generator.GenerateSummary( tags )
+                
+                self._last_tags = set( tags )
+                
+                self._last_upper_summary = upper_summary
+                self._last_lower_summary = lower_summary
+                
             
             if len( upper_summary ) > 0 or len( lower_summary ) > 0:
                 

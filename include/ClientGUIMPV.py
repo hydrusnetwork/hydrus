@@ -40,7 +40,8 @@ class mpvWidget( QW.QWidget ):
         
         # This is necessary since PyQT stomps over the locale settings needed by libmpv.
         # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
-        locale.setlocale( locale.LC_NUMERIC, 'C' )
+        # hydev is commenting this out for now since Windows doesn't seem to need it and it is set in the import for non-Windows
+        #locale.setlocale( locale.LC_NUMERIC, 'C' )
         
         self.setAttribute( QC.Qt.WA_DontCreateNativeAncestors )
         self.setAttribute( QC.Qt.WA_NativeWindow )
@@ -63,9 +64,10 @@ class mpvWidget( QW.QWidget ):
         
         self._player.loop = True
         
+        # this makes black screen for audio (rather than transparent)
         self._player.force_window = True
         
-        #self.setMouseTracking( True )#Needed to get mouse move events
+        self.setMouseTracking( True )#Needed to get mouse move events
         #self.setFocusPolicy(QC.Qt.StrongFocus)#Needed to get key events
         self._player.input_cursor = False#Disable mpv mouse move/click event capture
         self._player.input_vo_keyboard = False#Disable mpv key event capture, might also need to set input_x11_keyboard
@@ -75,6 +77,9 @@ class mpvWidget( QW.QWidget ):
         self._has_played_once_through = False
         
         self.destroyed.connect( self._player.terminate )
+        
+        HG.client_controller.sub( self, 'UpdateGlobalAudioMute', 'new_global_audio_mute' )
+        HG.client_controller.sub( self, 'UpdateGlobalAudioMute', 'new_global_audio_volume' )
         
 
     def GetAnimationBarStatus( self ):
@@ -181,26 +186,32 @@ class mpvWidget( QW.QWidget ):
         event.ignore()
         
 
-    #def mouseMoveEvent( self, event ):
+    def mouseMoveEvent( self, event ):
         
         # same deal here as with mousereleaseevent--osc is non-interactable with commands, so let's not use it for now
         #self._player.command( 'mouse', event.x(), event.y() )
         
-        #event.ignore()
+        event.ignore()
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
+            
+            if event.button() == QC.Qt.LeftButton:
+                
+                self.PausePlay()
+                
+                self.parentWidget().BeginDrag()
+                
+                return
+                
+            
+        
+        event.ignore()
         
     
     def mouseReleaseEvent( self, event ):
-        
-        if event.button() == QC.Qt.LeftButton:
-            
-            self.PausePlay()
-            
-        else:
-            
-            event.ignore()
-            
-            return
-            
         
         # left index = 0
         # right index = 2
@@ -208,7 +219,7 @@ class mpvWidget( QW.QWidget ):
         
         #self._player.command( 'mouse', event.x(), event.y(), index, 'single' )
         
-        event.accept()
+        event.ignore()
         
 
     def Pause( self ):
@@ -234,7 +245,10 @@ class mpvWidget( QW.QWidget ):
             
             self._player.pause = True
             
-            self._player.command( 'playlist-remove', 'current' )
+            if len( self._player.playlist ) > 0:
+                
+                self._player.command( 'playlist-remove', 'current' )
+                
             
         else:
             
@@ -249,16 +263,20 @@ class mpvWidget( QW.QWidget ):
             
             self._player.visibility = 'always'
             
-            volume = 70
-            mute = False
-            
             self._player.pause = True
             
-            self._player.loadfile( path )
+            try:
+                
+                self._player.loadfile( path )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
             
+            self._player.volume = HG.client_controller.new_options.GetInteger( 'global_audio_volume' )
+            self._player.mute = HG.client_controller.new_options.GetBoolean( 'global_audio_mute' )
             self._player.pause = start_paused
-            self._player.volume = volume
-            self._player.mute = mute
             
         
     
@@ -267,3 +285,12 @@ class mpvWidget( QW.QWidget ):
         self.SetMedia( None )
         
     
+    def UpdateGlobalAudioMute( self ):
+        
+        self._player.mute = HG.client_controller.new_options.GetBoolean( 'global_audio_mute' )
+        
+
+    def UpdateGlobalAudioVolume( self ):
+        
+        self._player.volume = HG.client_controller.new_options.GetInteger( 'global_audio_volume' )
+        

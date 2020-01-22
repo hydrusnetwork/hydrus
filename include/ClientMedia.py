@@ -546,7 +546,7 @@ class MediaResult( object ):
     
     def GetInbox( self ):
         
-        return self._locations_manager.GetInbox()
+        return self._locations_manager.inbox
         
     
     def GetLocationsManager( self ):
@@ -596,7 +596,10 @@ class MediaResult( object ):
     
     def IsStaticImage( self ):
         
-        return self._file_info_manager.mime in HC.IMAGES and self._file_info_manager.duration in ( None, 0 )
+        image = self._file_info_manager.mime in HC.IMAGES
+        static_animation = self._file_info_manager.mime in HC.ANIMATIONS and self._file_info_manager.duration in ( 0, None )
+        
+        return image or static_animation
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
@@ -761,7 +764,7 @@ class LocationsManager( object ):
         self._pending = pending
         self._petitioned = petitioned
         
-        self._inbox = inbox
+        self.inbox = inbox
         
         if urls is None:
             
@@ -803,7 +806,7 @@ class LocationsManager( object ):
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
         current_to_timestamps = dict( self._current_to_timestamps )
         
-        return LocationsManager( current, deleted, pending, petitioned, self._inbox, urls, service_keys_to_filenames, current_to_timestamps, self._file_modified_timestamp )
+        return LocationsManager( current, deleted, pending, petitioned, self.inbox, urls, service_keys_to_filenames, current_to_timestamps, self._file_modified_timestamp )
         
     
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
@@ -827,7 +830,7 @@ class LocationsManager( object ):
     
     def GetInbox( self ):
         
-        return self._inbox
+        return self.inbox
         
     
     def GetPending( self ): return self._pending
@@ -931,11 +934,11 @@ class LocationsManager( object ):
             
             if action == HC.CONTENT_UPDATE_ARCHIVE:
                 
-                self._inbox = False
+                self.inbox = False
                 
             elif action == HC.CONTENT_UPDATE_INBOX:
                 
-                self._inbox = True
+                self.inbox = True
                 
             elif action == HC.CONTENT_UPDATE_ADD:
                 
@@ -951,7 +954,7 @@ class LocationsManager( object ):
                     
                     if CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current:
                         
-                        self._inbox = True
+                        self.inbox = True
                         
                         self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                         
@@ -978,7 +981,7 @@ class LocationsManager( object ):
                     
                 elif service_key == CC.TRASH_SERVICE_KEY:
                     
-                    self._inbox = False
+                    self.inbox = False
                     
                     self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                     self._deleted.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
@@ -1047,7 +1050,15 @@ class Media( object ):
         self._id_hash = self._id.__hash__()
         
     
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    def __eq__( self, other ):
+        
+        if isinstance( other, Media ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
     
     def __hash__( self ):
         
@@ -1447,6 +1458,68 @@ class MediaList( object ):
             
         
     
+    def GetFilteredFileCount( self, file_filter ):
+        
+        if file_filter.filter_type == FILE_FILTER_ALL:
+            
+            return self.GetNumFiles()
+            
+        elif file_filter.filter_type == FILE_FILTER_SELECTED:
+            
+            return sum( ( m.GetNumFiles() for m in self._selected_media ) )
+            
+        elif file_filter.filter_type == FILE_FILTER_NOT_SELECTED:
+            
+            return self.GetNumFiles() - sum( ( m.GetNumFiles() for m in self._selected_media ) )
+            
+        elif file_filter.filter_type == FILE_FILTER_NONE:
+            
+            return 0
+            
+        elif file_filter.filter_type == FILE_FILTER_INBOX:
+            
+            return sum( ( m.GetNumInbox() for m in self._selected_media ) )
+            
+        elif file_filter.filter_type == FILE_FILTER_ARCHIVE:
+            
+            return self.GetNumFiles() - sum( ( m.GetNumInbox() for m in self._selected_media ) )
+            
+        else:
+            
+            flat_media = self.GetFlatMedia()
+            
+            if file_filter.filter_type == FILE_FILTER_FILE_SERVICE:
+                
+                file_service_key = file_filter.filter_data
+                
+                return sum( ( 1 for m in flat_media if file_service_key in m.GetLocationsManager().GetCurrent() ) )
+                
+            elif file_filter.filter_type == FILE_FILTER_LOCAL:
+                
+                return sum( ( 1 for m in flat_media if m.GetLocationsManager().IsLocal() ) )
+                
+            elif file_filter.filter_type == FILE_FILTER_REMOTE:
+                
+                return sum( ( 1 for m in flat_media if m.GetLocationsManager().IsRemote() ) )
+                
+            elif file_filter.filter_type == FILE_FILTER_TAGS:
+                
+                ( and_or_or, select_tags ) = file_filter.filter_data
+                
+                if and_or_or == 'AND':
+                    
+                    return sum( ( 1 for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) == len( select_tags ) ) )
+                    
+                elif and_or_or == 'OR':
+                    
+                    return sum( ( 1 for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) > 0 ) )
+                    
+                
+            
+        
+        return 0
+        
+    
     def GetFilteredHashes( self, file_filter ):
         
         if file_filter.filter_type == FILE_FILTER_ALL:
@@ -1527,6 +1600,8 @@ class MediaList( object ):
             return hashes
             
         
+        return set()
+        
     
     def GetFilteredMedia( self, file_filter ):
         
@@ -1586,6 +1661,8 @@ class MediaList( object ):
             
             return filtered_media
             
+        
+        return set()
         
     
     def GenerateMediaResults( self, has_location = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ):
@@ -1977,6 +2054,16 @@ class FileFilter( object ):
         self.filter_data = filter_data
         
     
+    def __eq__( self, other ):
+        
+        if isinstance( other, FileFilter ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
     def __hash__( self ):
         
         if self.filter_data is None:
@@ -2023,7 +2110,7 @@ class FileFilter( object ):
                     
                 
             
-            count = len( media_list.GetFilteredHashes( self ) )
+            count = media_list.GetFilteredFileCount( self )
             
             filter_counts[ self ] = count
             
@@ -2483,7 +2570,10 @@ class MediaSingleton( Media ):
             
         
     
-    def GetLocationsManager( self ): return self._media_result.GetLocationsManager()
+    def GetLocationsManager( self ):
+        
+        return self._media_result.GetLocationsManager()
+        
     
     def GetMediaResult( self ): return self._media_result
     
@@ -2685,7 +2775,7 @@ class MediaSingleton( Media ):
     
     def IsImage( self ):
         
-        return self._media_result.GetMime() in HC.IMAGES and not self.HasDuration()
+        return self._media_result.GetMime() in HC.IMAGES
         
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None

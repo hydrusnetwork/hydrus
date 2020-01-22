@@ -1325,7 +1325,10 @@ def ToHumanBytes( size ):
     
 def ToHumanInt( num ):
     
-    text = locale.format_string( '%d', num, grouping = True )
+    # this got stomped on by mpv, which resets locale
+    #text = locale.format_string( '%d', num, grouping = True )
+    
+    text = '{:,}'.format( num )
     
     return text
     
@@ -1375,11 +1378,17 @@ class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    def __eq__( self, other ):
+        
+        if isinstance( other, AccountIdentifier ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
     
     def __hash__( self ): return ( self._type, self._data ).__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
     def __repr__( self ): return 'Account Identifier: ' + str( ( self._type, self._data ) )
     
@@ -1539,10 +1548,13 @@ class ContentUpdate( object ):
     
     def __eq__( self, other ):
         
-        return hash( self ) == hash( other )
+        if isinstance( other, ContentUpdate ):
+            
+            return self.__hash__() == other.__hash__()
+            
         
-    
-    def __ne__( self, other ): return not self.__eq__( other )
+        return NotImplemented
+        
     
     def __hash__( self ):
         

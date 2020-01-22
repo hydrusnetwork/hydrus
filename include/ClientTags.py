@@ -405,7 +405,12 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def __eq__( self, other ):
         
-        return self._tag_slices_to_rules == other._tag_slices_to_rules
+        if isinstance( other, TagFilter ):
+            
+            return self._tag_slices_to_rules == other._tag_slices_to_rules
+            
+        
+        return NotImplemented
         
     
     def _GetTagSlices( self, tag ):

@@ -240,7 +240,7 @@ def ShouldHaveAnimationBar( media, show_action ):
         return True
         
     
-    is_animated_image = media.GetMime() in HC.IMAGES_THAT_CAN_HAVE_ANIMATION and media.HasDuration()
+    is_animated_image = media.GetMime() in HC.ANIMATIONS and media.HasDuration()
     
     is_video = media.GetMime() in HC.VIDEO
     
@@ -1187,7 +1187,7 @@ class Canvas( QW.QWidget ):
         
         if self._current_media is not None:
             
-            if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
+            if self._current_media.GetMime() in HC.IMAGES:
                 
                 HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
                 
@@ -2357,6 +2357,11 @@ class Canvas( QW.QWidget ):
     
     def SetMedia( self, media ):
         
+        if not self.isVisible():
+            
+            return
+            
+        
         if media is not None:
             
             media = media.GetDisplayMedia()
@@ -2586,7 +2591,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
-            if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
+            if self._current_media.GetMime() in HC.IMAGES:
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
                 
@@ -4211,6 +4216,13 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
+        if self._current_media is None:
+            
+            # probably a file view stats update as we close down--ignore it
+            
+            return
+            
+        
         if self.HasMedia( self._current_media ):
             
             next_media = self._GetNext( self._current_media )
@@ -5011,8 +5023,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
-            if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
+            if self._current_media.GetMime() in HC.IMAGES:
+                
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
+                
 
             ClientGUIMenus.AppendMenuItem( copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
             
@@ -5126,7 +5140,10 @@ class MediaContainer( QW.QWidget ):
         
         # If I do not set this, macOS goes 100% CPU endless repaint events!
         # My guess is it due to the borked layout
+        # it means 'I guarantee to cover my whole viewport with pixels, no need for automatic background clear'
         self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
+        
+        self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
         
         self._media = None
         self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
@@ -5161,6 +5178,7 @@ class MediaContainer( QW.QWidget ):
             if isinstance( media_window, ( Animation, StaticImage ) ):
                 
                 media_window.SetNoneMedia()
+                
                 media_window.hide()
                 
             elif isinstance( media_window, ClientGUIMPV.mpvWidget ):
@@ -5169,11 +5187,9 @@ class MediaContainer( QW.QWidget ):
                 
                 media_window.SetNoneMedia()
                 
-                time.sleep( 0.1 ) # anti crash wew
+                media_window.hide()
                 
-                media_window.deleteLater()
-                
-                time.sleep( 0.1 ) # anti crash wew
+                HG.client_controller.gui.ReleaseMPVWidget( media_window )
                 
             else:
                 
@@ -5219,8 +5235,6 @@ class MediaContainer( QW.QWidget ):
                     
                 else:
                     
-                    self._static_image_window.show()
-                    
                     self._media_window = self._static_image_window
                     
                 
@@ -5233,8 +5247,6 @@ class MediaContainer( QW.QWidget ):
                     destroy_old_media_window = False
                     
                 else:
-                    
-                    self._animation_window.show()
                     
                     self._media_window = self._animation_window
                     
@@ -5252,22 +5264,20 @@ class MediaContainer( QW.QWidget ):
                 
                 if self._mpv_window is None:
                     
-                    self._mpv_window = ClientGUIMPV.mpvWidget( self )
+                    self._mpv_window = HG.client_controller.gui.GetMPVWidget( self )
                     
-                
-                self._mpv_window.show()
                 
                 self._media_window = self._mpv_window
                 
             
-            self._mpv_window.SetMedia( self._media, start_paused = self._start_paused )
+            self._media_window.SetMedia( self._media, start_paused = self._start_paused )
             
         
         if ShouldHaveAnimationBar( self._media, self._show_action ):
             
-            self._animation_bar.show()
-            
             self._animation_bar.SetMediaAndWindow( self._media, self._media_window )
+            
+            self._animation_bar.show()
             
         else:
             
@@ -5278,6 +5288,11 @@ class MediaContainer( QW.QWidget ):
             
             self._DestroyOrHideThisMediaWindow( old_media_window )
             
+            # this forces a flush of the last valid background bmp, so we don't get a flicker of a file from five files ago when we last saw a static image
+            self.repaint()
+            
+        
+        self._media_window.show()
         
     
     def _SizeAndPositionChildren( self ):
@@ -5288,8 +5303,8 @@ class MediaContainer( QW.QWidget ):
             
             if self._media_window is None:
                 
-                self._embed_button.setFixedSize( QP.TupleToQSize( (my_width,my_height) ) )
-                self._embed_button.move( QP.TupleToQPoint( (0,0) ) )
+                self._embed_button.setFixedSize( QP.TupleToQSize( ( my_width, my_height ) ) )
+                self._embed_button.move( QP.TupleToQPoint( ( 0, 0 ) ) )
                 
             else:
                 
@@ -5309,6 +5324,7 @@ class MediaContainer( QW.QWidget ):
                 
                 self._media_window.setFixedSize( QP.TupleToQSize( ( media_width, media_height ) ) )
                 self._media_window.move( QP.TupleToQPoint( ( 0, 0 ) ) )
+                
             
         
     
@@ -5404,6 +5420,26 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def paintEvent( self, event ):
+        
+        if self._media_window is not None and self._media_window.isVisible():
+            
+            return
+            
+        
+        # this only happens when we are transitioning from one media to another. in the brief period when one media type is going to another, we'll get flicker of the last valid bmp
+        # mpv embed fun aggravates this
+        # so instead we do an explicit repaint after the hide and before the new show, to clear our window
+        
+        painter = QG.QPainter( self )
+        
+        background_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
+        
+        painter.setBrush( QG.QBrush( background_colour ) )
+        
+        painter.drawRect( painter.viewport() )
+        
+    
     def Pause( self ):
         
         if self._media is not None:
@@ -5470,8 +5506,6 @@ class MediaContainer( QW.QWidget ):
     def SetMedia( self, media, initial_size, initial_position, show_action, start_paused, start_with_embed ):
         
         self._media = media
-        
-        self.hide()
         
         self._show_action = show_action
         self._start_paused = start_paused
@@ -5707,6 +5741,8 @@ class StaticImage( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
+        self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
+        
         self.setMouseTracking( True )
         
         self._media = None
@@ -5725,6 +5761,8 @@ class StaticImage( QW.QWidget ):
         self._canvas_qt_pixmap = None
         
         self._is_rendered = False
+        
+        self._first_background_drawn = False
         
     
     def _DrawBackground( self, painter ):
@@ -5815,7 +5853,7 @@ class StaticImage( QW.QWidget ):
         
         self._ClearCanvasBitmap()
         
-        self._first_background_drawn = False
+        self.update()
         
     
     def TIMERAnimationUpdate( self ):

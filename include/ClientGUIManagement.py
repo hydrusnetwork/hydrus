@@ -966,6 +966,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, QW.QWidget( self._main_left_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._main_left_panel.setLayout( vbox )
         
@@ -998,6 +999,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         QP.AddToLayout( vbox, self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, QW.QWidget( self._main_right_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._main_right_panel.setLayout( vbox )
         

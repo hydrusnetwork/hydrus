@@ -31,6 +31,79 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._InitialiseDefaults()
         
     
+    def _GetDefaultMediaViewOptions( self ):
+        
+        media_view = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
+        
+        # media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
+        
+        from . import ClientGUIMPV
+        
+        if ClientGUIMPV.MPV_IS_AVAILABLE:
+            
+            video_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV
+            audio_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV
+            
+            video_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+            
+        else:
+            
+            video_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
+            audio_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
+            video_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+            
+        
+        image_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        gif_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        flash_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        
+        null_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        
+        media_start_paused = False
+        media_start_with_embed = False
+        preview_start_paused = False
+        preview_start_with_embed = False
+        
+        media_view[ HC.GENERAL_IMAGE ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, image_zoom_info )
+        
+        media_view[ HC.GENERAL_ANIMATION ] = ( video_action, media_start_paused, media_start_with_embed, video_action, preview_start_paused, preview_start_with_embed, gif_zoom_info )
+        
+        media_view[ HC.GENERAL_VIDEO ] = ( video_action, media_start_paused, media_start_with_embed, video_action, preview_start_paused, preview_start_with_embed, video_zoom_info )
+        
+        media_view[ HC.GENERAL_AUDIO ] = ( audio_action, media_start_paused, media_start_with_embed, audio_action, preview_start_paused, preview_start_with_embed, null_zoom_info )
+        
+        media_view[ HC.GENERAL_APPLICATION ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, preview_start_paused, preview_start_with_embed, null_zoom_info )
+        
+        return media_view
+        
+    
+    def _GetMediaViewOptions( self, mime ):
+        
+        if mime in self._dictionary[ 'media_view' ]:
+            
+            return self._dictionary[ 'media_view' ][ mime ]
+            
+        else:
+            
+            if mime not in HC.mimes_to_general_mimetypes:
+                
+                null_result = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, False, False, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, False, False, ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR ) )
+                
+                return null_result
+                
+            
+            general_mime_type = HC.mimes_to_general_mimetypes[ mime ]
+            
+            if general_mime_type not in self._dictionary[ 'media_view' ]:
+                
+                self._dictionary[ 'media_view' ] = self._GetDefaultMediaViewOptions()
+                
+            
+            return self._dictionary[ 'media_view' ][ general_mime_type ]
+            
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_info = self._dictionary.GetSerialisableTuple()
@@ -137,6 +210,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'autocomplete_float_main_gui' ] = True
         self._dictionary[ 'booleans' ][ 'autocomplete_float_frames' ] = False
         
+        self._dictionary[ 'booleans' ][ 'global_audio_mute' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -228,6 +303,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'duplicate_filter_max_batch_size' ] = 250
         
         self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
+        
+        self._dictionary[ 'integers' ][ 'global_audio_volume' ] = 70
         
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_jpeg_quality' ] = 10
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_jpeg_quality' ] = 20
@@ -468,47 +545,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'media_view' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
-        
-        # media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
-        
-        image_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        gif_zoom_info = ( CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        flash_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
-        video_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        null_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
-        
-        media_start_paused = False
-        media_start_with_embed = False
-        preview_start_paused = False
-        preview_start_with_embed = False
-        
-        for mime in HC.SEARCHABLE_MIMES:
-            
-            if mime in HC.IMAGES_THAT_CAN_HAVE_ANIMATION:
-                
-                self._dictionary[ 'media_view' ][ mime ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, gif_zoom_info )
-                
-            elif mime in HC.IMAGES:
-                
-                self._dictionary[ 'media_view' ][ mime ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, image_zoom_info )
-                
-            elif mime in HC.VIDEO:
-                
-                self._dictionary[ 'media_view' ][ mime ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, video_zoom_info )
-                
-            elif mime in HC.AUDIO:
-                
-                self._dictionary[ 'media_view' ][ mime ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, preview_start_paused, preview_start_with_embed, null_zoom_info )
-                
-            elif mime in HC.APPLICATIONS:
-                
-                self._dictionary[ 'media_view' ][ mime ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, preview_start_paused, preview_start_with_embed, null_zoom_info )
-                
-            
-        
-        self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_CONTENT ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, preview_start_paused, preview_start_with_embed, null_zoom_info )
-        self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, preview_start_paused, preview_start_with_embed, null_zoom_info )
+        self._dictionary[ 'media_view' ] = self._GetDefaultMediaViewOptions()
         
         self._dictionary[ 'media_zooms' ] = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
         
@@ -749,6 +786,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultMediaViewOptions( self ):
+        
+        with self._lock:
+            
+            return self._GetDefaultMediaViewOptions()
+            
+        
+    
     def GetDefaultSort( self ):
         
         with self._lock:
@@ -848,7 +893,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._GetMediaViewOptions( mime )
             
             ( possible_show_actions, can_start_paused, can_start_with_embed ) = CC.media_viewer_capabilities[ mime ]
             
@@ -861,11 +906,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetMediaViewOptions( self, mime ):
+    def GetMediaViewOptions( self ):
         
         with self._lock:
             
-            return self._dictionary[ 'media_view' ][ mime ]
+            return dict( self._dictionary[ 'media_view' ] )
             
         
     
@@ -873,7 +918,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._GetMediaViewOptions( mime )
             
             return zoom_info
             
@@ -891,7 +936,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._GetMediaViewOptions( mime )
             
             ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = zoom_info
             
@@ -932,7 +977,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._GetMediaViewOptions( mime )
             
             ( possible_show_actions, can_start_paused, can_start_with_embed ) = CC.media_viewer_capabilities[ mime ]
             
@@ -1125,11 +1170,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetMediaViewOptions( self, mime, value_tuple ):
+    def SetMediaViewOptions( self, mimes_to_media_view_options ):
         
         with self._lock:
             
-            self._dictionary[ 'media_view' ][ mime ] = value_tuple
+            self._dictionary[ 'media_view' ] = HydrusSerialisable.SerialisableDictionary( mimes_to_media_view_options )
             
         
     

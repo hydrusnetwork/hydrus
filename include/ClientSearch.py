@@ -819,7 +819,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __eq__( self, other ):
         
-        return self.__hash__() == other.__hash__()
+        if isinstance( other, Predicate ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
         
     
     def __hash__( self ):
@@ -1460,6 +1465,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.IMAGES ) ):
                         
                         mime_text = 'image'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.ANIMATIONS ) ):
+                        
+                        mime_text = 'animation'
                         
                     elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.VIDEO ) ):
                         

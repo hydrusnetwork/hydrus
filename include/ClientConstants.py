@@ -190,9 +190,15 @@ no_support = ( unsupported_media_actions, False, False )
 
 media_viewer_capabilities = {}
 
+media_viewer_capabilities[ HC.GENERAL_ANIMATION ] = animated_full_support
+media_viewer_capabilities[ HC.GENERAL_IMAGE ] = static_full_support
+media_viewer_capabilities[ HC.GENERAL_VIDEO ] = animated_full_support
+media_viewer_capabilities[ HC.GENERAL_AUDIO ] = audio_full_support
+media_viewer_capabilities[ HC.GENERAL_APPLICATION ] = no_support
+
 for mime in HC.SEARCHABLE_MIMES:
     
-    if mime in HC.IMAGES_THAT_CAN_HAVE_ANIMATION:
+    if mime in HC.ANIMATIONS:
         
         media_viewer_capabilities[ mime ] = animated_full_support
         

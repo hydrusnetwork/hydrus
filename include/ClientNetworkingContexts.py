@@ -20,7 +20,12 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     def __eq__( self, other ):
         
-        return self.__hash__() == other.__hash__()
+        if isinstance( other, NetworkContext ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
         
     
     def __hash__( self ):

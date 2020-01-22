@@ -390,6 +390,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._canvas_frames = [] # Keep references to canvas frames so they won't get garbage collected (canvas frames don't have a parent)
         
+        self._persistent_mpv_widgets = []
+        
         self._closed_pages = []
         
         self._lock = threading.Lock()
@@ -473,6 +475,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._ui_update_windows = set()
         
         self._animation_update_timer = QC.QTimer( self )
+        self._animation_update_timer.setTimerType( QC.Qt.PreciseTimer )
         self._animation_update_timer.timeout.connect( self.TIMEREventAnimationUpdate )
         
         self._animation_update_windows = set()
@@ -4906,6 +4909,25 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return self._notebook.GetSessionAPIInfoDict( is_selected = True )
         
     
+    def GetMPVWidget( self, parent ):
+        
+        if len( self._persistent_mpv_widgets ) == 0:
+            
+            mpv_widget = ClientGUIMPV.mpvWidget( parent )
+            
+            self._persistent_mpv_widgets.append( mpv_widget )
+            
+        
+        mpv_widget = self._persistent_mpv_widgets.pop()
+        
+        if mpv_widget.parent() is self:
+            
+            mpv_widget.setParent( parent )
+            
+        
+        return mpv_widget
+        
+    
     def GetPageAPIInfoDict( self, page_key, simple ):
         
         page = self._notebook.GetPageFromPageKey( page_key )
@@ -4995,7 +5017,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            self._ImportURL( url, destination_page_name = destination_page_name )
+            self._ImportURL( url, destination_page_name = destination_page_name, show_destination_page = False )
             
         except Exception as e:
             
@@ -5148,7 +5170,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if tlw.isMinimized() and not self._notebook.HasMediaPageName( page_name ):
             
-            self._controller.CallLaterQtSafe(self, 10.0, self.PresentImportedFilesToPage, hashes, page_name)
+            self._controller.CallLaterQtSafe( self, 10.0, self.PresentImportedFilesToPage, hashes, page_name )
             
             return
             
@@ -5412,6 +5434,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._ui_update_repeating_job = self._controller.CallRepeatingQtSafe(self, 0.0, 0.1, self.REPEATINGUIUpdate)
             
+        
+    
+    def ReleaseMPVWidget( self, mpv_widget ):
+        
+        mpv_widget.setParent( self )
+        
+        self._persistent_mpv_widgets.append( mpv_widget )
         
     
     def REPEATINGBandwidth( self ):

@@ -48,11 +48,20 @@ class JobKey( object ):
         self._variables = dict()
         
     
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    def __eq__( self, other ):
+        
+        if isinstance( other, JobKey ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
     
-    def __hash__( self ): return self._key.__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    def __hash__( self ):
+        
+        return self._key.__hash__()
+        
     
     def _CheckCancelTests( self ):
         
@@ -535,19 +544,19 @@ class QtAwareRepeatingJob(HydrusThreading.RepeatingJob):
         self._window = window
         
     
+    def _QTWork( self ):
+        
+        if not self._window or not QP.isValid( self._window ):
+            
+            return
+            
+        
+        self.Work()
+        
+    
     def _BootWorker( self ):
         
-        def qt_code():
-            
-            if not self._window or not QP.isValid( self._window ):
-                
-                return
-                
-            
-            self.Work()
-            
-        
-        QP.CallAfter( qt_code )
+        QP.CallAfter( self._QTWork )
         
     
     def _MyWindowDead( self ):

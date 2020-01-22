@@ -161,7 +161,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
-        QP.AddToLayout( vbox, info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )

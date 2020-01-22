@@ -97,6 +97,8 @@ try:
         HydrusPaths.SetEnvTempDir( result.temp_dir )
         
     
+    HydrusPaths.AddBaseDirToEnvPath()
+    
     from include import HydrusPy2To3
     
     HydrusPy2To3.do_2to3_test()

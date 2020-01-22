@@ -3282,10 +3282,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( self._media_viewer_panel, 'media_viewer_options', 20, 20, [ ( 'mime', 21 ), ( 'media show action', 20 ), ( 'preview show action', 20 ), ( 'zoom info', -1 ) ], data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions )
+            media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._media_viewer_panel )
             
-            self._media_viewer_edit_button = QW.QPushButton( 'edit', self._media_viewer_panel )
-            self._media_viewer_edit_button.clicked.connect( self.EditMediaViewerOptions )
+            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, 'media_viewer_options', 20, 20, [ ( 'mime', 21 ), ( 'media show action', 20 ), ( 'preview show action', 20 ), ( 'zoom info', -1 ) ], data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+            
+            media_viewer_list_panel.SetListCtrl( self._media_viewer_options )
+            
+            media_viewer_list_panel.AddButton( 'add', self.AddMediaViewerOptions, enabled_check_func = self._CanAddMediaViewOption )
+            media_viewer_list_panel.AddButton( 'edit', self.EditMediaViewerOptions, enabled_only_on_selection = True )
+            media_viewer_list_panel.AddDeleteButton( enabled_check_func = self._CanDeleteMediaViewOptions )
             
             #
             
@@ -3302,13 +3307,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_PSD, HC.APPLICATION_ZIP, HC.APPLICATION_RAR, HC.APPLICATION_7Z, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.VIDEO_MPEG, HC.VIDEO_REALMEDIA, HC.AUDIO_MP3, HC.AUDIO_M4A, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA, HC.AUDIO_REALMEDIA, HC.AUDIO_TRUEAUDIO )
+            all_media_view_options = self._new_options.GetMediaViewOptions()
             
-            for mime in mimes_in_correct_order:
+            for ( mime, view_options ) in all_media_view_options.items():
                 
-                items = self._new_options.GetMediaViewOptions( mime )
-                
-                data = QP.ListsToTuples( [ mime ] + list( items ) )
+                data = QP.ListsToTuples( [ mime ] + list( view_options ) )
                 
                 self._media_viewer_options.AddDatas( ( data, ) )
                 
@@ -3335,31 +3338,75 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            self._media_viewer_panel.Add( self._media_viewer_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._media_viewer_panel.Add( self._media_viewer_edit_button, CC.FLAGS_LONE_BUTTON )
+            self._media_viewer_panel.Add( media_viewer_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             QP.AddToLayout( vbox, self._media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
         
+        def _CanAddMediaViewOption( self ):
+            
+            return len( self._GetUnsetMediaViewFiletypes() ) > 0
+            
+        
+        def _CanDeleteMediaViewOptions( self ):
+            
+            deletable_mimes = set( HC.SEARCHABLE_MIMES )
+            
+            selected_mimes = set()
+            
+            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._media_viewer_options.GetData( only_selected = True ):
+                
+                selected_mimes.add( mime )
+                
+            
+            if len( selected_mimes ) == 0:
+                
+                return False
+                
+            
+            all_selected_are_deletable = selected_mimes.issubset( deletable_mimes )
+            
+            return all_selected_are_deletable
+            
+        
+        def _GetCopyOfGeneralMediaViewOptions( self, desired_mime ):
+            
+            general_mime_type = HC.mimes_to_general_mimetypes[ desired_mime ]
+            
+            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._media_viewer_options.GetData():
+                
+                if mime == general_mime_type:
+                    
+                    view_options = ( desired_mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info )
+                    
+                    return view_options
+                    
+                
+            
+        
+        def _GetUnsetMediaViewFiletypes( self ):
+            
+            editable_mimes = set( HC.SEARCHABLE_MIMES )
+            
+            set_mimes = set()
+            
+            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._media_viewer_options.GetData():
+                
+                set_mimes.add( mime )
+                
+            
+            unset_mimes = editable_mimes.difference( set_mimes )
+            
+            return unset_mimes
+            
+        
         def _GetListCtrlData( self, data ):
             
             ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = data
             
-            pretty_mime = HC.mime_string_lookup[ mime ]
-            
-            for general_mime in HC.GENERAL_FILETYPES:
-                
-                mime_group = HC.general_mimetypes_to_mime_groups[ general_mime ]
-                
-                if mime in mime_group:
-                    
-                    pretty_mime = '{}: {}'.format( HC.mime_string_lookup[ general_mime ], pretty_mime )
-                    
-                    break
-                    
-                
+            pretty_mime = self._GetPrettyMime( mime )
             
             pretty_media_show_action = CC.media_viewer_action_string_lookup[ media_show_action ]
             
@@ -3402,11 +3449,64 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return ( display_tuple, sort_tuple )
             
         
+        def _GetPrettyMime( self, mime ):
+            
+            pretty_mime = HC.mime_string_lookup[ mime ]
+            
+            if mime not in HC.GENERAL_FILETYPES:
+                
+                pretty_mime = '{}: {}'.format( HC.mime_string_lookup[ HC.mimes_to_general_mimetypes[ mime ] ], pretty_mime )
+                
+            
+            return pretty_mime
+            
+        
+        def AddMediaViewerOptions( self ):
+            
+            unset_filetypes = self._GetUnsetMediaViewFiletypes()
+            
+            if len( unset_filetypes ) == 0:
+                
+                QW.QMessageBox.warning( self, 'Warning', 'You cannot add any more specific filetype options!' )
+                
+                return
+                
+            
+            choice_tuples = [ ( self._GetPrettyMime( mime ), mime ) for mime in unset_filetypes ]
+            
+            try:
+                
+                mime = ClientGUIDialogsQuick.SelectFromList( self, 'select the filetype to add', choice_tuples, sort_tuples = True )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            data = self._GetCopyOfGeneralMediaViewOptions( mime )
+            
+            title = 'add media view options information'
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, data )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    new_data = panel.GetValue()
+                    
+                    self._media_viewer_options.AddDatas( ( new_data, ) )
+                    
+                
+            
+        
         def EditMediaViewerOptions( self ):
             
             for data in self._media_viewer_options.GetData( only_selected = True ):
                 
-                title = 'set media view options information'
+                title = 'edit media view options information'
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
                     
@@ -3469,6 +3569,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 HydrusData.ShowText( 'Could not parse those zooms, so they were not saved!' )
                 
             
+            mimes_to_media_view_options = {}
+            
             for data in self._media_viewer_options.GetData():
                 
                 data = list( data )
@@ -3477,8 +3579,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 value = data[1:]
                 
-                self._new_options.SetMediaViewOptions( mime, value )
+                mimes_to_media_view_options[ mime ] = value
                 
+            
+            self._new_options.SetMediaViewOptions( mimes_to_media_view_options )
             
         
     
@@ -4912,7 +5016,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
-        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrl( reserved_panel, 'reserved_shortcuts', 20, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, activation_callback = self._EditReserved )
+        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrl( reserved_panel, 'reserved_shortcuts', 6, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, activation_callback = self._EditReserved )
         
         self._reserved_shortcuts.setMinimumSize( QP.TupleToQSize( (320,200) ) )
         
@@ -4922,7 +5026,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         custom_panel = ClientGUICommon.StaticBox( self, 'custom user sets' )
         
-        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrl( custom_panel, 'custom_shortcuts', 20, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrl( custom_panel, 'custom_shortcuts', 6, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
         
         self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
@@ -4967,7 +5071,10 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         custom_panel_message = 'Custom shortcuts are advanced. They apply to the media viewer and must be turned on to take effect.'
         
-        custom_panel.Add( ClientGUICommon.BetterStaticText( custom_panel, custom_panel_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        st = ClientGUICommon.BetterStaticText( custom_panel, custom_panel_message )
+        st.setWordWrap( True )
+        
+        custom_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         custom_panel.Add( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         custom_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         

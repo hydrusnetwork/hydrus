@@ -56,6 +56,42 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
+class PubSubEvent( QC.QEvent ):
+    
+    def __init__( self, pubsub ):
+        
+        QC.QEvent.__init__( self, QC.QEvent.User )
+        
+        self._pubsub = pubsub
+        
+    
+    def Execute( self ):
+        
+        if self._pubsub.WorkToDo():
+            
+            self._pubsub.Process()
+            
+        
+    
+class PubSubEventFilter( QC.QObject ):
+    
+    def __init__( self, parent = None ):
+        
+        QC.QObject.__init__( self, parent )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.User and isinstance( event, PubSubEvent ):
+            
+            event.Execute()
+            
+            return True
+            
+        
+        return False
+        
+
 class App( QW.QApplication ):
     
     def __init__( self, *args, **kwargs ):
@@ -73,6 +109,10 @@ class App( QW.QApplication ):
         self.call_after_catcher = QC.QObject( self )
         
         self.call_after_catcher.installEventFilter( QP.CallAfterEventFilter( self.call_after_catcher ) )
+        
+        self.pubsub_catcher = QC.QObject( self )
+        
+        self.pubsub_catcher.installEventFilter( PubSubEventFilter( self.pubsub_catcher ) )
         
         self.aboutToQuit.connect( self.EventEndSession )
         
@@ -281,7 +321,7 @@ class Controller( HydrusController.HydrusController ):
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
             
-            time.sleep( 0.05 )
+            time.sleep( 0.02 )
             
         
         if job_key.HasVariable( 'result' ):
@@ -1115,6 +1155,16 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        def do_gui_refs( gui ):
+            
+            if self.gui is not None and QP.isValid( self.gui ):
+                
+                self.gui.MaintainCanvasFrameReferences()
+                
+            
+        
+        QP.CallAfter( do_gui_refs, self.gui )
+        
     
     def MenubarMenuIsOpen( self ):
         
@@ -1169,6 +1219,9 @@ class Controller( HydrusController.HydrusController ):
     def ProcessPubSub( self ):
         
         self.CallBlockingToQt( self.app, self._pubsub.Process )
+        
+        # this needs to be blocking in some way or the pubsub daemon goes nuts
+        #QW.QApplication.instance().postEvent( QW.QApplication.instance().pubsub_catcher, PubSubEvent( self._pubsub ) )
         
     
     def RefreshServices( self ):

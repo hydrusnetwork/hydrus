@@ -573,6 +573,11 @@ class Controller( object ):
         return True
         
     
+    def isFullScreen( self ):
+        
+        return True # hackery for another test
+        
+    
     def IShouldRegularlyUpdate( self, window ):
         
         return True

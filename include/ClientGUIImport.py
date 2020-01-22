@@ -617,6 +617,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 self._checkboxes_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
+            self._checkboxes_panel.Add( QW.QWidget( self._checkboxes_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            
             hbox = QP.HBoxLayout()
             
             QP.AddToLayout( hbox, self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1183,7 +1185,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         

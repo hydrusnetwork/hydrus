@@ -411,7 +411,7 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
         
         mime = media_result.GetMime()
         
-        if mime in HC.IMAGES:
+        if mime in HC.IMAGES or mime in HC.ANIMATIONS:
             
             ( width, height ) = media_result.GetResolution()
             

@@ -360,6 +360,7 @@ class TabBar( QW.QTabBar ):
         self._supplementary_drop_target = None
         
         self._last_clicked_tab_index = -1
+        self._last_clicked_global_pos = None
         
     
     def AddSupplementaryTabBarDropTarget( self, drop_target ):
@@ -367,9 +368,11 @@ class TabBar( QW.QTabBar ):
         self._supplementary_drop_target = drop_target
         
     
-    def clearLastClickedTabIndex( self ):
+    def clearLastClickedTabInfo( self ):
         
         self._last_clicked_tab_index = -1
+        
+        self._last_clicked_global_pos = None
         
     
     def mouseMoveEvent( self, e ):
@@ -382,6 +385,8 @@ class TabBar( QW.QTabBar ):
         if event.button() == QC.Qt.LeftButton:
             
             self._last_clicked_tab_index = self.tabAt( event.pos() )
+            
+            self._last_clicked_global_pos = event.globalPos()
             
         
         QW.QTabBar.mousePressEvent( self, event )
@@ -416,9 +421,9 @@ class TabBar( QW.QTabBar ):
             
         
     
-    def lastClickedTabIndex( self ):
+    def lastClickedTabInfo( self ):
         
-        return self._last_clicked_tab_index
+        return ( self._last_clicked_tab_index, self._last_clicked_global_pos )
         
     
     def dropEvent( self, event ):
@@ -504,7 +509,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
     def mouseMoveEvent( self, e ):
-
+        
         if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
             
             QW.QTabWidget.mouseMoveEvent( self, e )
@@ -529,9 +534,16 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        clicked_tab_index = self._tab_bar.lastClickedTabIndex()
+        ( clicked_tab_index, clicked_global_pos ) = self._tab_bar.lastClickedTabInfo()
         
         if clicked_tab_index == -1:
+            
+            return
+            
+        
+        if e.globalPos() == clicked_global_pos:
+            
+            # don't start a drag until movement
             
             return
             
@@ -655,9 +667,9 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        source_page_index = source_tab_bar.lastClickedTabIndex()
+        ( source_page_index, source_page_click_global_pos ) = source_tab_bar.lastClickedTabInfo()
         
-        source_tab_bar.clearLastClickedTabIndex()
+        source_tab_bar.clearLastClickedTabInfo()
         
         source_notebook = source_tab_bar.parentWidget()
         source_page = source_notebook.widget( source_page_index )
@@ -1183,11 +1195,15 @@ class CallAfterEvent( QC.QEvent ):
         self._args = args
         self._kwargs = kwargs
         
+    
     def Execute( self ):
         
-        self._fn( *self._args, **self._kwargs )
-
-
+        if self._fn is not None:
+            
+            self._fn( *self._args, **self._kwargs )
+            
+        
+    
 class CallAfterEventFilter( QC.QObject ):
     
     def __init__( self, parent = None ):

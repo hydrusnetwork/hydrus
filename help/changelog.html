@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 381</h3></li>
+				<ul>
+					<li>mpv:</li>
+					<li>mpv is now available and the default for all windows users</li>
+					<li>I believed I have eliminated the final reported mpv crash</li>
+					<li>mpv load and unload delays are greatly reduced. initial load still takes about half a second, but subsequent loads are now as quick as native renderers</li>
+					<li>mpv seems to work well for gif and apng</li>
+					<li>added a very simple global volume slider and audio mute checkbox to the media viewer top hover window. this was a quick patch--much better controls and shortcuts will come in future</li>
+					<li>mpv windows now properly re-show the cursor on mouse movement</li>
+					<li>unified mpv mouse press/release handling with native animation--click down now does pause/play and starts a drag event</li>
+					<li>unfortunately, in some cases embedding mpv requires overriding local OS number rendering (e.g. 1,234 vs 1.234). hydrus number rendering is now coerced to the english style with commas until we can figure out a better solution--sorry!</li>
+					<li>cleared up an issue where simple clicks on page tabs would trigger micro-page drags that were immediately cancelled. this situation was exacerbated when the page being left had an active mpv window. the flicker of page drag cursor is now gone, and some weird situations where static clicks during busy time could move a tab should be fixed</li>
+					<li>eliminated the recent issue in the media viewer where transitioning from one media type to another through navigation, particularly mpv->other, would flicker a single frame of the last 'other' media shown(!)</li>
+					<li>fixed a bug where repeated mpv views in the preview viewer could disable client file drag and drop</li>
+					<li>the bug where thumbnails may not waterfall in unless the mouse is moving after some mpv videos are loaded for a page is relieved but not completely fixed</li>
+					<li>if the preview window is collapsed and hidden, media will no longer ever load into it</li>
+					<li>fixed an edge-case bug where the mpv window would not like being told to show nothing when it was already showing nothing</li>
+					<li>wrapped mpv load errors in a basic graceful catch</li>
+					<li>fixed an issue some users had with loading mpv's dll</li>
+					<li>.</li>
+					<li>file types:</li>
+					<li>a new file metatype, 'animation', is added, for gif and apng. these are no longer considered 'image' for a variety of purposes</li>
+					<li>the filetype selection panel, which is used in system:filetype and import folder UI, has had an overhaul--it now has tristate 'mime group' checkboxes to represent a half-filled group and expand/collapse buttons to hide the tall filetype lists. individual filetype lists will start hidden unless their default value is a partially filled group</li>
+					<li>the media view options have a similar overhaul: they are now collapsed to general filetypes by default. you set view and zoom options for the generalised 'video' type under options->media, and if you want to set specific options for webm or anything else, you can add/delete those types to override the general default</li>
+					<li>the new default options for a fresh client are just for these general types. if mpv is available, video, animations, and audio now start with mpv as the default viewer. video and animation zoom is now flexible (not fixed to 50%, 100%, 200%) and will fill the media canvas</li>
+					<li>all media view options will be reset to this simple default on update! if you have specific zoom or display preferences, please reset them after the update--but you might like to play with mpv a bit first, as it renders at large and smooth zooms very well</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the new thumbnail right-click file selection routine will now only focus and scroll to the first member of the selection if no other members of the new selection are already in view</li>
+					<li>fixed some caching code and sped up the new select/remove menu count generation (which can lag for very large pages) by two to six times</li>
+					<li>sped up file filter counting code by about ten percent</li>
+					<li>fixed weird layout on: migrate database panel, duplicates page (left and right), edit shortcuts, edit import folder, and the filename tagging panel</li>
+					<li>fixed an issue where the media viewer's hover windows might flicker into view for one frame when the mouse moved over the center of the media viewer for the first time</li>
+					<li>fixed a media viewer shutdown issue that would sometimes lead to the first file in the list being opened in the shutting-down viewer for an instant or highlighted as the new thumb focus</li>
+					<li>the file maintenance system that queues up missing/broken files' urls for redownload will no longer re-select the download page on every new url</li>
+					<li>fixed an issue where a downloader's tag blacklist was not being applied on the child files of certain kinds of multiple-file post (such as with pixiv)</li>
+					<li>deleting a very long tag should no longer create a very wide confirmation dialog in the manage tags dialog</li>
+					<li>fixed some 'the panel grew a bit, but the parent window didn't grow quite enough and now it has scrollbars for two pixels of extra content' sizing issues</li>
+					<li>fixed some dialog sizing calculations when the parent window was borderless fullscreen</li>
+					<li>maybe fixed a rare event processing bug</li>
+					<li>improved quality of some misc data comparison code across the program</li>
+					<li>did some significant backend event/pubsub code cleanup, mostly related to getting mpv working a bit cleaner</li>
+					<li>improved thumbnail rendering time</li>
+					<li>improved smoothness of thumbnail fade animations (at least for when they are working right, ha ha!)</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 380</h3></li>
 				<ul>
 					<li>basic mpv support is added. it comes with the windows build this week, and is a prototype meant for initial testing. the library is optional. users who run from source will want 'python-mpv' added via pip and libmpv available on their PATH, more details in running_from_source help</li>

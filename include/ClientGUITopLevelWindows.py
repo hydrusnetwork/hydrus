@@ -71,15 +71,27 @@ def GetSafeSize( tlw, min_size, gravity ):
         parent_window = parent.window()
         
         # when we initialise, we might not have a frame yet because we haven't done show() yet
-        # so borrow parent's
+        # so borrow main gui's
         if frame_padding.isEmpty():
             
-            frame_padding = parent_window.frameGeometry().size() - parent_window.size()
+            main_gui = HG.client_controller.gui
+            
+            if main_gui is not None and QP.isValid( main_gui ) and not main_gui.isFullScreen():
+                
+                frame_padding = main_gui.frameGeometry().size() - main_gui.size()
+                
             
         
-        parent_frame_size = parent_window.frameGeometry().size()
-        
-        parent_available_size = parent_frame_size - frame_padding
+        if parent_window.isFullScreen():
+            
+            parent_available_size = parent_window.size()
+            
+        else:
+            
+            parent_frame_size = parent_window.frameGeometry().size()
+            
+            parent_available_size = parent_frame_size - frame_padding
+            
         
         parent_available_width = parent_available_size.width()
         parent_available_height = parent_available_size.height()

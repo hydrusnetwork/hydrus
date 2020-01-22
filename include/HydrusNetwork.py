@@ -1021,11 +1021,17 @@ class Content( HydrusSerialisable.SerialisableBase ):
         self._content_data = content_data
         
     
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    def __eq__( self, other ):
+        
+        if isinstance( other, Content ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
     
     def __hash__( self ): return ( self._content_type, self._content_data ).__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
     def __repr__( self ): return 'Content: ' + self.ToString()
     
@@ -1378,17 +1384,17 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
     
     def __eq__( self, other ):
         
-        return self.__hash__() == other.__hash__()
+        if isinstance( other, Credentials ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
         
     
     def __hash__( self ):
         
         return ( self._host, self._port, self._access_key ).__hash__()
-        
-    
-    def __ne__( self, other ):
-        
-        return self.__hash__() != other.__hash__()
         
     
     def __repr__( self ):

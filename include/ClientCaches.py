@@ -955,6 +955,11 @@ class ThumbnailCache( object ):
             self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 3
             
         
+        for mime in HC.ANIMATIONS:
+            
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 3
+            
+        
     
     def _RecalcQueues( self ):
         
@@ -1217,7 +1222,10 @@ class ThumbnailCache( object ):
             
             page_keys_to_rendered_medias = collections.defaultdict( list )
             
-            while not HydrusData.TimeHasPassedPrecise( stop_time ):
+            num_done = 0
+            max_at_once = 16
+            
+            while not HydrusData.TimeHasPassedPrecise( stop_time ) and num_done <= max_at_once:
                 
                 with self._lock:
                     
@@ -1244,6 +1252,8 @@ class ThumbnailCache( object ):
                     
                     page_keys_to_rendered_medias[ page_key ].append( media )
                     
+                
+                num_done += 1
                 
             
             if len( page_keys_to_rendered_medias ) > 0:

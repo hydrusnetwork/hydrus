@@ -445,7 +445,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def __eq__( self, other ):
         
-        return self.__hash__() == other.__hash__()
+        if isinstance( other, FileSeed ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
         
     
     def __hash__( self ):
@@ -1356,6 +1361,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 if should_download_file:
+                    
+                    self.CheckPreFetchMetadata( tag_import_options )
                     
                     did_substantial_work = True
                     

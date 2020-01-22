@@ -2680,11 +2680,9 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preview_start_paused = QW.QCheckBox( self )
         self._preview_start_with_embed = QW.QCheckBox( self )
         
-        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
-        
         for action in possible_show_actions:
             
-            if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and ( not advanced_mode or not ClientGUIMPV.MPV_IS_AVAILABLE ):
+            if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and not ClientGUIMPV.MPV_IS_AVAILABLE:
                 
                 continue
                 
@@ -2762,11 +2760,6 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         if not ClientGUIMPV.MPV_IS_AVAILABLE:
             
             text += ' MPV is not available for this client.'
-            
-        
-        if not advanced_mode:
-            
-            text += ' Only advanced mode users can select MPV for now.'
             
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )

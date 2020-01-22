@@ -18,6 +18,9 @@ if getattr( sys, 'frozen', False ):
     
 else:
     
+    # maybe this is better?
+    # os.path.dirname( __file__ )
+    
     RUNNING_FROM_FROZEN_BUILD = False
     
     BASE_DIR = sys.path[0]
@@ -67,7 +70,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 380
+SOFTWARE_VERSION = 381
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -488,20 +491,23 @@ GENERAL_AUDIO = 40
 GENERAL_IMAGE = 41
 GENERAL_VIDEO = 42
 GENERAL_APPLICATION = 43
+GENERAL_ANIMATION = 44
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-GENERAL_FILETYPES = ( GENERAL_APPLICATION, GENERAL_AUDIO, GENERAL_IMAGE, GENERAL_VIDEO )
+GENERAL_FILETYPES = { GENERAL_APPLICATION, GENERAL_AUDIO, GENERAL_IMAGE, GENERAL_VIDEO, GENERAL_ANIMATION }
 
 SEARCHABLE_MIMES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PSD, APPLICATION_PDF, APPLICATION_ZIP, APPLICATION_RAR, APPLICATION_7Z, AUDIO_M4A, AUDIO_MP3, AUDIO_REALMEDIA, AUDIO_OGG, AUDIO_FLAC, AUDIO_TRUEAUDIO, AUDIO_WMA, VIDEO_WMV }
 
-ALLOWED_MIMES = set( SEARCHABLE_MIMES ).union( { IMAGE_BMP, APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS } )
+STORABLE_MIMES = set( SEARCHABLE_MIMES ).union( { APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS } )
+
+ALLOWED_MIMES = set( STORABLE_MIMES ).union( { IMAGE_BMP } )
 
 DECOMPRESSION_BOMB_IMAGES = ( IMAGE_JPEG, IMAGE_PNG )
 
-IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON )
+IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON )
 
-IMAGES_THAT_CAN_HAVE_ANIMATION = ( IMAGE_GIF, IMAGE_APNG )
+ANIMATIONS = ( IMAGE_GIF, IMAGE_APNG )
 
 AUDIO = ( AUDIO_M4A, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, AUDIO_REALMEDIA, AUDIO_TRUEAUDIO )
 
@@ -515,6 +521,17 @@ general_mimetypes_to_mime_groups[ GENERAL_APPLICATION ] = APPLICATIONS
 general_mimetypes_to_mime_groups[ GENERAL_AUDIO ] = AUDIO
 general_mimetypes_to_mime_groups[ GENERAL_IMAGE ] = IMAGES
 general_mimetypes_to_mime_groups[ GENERAL_VIDEO ] = VIDEO
+general_mimetypes_to_mime_groups[ GENERAL_ANIMATION ] = ANIMATIONS
+
+mimes_to_general_mimetypes = {}
+
+for ( general_mime_type, mimes_in_type ) in general_mimetypes_to_mime_groups.items():
+    
+    for mime in mimes_in_type:
+        
+        mimes_to_general_mimetypes[ mime ] = general_mime_type
+        
+    
 
 MIMES_THAT_DEFINITELY_HAVE_AUDIO = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) )
 MIMES_THAT_MAY_HAVE_AUDIO = tuple( list( MIMES_THAT_DEFINITELY_HAVE_AUDIO ) + list( VIDEO ) )
@@ -627,6 +644,7 @@ mime_string_lookup[ GENERAL_APPLICATION ] = 'application'
 mime_string_lookup[ GENERAL_AUDIO ] = 'audio'
 mime_string_lookup[ GENERAL_IMAGE ] = 'image'
 mime_string_lookup[ GENERAL_VIDEO ] = 'video'
+mime_string_lookup[ GENERAL_ANIMATION ] = 'animation'
 
 mime_mimetype_string_lookup = {}
 
@@ -675,6 +693,7 @@ mime_mimetype_string_lookup[ GENERAL_APPLICATION ] = 'application'
 mime_mimetype_string_lookup[ GENERAL_AUDIO ] = 'audio'
 mime_mimetype_string_lookup[ GENERAL_IMAGE ] = 'image'
 mime_mimetype_string_lookup[ GENERAL_VIDEO ] = 'video'
+mime_mimetype_string_lookup[ GENERAL_ANIMATION ] = 'animation'
 
 mime_ext_lookup = {}
 

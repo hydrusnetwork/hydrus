@@ -836,7 +836,7 @@ class TestClientDB( unittest.TestCase ):
             
             ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_has_audio, mr_num_words ) = mr_file_info_manager.ToTuple()
             
-            mr_inbox = mr_locations_manager.GetInbox()
+            mr_inbox = mr_locations_manager.inbox
             
             now = HydrusData.GetNow()
             
@@ -985,7 +985,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_has_audio, mr_num_words ) = mr_file_info_manager.ToTuple()
         
-        mr_inbox = mr_locations_manager.GetInbox()
+        mr_inbox = mr_locations_manager.inbox
         
         now = HydrusData.GetNow()
         
@@ -1007,7 +1007,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_has_audio, mr_num_words ) = mr_file_info_manager.ToTuple()
         
-        mr_inbox = mr_locations_manager.GetInbox()
+        mr_inbox = mr_locations_manager.inbox
         
         now = HydrusData.GetNow()
         

@@ -20,6 +20,15 @@ import traceback
 TEMP_PATH_LOCK = threading.Lock()
 IN_USE_TEMP_PATHS = set()
 
+def AddBaseDirToEnvPath():
+    
+    # this is a thing to get mpv working, loading the dll/so from the base dir using ctypes
+    
+    if 'PATH' in os.environ:
+        
+        os.environ[ 'PATH' ] = HC.BASE_DIR + os.pathsep + os.environ[ 'PATH' ]
+        
+    
 def AppendPathUntilNoConflicts( path ):
     
     ( path_absent_ext, ext ) = os.path.splitext( path )

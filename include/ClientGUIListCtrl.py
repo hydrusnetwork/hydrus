@@ -952,9 +952,18 @@ class BetterListCtrlPanel( QW.QWidget ):
         self.AddMenuButton( 'add defaults', import_menu_items )
         
     
-    def AddDeleteButton( self ):
+    def AddDeleteButton( self, enabled_check_func = None ):
         
-        self.AddButton( 'delete', self._listctrl.ProcessDeleteAction, enabled_only_on_selection = True )
+        if enabled_check_func is None:
+            
+            enabled_only_on_selection = True
+            
+        else:
+            
+            enabled_only_on_selection = False
+            
+        
+        self.AddButton( 'delete', self._listctrl.ProcessDeleteAction, enabled_check_func = enabled_check_func, enabled_only_on_selection = enabled_only_on_selection )
         
     
     def AddImportExportButtons( self, permitted_object_types, import_add_callable ):

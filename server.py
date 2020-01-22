@@ -113,6 +113,8 @@ try:
         HydrusPaths.SetEnvTempDir( result.temp_dir )
         
     
+    HydrusPaths.AddBaseDirToEnvPath()
+    
     #
     
     try:

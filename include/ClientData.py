@@ -631,7 +631,15 @@ class Credentials( HydrusData.HydrusYAMLBase ):
         self._access_key = access_key
         
     
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    def __eq__( self, other ):
+        
+        if isinstance( other, Credentials ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
     
     def __hash__( self ): return ( self._host, self._port, self._access_key ).__hash__()
     

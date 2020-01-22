@@ -1,7 +1,9 @@
 from . import ClientConstants as CC
 from . import ClientCaches
 from . import ClientDefaults
+from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientImporting
 from . import ClientTags
 import collections
@@ -26,6 +28,9 @@ class OptionsPanel( QW.QWidget ):
     
 class OptionsPanelMimes( OptionsPanel ):
     
+    BUTTON_CURRENTLY_HIDDEN = '\u25B6'
+    BUTTON_CURRENTLY_SHOWING = '\u25BC'
+    
     def __init__( self, parent, selectable_mimes ):
         
         OptionsPanel.__init__( self, parent )
@@ -33,55 +38,53 @@ class OptionsPanelMimes( OptionsPanel ):
         self._selectable_mimes = set( selectable_mimes )
         
         self._mimes_to_checkboxes = {}
-        self._mime_groups_to_checkboxes = {}
-        self._mime_groups_to_values = {}
+        self._general_mime_types_to_checkboxes = {}
+        self._general_mime_types_to_buttons = {}
         
-        mime_groups = []
+        general_mime_types = []
         
-        mime_groups.append( ( HC.APPLICATIONS, HC.GENERAL_APPLICATION ) )
-        mime_groups.append( ( HC.AUDIO, HC.GENERAL_AUDIO ) )
-        mime_groups.append( ( HC.IMAGES, HC.GENERAL_IMAGE ) )
-        mime_groups.append( ( HC.VIDEO, HC.GENERAL_VIDEO ) )
+        general_mime_types.append( HC.GENERAL_IMAGE )
+        general_mime_types.append( HC.GENERAL_ANIMATION )
+        general_mime_types.append( HC.GENERAL_VIDEO )
+        general_mime_types.append( HC.GENERAL_AUDIO )
+        general_mime_types.append( HC.GENERAL_APPLICATION )
         
-        mime_groups_to_mimes = collections.defaultdict( list )
+        gridbox = QP.GridLayout( cols = 3 )
         
-        for mime in self._selectable_mimes:
+        gridbox.setColumnStretch( 2, 1 )
+        
+        for general_mime_type in general_mime_types:
             
-            for ( mime_group, mime_group_type ) in mime_groups:
+            mimes_in_type = self._GetMimesForGeneralMimeType( general_mime_type )
+            
+            if len( mimes_in_type ) == 0:
                 
-                if mime in mime_group:
-                    
-                    mime_groups_to_mimes[ mime_group ].append( mime )
-                    
-                    break
-                    
+                continue
                 
             
-        
-        gridbox = QP.GridLayout( cols = 2 )
-        
-        gridbox.setColumnStretch( 1, 1 )
-        
-        for ( mime_group, mime_group_type ) in mime_groups:
+            general_mime_checkbox = QW.QCheckBox( HC.mime_string_lookup[ general_mime_type ], self )
+            general_mime_checkbox.clicked.connect( self.EventMimeGroupCheckbox )
             
-            mimes = mime_groups_to_mimes[ mime_group ]
+            self._general_mime_types_to_checkboxes[ general_mime_type ] = general_mime_checkbox
             
-            mg_checkbox = QW.QCheckBox( HC.mime_string_lookup[ mime_group_type ], self )
-            mg_checkbox.clicked.connect( self.EventMimeGroupCheckbox )
+            QP.AddToLayout( gridbox, general_mime_checkbox, CC.FLAGS_VCENTER )
             
-            self._mime_groups_to_checkboxes[ mime_group ] = mg_checkbox
-            self._mime_groups_to_values[ mime_group ] = mg_checkbox.isChecked()
+            show_hide_button = ClientGUICommon.BetterButton( self, self.BUTTON_CURRENTLY_SHOWING, self._ButtonShowHide, general_mime_type )
             
-            QP.AddToLayout( gridbox, mg_checkbox, CC.FLAGS_VCENTER )
+            max_width = ClientGUIFunctions.ConvertTextToPixelWidth( show_hide_button, 5 )
+            
+            show_hide_button.setMaximumWidth( max_width )
+            
+            self._general_mime_types_to_buttons[ general_mime_type ] = show_hide_button
+            
+            QP.AddToLayout( gridbox, show_hide_button, CC.FLAGS_VCENTER )
             
             vbox = QP.VBoxLayout()
             
-            for mime in mimes:
+            for mime in mimes_in_type:
                 
                 m_checkbox = QW.QCheckBox( HC.mime_string_lookup[ mime ], self )
                 m_checkbox.clicked.connect( self.EventMimeCheckbox )
-                
-                #m_checkbox.hide()
                 
                 self._mimes_to_checkboxes[ mime ] = m_checkbox
                 
@@ -93,46 +96,90 @@ class OptionsPanelMimes( OptionsPanel ):
         
         self.setLayout( gridbox )
         
-        self._HideShowSubCheckboxes()
+    
+    def _DoInitialHideShow( self ):
+        
+        for ( general_mime_type, general_mime_checkbox ) in list( self._general_mime_types_to_checkboxes.items() ):
+            
+            mimes_in_type = self._GetMimesForGeneralMimeType( general_mime_type )
+            
+            should_show = general_mime_checkbox.checkState() == QC.Qt.PartiallyChecked
+            
+            if not should_show:
+                
+                self._ButtonShowHide( general_mime_type )
+                
+            
         
     
-    def _HideShowSubCheckboxes( self ):
+    def _GetMimesForGeneralMimeType( self, general_mime_type ):
         
-        pass
+        mimes_in_type = HC.general_mimetypes_to_mime_groups[ general_mime_type ]
         
-        # this is insufficient. we need to have mime groups done by three-state checkboxes or something.
-        # and it'd be nice to have a border around groups or something.
+        mimes_in_type = [ mime for mime in mimes_in_type if mime in self._selectable_mimes ]
         
-        '''
-        for ( mime_group, all_true ) in self._mime_groups_to_values.items():
+        return mimes_in_type
+        
+    
+    def _ButtonShowHide( self, general_mime_type ):
+        
+        button = self._general_mime_types_to_buttons[ general_mime_type ]
+        
+        mimes_in_type = self._GetMimesForGeneralMimeType( general_mime_type )
+        
+        should_show = button.text() == self.BUTTON_CURRENTLY_HIDDEN
+        
+        for mime in mimes_in_type:
             
-            should_show = not all_true
+            self._mimes_to_checkboxes[ mime ].setVisible( should_show )
             
-            for mime in mime_group:
-                
-                if mime not in self._selectable_mimes:
-                    
-                    continue
-                    
-                
-                self._mimes_to_checkboxes[ mime ].setVisible( should_show )
-                
+        
+        if should_show:
             
-        '''
+            button.setText( self.BUTTON_CURRENTLY_SHOWING )
+            
+        else:
+            
+            button.setText( self.BUTTON_CURRENTLY_HIDDEN )
+            
+        
     
     def _UpdateMimeGroupCheckboxes( self ):
         
-        for ( mime_group, mg_checkbox ) in self._mime_groups_to_checkboxes.items():
+        for ( general_mime_type, general_mime_checkbox ) in self._general_mime_types_to_checkboxes.items():
             
-            respective_checkbox_values = [ m_checkbox.isChecked() for ( mime, m_checkbox ) in list( self._mimes_to_checkboxes.items() ) if mime in mime_group ]
+            mimes_in_type = self._GetMimesForGeneralMimeType( general_mime_type )
             
-            all_true = False not in respective_checkbox_values
+            all_checkbox_values = { self._mimes_to_checkboxes[ mime ].isChecked() for mime in mimes_in_type }
             
-            mg_checkbox.setChecked( all_true )
-            self._mime_groups_to_values[ mime_group ] = all_true
+            all_false = True not in all_checkbox_values
+            all_true = False not in all_checkbox_values
             
-        
-        self._HideShowSubCheckboxes()
+            if all_false:
+                
+                check_state = QC.Qt.Unchecked
+                
+            elif all_true:
+                
+                check_state = QC.Qt.Checked
+                
+            else:
+                
+                check_state = QC.Qt.PartiallyChecked
+                
+            
+            if check_state == QC.Qt.PartiallyChecked:
+                
+                general_mime_checkbox.setTristate( True )
+                
+            
+            general_mime_checkbox.setCheckState( check_state )
+            
+            if check_state != QC.Qt.PartiallyChecked:
+                
+                general_mime_checkbox.setTristate( False )
+                
+            
         
     
     def EventMimeCheckbox( self ):
@@ -142,43 +189,45 @@ class OptionsPanelMimes( OptionsPanel ):
     
     def EventMimeGroupCheckbox( self ):
         
-        # Obsolote comment from before the Qt port:
-        # this is a commandevent, which won't give up the checkbox object, so we have to do some jiggery pokery
-        
-        for ( mime_group, mg_checkbox ) in list(self._mime_groups_to_checkboxes.items()):
+        for ( general_mime_type, general_mime_checkbox ) in list( self._general_mime_types_to_checkboxes.items() ):
             
-            expected_value = self._mime_groups_to_values[ mime_group ]
-            actual_value = mg_checkbox.isChecked()
+            check_state = general_mime_checkbox.checkState()
             
-            if actual_value != expected_value:
+            mime_check_state = None
+            
+            if check_state == QC.Qt.Unchecked:
                 
-                for ( mime, m_checkbox ) in list(self._mimes_to_checkboxes.items()):
+                mime_check_state = False
+                
+            elif check_state == QC.Qt.Checked:
+                
+                mime_check_state = True
+                
+            
+            if mime_check_state is not None:
+                
+                mimes_in_type = self._GetMimesForGeneralMimeType( general_mime_type )
+                
+                for mime in mimes_in_type:
                     
-                    if mime in mime_group:
-                        
-                        m_checkbox.setChecked( actual_value )
-                        
+                    self._mimes_to_checkboxes[ mime ].setChecked( mime_check_state )
                     
                 
-                self._mime_groups_to_values[ mime_group ] = actual_value
-                
             
-        
-        self._HideShowSubCheckboxes()
         
     
     def GetValue( self ):
         
-        mimes = tuple( [ mime for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()) if checkbox.isChecked() == True ] )
+        mimes = tuple( [ mime for ( mime, checkbox ) in list( self._mimes_to_checkboxes.items() ) if checkbox.isChecked() ] )
         
         return mimes
         
     
-    def SetValue( self, mimes ):
+    def SetValue( self, checked_mimes ):
         
-        for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()):
+        for ( mime, checkbox ) in self._mimes_to_checkboxes.items():
             
-            if mime in mimes:
+            if mime in checked_mimes:
                 
                 checkbox.setChecked( True )
                 
@@ -189,5 +238,7 @@ class OptionsPanelMimes( OptionsPanel ):
             
         
         self._UpdateMimeGroupCheckboxes()
+        
+        self._DoInitialHideShow()
         
     

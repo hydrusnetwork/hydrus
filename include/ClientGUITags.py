@@ -1579,7 +1579,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         [ ( tag, count ) ] = tag_counts
                         
-                        text = choice_text_prefix + ' "' + tag + '" for ' + HydrusData.ToHumanInt( count ) + ' files'
+                        text = choice_text_prefix + ' "' + HydrusText.ElideText( tag, 64 ) + '" for ' + HydrusData.ToHumanInt( count ) + ' files'
                         
                     else:
                         
@@ -2127,7 +2127,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         message = 'Are you sure you want to remove these tags:'
                         message += os.linesep * 2
-                        message += os.linesep.join( tags )
+                        message += os.linesep.join( ( HydrusText.ElideText( tag, 64 ) for tag in tags ) )
                         
                     else:
                         

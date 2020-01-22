@@ -117,14 +117,16 @@ class ResizingScrolledPanel( QW.QScrollArea ):
         width_increase = 0
         height_increase = 0
         
+        # + 2 because it is late and that seems to stop scrollbars lmao
+        
         if width_larger:
             
-            width_increase = max( 0, widget_size_hint.width() - my_size.width() )
+            width_increase = max( 0, widget_size_hint.width() - my_size.width() + 2 )
             
         
         if height_larger:
             
-            height_increase = max( 0, widget_size_hint.height() - my_size.height() )
+            height_increase = max( 0, widget_size_hint.height() - my_size.height() + 2 )
             
         
         if width_increase > 0 or height_increase > 0:
