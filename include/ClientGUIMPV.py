@@ -40,8 +40,7 @@ class mpvWidget( QW.QWidget ):
         
         # This is necessary since PyQT stomps over the locale settings needed by libmpv.
         # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
-        # hydev is commenting this out for now since Windows doesn't seem to need it and it is set in the import for non-Windows
-        #locale.setlocale( locale.LC_NUMERIC, 'C' )
+        locale.setlocale( locale.LC_NUMERIC, 'C' )
         
         self.setAttribute( QC.Qt.WA_DontCreateNativeAncestors )
         self.setAttribute( QC.Qt.WA_NativeWindow )
