@@ -4495,7 +4495,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', QW.QMessageBox.information, self, 'Information', CC.SHORTCUT_HELP )
             ClientGUIMenus.AppendMenuItem( menu, 'about Qt', 'See information about the Qt framework.', QW.QMessageBox.aboutQt, self )
             ClientGUIMenus.AppendMenuItem( menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )
             

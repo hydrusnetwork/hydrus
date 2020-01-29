@@ -284,7 +284,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         self._load_from_neighbouring_txt_files = False
         
-        self._add_filename = ( False, '' )
+        self._add_filename = ( False, 'filename' )
         
         self._directories_dict = {}
         
@@ -363,9 +363,18 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
             
             if os.path.exists( txt_path ):
                 
-                with open( txt_path, 'r', encoding = 'utf-8'  ) as f:
+                try:
                     
-                    txt_tags_string = f.read()
+                    with open( txt_path, 'r', encoding = 'utf-8' ) as f:
+                        
+                        txt_tags_string = f.read()
+                        
+                    
+                except:
+                    
+                    HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
+                    
+                    tags.add( '___had problem reading .txt file--is it not in utf-8?' )
                     
                 
                 try:

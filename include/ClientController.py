@@ -1,3 +1,4 @@
+
 import os
 import sys
 from qtpy import QtCore as QC
@@ -56,35 +57,33 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
+
+PubSubEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
+
 class PubSubEvent( QC.QEvent ):
     
-    def __init__( self, pubsub ):
+    def __init__( self ):
         
-        QC.QEvent.__init__( self, QC.QEvent.User )
-        
-        self._pubsub = pubsub
-        
-    
-    def Execute( self ):
-        
-        if self._pubsub.WorkToDo():
-            
-            self._pubsub.Process()
-            
+        QC.QEvent.__init__( self, PubSubEventType )
         
     
 class PubSubEventFilter( QC.QObject ):
     
-    def __init__( self, parent = None ):
+    def __init__( self, parent, pubsub ):
         
         QC.QObject.__init__( self, parent )
+        
+        self._pubsub = pubsub
         
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.User and isinstance( event, PubSubEvent ):
+        if event.type() == PubSubEventType and isinstance( event, PubSubEvent ):
             
-            event.Execute()
+            if self._pubsub.WorkToDo():
+                
+                self._pubsub.Process()
+                
             
             return True
             
@@ -94,9 +93,11 @@ class PubSubEventFilter( QC.QObject ):
 
 class App( QW.QApplication ):
     
-    def __init__( self, *args, **kwargs ):
+    def __init__( self, pubsub, *args, **kwargs ):
         
         QW.QApplication.__init__( self, *args, **kwargs )
+        
+        self._pubsub = pubsub
         
         self.setApplicationName( 'Hydrus Client' )
         self.setApplicationVersion( str( HC.SOFTWARE_VERSION ) )
@@ -112,7 +113,7 @@ class App( QW.QApplication ):
         
         self.pubsub_catcher = QC.QObject( self )
         
-        self.pubsub_catcher.installEventFilter( PubSubEventFilter( self.pubsub_catcher ) )
+        self.pubsub_catcher.installEventFilter( PubSubEventFilter( self.pubsub_catcher, self._pubsub ) )
         
         self.aboutToQuit.connect( self.EventEndSession )
         
@@ -125,7 +126,7 @@ class App( QW.QApplication ):
             
             HG.emergency_exit = True
             
-            if hasattr( HG.client_controller, 'gui' ) and HG.client_controller.gui is not None and QP.isValid( HG.client_controller.gui ):
+            if HG.client_controller.gui is not None and QP.isValid( HG.client_controller.gui ):
                 
                 HG.client_controller.gui.SaveAndClose()
                 
@@ -141,6 +142,8 @@ class Controller( HydrusController.HydrusController ):
         self._is_booted = False
         
         self._splash = None
+        
+        self.gui = None
         
         HydrusController.HydrusController.__init__( self, db_dir )
         
@@ -1034,7 +1037,7 @@ class Controller( HydrusController.HydrusController ):
             
             message = 'Hi, this looks like the first time you have started the hydrus client.'
             message += os.linesep * 2
-            message += 'Don\'t forget to check out the help if you haven\'t already--it has an extensive \'getting started\' section, including on the importance of backing up your database.'
+            message += 'Don\'t forget to check out the help if you haven\'t already--it has an extensive \'getting started\' section, including how to update and the importance of backing up your database.'
             message += os.linesep * 2
             message += 'To dismiss popup messages like this, right-click them.'
             
@@ -1229,6 +1232,13 @@ class Controller( HydrusController.HydrusController ):
         self.services_manager.RefreshServices()
         
     
+    def pub( self, *args, **kwargs ):
+        
+        HydrusController.HydrusController.pub( self, *args, **kwargs )
+        
+        QW.QApplication.instance().postEvent( QW.QApplication.instance().pubsub_catcher, PubSubEvent() )
+        
+    
     def ReleasePageKey( self, page_key ):
         
         with self._page_key_lock:
@@ -1318,7 +1328,7 @@ class Controller( HydrusController.HydrusController ):
         
         QP.MonkeyPatchMissingMethods()
         
-        self.app = App( sys.argv )
+        self.app = App( self._pubsub, sys.argv )
         
         HydrusData.Print( 'booting controller\u2026' )
         

@@ -1185,11 +1185,13 @@ def GetBackgroundColour( widget ):
     return widget.palette().color( QG.QPalette.Window )
 
 
+CallAfterEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
+
 class CallAfterEvent( QC.QEvent ):
     
     def __init__( self, fn, *args, **kwargs ):
         
-        QC.QEvent.__init__( self, QC.QEvent.User )
+        QC.QEvent.__init__( self, CallAfterEventType )
         
         self._fn = fn
         self._args = args
@@ -1213,7 +1215,7 @@ class CallAfterEventFilter( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.User and isinstance( event, CallAfterEvent ):
+        if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
             
             event.Execute()
             
@@ -1226,7 +1228,9 @@ class CallAfterEventFilter( QC.QObject ):
 def CallAfter( fn, *args, **kwargs ):
     
     QW.QApplication.instance().postEvent( QW.QApplication.instance().call_after_catcher, CallAfterEvent( fn, *args, **kwargs ) )
-
+    
+    QW.QApplication.instance().eventDispatcher().wakeUp()
+    
 
 def ClearLayout( layout, delete_widgets = False ):
     
@@ -1253,7 +1257,7 @@ def ClearLayout( layout, delete_widgets = False ):
 
         layout.removeItem( item )
         
-
+    
 def ListWidgetGetStringSelection( widget ):
     
     for i in range( widget.count() ):
@@ -1261,8 +1265,7 @@ def ListWidgetGetStringSelection( widget ):
         if widget.item( i ).isSelected(): return widget.item( i ).text()
 
     return None
-
-
+    
 def GetClientData( widget, idx ):
     
     if isinstance( widget, QW.QComboBox ):

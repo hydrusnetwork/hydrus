@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 382</h3></li>
+				<ul>
+					<li>mpv:</li>
+					<li>rolled Qt back from 5.14.0 to 5.13.0 on the releases, which seems to have fixed our 'event queue sometimes halts until mouse move' issue that occurs after initial mpv load. some other ui and media viewer resize jank seems to be cleared up. I dunno what happened with 5.14, and I don't suspect it as the problem nearly as much as my currently borked Qt event processing code, but rolling back seems the easiest solution for now</li>
+					<li>fixed an issue that was crashing non-windows that were able to load mpv</li>
+					<li>mpv now loads an mpv.conf from install_dir/static/mpv-conf. please feel free to swap in another conf or edit that one as you like. I would be interested in feedback</li>
+					<li>default mpv conf is now set to specifically enable some hardware acceleration to improve playback for some users, and to never load sidecar files like subtitles as this was introducing incredibly large load lag for users with large/high latency file storage</li>
+					<li>fixed a new issue where preview windows were not unloading media (particularly significant for mpv with audio) on page change and client shutdown</li>
+					<li>fixed an issue with global volume propagation to multiple open mpv widgets</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added two dark qss stylesheets from the user-creation github repo to the default install</li>
+					<li>when zooming out from a zoom that makes the media bigger than the media viewer canvas to a zoom where it fits, the media will now recenter. see if you like this, maybe it should be an option</li>
+					<li>to help forestall unnamespaced filename tag spam in various new-user scenarios, the 'filename' checkbox-and-namespace widget on the filename tagging options panel now initialises with 'filename' as the namespace</li>
+					<li>fixed a recent window sizing issue with the 'the client is already running' dialog not appearing</li>
+					<li>file export paths that include subdirectories that could possibly have empty text, like "[creator]/[page]", will no longer error when this is so (e.g. if a file in this case has no creator tags)--they will eliminate the subdirectory entirely, becoming "[page]". this should work for all platforms and for any nested subdirectory</li>
+					<li>fixed an issue with some fractional dataspeeds below 1KB/s displaying with many significant figures</li>
+					<li>improved some custom event handling definition code</li>
+					<li>reworked hydrus's internal object publisher/subscriber messaging system to be more Qt-happy</li>
+					<li>if the file import tagger is given a neighbouring .txt file to pull tags from that does not decode to utf-8 nicely, it now catches and reports the error more gracefully</li>
+					<li>reworded a bit of the installing help and first-start popup to emphasise that hydrus does not auto-update</li>
+					<li>added links to https://github.com/Zweibach/text/blob/master/Hydrus/PTR.md , a new guide for the PTR, to the help</li>
+					<li>removed the old 'hardcoded shortcuts' help entry, since it is increasingly irrelevent</li>
+				</ul>
 				<li><h3>version 381</h3></li>
 				<ul>
 					<li>mpv:</li>

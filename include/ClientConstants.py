@@ -38,20 +38,6 @@ COLOUR_MEDIA_BACKGROUND = 10
 COLOUR_MEDIA_TEXT = 11
 COLOUR_TAGS_BOX = 12
 
-SHORTCUT_HELP = '''You can set up many custom shortcuts in file->shortcuts. Please check that to see your current mapping.
-
-Some shortcuts remain hardcoded, however:
-
-- While Browsing -
-Ctrl + A - Select all
-Escape - Deselect all
-Ctrl + C - Copy selected files to clipboard
-
-- In Media Viewer -
-Shift-LeftClick-Drag - Drag (in Filter)
-Ctrl + MouseWheel - Zoom
-Z - Zoom Full/Fit'''
-
 DISCRIMINANT_INBOX = 0
 DISCRIMINANT_LOCAL = 1
 DISCRIMINANT_NOT_LOCAL = 2

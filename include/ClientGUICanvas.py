@@ -1889,6 +1889,11 @@ class Canvas( QW.QWidget ):
         
         ( new_media_window_width, new_media_window_height ) = CalculateMediaSize( self._current_media, new_zoom )
         
+        my_size = self.size()
+        
+        old_size_bigger = my_size.width() < media_window_width or my_size.height() < media_window_height
+        new_size_fits = my_size.width() >= new_media_window_width and my_size.height() >= new_media_window_height
+        
         width_delta = media_window_width - new_media_window_width
         height_delta = media_window_height - new_media_window_height
         
@@ -1899,6 +1904,11 @@ class Canvas( QW.QWidget ):
         self._current_zoom = new_zoom
         
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+        
+        if old_size_bigger and new_size_fits:
+            
+            self._ResetMediaWindowCenterPosition()
+            
         
         # due to the foolish 'giganto window' system for large zooms, some auto-update stuff doesn't work right if the convas rect is contained by the media rect, so do a refresh here
         self._DrawCurrentMedia()
@@ -2357,7 +2367,7 @@ class Canvas( QW.QWidget ):
     
     def SetMedia( self, media ):
         
-        if not self.isVisible():
+        if media is not None and not self.isVisible():
             
             return
             

@@ -104,17 +104,22 @@ def GenerateExportFilename( destination_directory, media, terms, append_number =
             
         
     
+    while filename.startswith( os.path.sep ):
+        
+        filename = filename[1:]
+        
+    
     if HC.PLATFORM_WINDOWS:
         
         # replace many consecutive backspace with single backspace
-        filename = re.sub( r'\\+', r'\\', filename )
+        filename = re.sub( '\\\\+', '\\\\', filename )
         
         # /, :, *, ?, ", <, >, |
         filename = re.sub( r'/|:|\*|\?|"|<|>|\|', '_', filename )
         
     else:
         
-        filename = re.sub( '/', '_', filename )
+        filename = re.sub( '/+', '/', filename )
         
     
     #

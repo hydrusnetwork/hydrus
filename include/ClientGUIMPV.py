@@ -2,6 +2,7 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusPaths
+import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -47,8 +48,6 @@ class mpvWidget( QW.QWidget ):
         
         self._player = mpv.MPV( wid = str( int( self.winId() ) ), log_handler = print, loglevel = 'fatal' )
         
-        self._player.profile = 'gpu-hq'
-        
         # hydev notes on OSC:
         # OSC is by default off, default input bindings are by default off
         # difficult to get this to intercept mouse/key events naturally, so you have to pipe them to the window with 'command', but this is not excellent
@@ -56,8 +55,17 @@ class mpvWidget( QW.QWidget ):
         
         #self._player[ 'input-default-bindings' ] = True
         
+        mpv_config_path = os.path.join( HC.STATIC_DIR, 'mpv-conf', 'mpv.conf' )
+        
         #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
-        #mpv._mpv_load_config_file(self._player.handle,'blah/mpv.conf'.encode('utf-8') )
+        if hasattr( mpv, '_mpv_load_config_file' ):
+            
+            mpv._mpv_load_config_file( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
+            
+        else:
+            
+            HydrusData.Print( 'Failed to load mpv.conf--has the API changed?' )
+            
         
         #self._player.osc = True #Set to enable the mpv UI. Requires that mpv captures mouse/key events, otherwise it won't work.
         
@@ -78,7 +86,7 @@ class mpvWidget( QW.QWidget ):
         self.destroyed.connect( self._player.terminate )
         
         HG.client_controller.sub( self, 'UpdateGlobalAudioMute', 'new_global_audio_mute' )
-        HG.client_controller.sub( self, 'UpdateGlobalAudioMute', 'new_global_audio_volume' )
+        HG.client_controller.sub( self, 'UpdateGlobalAudioVolume', 'new_global_audio_volume' )
         
 
     def GetAnimationBarStatus( self ):

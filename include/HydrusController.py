@@ -65,8 +65,6 @@ class HydrusController( object ):
         
         self._system_busy = False
         
-        self.CallToThreadLongRunning( self.DAEMONPubSub )
-        
     
     def _GetCallToThread( self ):
         
@@ -585,11 +583,6 @@ class HydrusController( object ):
             
         
     
-    def ProcessPubSub( self ):
-        
-        self._pubsub.Process()
-        
-    
     def Read( self, action, *args, **kwargs ):
         
         return self._Read( action, *args, **kwargs )
@@ -814,27 +807,5 @@ class HydrusController( object ):
     def WriteSynchronous( self, action, *args, **kwargs ):
         
         return self._Write( action, True, *args, **kwargs )
-        
-    
-    def DAEMONPubSub( self ):
-        
-        while not HG.model_shutdown:
-            
-            if self._pubsub.WorkToDo():
-                
-                try:
-                    
-                    self.ProcessPubSub()
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e, do_wait = True )
-                    
-                
-            else:
-                
-                self._pubsub.WaitOnPub()
-                
-            
         
     

@@ -160,6 +160,8 @@ class Controller( HydrusController.HydrusController ):
         
         HG.server_controller = self
         
+        self.CallToThreadLongRunning( self.DAEMONPubSub )
+        
     
     def _GetUPnPServices( self ):
         
@@ -169,6 +171,28 @@ class Controller( HydrusController.HydrusController ):
     def _InitDB( self ):
         
         return ServerDB.DB( self, self.db_dir, 'server' )
+        
+    
+    def DAEMONPubSub( self ):
+        
+        while not HG.model_shutdown:
+            
+            if self._pubsub.WorkToDo():
+                
+                try:
+                    
+                    self._pubsub.Process()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e, do_wait = True )
+                    
+                
+            else:
+                
+                self._pubsub.WaitOnPub()
+                
+            
         
     
     def DeleteOrphans( self ):

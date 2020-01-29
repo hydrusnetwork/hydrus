@@ -1325,6 +1325,8 @@ def ToHumanBytes( size ):
     
 def ToHumanInt( num ):
     
+    num = int( num )
+    
     # this got stomped on by mpv, which resets locale
     #text = locale.format_string( '%d', num, grouping = True )
     
