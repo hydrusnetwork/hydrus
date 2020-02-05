@@ -25,6 +25,14 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
 
+CANVAS_MEDIA_VIEWER = 0
+CANVAS_PREVIEW = 1
+
+canvas_str_lookup = {}
+
+canvas_str_lookup[ CANVAS_MEDIA_VIEWER ] = 'media viewer'
+canvas_str_lookup[ CANVAS_PREVIEW ] = 'preview'
+
 def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     gridbox = QP.GridLayout( cols = 2 )

@@ -211,6 +211,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'autocomplete_float_frames' ] = False
         
         self._dictionary[ 'booleans' ][ 'global_audio_mute' ] = False
+        self._dictionary[ 'booleans' ][ 'media_viewer_audio_mute' ] = False
+        self._dictionary[ 'booleans' ][ 'media_viewer_uses_its_own_audio_volume' ] = False
+        self._dictionary[ 'booleans' ][ 'preview_audio_mute' ] = False
+        self._dictionary[ 'booleans' ][ 'preview_uses_its_own_audio_volume' ] = True
         
         #
         
@@ -305,6 +309,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
         
         self._dictionary[ 'integers' ][ 'global_audio_volume' ] = 70
+        self._dictionary[ 'integers' ][ 'media_viewer_audio_volume' ] = 70
+        self._dictionary[ 'integers' ][ 'preview_audio_volume' ] = 70
         
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_jpeg_quality' ] = 10
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_jpeg_quality' ] = 20

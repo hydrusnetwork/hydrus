@@ -13450,6 +13450,24 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 382:
+            
+            existing_shortcut_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+            
+            if 'global' not in existing_shortcut_names:
+                
+                list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
+                
+                for shortcuts in list_of_shortcuts:
+                    
+                    if shortcuts.GetName() == 'global':
+                        
+                        self._SetJSONDump( shortcuts )
+                        
+                    
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

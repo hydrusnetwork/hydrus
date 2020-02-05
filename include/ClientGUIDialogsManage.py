@@ -117,7 +117,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
         
     
     def EventOK( self ):

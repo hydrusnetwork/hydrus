@@ -2871,6 +2871,11 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         
         for ( i, transformation ) in enumerate( self.transformations ):
             
+            if max_steps_allowed is not None and i >= max_steps_allowed:
+                
+                return s
+                
+            
             try:
                 
                 ( transformation_type, data ) = transformation
@@ -3025,11 +3030,6 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
             except Exception as e:
                 
                 raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.TransformationToString( transformation ) + '" to string "' + repr( s ) + '":' + str( e ) )
-                
-            
-            if max_steps_allowed is not None and i + 1 >= max_steps_allowed:
-                
-                return s
                 
             
         

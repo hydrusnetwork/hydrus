@@ -13,6 +13,7 @@ from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIHoverFrames
 from . import ClientGUIMedia
+from . import ClientGUIMediaControls
 from . import ClientGUIMenus
 from . import ClientGUIMPV
 from . import ClientGUIScrolledPanels
@@ -42,10 +43,101 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
 
-    
-
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
+def AddAudioVolumeMenu( menu, canvas_type ):
+    
+    mute_volume_type = None
+    volume_volume_type = ClientGUIMediaControls.AUDIO_GLOBAL
+    
+    if canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        
+        mute_volume_type = ClientGUIMediaControls.AUDIO_MEDIA_VIEWER
+        
+        if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
+            
+            volume_volume_type = ClientGUIMediaControls.AUDIO_MEDIA_VIEWER
+            
+        
+    elif canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+        
+        mute_volume_type = ClientGUIMediaControls.AUDIO_PREVIEW
+        
+        if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
+            
+            volume_volume_type = ClientGUIMediaControls.AUDIO_PREVIEW
+            
+        
+    
+    volume_menu = QW.QMenu( menu )
+    
+    ( global_mute_option_name, global_volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
+    
+    if HG.client_controller.new_options.GetBoolean( global_mute_option_name ):
+        
+        label = 'unmute global'
+        
+    else:
+        
+        label = 'mute global'
+        
+    
+    ClientGUIMenus.AppendMenuItem( volume_menu, label, 'Mute/unmute audio.', ClientGUIMediaControls.FlipMute, ClientGUIMediaControls.AUDIO_GLOBAL )
+    
+    #
+    
+    if mute_volume_type is not None:
+        
+        ClientGUIMenus.AppendSeparator( volume_menu )
+        
+        ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ mute_volume_type ]
+        
+        if HG.client_controller.new_options.GetBoolean( mute_option_name ):
+            
+            label = 'unmute {}'.format( ClientGUIMediaControls.volume_types_str_lookup[ mute_volume_type ] )
+            
+        else:
+            
+            label = 'mute {}'.format( ClientGUIMediaControls.volume_types_str_lookup[ mute_volume_type ] )
+            
+        
+        ClientGUIMenus.AppendMenuItem( volume_menu, label, 'Mute/unmute audio.', ClientGUIMediaControls.FlipMute, mute_volume_type )
+        
+    
+    #
+    
+    ClientGUIMenus.AppendSeparator( volume_menu )
+    
+    ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ volume_volume_type ]
+    
+    # 0-100 inclusive
+    volumes = list( range( 0, 110, 10 ) )
+    
+    current_volume = HG.client_controller.new_options.GetInteger( volume_option_name )
+    
+    if current_volume not in volumes:
+        
+        volumes.append( current_volume )
+        
+        volumes.sort()
+        
+    
+    for volume in volumes:
+        
+        label = 'volume: {}'.format( volume )
+        
+        if volume == current_volume:
+            
+            ClientGUIMenus.AppendMenuCheckItem( volume_menu, label, 'Set the volume.', True, ClientGUIMediaControls.ChangeVolume, volume_volume_type, volume )
+            
+        else:
+            
+            ClientGUIMenus.AppendMenuItem( volume_menu, label, 'Set the volume.', ClientGUIMediaControls.ChangeVolume, volume_volume_type, volume )
+            
+        
+    
+    ClientGUIMenus.AppendMenu( menu, volume_menu, 'volume' )
+    
 def CalculateCanvasMediaSize( media, canvas_size, show_action ):
     
     ( canvas_width, canvas_height ) = canvas_size.toTuple()
@@ -982,7 +1074,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._canvas_window = None
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media_viewer' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media_viewer' ] )
         
         HG.client_controller.gui.RegisterCanvasFrameReference( self )
         
@@ -1049,6 +1141,18 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             elif action == 'flip_darkmode':
                 
                 HG.client_controller.gui.FlipDarkmode()
+                
+            elif action == 'global_audio_mute':
+                
+                ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, True )
+                
+            elif action == 'global_audio_unmute':
+                
+                ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, False )
+                
+            elif action == 'global_audio_mute_flip':
+                
+                ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
                 
             else:
                 
@@ -1125,7 +1229,17 @@ class Canvas( QW.QWidget ):
         self._service_keys_to_services = {}
         
         self._current_media = None
-        self._media_container = MediaContainer( self )
+        
+        if self.PREVIEW_WINDOW:
+            
+            self._canvas_type = ClientGUICommon.CANVAS_PREVIEW
+            
+        else:
+            
+            self._canvas_type = ClientGUICommon.CANVAS_MEDIA_VIEWER
+            
+        
+        self._media_container = MediaContainer( self, self._canvas_type )
         
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
@@ -2493,6 +2607,8 @@ class CanvasPanel( Canvas ):
             return
             
         
+        menu = QW.QMenu()
+        
         if self._current_media is not None:
             
             new_options = HG.client_controller.new_options
@@ -2506,8 +2622,6 @@ class CanvasPanel( Canvas ):
             local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
             
             i_can_post_ratings = len( local_ratings_services ) > 0
-            
-            menu = QW.QMenu()
             
             #
             
@@ -2525,6 +2639,13 @@ class CanvasPanel( Canvas ):
             ClientGUIMedia.AddFileViewingStatsMenu( info_menu, self._current_media )
             
             ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        AddAudioVolumeMenu( menu, self._canvas_type )
+        
+        if self._current_media is not None:
             
             #
             
@@ -2612,8 +2733,8 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
-            HG.client_controller.PopupMenu( self, menu )
-            
+        
+        HG.client_controller.PopupMenu( self, menu )
         
     
     def MediaFocusWentToExternalProgram( self, page_key ):
@@ -4932,6 +5053,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenu( menu, zoom_menu, 'current zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._current_zoom ) ) )
                 
             
+            AddAudioVolumeMenu( menu, self._canvas_type )
+            
             if self.parentWidget().isFullScreen():
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.parentWidget().FullscreenSwitch )
@@ -5144,9 +5267,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
 class MediaContainer( QW.QWidget ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, canvas_type ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self._canvas_type = canvas_type
         
         # If I do not set this, macOS goes 100% CPU endless repaint events!
         # My guess is it due to the borked layout
@@ -5170,11 +5295,16 @@ class MediaContainer( QW.QWidget ):
         
         self._animation_window = Animation( self )
         self._animation_bar = AnimationBar( self )
+        self._volume_control = ClientGUIMediaControls.VolumeControl( self, self._canvas_type, direction = 'up' )
         self._mpv_window = None
         self._static_image_window = StaticImage( self )
         
+        self._volume_control.adjustSize()
+        self._volume_control.setCursor( QG.Qt.ArrowCursor )
+        
         self._animation_window.hide()
         self._animation_bar.hide()
+        self._volume_control.hide()
         self._static_image_window.hide()
         self._embed_button.hide()
         
@@ -5277,6 +5407,8 @@ class MediaContainer( QW.QWidget ):
                     self._mpv_window = HG.client_controller.gui.GetMPVWidget( self )
                     
                 
+                self._mpv_window.SetCanvasType( self._canvas_type )
+                
                 self._media_window = self._mpv_window
                 
             
@@ -5287,11 +5419,22 @@ class MediaContainer( QW.QWidget ):
             
             self._animation_bar.SetMediaAndWindow( self._media, self._media_window )
             
+            if self._mpv_window is not None and self._media.HasAudio():
+                
+                self._volume_control.show()
+                
+            else:
+                
+                self._volume_control.hide()
+                
+            
             self._animation_bar.show()
             
         else:
             
             self._HideAnimationBar()
+            
+            self._volume_control.hide()
             
         
         if old_media_window is not None and destroy_old_media_window:
@@ -5328,8 +5471,23 @@ class MediaContainer( QW.QWidget ):
                     
                     media_height -= animated_scanbar_height
                     
-                    self._animation_bar.setFixedSize( QP.TupleToQSize( ( my_width, animated_scanbar_height ) ) )
+                    if self._volume_control.isVisibleTo( self ):
+                        
+                        volume_width = self._volume_control.width()
+                        
+                    else:
+                        
+                        volume_width = 0
+                        
+                    
+                    self._animation_bar.setFixedSize( QP.TupleToQSize( ( my_width - volume_width, animated_scanbar_height ) ) )
                     self._animation_bar.move( QP.TupleToQPoint( ( 0, my_height - animated_scanbar_height ) ) )
+                    
+                    if self._volume_control.isVisibleTo( self ):
+                        
+                        self._volume_control.setFixedSize( QP.TupleToQSize( ( volume_width, animated_scanbar_height ) ) )
+                        self._volume_control.move( QP.TupleToQPoint( ( self._animation_bar.width(), my_height - animated_scanbar_height ) ) )
+                        
                     
                 
                 self._media_window.setFixedSize( QP.TupleToQSize( ( media_width, media_height ) ) )
@@ -5432,6 +5590,22 @@ class MediaContainer( QW.QWidget ):
     
     def paintEvent( self, event ):
         
+        painter = None
+        
+        # hackery dackery doo to deal with non-redrawing single-pixel border around the real widget
+        # we'll fix this when we fix the larger layout/repaint issue
+        if self._volume_control.isVisible():
+            
+            painter = QG.QPainter( self )
+            
+            background_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
+            
+            painter.setBrush( QG.QBrush( background_colour ) )
+            painter.setPen( QC.Qt.NoPen )
+            
+            painter.drawRect( self._volume_control.geometry() )
+            
+        
         if self._media_window is not None and self._media_window.isVisible():
             
             return
@@ -5441,7 +5615,10 @@ class MediaContainer( QW.QWidget ):
         # mpv embed fun aggravates this
         # so instead we do an explicit repaint after the hide and before the new show, to clear our window
         
-        painter = QG.QPainter( self )
+        if painter is None:
+            
+            painter = QG.QPainter( self )
+            
         
         background_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
         
@@ -5504,6 +5681,8 @@ class MediaContainer( QW.QWidget ):
         
         self._HideAnimationBar()
         
+        self._volume_control.hide()
+        
         self._DestroyOrHideThisMediaWindow( self._media_window )
         
         self._media_window = None
@@ -5545,6 +5724,8 @@ class MediaContainer( QW.QWidget ):
         self._media = None
         
         self._HideAnimationBar()
+        
+        self._volume_control.hide()
         
         self._DestroyOrHideThisMediaWindow( self._media_window )
         

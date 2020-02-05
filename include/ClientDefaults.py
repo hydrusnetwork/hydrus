@@ -312,6 +312,12 @@ def GetDefaultShortcuts():
     
     shortcuts = []
     
+    global_shortcuts = ClientGUIShortcuts.ShortcutSet( 'global' )
+    
+    global_shortcuts.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'G' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'global_audio_mute_flip' ) )
+    
+    shortcuts.append( global_shortcuts )
+    
     archive_delete_filter = ClientGUIShortcuts.ShortcutSet( 'archive_delete_filter' )
     
     archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )

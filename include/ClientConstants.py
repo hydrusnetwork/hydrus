@@ -401,10 +401,11 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
 
-SHORTCUTS_RESERVED_NAMES = [ 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
+SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
 
 shortcut_names_to_descriptions = {}
 
+shortcut_names_to_descriptions[ 'global' ] = 'Actions for the whole program. Should work in the main gui or a media viewer.'
 shortcut_names_to_descriptions[ 'archive_delete_filter' ] = 'Navigation actions for the media viewer during an archive/delete filter. Mouse shortcuts should work.'
 shortcut_names_to_descriptions[ 'duplicate_filter' ] = 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.'
 shortcut_names_to_descriptions[ 'media' ] = 'Actions to alter metadata for media in the media viewer or the thumbnail grid.'
@@ -414,6 +415,7 @@ shortcut_names_to_descriptions[ 'media_viewer' ] = 'Zoom and pan actions for any
 
 # shortcut commands
 
+SHORTCUTS_GLOBAL_ACTIONS = [ 'global_audio_mute', 'global_audio_unmute', 'global_audio_mute_flip' ]
 SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'export_files', 'export_files_quick_auto_export', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_set_alternate', 'duplicate_media_set_alternate_collections', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_focused_king', 'duplicate_media_set_same_quality', 'open_known_url' ]
 SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'pause_media', 'pause_play_media', 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode' ]
 SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous', 'pause_play_slideshow' ]
@@ -423,6 +425,7 @@ SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archi
 
 simple_shortcut_name_to_action_lookup = {}
 
+simple_shortcut_name_to_action_lookup[ 'global' ] = SHORTCUTS_GLOBAL_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'media' ] = SHORTCUTS_MEDIA_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'media_viewer' ] = SHORTCUTS_MEDIA_VIEWER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'media_viewer_browser' ] = SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS
@@ -530,89 +533,91 @@ class GlobalPixmaps( object ):
         
         # These probably *could* be created even before QApplication is constructed, but it can't hurt to wait until that's done.
         
-        GlobalPixmaps.bold = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_bold.png' ) )
-        GlobalPixmaps.italic = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_italic.png' ) )
-        GlobalPixmaps.underline = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_underline.png' ) )
+        GlobalPixmaps.bold = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_bold.png' ) )
+        GlobalPixmaps.italic = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_italic.png' ) )
+        GlobalPixmaps.underline = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_underline.png' ) )
         
-        GlobalPixmaps.align_left = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_align_left.png' ) )
-        GlobalPixmaps.align_center = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_align_center.png' ) )
-        GlobalPixmaps.align_right = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_align_right.png' ) )
-        GlobalPixmaps.align_justify = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_align_justify.png' ) )
+        GlobalPixmaps.align_left = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_align_left.png' ) )
+        GlobalPixmaps.align_center = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_align_center.png' ) )
+        GlobalPixmaps.align_right = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_align_right.png' ) )
+        GlobalPixmaps.align_justify = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_align_justify.png' ) )
         
-        GlobalPixmaps.indent_less = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_indent_remove.png' ) )
-        GlobalPixmaps.indent_more = QG.QPixmap( os.path.join( HC.STATIC_DIR,'text_indent.png' ) )
+        GlobalPixmaps.indent_less = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_indent_remove.png' ) )
+        GlobalPixmaps.indent_more = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'text_indent.png' ) )
         
-        GlobalPixmaps.font = QG.QPixmap( os.path.join( HC.STATIC_DIR,'font.png' ) )
-        GlobalPixmaps.colour = QG.QPixmap( os.path.join( HC.STATIC_DIR,'color_swatch.png' ) )
+        GlobalPixmaps.font = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'font.png' ) )
+        GlobalPixmaps.colour = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'color_swatch.png' ) )
         
-        GlobalPixmaps.link = QG.QPixmap( os.path.join( HC.STATIC_DIR,'link.png' ) )
-        GlobalPixmaps.link_break = QG.QPixmap( os.path.join( HC.STATIC_DIR,'link_break.png' ) )
+        GlobalPixmaps.link = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'link.png' ) )
+        GlobalPixmaps.link_break = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'link_break.png' ) )
         
-        GlobalPixmaps.drag = QG.QPixmap( os.path.join( HC.STATIC_DIR,'drag.png' ) )
+        GlobalPixmaps.drag = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'drag.png' ) )
         
-        GlobalPixmaps.transparent = QG.QPixmap( os.path.join( HC.STATIC_DIR,'transparent.png' ) )
-        GlobalPixmaps.downloading = QG.QPixmap( os.path.join( HC.STATIC_DIR,'downloading.png' ) )
-        GlobalPixmaps.file_repository = QG.QPixmap( os.path.join( HC.STATIC_DIR,'file_repository_small.png' ) )
-        GlobalPixmaps.file_repository_pending = QG.QPixmap( os.path.join( HC.STATIC_DIR,'file_repository_pending_small.png' ) )
-        GlobalPixmaps.file_repository_petitioned = QG.QPixmap( os.path.join( HC.STATIC_DIR,'file_repository_petitioned_small.png' ) )
-        GlobalPixmaps.ipfs = QG.QPixmap( os.path.join( HC.STATIC_DIR,'ipfs_small.png' ) )
-        GlobalPixmaps.ipfs_pending = QG.QPixmap( os.path.join( HC.STATIC_DIR,'ipfs_pending_small.png' ) )
-        GlobalPixmaps.ipfs_petitioned = QG.QPixmap( os.path.join( HC.STATIC_DIR,'ipfs_petitioned_small.png' ) )
+        GlobalPixmaps.transparent = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'transparent.png' ) )
+        GlobalPixmaps.downloading = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'downloading.png' ) )
+        GlobalPixmaps.file_repository = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_repository_small.png' ) )
+        GlobalPixmaps.file_repository_pending = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_repository_pending_small.png' ) )
+        GlobalPixmaps.file_repository_petitioned = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_repository_petitioned_small.png' ) )
+        GlobalPixmaps.ipfs = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'ipfs_small.png' ) )
+        GlobalPixmaps.ipfs_pending = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'ipfs_pending_small.png' ) )
+        GlobalPixmaps.ipfs_petitioned = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'ipfs_petitioned_small.png' ) )
         
-        GlobalPixmaps.collection = QG.QPixmap( os.path.join( HC.STATIC_DIR,'collection.png' ) )
-        GlobalPixmaps.inbox = QG.QPixmap( os.path.join( HC.STATIC_DIR,'inbox.png' ) )
-        GlobalPixmaps.trash = QG.QPixmap( os.path.join( HC.STATIC_DIR,'trash.png' ) )
+        GlobalPixmaps.collection = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'collection.png' ) )
+        GlobalPixmaps.inbox = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'inbox.png' ) )
+        GlobalPixmaps.trash = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'trash.png' ) )
         
-        GlobalPixmaps.refresh = QG.QPixmap( os.path.join( HC.STATIC_DIR,'refresh.png' ) )
-        GlobalPixmaps.archive = QG.QPixmap( os.path.join( HC.STATIC_DIR,'archive.png' ) )
-        GlobalPixmaps.to_inbox = QG.QPixmap( os.path.join( HC.STATIC_DIR,'to_inbox.png' ) )
-        GlobalPixmaps.delete = QG.QPixmap( os.path.join( HC.STATIC_DIR,'trash.png' ) )
-        GlobalPixmaps.trash_delete = QG.QPixmap( os.path.join( HC.STATIC_DIR,'delete.png' ) )
-        GlobalPixmaps.undelete = QG.QPixmap( os.path.join( HC.STATIC_DIR,'undelete.png' ) )
-        GlobalPixmaps.zoom_in = QG.QPixmap( os.path.join( HC.STATIC_DIR,'zoom_in.png' ) )
-        GlobalPixmaps.zoom_out = QG.QPixmap( os.path.join( HC.STATIC_DIR,'zoom_out.png' ) )
-        GlobalPixmaps.zoom_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR,'zoom_switch.png' ) )
-        GlobalPixmaps.fullscreen_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR,'fullscreen_switch.png' ) )
-        GlobalPixmaps.open_externally = QG.QPixmap( os.path.join( HC.STATIC_DIR,'open_externally.png' ) )
+        GlobalPixmaps.refresh = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'refresh.png' ) )
+        GlobalPixmaps.archive = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'archive.png' ) )
+        GlobalPixmaps.to_inbox = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'to_inbox.png' ) )
+        GlobalPixmaps.delete = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'trash.png' ) )
+        GlobalPixmaps.trash_delete = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'delete.png' ) )
+        GlobalPixmaps.undelete = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'undelete.png' ) )
+        GlobalPixmaps.zoom_in = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_in.png' ) )
+        GlobalPixmaps.zoom_out = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_out.png' ) )
+        GlobalPixmaps.zoom_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_switch.png' ) )
+        GlobalPixmaps.fullscreen_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'fullscreen_switch.png' ) )
+        GlobalPixmaps.open_externally = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'open_externally.png' ) )
         
-        GlobalPixmaps.dump_ok = QG.QPixmap( os.path.join( HC.STATIC_DIR,'dump_ok.png' ) )
-        GlobalPixmaps.dump_recoverable = QG.QPixmap( os.path.join( HC.STATIC_DIR,'dump_recoverable.png' ) )
-        GlobalPixmaps.dump_fail = QG.QPixmap( os.path.join( HC.STATIC_DIR,'dump_fail.png' ) )
+        GlobalPixmaps.dump_ok = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'dump_ok.png' ) )
+        GlobalPixmaps.dump_recoverable = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'dump_recoverable.png' ) )
+        GlobalPixmaps.dump_fail = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'dump_fail.png' ) )
         
-        GlobalPixmaps.cog = QG.QPixmap( os.path.join( HC.STATIC_DIR,'cog.png' ) )
-        GlobalPixmaps.family = QG.QPixmap( os.path.join( HC.STATIC_DIR,'family.png' ) )
-        GlobalPixmaps.keyboard = QG.QPixmap( os.path.join( HC.STATIC_DIR,'keyboard.png' ) )
-        GlobalPixmaps.help = QG.QPixmap( os.path.join( HC.STATIC_DIR,'help.png' ) )
+        GlobalPixmaps.cog = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'cog.png' ) )
+        GlobalPixmaps.family = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'family.png' ) )
+        GlobalPixmaps.keyboard = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'keyboard.png' ) )
+        GlobalPixmaps.help = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'help.png' ) )
         
-        GlobalPixmaps.check = QG.QPixmap( os.path.join( HC.STATIC_DIR,'check.png' ) )
-        GlobalPixmaps.pause = QG.QPixmap( os.path.join( HC.STATIC_DIR,'pause.png' ) )
-        GlobalPixmaps.play = QG.QPixmap( os.path.join( HC.STATIC_DIR,'play.png' ) )
-        GlobalPixmaps.stop = QG.QPixmap( os.path.join( HC.STATIC_DIR,'stop.png' ) )
-        GlobalPixmaps.sound = QG.QPixmap( os.path.join( HC.STATIC_DIR,'sound.png' ) )
+        GlobalPixmaps.check = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'check.png' ) )
+        GlobalPixmaps.pause = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'pause.png' ) )
+        GlobalPixmaps.play = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'play.png' ) )
+        GlobalPixmaps.stop = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'stop.png' ) )
         
-        GlobalPixmaps.file_pause = QG.QPixmap( os.path.join( HC.STATIC_DIR,'file_pause.png' ) )
-        GlobalPixmaps.file_play = QG.QPixmap( os.path.join( HC.STATIC_DIR,'file_play.png' ) )
-        GlobalPixmaps.gallery_pause = QG.QPixmap( os.path.join( HC.STATIC_DIR,'gallery_pause.png' ) )
-        GlobalPixmaps.gallery_play = QG.QPixmap( os.path.join( HC.STATIC_DIR,'gallery_play.png' ) )
+        GlobalPixmaps.sound = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'sound.png' ) )
+        GlobalPixmaps.mute = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'mute.png' ) )
         
-        GlobalPixmaps.highlight = QG.QPixmap( os.path.join( HC.STATIC_DIR,'highlight.png' ) )
-        GlobalPixmaps.clear_highlight = QG.QPixmap( os.path.join( HC.STATIC_DIR,'clear_highlight.png' ) )
+        GlobalPixmaps.file_pause = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_pause.png' ) )
+        GlobalPixmaps.file_play = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_play.png' ) )
+        GlobalPixmaps.gallery_pause = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'gallery_pause.png' ) )
+        GlobalPixmaps.gallery_play = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'gallery_play.png' ) )
         
-        GlobalPixmaps.listctrl = QG.QPixmap( os.path.join( HC.STATIC_DIR,'listctrl.png' ) )
+        GlobalPixmaps.highlight = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'highlight.png' ) )
+        GlobalPixmaps.clear_highlight = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'clear_highlight.png' ) )
         
-        GlobalPixmaps.copy = QG.QPixmap( os.path.join( HC.STATIC_DIR,'copy.png' ) )
-        GlobalPixmaps.paste = QG.QPixmap( os.path.join( HC.STATIC_DIR,'paste.png' ) )
+        GlobalPixmaps.listctrl = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'listctrl.png' ) )
         
-        GlobalPixmaps.eight_kun = QG.QPixmap( os.path.join( HC.STATIC_DIR,'8kun.png' ) )
-        GlobalPixmaps.twitter = QG.QPixmap( os.path.join( HC.STATIC_DIR,'twitter.png' ) )
-        GlobalPixmaps.tumblr = QG.QPixmap( os.path.join( HC.STATIC_DIR,'tumblr.png' ) )
-        GlobalPixmaps.discord = QG.QPixmap( os.path.join( HC.STATIC_DIR,'discord.png' ) )
-        GlobalPixmaps.patreon = QG.QPixmap( os.path.join( HC.STATIC_DIR,'patreon.png' ) )
+        GlobalPixmaps.copy = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'copy.png' ) )
+        GlobalPixmaps.paste = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'paste.png' ) )
         
-        GlobalPixmaps.first = QG.QPixmap( os.path.join( HC.STATIC_DIR,'first.png' ) )
-        GlobalPixmaps.previous = QG.QPixmap( os.path.join( HC.STATIC_DIR,'previous.png' ) )
-        GlobalPixmaps.next_bmp = QG.QPixmap( os.path.join( HC.STATIC_DIR,'next.png' ) )
-        GlobalPixmaps.last = QG.QPixmap( os.path.join( HC.STATIC_DIR,'last.png' ) )
+        GlobalPixmaps.eight_kun = QG.QPixmap( os.path.join( HC.STATIC_DIR, '8kun.png' ) )
+        GlobalPixmaps.twitter = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'twitter.png' ) )
+        GlobalPixmaps.tumblr = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'tumblr.png' ) )
+        GlobalPixmaps.discord = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'discord.png' ) )
+        GlobalPixmaps.patreon = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'patreon.png' ) )
+        
+        GlobalPixmaps.first = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'first.png' ) )
+        GlobalPixmaps.previous = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )
+        GlobalPixmaps.next_bmp = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'next.png' ) )
+        GlobalPixmaps.last = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'last.png' ) )
         
 
 DEFAULT_LOCAL_TAG_SERVICE_KEY = b'local tags'

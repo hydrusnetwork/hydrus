@@ -950,7 +950,7 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
             
             item.setSizePolicy( sizePolicy[0], sizePolicy[1] )
     
-    expand_both_ways = flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
+    expand_both_ways = flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
     zero_border = False
     
     # This is kind of a mess right now, adjustments might be needed
@@ -1006,10 +1006,6 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         #item.setContentsMargins( 0, 0, 0, 0 )
     elif flag == CC.FLAGS_EXPAND_SIZER_BOTH_WAYS:
         zero_border = True
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
-            
-            layout.setStretchFactor( item, 5 )
-            
         
         #item.setContentsMargins( 0, 0, 0, 0 )
         
@@ -1057,7 +1053,7 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         
         if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
             
-            if flag == CC.FLAGS_EXPAND_BOTH_WAYS:
+            if flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS ):
                 
                 stretch_factor = 5
                 

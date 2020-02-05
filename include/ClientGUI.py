@@ -16,6 +16,7 @@ from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUILogin
 from . import ClientGUIManagement
+from . import ClientGUIMediaControls
 from . import ClientGUIMenus
 from . import ClientGUIMPV
 from . import ClientGUIPages
@@ -480,7 +481,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._animation_update_windows = set()
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'main_gui' ] )
         
         self._controller.CallLaterQtSafe( self, 0.5, self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
@@ -5251,6 +5252,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self.FlipDarkmode()
                 
+            elif action == 'global_audio_mute':
+                
+                ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, True )
+                
+            elif action == 'global_audio_unmute':
+                
+                ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, False )
+                
+            elif action == 'global_audio_mute_flip':
+                
+                ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
+                
             elif action == 'show_hide_splitters':
                 
                 self._ShowHideSplitters()
@@ -5852,19 +5865,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
 class FrameSplashPanel( QW.QWidget ):
     
-    WIDTH = 480
-    HEIGHT = 280
-    
     def __init__( self, parent, controller ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self.setForegroundRole( QG.QPalette.Text )
         
         self._controller = controller
         
         self._my_status = FrameSplashStatus( self._controller, self )
         
-        QP.SetClientSize( self, (self.WIDTH,self.HEIGHT) )
-        QP.SetMinClientSize( self, (self.WIDTH,self.HEIGHT) )
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 64 )
+        
+        self.setMinimumWidth( width )
+        
+        self.setMaximumWidth( width * 2 )
         
         self._drag_last_pos = None
         self._initial_position = self.parentWidget().pos()
@@ -5872,61 +5887,39 @@ class FrameSplashPanel( QW.QWidget ):
         # this is 124 x 166
         self._hydrus_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_splash.png' ) )
         
+        self._image_label = QW.QLabel( self )
+        
+        self._image_label.setPixmap( self._hydrus_pixmap )
+        
+        self._image_label.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.SetBackgroundColour( self._image_label, ( 255, 255, 255 ) )
+        
+        self._title_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
+        self._status_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
+        self._status_sub_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
+        
+        self._title_label.setAlignment( QC.Qt.AlignCenter )
+        self._status_label.setAlignment( QC.Qt.AlignCenter )
+        self._status_sub_label.setAlignment( QC.Qt.AlignCenter )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._image_label, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._title_label, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._status_label, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._status_sub_label, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        margin = ClientGUIFunctions.ConvertTextToPixelWidth( self, 3 )
+        
+        self._image_label.setMargin( margin )
+        
+        self.setLayout( vbox )
+        
         self._widget_event_filter = QP.WidgetEventFilter( self )
         self._widget_event_filter.EVT_MOTION( self.EventDrag )
         self._widget_event_filter.EVT_LEFT_DOWN( self.EventDragBegin )
         self._widget_event_filter.EVT_LEFT_UP( self.EventDragEnd )
-        
-    
-    def _Redraw( self, painter ):
-        
-        ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
-        
-        painter.setBackground( QG.QBrush( QP.GetSystemColour( QG.QPalette.Base ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        #
-        
-        x = ( self.WIDTH - 124 ) // 2
-        y = 15
-        
-        painter.drawPixmap( x, y, self._hydrus_pixmap )
-        
-        painter.setFont( QW.QApplication.font() )
-        
-        y += 166 + 15
-        
-        #
-        
-        ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, title_text ).toTuple()
-        
-        text_gap = ( self.HEIGHT - y - height * 3 ) // 4
-        
-        x = ( self.WIDTH - width ) // 2
-        y += text_gap
-        
-        QP.DrawText( painter, x, y, title_text )
-        
-        #
-        
-        y += height + text_gap
-        
-        ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, status_text ).toTuple()
-        
-        x = ( self.WIDTH - width ) // 2
-        
-        QP.DrawText( painter, x, y, status_text )
-        
-        #
-        
-        y += height + text_gap
-        
-        ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, status_subtext ).toTuple()
-        
-        x = ( self.WIDTH - width ) // 2
-        
-        QP.DrawText( painter, x, y, status_subtext )
         
     
     def EventDrag( self, event ):
@@ -5957,18 +5950,15 @@ class FrameSplashPanel( QW.QWidget ):
         self._drag_last_pos = None
         
         return True # was: event.ignore()
-
-
-    def paintEvent( self, event ):
-        
-        painter = QG.QPainter( self )
-        
-        self._Redraw( painter )
         
     
     def SetDirty( self ):
         
-        self.update()
+        ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
+        
+        self._title_label.setText( title_text )
+        self._status_label.setText( status_text )
+        self._status_sub_label.setText( status_subtext )
         
     
 # We have this to be an off-Qt-thread-happy container for this info, as the framesplash has to deal with messages in the fuzzy time of shutdown

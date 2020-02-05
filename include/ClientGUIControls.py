@@ -361,9 +361,20 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         transformation_type = ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT
         data = ' extra text'
         
+        try:
+            
+            string_converter = self._GetValue()
+            
+            example_string_at_this_point = string_converter.Convert( self._example_string.text() )
+            
+        except:
+            
+            example_string_at_this_point = self._example_string.text()
+            
+        
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = self._TransformationPanel( dlg, transformation_type, data )
+            panel = self._TransformationPanel( dlg, transformation_type, data, example_string_at_this_point )
             
             dlg.SetPanel( panel )
             
@@ -504,9 +515,20 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( number, transformation_type, data ) = enumerated_transformation
             
+            try:
+                
+                string_converter = self._GetValue()
+                
+                example_string_at_this_point = string_converter.Convert( self._example_string.text(), number - 1 )
+                
+            except:
+                
+                example_string_at_this_point = self._example_string.text()
+                
+            
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                panel = self._TransformationPanel( dlg, transformation_type, data )
+                panel = self._TransformationPanel( dlg, transformation_type, data, example_string_at_this_point )
                 
                 dlg.SetPanel( panel )
                 
@@ -643,7 +665,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     class _TransformationPanel( ClientGUIScrolledPanels.EditPanel ):
         
-        def __init__( self, parent, transformation_type, data ):
+        def __init__( self, parent, transformation_type, data, example_text ):
             
             ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
             
@@ -653,6 +675,21 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._transformation_type.addItem( ClientParsing.transformation_type_str_lookup[ t_type], t_type )
                 
+            
+            self._example_string = QW.QLineEdit( self )
+            
+            min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._example_string, 96 )
+            
+            self._example_string.setMinimumWidth( min_width )
+            
+            self._example_string.setText( example_text )
+            
+            self._example_transformation = QW.QLineEdit( self )
+            
+            self._update_example = ClientGUICommon.BetterButton( self, 'update example', self._UpdateExampleText )
+            
+            self._example_string.setEnabled( False )
+            self._example_transformation.setEnabled( False )
             
             self._data_text = QW.QLineEdit( self )
             self._data_number = QP.MakeQSpinBox( self, min=0, max=65535 )
@@ -726,6 +763,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             rows = []
             
+            rows.append( ( 'example string: ', self._example_string ) )
+            rows.append( ( 'transformed string: ', self._example_transformation ) )
+            
+            example_gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            rows = []
+            
             rows.append( ( 'string data: ', self._data_text ) )
             rows.append( ( 'number data: ', self._data_number ) )
             rows.append( ( 'encoding data: ', self._data_encoding ) )
@@ -740,6 +784,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             vbox = QP.VBoxLayout()
             
+            QP.AddToLayout( vbox, example_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._update_example, CC.FLAGS_LONE_BUTTON )
             QP.AddToLayout( vbox, self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -751,6 +797,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_encoding.currentIndexChanged.connect( self._UpdateDataControls )
             self._data_timezone_decode.currentIndexChanged.connect( self._UpdateDataControls )
             self._data_timezone_encode.currentIndexChanged.connect( self._UpdateDataControls )
+            
+            self._UpdateExampleText()
             
         
         def _UpdateDataControls( self ):
@@ -805,6 +853,26 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_regex_pattern.setEnabled( True )
                 self._data_regex_repl.setEnabled( True )
+                
+            
+        
+        def _UpdateExampleText( self ):
+            
+            try:
+                
+                transformations = [ self.GetValue() ]
+                
+                example_string = self._example_string.text()
+                
+                string_converter = ClientParsing.StringConverter( transformations, example_string )
+                
+                example_transformation = string_converter.Convert( example_string )
+                
+                self._example_transformation.setText( example_transformation )
+                
+            except Exception as e:
+                
+                self._example_transformation.setText( str( e ) )
                 
             
         

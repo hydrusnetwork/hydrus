@@ -1110,7 +1110,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
         
         self._tag_repositories.currentChanged.connect( self.EventServiceChanged )
         
@@ -1437,7 +1437,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
+            self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'main_gui' ] )
             
             self.setLayout( hbox )
             

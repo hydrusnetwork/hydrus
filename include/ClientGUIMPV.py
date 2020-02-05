@@ -1,3 +1,5 @@
+from . import ClientGUICommon
+from . import ClientGUIMediaControls
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -14,7 +16,7 @@ try:
     
     MPV_IS_AVAILABLE = True
     
-except:
+except Exception as e:
     
     MPV_IS_AVAILABLE = False
 
@@ -38,6 +40,8 @@ class mpvWidget( QW.QWidget ):
     def __init__( self, parent ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self._canvas_type = ClientGUICommon.CANVAS_PREVIEW
         
         # This is necessary since PyQT stomps over the locale settings needed by libmpv.
         # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
@@ -85,10 +89,70 @@ class mpvWidget( QW.QWidget ):
         
         self.destroyed.connect( self._player.terminate )
         
-        HG.client_controller.sub( self, 'UpdateGlobalAudioMute', 'new_global_audio_mute' )
-        HG.client_controller.sub( self, 'UpdateGlobalAudioVolume', 'new_global_audio_volume' )
+        HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
+        HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
         
-
+    
+    def _GetAudioOptionNames( self ):
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
+                
+                return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
+                
+            
+        elif self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            
+            if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
+                
+                return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
+                
+            
+        
+        return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
+        
+    
+    def _GetCorrectCurrentMute( self ):
+        
+        ( global_mute_option_name, global_volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
+        
+        mute_option_name = global_mute_option_name
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
+            
+        elif self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            
+            ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
+            
+        
+        return HG.client_controller.new_options.GetBoolean( mute_option_name ) or HG.client_controller.new_options.GetBoolean( global_mute_option_name )
+        
+    
+    def _GetCorrectCurrentVolume( self ):
+        
+        ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
+                
+                ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
+                
+            
+        elif self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            
+            if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
+                
+                ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
+                
+            
+        
+        return HG.client_controller.new_options.GetInteger( volume_option_name )
+        
+    
     def GetAnimationBarStatus( self ):
         
         buffer_indices = None
@@ -243,7 +307,12 @@ class mpvWidget( QW.QWidget ):
         
         self._player.pause = False
         
-
+    
+    def SetCanvasType( self, canvas_type ):
+        
+        self._canvas_type = canvas_type
+        
+    
     def SetMedia( self, media, start_paused = False ):
         
         self._media = media
@@ -254,7 +323,14 @@ class mpvWidget( QW.QWidget ):
             
             if len( self._player.playlist ) > 0:
                 
-                self._player.command( 'playlist-remove', 'current' )
+                try:
+                    
+                    self._player.command( 'playlist-remove', 'current' )
+                    
+                except:
+                    
+                    pass # sometimes happens after an error--screw it
+                    
                 
             
         else:
@@ -281,8 +357,8 @@ class mpvWidget( QW.QWidget ):
                 HydrusData.ShowException( e )
                 
             
-            self._player.volume = HG.client_controller.new_options.GetInteger( 'global_audio_volume' )
-            self._player.mute = HG.client_controller.new_options.GetBoolean( 'global_audio_mute' )
+            self._player.volume = self._GetCorrectCurrentVolume()
+            self._player.mute = self._GetCorrectCurrentMute()
             self._player.pause = start_paused
             
         
@@ -292,12 +368,12 @@ class mpvWidget( QW.QWidget ):
         self.SetMedia( None )
         
     
-    def UpdateGlobalAudioMute( self ):
+    def UpdateAudioMute( self ):
         
-        self._player.mute = HG.client_controller.new_options.GetBoolean( 'global_audio_mute' )
+        self._player.mute = self._GetCorrectCurrentMute()
         
 
-    def UpdateGlobalAudioVolume( self ):
+    def UpdateAudioVolume( self ):
         
-        self._player.volume = HG.client_controller.new_options.GetInteger( 'global_audio_volume' )
+        self._player.volume = self._GetCorrectCurrentVolume()
         

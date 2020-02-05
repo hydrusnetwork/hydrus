@@ -6,6 +6,7 @@ from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
+from . import ClientGUIMediaControls
 from . import ClientGUIMenus
 from . import ClientGUIMPV
 from . import ClientGUITopLevelWindows
@@ -106,6 +107,21 @@ class FullscreenHoverFrame( QW.QFrame ):
         
         focus_is_good = focus_is_on_descendant and focus_has_right_window_type
         
+        mouse_is_over_self_or_child = False
+        
+        for tlw in QW.QApplication.topLevelWidgets():
+            
+            if tlw == self or ClientGUIFunctions.IsQtAncestor( tlw, self, through_tlws = True ):
+                
+                if tlw.underMouse():
+                    
+                    mouse_is_over_self_or_child = True
+                    
+                    break
+                    
+                
+            
+        
         new_options = HG.client_controller.new_options
         
         if self._always_on_top:
@@ -192,12 +208,13 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
             
-            mouse_is_over_something_important = mouse_is_near_animation_bar # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
+            # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
+            mouse_is_over_something_else_important = mouse_is_near_animation_bar
             
             hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
             
-            ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
-            ready_to_hide = not menu_open and ( not in_position or dialog_open or not hide_focus_is_good )
+            ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_open and not menu_open
+            ready_to_hide = not menu_open and not mouse_is_over_self_or_child and ( not in_position or dialog_open or not hide_focus_is_good )
             
             def get_logic_report_string():
                 
@@ -561,8 +578,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
-        HG.client_controller.sub( self, 'UpdateGlobalAudioMute', 'new_global_audio_mute' )
-        HG.client_controller.sub( self, 'UpdateGlobalAudioVolume', 'new_global_audio_volume' )
         
     
     def _Archive( self ):
@@ -577,13 +592,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
         
         HG.client_controller.pub( 'canvas_application_command', command, self._canvas_key )
-        
-    
-    def _FlipGlobalMute( self ):
-        
-        HG.client_controller.new_options.FlipBoolean( 'global_audio_mute' )
-        
-        HG.client_controller.pub( 'new_global_audio_mute' )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -659,27 +667,11 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.zoom_switch, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ), self._canvas_key )
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', 'switch_between_100_percent_and_canvas_zoom' )
         
-        self._global_audio_volume_slider = QW.QSlider( self )
-        
-        self._global_audio_volume_slider.setOrientation( QC.Qt.Horizontal )
-        self._global_audio_volume_slider.setTickInterval( 1 )
-        self._global_audio_volume_slider.setTickPosition( QW.QSlider.TicksBothSides )
-        self._global_audio_volume_slider.setRange( 0, 100 )
-        
-        self._global_audio_volume_slider.setValue( HG.client_controller.new_options.GetInteger( 'global_audio_volume' ) )
-        
-        self._global_audio_volume_slider.valueChanged.connect( self._VolumeSliderMoved )
-        
-        self._global_audio_mute_checkbox = QW.QCheckBox( 'mute', self )
-        
-        self._global_audio_mute_checkbox.setChecked( HG.client_controller.new_options.GetBoolean( 'global_audio_mute' ) )
-        
-        self._global_audio_mute_checkbox.clicked.connect( self._FlipGlobalMute )
+        self._volume_control = ClientGUIMediaControls.VolumeControl( self, ClientGUICommon.CANVAS_MEDIA_VIEWER )
         
         if not ClientGUIMPV.MPV_IS_AVAILABLE:
             
-            self._global_audio_mute_checkbox.hide()
-            self._global_audio_volume_slider.hide()
+            self._volume_control.hide()
             
         
         shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.keyboard, self._ShowShortcutMenu )
@@ -709,8 +701,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         QP.AddToLayout( self._top_hbox, zoom_in, CC.FLAGS_VCENTER )
         QP.AddToLayout( self._top_hbox, zoom_out, CC.FLAGS_VCENTER )
         QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._global_audio_volume_slider, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._global_audio_mute_checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._volume_control, CC.FLAGS_VCENTER )
         QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_VCENTER )
         QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_VCENTER )
         QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_VCENTER )
@@ -842,13 +833,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         HG.client_controller.PopupMenu( self, menu )
         
     
-    def _VolumeSliderMoved( self ):
-        
-        HG.client_controller.new_options.SetInteger( 'global_audio_volume', self._global_audio_volume_slider.value() )
-        
-        HG.client_controller.pub( 'new_global_audio_volume' )
-        
-    
     def EventDragButton( self ):
         
         if self._current_media is None:
@@ -945,16 +929,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             self._index_text.setText( self._current_index_string )
             
-        
-    
-    def UpdateGlobalAudioMute( self ):
-        
-        self._global_audio_mute_checkbox.setChecked( HG.client_controller.new_options.GetBoolean( 'global_audio_mute' ) )
-        
-    
-    def UpdateGlobalAudioVolume( self ):
-        
-        self._global_audio_volume_slider.setValue( HG.client_controller.new_options.GetInteger( 'global_audio_volume' ) )
         
     
 class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):

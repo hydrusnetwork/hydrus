@@ -12,6 +12,7 @@ from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
+from . import ClientGUIMediaControls
 from . import ClientGUIPanels
 from . import ClientGUIPredicates
 from . import ClientGUIScrolledPanels
@@ -1517,7 +1518,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
-        self._listbook.AddPage( 'audio and duration', 'audio and duration', self._AudioAndDurationPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'audio', 'audio', self._AudioPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
@@ -1540,7 +1541,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.widget().setLayout( vbox )
         
     
-    class _AudioAndDurationPanel( QW.QWidget ):
+    class _AudioPanel( QW.QWidget ):
         
         def __init__( self, parent, new_options ):
             
@@ -1548,13 +1549,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._has_duration_label = QW.QLineEdit( self )
+            #self._media_viewer_uses_its_own_audio_volume = QW.QCheckBox( self )
+            self._preview_uses_its_own_audio_volume = QW.QCheckBox( self )
             
             self._has_audio_label = QW.QLineEdit( self )
             
             #
             
-            self._has_duration_label.setText( self._new_options.GetString( 'has_duration_label' ) )
+            tt = 'If unchecked, this media canvas will use the \'global\' audio volume slider. If checked, this media canvas will have its own separate one.'
+            tt += os.linesep * 2
+            tt += 'Keep this on if you would like the preview viewer to be quieter than the main media viewer.'
+            
+            #self._media_viewer_uses_its_own_audio_volume.setChecked( self._new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ) )
+            self._preview_uses_its_own_audio_volume.setChecked( self._new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ) )
+            
+            #self._media_viewer_uses_its_own_audio_volume.setToolTip( tt )
+            self._preview_uses_its_own_audio_volume.setToolTip( tt )
             
             self._has_audio_label.setText( self._new_options.GetString( 'has_audio_label' ) )
             
@@ -1564,7 +1574,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Label for files with duration: ', self._has_duration_label ) )
+            rows.append( ( 'The preview window has its own volume: ', self._preview_uses_its_own_audio_volume ) )
+            #rows.append( ( 'The media viewer has its own volume: ', self._media_viewer_uses_its_own_audio_volume ) )
             rows.append( ( 'Label for files with audio: ', self._has_audio_label ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1577,7 +1588,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetString( 'has_duration_label', self._has_duration_label.text() )
+            #self._new_options.SetBoolean( 'media_viewer_uses_its_own_audio_volume', self._media_viewer_uses_its_own_audio_volume.isChecked() )
+            self._new_options.SetBoolean( 'preview_uses_its_own_audio_volume', self._preview_uses_its_own_audio_volume.isChecked() )
+            
             self._new_options.SetString( 'has_audio_label', self._has_audio_label.text() )
             
         
@@ -4182,6 +4195,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._apply_all_parents_to_all_services = QW.QCheckBox( general_panel )
             self._apply_all_siblings_to_all_services = QW.QCheckBox( general_panel )
             
+            self._apply_all_parents_to_all_services.setToolTip( 'If checked, all services will apply their tag parents to each other. If unchecked, services will only apply tag parents to themselves.' )
+            self._apply_all_siblings_to_all_services.setToolTip( 'If checked, all services will apply their tag siblings to each other. If unchecked, services will only apply tag siblings to themselves. In case of conflict, local tag services have precedence.' )
+            
             #
             
             favourites_panel = ClientGUICommon.StaticBox( self, 'favourite tags' )
@@ -4238,7 +4254,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
             rows.append( ( 'By default, search \'all known files\' in \'write\' tag autocomplete inputs: ', self._show_all_tags_in_autocomplete ) )
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
-            rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
+            rows.append( ( 'Apply all parents for all services: ', self._apply_all_parents_to_all_services ) )
             rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
@@ -6027,7 +6043,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self.widget().setLayout( vbox )
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
         
         QP.CallAfter( self._SetSearchFocus )
         

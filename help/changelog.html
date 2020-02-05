@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 383</h3></li>
+				<ul>
+					<li>mpv:</li>
+					<li>updated the prototype volume/mute controls on the top media viewer hover window to be a proper 'speaker' icon button for mute with a volume slider that pops up or down on mouse-over</li>
+					<li>the new volume control is on the hover window and any media that has audio</li>
+					<li>the right-click menu of the preview viewer and media viewer now have volume submenus to set mute/volume</li>
+					<li>the client now has multiple volumes and mutes:</li>
+					<li>for mute, there is a global mute which overrides everything, and the preview and media viewers have their own mutes that just apply there.</li>
+					<li>under options->audio, you can choose whether preview windows have their own separate volume value, default is yes they do</li>
+					<li>there is a new shortcut set called 'global', which applies on the main gui and the media viewer both, and which currently has actions to alter global mute. by default, ctrl+g flips global mute</li>
+					<li>after reports of unusual rendering bugs for some users, the default mpv.conf is now more barebones. more work will happen here</li>
+					<li>.</li>
+					<li>linux:</li>
+					<li>the linux release is now built on Ubuntu 18.04 (was 16.04). unfortunately, my build packager bundled in a variety of surplus libraries, so the archive has bloated somewhat--I have removed some that I am confident are not needed, but I may have made a mistake, and there are likely more that can be taken away</li>
+					<li>the linux release now comes with mpv support</li>
+					<li>please let me know if you have any errors running this build or loading mpv. early tests seem good though!</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the launch/exit splash screen now uses a cleaner Qt-compatible layout system. It resizes and obeys stylesheets better, colouring text and background according to current style</li>
+					<li>removed the 'has duration' text label option from 'audio and duration' options panel as it is no longer used, and renamed the panel back to just 'audio'</li>
+					<li>the string transformation edit panel's individual transformation edit panel now shows that transformation step's example string and the transformed string, which is updated by button. this edit panel will get some more love soon, including dynamic hide/show of applicable controls and live updates of the example transformation as you type</li>
+					<li>misc ui layout improvements</li>
+					<li>misc ui improvements</li>
+				</ul>
 				<li><h3>version 382</h3></li>
 				<ul>
 					<li>mpv:</li>
