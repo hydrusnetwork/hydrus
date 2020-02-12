@@ -28,6 +28,7 @@ from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
+from . import ClientGUIShortcutControls
 from . import ClientGUIStyle
 from . import ClientGUITags
 from . import ClientGUITopLevelWindows
@@ -505,6 +506,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
             
         else:
+            
+            HydrusData.ShowText( 'MPV failed to import because:' )
+            HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
             
             library_versions.append( ( 'mpv', 'not available' ) )
             
@@ -2500,7 +2504,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         with ClientGUITopLevelWindows.DialogManage( self, 'manage shortcuts' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageShortcutsPanel( dlg )
+            panel = ClientGUIShortcutControls.ManageShortcutsPanel( dlg )
             
             dlg.SetPanel( panel )
             
@@ -5189,7 +5193,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             action = data
             
-            if action == 'refresh':
+            if action == 'exit_application':
+                
+                self.TryToSaveAndClose()
+                
+            elif action == 'exit_application_force_maintenance':
+                
+                self.TryToSaveAndClose( force_shutdown_maintenance = True )
+                
+            elif action == 'restart_application':
+                
+                self.TryToSaveAndClose( restart = True )
+                
+            elif action == 'refresh':
                 
                 self._Refresh()
                 

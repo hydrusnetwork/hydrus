@@ -12,6 +12,8 @@ from . import ClientGUIMPV
 from . import ClientGUITopLevelWindows
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsManagement
+from . import ClientGUIShortcuts
+from . import ClientGUIShortcutControls
 from . import ClientMedia
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -620,7 +622,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         with ClientGUITopLevelWindows.DialogManage( self, 'manage shortcuts' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageShortcutsPanel( dlg )
+            panel = ClientGUIShortcutControls.ManageShortcutsPanel( dlg )
             
             dlg.SetPanel( panel )
             

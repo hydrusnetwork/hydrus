@@ -520,6 +520,14 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
+    def contextMenuEvent( self, event ):
+        
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
+            
+            self.ShowMenu()
+            
+        
+    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -528,6 +536,11 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             return
             
+        
+        self.ShowMenu()
+        
+    
+    def ShowMenu( self ):
         
         menu = QW.QMenu()
         

@@ -1,6 +1,5 @@
 from . import ClientConstants as CC
 from . import ClientData
-from . import ClientGUICommon
 from . import ClientGUIFunctions
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -9,7 +8,6 @@ from . import HydrusSerialisable
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
 
 # ok, the problem here is that I get key codes that are converted, so if someone does shift+1 on a US keyboard, this ends up with Shift+! same with ctrl+alt+ to get accented characters
 # it isn't really a big deal since everything still lines up, but the QGuiApplicationPrivate::platformIntegration()->possibleKeys(e) to get some variant of 'yeah this is just !' seems unavailable for python
@@ -87,7 +85,9 @@ def ConvertKeyEventToShortcut( event ):
             modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
             
         
-        shortcut = Shortcut( shortcut_type, key_ord, modifiers )
+        shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+        
+        shortcut = Shortcut( shortcut_type, key_ord, shortcut_press_type, modifiers )
         
         if HG.gui_report_mode:
             
@@ -117,25 +117,57 @@ def ConvertMouseEventToShortcut( event ):
     
     key = None
     
-    if ( event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.LeftButton ) or ( event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.LeftButton ):
+    shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+    
+    if event.type() == QC.QEvent.MouseButtonPress:
         
-        key = CC.SHORTCUT_MOUSE_LEFT
+        if event.buttons() & QC.Qt.LeftButton:
+            
+            key = CC.SHORTCUT_MOUSE_LEFT
+            
+        elif event.buttons() & QC.Qt.MiddleButton:
+            
+            key = CC.SHORTCUT_MOUSE_MIDDLE
+            
+        elif event.buttons() & QC.Qt.RightButton:
+            
+            key = CC.SHORTCUT_MOUSE_RIGHT
+            
         
-    elif ( event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.MiddleButton ) or ( event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.MiddleButton ):
+    elif event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
         
-        key = CC.SHORTCUT_MOUSE_MIDDLE
+        if event.type() == QC.QEvent.MouseButtonRelease:
+            
+            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_RELEASE
+            
+        elif event.type() == QC.QEvent.MouseButtonDblClick:
+            
+            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
+            
         
-    elif ( event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.RightButton ) or ( event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.RightButton ):
+        if event.button() == QC.Qt.LeftButton:
+            
+            key = CC.SHORTCUT_MOUSE_LEFT
+            
+        elif event.button() == QC.Qt.MiddleButton:
+            
+            key = CC.SHORTCUT_MOUSE_MIDDLE
+            
+        elif event.button() == QC.Qt.RightButton:
+            
+            key = CC.SHORTCUT_MOUSE_RIGHT
+            
         
-        key = CC.SHORTCUT_MOUSE_RIGHT
+    elif event.type() == QC.QEvent.Wheel:
         
-    elif event.type() == QC.QEvent.Wheel and event.angleDelta().y() > 0:
-        
-        key = CC.SHORTCUT_MOUSE_SCROLL_UP
-        
-    elif event.type() == QC.QEvent.Wheel and event.angleDelta().y() < 0:
-        
-        key = CC.SHORTCUT_MOUSE_SCROLL_DOWN
+        if event.angleDelta().y() > 0:
+            
+            key = CC.SHORTCUT_MOUSE_SCROLL_UP
+            
+        elif event.angleDelta().y() < 0:
+            
+            key = CC.SHORTCUT_MOUSE_SCROLL_DOWN
+            
         
     
     if key is not None:
@@ -167,7 +199,7 @@ def ConvertMouseEventToShortcut( event ):
             modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
             
         
-        shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, modifiers )
+        shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, shortcut_press_type, modifiers )
         
         if HG.gui_report_mode:
             
@@ -215,9 +247,9 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT
     SERIALISABLE_NAME = 'Shortcut'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, shortcut_type = None, shortcut_key = None, modifiers = None ):
+    def __init__( self, shortcut_type = None, shortcut_key = None, shortcut_press_type = None, modifiers = None ):
         
         if shortcut_type is None:
             
@@ -227,6 +259,11 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         if shortcut_key is None:
             
             shortcut_key = CC.SHORTCUT_KEY_SPECIAL_F7
+            
+        
+        if shortcut_press_type is None:
+            
+            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
             
         
         if modifiers is None:
@@ -243,9 +280,10 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._shortcut_type = shortcut_type
-        self._shortcut_key = shortcut_key
-        self._modifiers = modifiers
+        self.shortcut_type = shortcut_type
+        self.shortcut_key = shortcut_key
+        self.shortcut_press_type = shortcut_press_type
+        self.modifiers = modifiers
         
     
     def __eq__( self, other ):
@@ -260,7 +298,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self._shortcut_type, self._shortcut_key, tuple( self._modifiers ) ).__hash__()
+        return ( self.shortcut_type, self.shortcut_key, self.shortcut_press_type, tuple( self.modifiers ) ).__hash__()
         
     
     def __repr__( self ):
@@ -270,12 +308,12 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._shortcut_type, self._shortcut_key, self._modifiers )
+        return ( self.shortcut_type, self.shortcut_key, self.shortcut_press_type, self.modifiers )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._shortcut_type, self._shortcut_key, self._modifiers ) = serialisable_info
+        ( self.shortcut_type, self.shortcut_key, self.shortcut_press_type, self.modifiers ) = serialisable_info
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -391,70 +429,92 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( shortcut_type, shortcut_key, modifiers ) = old_serialisable_info
+            
+            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+            
+            new_serialisable_info = ( shortcut_type, shortcut_key, shortcut_press_type, modifiers )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def GetShortcutType( self ):
         
-        return self._shortcut_type
+        return self.shortcut_type
         
     
     def ToString( self ):
         
         components = []
         
-        if CC.SHORTCUT_MODIFIER_CTRL in self._modifiers:
+        if CC.SHORTCUT_MODIFIER_CTRL in self.modifiers:
             
             components.append( 'ctrl' )
             
         
-        if CC.SHORTCUT_MODIFIER_ALT in self._modifiers:
+        if CC.SHORTCUT_MODIFIER_ALT in self.modifiers:
             
             components.append( 'alt' )
             
         
-        if CC.SHORTCUT_MODIFIER_SHIFT in self._modifiers:
+        if CC.SHORTCUT_MODIFIER_SHIFT in self.modifiers:
             
             components.append( 'shift' )
             
         
-        if CC.SHORTCUT_MODIFIER_GROUP_SWITCH in self._modifiers:
+        if CC.SHORTCUT_MODIFIER_GROUP_SWITCH in self.modifiers:
             
             components.append( 'Mode_switch' )
             
         
-        if self._shortcut_type == CC.SHORTCUT_TYPE_MOUSE and self._shortcut_key in CC.shortcut_mouse_string_lookup:
+        if self.shortcut_press_type != CC.SHORTCUT_PRESS_TYPE_PRESS:
             
-            components.append( CC.shortcut_mouse_string_lookup[ self._shortcut_key ] )
+            action_name = '{} '.format( CC.shortcut_press_type_str_lookup[ self.shortcut_press_type ] )
             
-        elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL and self._shortcut_key in CC.special_key_shortcut_str_lookup:
+        else:
             
-            components.append( CC.special_key_shortcut_str_lookup[ self._shortcut_key ] )
+            action_name = ''
             
-        elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
+        
+        if self.shortcut_type == CC.SHORTCUT_TYPE_MOUSE and self.shortcut_key in CC.shortcut_mouse_string_lookup:
+            
+            action_name += CC.shortcut_mouse_string_lookup[ self.shortcut_key ]
+            
+        elif self.shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL and self.shortcut_key in CC.special_key_shortcut_str_lookup:
+            
+            action_name += CC.special_key_shortcut_str_lookup[ self.shortcut_key ]
+            
+        elif self.shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
             
             try:
                 
-                if ClientData.OrdIsAlphaUpper( self._shortcut_key ):
+                if ClientData.OrdIsAlphaUpper( self.shortcut_key ):
                     
-                    components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
+                    action_name += chr( self.shortcut_key + 32 ) # + 32 for converting ascii A -> a
                     
                 else:
                     
-                    components.append( chr( self._shortcut_key ) )
+                    action_name += chr( self.shortcut_key )
                     
                 
             except:
                 
-                components.append( 'unknown key: {}'.format( repr( self._shortcut_key ) ) )
+                action_name += 'unknown key: {}'.format( repr( self.shortcut_key ) )
                 
             
         else:
             
-            components.append( 'unknown key: {}'.format( repr( self._shortcut_key ) ) )
+            action_name += 'unknown key: {}'.format( repr( self.shortcut_key ) )
             
+        
+        components.append( action_name )
         
         s = '+'.join( components )
         
-        if CC.SHORTCUT_MODIFIER_KEYPAD in self._modifiers:
+        if CC.SHORTCUT_MODIFIER_KEYPAD in self.modifiers:
             
             s += ' (on numpad)'
             
@@ -463,173 +523,6 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT ] = Shortcut
-
-class ShortcutPanel( QW.QWidget ):
-    
-    def __init__( self, parent ):
-        
-        QW.QWidget.__init__( self, parent )
-        
-        self._mouse_radio = QW.QRadioButton( 'mouse', self )
-        self._mouse_shortcut = ShortcutMouse( self, self._mouse_radio )
-        
-        self._keyboard_radio = QW.QRadioButton( 'keyboard', self )
-        self._keyboard_shortcut = ShortcutKeyboard( self, self._keyboard_radio )
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,'Mouse events only work for the duplicate and archive/delete filters atm!'), CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        gridbox = QP.GridLayout( cols = 2 )
-        
-        gridbox.setColumnStretch( 1, 1 )
-        
-        QP.AddToLayout( gridbox, self._mouse_radio, CC.FLAGS_VCENTER )
-        QP.AddToLayout( gridbox, self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._keyboard_radio, CC.FLAGS_VCENTER )
-        QP.AddToLayout( gridbox, self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.setLayout( vbox )
-        
-    
-    def GetValue( self ):
-        
-        if self._mouse_radio.isChecked():
-            
-            return self._mouse_shortcut.GetValue()
-            
-        else:
-            
-            return self._keyboard_shortcut.GetValue()
-            
-        
-    
-    def SetValue( self, shortcut ):
-        
-        if shortcut.GetShortcutType() == CC.SHORTCUT_TYPE_MOUSE:
-            
-            self._mouse_radio.setChecked( True )
-            self._mouse_shortcut.SetValue( shortcut )
-            
-        else:
-            
-            self._keyboard_radio.setChecked( True )
-            self._keyboard_shortcut.SetValue( shortcut )
-            
-        
-    
-class ShortcutKeyboard( QW.QLineEdit ):
-    
-    def __init__( self, parent, related_radio = None ):
-        
-        self._shortcut = Shortcut()
-        
-        self._related_radio = related_radio
-        
-        QW.QLineEdit.__init__( self, parent )
-        
-        self._SetShortcutString()
-        
-    
-    def _SetShortcutString( self ):
-        
-        display_string = self._shortcut.ToString()
-        
-        self.setText( display_string )
-        
-    
-    def keyPressEvent( self, event ):
-        
-        shortcut = ConvertKeyEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            self._shortcut = shortcut
-            
-            if self._related_radio is not None:
-                
-                self._related_radio.setChecked( True )
-                
-            
-            self._SetShortcutString()
-            
-        
-    
-    def GetValue( self ):
-        
-        return self._shortcut
-        
-    
-    def SetValue( self, shortcut ):
-        
-        self._shortcut = shortcut
-        
-        self._SetShortcutString()
-        
-    
-class ShortcutMouse( QW.QPushButton ):
-    
-    def __init__( self, parent, related_radio = None ):
-        
-        self._shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] )
-        
-        self._related_radio = related_radio
-        
-        QW.QPushButton.__init__( self, parent )
-        
-        self._SetShortcutString()
-        
-    
-    def _SetShortcutString( self ):
-        
-        display_string = self._shortcut.ToString()
-        
-        self.setText( display_string )
-        
-    
-    def mousePressEvent( self, event ):
-        
-        self.EventMouse( event )
-        
-    def mouseDoubleClickEvent( self, event ):
-        
-        self.EventMouse( event )
-    
-    def EventMouse( self, event ):
-        
-        self.setFocus( QC.Qt.OtherFocusReason )
-        
-        shortcut = ConvertMouseEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            self._shortcut = shortcut
-            
-            if self._related_radio is not None:
-                
-                self._related_radio.setChecked( True )
-                
-            
-            self._SetShortcutString()
-            
-        
-    
-    def GetValue( self ):
-        
-        return self._shortcut
-        
-    
-    def SetValue( self, shortcut ):
-        
-        self._shortcut = shortcut
-        
-        self._SetShortcutString()
-        
-    
 
 class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -691,7 +584,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 modifiers = []
                 
-                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, key, modifiers )
+                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, key, CC.SHORTCUT_PRESS_TYPE_PRESS, modifiers )
                 
                 if serialisable_service_key is None:
                     
@@ -775,9 +668,11 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ShortcutsHandler( QC.QObject ):
     
-    def __init__( self, parent, initial_shortcuts_names = None ):
+    def __init__( self, parent, initial_shortcuts_names = None, catch_mouse = False ):
         
         QC.QObject.__init__( self, parent )
+        
+        self._catch_mouse = catch_mouse
         
         if initial_shortcuts_names is None:
             
@@ -828,6 +723,8 @@ class ShortcutsHandler( QC.QObject ):
         
         if event.type() == QC.QEvent.KeyPress:
             
+            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, event = event )
+            
             shortcut = ConvertKeyEventToShortcut( event )
             
             if shortcut is not None:
@@ -836,7 +733,7 @@ class ShortcutsHandler( QC.QObject ):
                     
                     message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
                     
-                    if IShouldCatchShortcutEvent( self._parent, event = event ):
+                    if i_should_catch_shortcut_event:
                         
                         message += ' I am in a state to catch it.'
                         
@@ -848,17 +745,60 @@ class ShortcutsHandler( QC.QObject ):
                     HydrusData.ShowText( message )
                     
                 
-                if IShouldCatchShortcutEvent( self._parent, event = event ):
+                if i_should_catch_shortcut_event:
                     
                     shortcut_processed = self._ProcessShortcut( shortcut )
                     
                     if shortcut_processed:
+                        
+                        event.accept()
                         
                         return True
                         
                     
                 
             
+        elif self._catch_mouse:
+            
+            if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
+                
+                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, event = event )
+                
+                shortcut = ConvertMouseEventToShortcut( event )
+                
+                if shortcut is not None:
+                    
+                    if HG.shortcut_report_mode:
+                        
+                        message = 'Mouse Press shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                        
+                        if i_should_catch_shortcut_event:
+                            
+                            message += ' I am in a state to catch it.'
+                            
+                        else:
+                            
+                            message += ' I am not in a state to catch it.'
+                            
+                        
+                        HydrusData.ShowText( message )
+                        
+                    
+                    if i_should_catch_shortcut_event:
+                        
+                        shortcut_processed = self._ProcessShortcut( shortcut )
+                        
+                        if shortcut_processed:
+                            
+                            event.accept()
+                            
+                            return True
+                            
+                        
+                    
+                
+            
+        
         return False
         
     
@@ -876,6 +816,11 @@ class ShortcutsHandler( QC.QObject ):
             
             self._shortcuts_names.remove( shortcut_set_name )
             
+        
+    
+    def SetShortcuts( self, shortcut_set_names ):
+        
+        self._shortcuts_names = list( shortcut_set_names )
         
     
 class ShortcutsManager( object ):

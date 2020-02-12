@@ -1,5 +1,8 @@
+from . import ClientConstants as CC
 from . import ClientGUICommon
+from . import ClientGUIMedia
 from . import ClientGUIMediaControls
+from . import ClientGUIShortcuts
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -9,6 +12,9 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 import locale
+import traceback
+
+mpv_failed_reason = 'MPV seems ok!'
 
 try:
     
@@ -17,6 +23,8 @@ try:
     MPV_IS_AVAILABLE = True
     
 except Exception as e:
+    
+    mpv_failed_reason = traceback.format_exc()
     
     MPV_IS_AVAILABLE = False
 
@@ -33,6 +41,28 @@ def GetClientAPIVersionString():
         return 'unknown'
         
     
+# issue about mouse-to-osc interactions:
+'''
+    def mouseMoveEvent( self, event ):
+        
+        # same deal here as with mousereleaseevent--osc is non-interactable with commands, so let's not use it for now
+        #self._player.command( 'mouse', event.x(), event.y() )
+        
+        event.ignore()
+        
+    
+    def mouseReleaseEvent( self, event ):
+        
+        # left index = 0
+        # right index = 2
+        # the issue with using this guy is it sends a mouse press or mouse down event, and the OSC only responds to mouse up
+        
+        #self._player.command( 'mouse', event.x(), event.y(), index, 'single' )
+        
+        event.ignore()
+        
+    '''
+
 #Not sure how well this works with hardware acceleration. This just renders to a QWidget. In my tests it seems fine, even with vdpau video out, but I'm not 100% sure it actually uses hardware acceleration.
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
 class mpvWidget( QW.QWidget ):
@@ -50,6 +80,7 @@ class mpvWidget( QW.QWidget ):
         self.setAttribute( QC.Qt.WA_DontCreateNativeAncestors )
         self.setAttribute( QC.Qt.WA_NativeWindow )
         
+        # loglevels: fatal, error, debug
         self._player = mpv.MPV( wid = str( int( self.winId() ) ), log_handler = print, loglevel = 'fatal' )
         
         # hydev notes on OSC:
@@ -78,6 +109,10 @@ class mpvWidget( QW.QWidget ):
         # this makes black screen for audio (rather than transparent)
         self._player.force_window = True
         
+        # this is telling ffmpeg to do audio normalization. play with it more and put it in default mpv.conf
+        # it doesn't seem to apply at all for some files--maybe a vp9 issue or something?
+        #self._player.af = 'lavfi=[dynaudnorm=p=0.9]'
+        
         self.setMouseTracking( True )#Needed to get mouse move events
         #self.setFocusPolicy(QC.Qt.StrongFocus)#Needed to get key events
         self._player.input_cursor = False#Disable mpv mouse move/click event capture
@@ -91,6 +126,8 @@ class mpvWidget( QW.QWidget ):
         
         HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
         HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [], catch_mouse = True )
         
     
     def _GetAudioOptionNames( self ):
@@ -227,72 +264,6 @@ class mpvWidget( QW.QWidget ):
         return not self._player.pause
         
     
-    def mouseDoubleClickEvent( self, event ):
-        
-        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
-            
-            if event.button() == QC.Qt.LeftButton:
-                
-                self.Pause()
-                
-                hash = self._media.GetHash()
-                mime = self._media.GetMime()
-                
-                client_files_manager = HG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                new_options = HG.client_controller.new_options
-                
-                launch_path = new_options.GetMimeLaunch( mime )
-                
-                HydrusPaths.LaunchFile( path, launch_path )
-                
-                event.accept()
-                
-                return
-                
-            
-        
-        event.ignore()
-        
-
-    def mouseMoveEvent( self, event ):
-        
-        # same deal here as with mousereleaseevent--osc is non-interactable with commands, so let's not use it for now
-        #self._player.command( 'mouse', event.x(), event.y() )
-        
-        event.ignore()
-        
-    
-    def mousePressEvent( self, event ):
-        
-        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
-            
-            if event.button() == QC.Qt.LeftButton:
-                
-                self.PausePlay()
-                
-                self.parentWidget().BeginDrag()
-                
-                return
-                
-            
-        
-        event.ignore()
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        # left index = 0
-        # right index = 2
-        # the issue with using this guy is it sends a mouse press or mouse down event, and the OSC only responds to mouse up
-        
-        #self._player.command( 'mouse', event.x(), event.y(), index, 'single' )
-        
-        event.ignore()
-        
-
     def Pause( self ):
         
         self._player.pause = True
@@ -308,9 +279,67 @@ class mpvWidget( QW.QWidget ):
         self._player.pause = False
         
     
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'pause_media':
+                
+                self.Pause()
+                
+            elif action == 'pause_play_media':
+                
+                self.PausePlay()
+                
+            elif action == 'open_file_in_external_program':
+                
+                if self._media is not None:
+                    
+                    ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == 'close_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+                
+                self.window().close()
+                
+            elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+                
+                self.parent().LaunchMediaViewer()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
     def SetCanvasType( self, canvas_type ):
         
         self._canvas_type = canvas_type
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            shortcut_set = 'media_viewer_media_window'
+            
+        else:
+            
+            shortcut_set = 'preview_media_window'
+            
+        
+        self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
         
     
     def SetMedia( self, media, start_paused = False ):

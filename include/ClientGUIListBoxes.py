@@ -1852,6 +1852,14 @@ class ListBoxTags( ListBox ):
             
         
     
+    def contextMenuEvent( self, event ):
+        
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
+            
+            self.ShowMenu()
+            
+        
+    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -1860,6 +1868,11 @@ class ListBoxTags( ListBox ):
             
             return
             
+        
+        self.ShowMenu()
+        
+    
+    def ShowMenu( self ):
         
         if len( self._ordered_terms ) > 0:
             

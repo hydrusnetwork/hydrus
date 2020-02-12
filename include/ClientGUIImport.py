@@ -2187,6 +2187,14 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
     
+    def contextMenuEvent( self, event ):
+        
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
+            
+            self.ShowMenu()
+            
+        
+    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -2195,6 +2203,13 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
             return
             
+        
+        self.ShowMenu()
+        
+        event.accept()
+        
+    
+    def ShowMenu( self ):
         
         menu = QW.QMenu()
 

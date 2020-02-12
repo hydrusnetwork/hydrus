@@ -56,7 +56,14 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     for ( text, control ) in rows:
         
-        st = BetterStaticText( parent, text )
+        if isinstance( text, BetterStaticText ):
+            
+            st = text
+            
+        else:
+            
+            st = BetterStaticText( parent, text )
+            
         
         if isinstance( control, QW.QLayout ):
             
@@ -321,6 +328,14 @@ class BetterColourControl( QP.ColourPickerCtrl ):
         self.SetColour( colour )
         
     
+    def contextMenuEvent( self, event ):
+        
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
+            
+            self.ShowMenu()
+            
+        
+    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -329,6 +344,11 @@ class BetterColourControl( QP.ColourPickerCtrl ):
             
             return
             
+        
+        self.ShowMenu()
+        
+    
+    def ShowMenu( self ):
         
         menu = QW.QMenu()
         
@@ -2577,6 +2597,8 @@ class TextCatchEnterEventFilter( QC.QObject ):
         if event.type() == QC.QEvent.KeyPress and event.key() in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
             
             self._callable()
+            
+            event.accept()
             
             return True
             

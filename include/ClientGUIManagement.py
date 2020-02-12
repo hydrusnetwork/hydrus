@@ -16,6 +16,7 @@ from . import ClientGUIListCtrl
 from . import ClientGUIMedia
 from . import ClientGUIMenus
 from . import ClientGUIParsing
+from . import ClientGUIResults
 from . import ClientGUIScrolledPanels
 from . import ClientGUIFileSeedCache
 from . import ClientGUIGallerySeedLog
@@ -1232,7 +1233,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             return
             
         
-        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
         self._page.SwapMediaPanel( panel )
         
@@ -1724,7 +1725,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         media_results = []
         
-        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._page.SwapMediaPanel( panel )
         
@@ -1881,7 +1882,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
             
             self._page.SwapMediaPanel( panel )
             
@@ -2123,7 +2124,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
             
             self._page.SwapMediaPanel( panel )
             
@@ -2442,7 +2443,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         media_results = []
         
-        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._page.SwapMediaPanel( panel )
         
@@ -2594,7 +2595,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
             
             self._page.SwapMediaPanel( panel )
             
@@ -2834,7 +2835,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
             
             self._page.SwapMediaPanel( panel )
             
@@ -4021,7 +4022,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             media_results = self._controller.Read( 'media_results', hashes )
             
         
-        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
         panel.Collect( self._page_key, self._media_collect.GetValue() )
         
@@ -4420,11 +4421,11 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
                     
-                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
+                    panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
                 else:
                     
-                    panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+                    panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
                     
                 
                 self._page.SwapMediaPanel( panel )
@@ -4550,7 +4551,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_service_key = self._management_controller.GetKey( 'file_service' )
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
             
             panel.Collect( self._page_key, self._media_collect.GetValue() )
             

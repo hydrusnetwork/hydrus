@@ -9,7 +9,7 @@ from . import ClientGUIShortcuts
 from . import ClientSearch
 from . import ClientTags
 from . import ClientThreading
-from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanels
 from . import ClientGUITopLevelWindows
 import collections
 from . import HydrusConstants as HC
@@ -19,6 +19,8 @@ from . import HydrusGlobals as HG
 from . import HydrusTags
 from . import HydrusText
 import itertools
+from . import LogicExpressionQueryParser
+import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -457,6 +459,23 @@ def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service
     
     HG.client_controller.CallLaterQtSafe(win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast)
     
+class WindowActivationACDropdownEventFilter( QC.QObject ):
+    
+    def __init__( self, parent ):
+        
+        QC.QObject.__init__( self, parent )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() in ( QC.QEvent.WindowActivate, QC.QEvent.WindowDeactivate ):
+            
+            self.parent().DoDropdownHideShow()
+            
+        
+        return False
+        
+    
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( QW.QWidget ):
     
@@ -531,6 +550,10 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._dropdown_window_widget_event_filter.EVT_CLOSE( self.EventCloseDropdown )
             
             self._dropdown_hidden = True
+            
+            self._window_activation_ac_dropdown_event_filter = WindowActivationACDropdownEventFilter( self )
+            
+            self._dropdown_window.installEventFilter( self._window_activation_ac_dropdown_event_filter )
             
         else:
             
@@ -784,13 +807,15 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def _ShouldShow( self ):
         
-        tlw_active = self.window().isActiveWindow() or self._dropdown_window.isActiveWindow()
+        i_am_active_and_focused = self.window().isActiveWindow() and self._text_ctrl.hasFocus()
         
-        visible = self._text_ctrl.isVisible()
+        dropdown_is_active = self._dropdown_window.isActiveWindow()
         
-        focus_remains_on_self_or_children = ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( self )
+        focus_or_active_good = i_am_active_and_focused or dropdown_is_active
         
-        return tlw_active and visible and focus_remains_on_self_or_children
+        visible = self.isVisible()
+        
+        return focus_or_active_good and visible
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
@@ -1025,6 +1050,8 @@ class AutoCompleteDropdown( QW.QWidget ):
                 self.selectDown.emit()
                 
             
+            event.accept()
+            
         else:
             
             if event.modifiers() & QC.Qt.ControlModifier:
@@ -1042,9 +1069,11 @@ class AutoCompleteDropdown( QW.QWidget ):
                 
             else:
                 
-                return True # was: event.ignore()
+                event.ignore()
                 
             
+        
+        return True
         
     
     def EventMove( self, event ):
@@ -1399,7 +1428,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditAdvancedORPredicates( dlg )
+            panel = EditAdvancedORPredicates( dlg )
             
             dlg.SetPanel( panel )
             
@@ -2025,5 +2054,156 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             self._next_search_is_probably_fast = next_search_is_probably_fast
             
+        
+    
+class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, initial_string = None ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._input_text = QW.QLineEdit( self )
+        
+        self._result_preview = QW.QPlainTextEdit()
+        self._result_preview.setReadOnly( True )
+        
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._result_preview, ( 64, 6 ) )
+        
+        self._result_preview.setMinimumWidth( width )
+        self._result_preview.setMinimumHeight( height )
+        
+        self._current_predicates = []
+        
+        #
+        
+        if initial_string is not None:
+            
+            self._input_text.setText( initial_string )
+            
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'Input: ', self._input_text ) )
+        rows.append( ( 'Result preview: ', self._result_preview ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        summary = 'Enter a complicated tag search here as text, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and this should turn it into hydrus-compatible search predicates.'
+        summary += os.linesep * 2
+        summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor.'
+        summary += os.linesep * 2
+        summary += 'Parentheses work the usual way. \ can be used to escape characters (e.g. to search for tags including parentheses)'
+        
+        st = ClientGUICommon.BetterStaticText( self, summary )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        self._UpdateText()
+        
+        self._input_text.textChanged.connect( self.EventUpdateText )
+        
+    
+    def _UpdateText( self ):
+        
+        text = self._input_text.text()
+        
+        self._current_predicates = []
+        
+        colour = ( 0, 0, 0 )
+        
+        output = ''
+        
+        if len( text ) > 0:
+            
+            try:
+                
+                # this makes a list of sets, each set representing a list of AND preds
+                result = LogicExpressionQueryParser.parse_logic_expression_query( text )
+                
+                for s in result:
+                    
+                    row_preds = []
+                    
+                    for tag_string in s:
+                        
+                        if tag_string.startswith( '-' ):
+                            
+                            inclusive = False
+                            
+                            tag_string = tag_string[1:]
+                            
+                        else:
+                            
+                            inclusive = True
+                            
+                        
+                        if '*' in tag_string:
+                            
+                            ( namespace, subtag ) = HydrusTags.SplitTag( tag_string )
+                            
+                            if '*' not in namespace and subtag == '*':
+                                
+                                row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
+                                
+                            else:
+                                
+                                row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, tag_string, inclusive )
+                                
+                            
+                        else:
+                            
+                            row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag_string, inclusive )
+                            
+                        
+                        row_preds.append( row_pred )
+                        
+                    
+                    if len( row_preds ) == 1:
+                        
+                        self._current_predicates.append( row_preds[0] )
+                        
+                    else:
+                        
+                        self._current_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, row_preds ) )
+                        
+                    
+                
+                output = os.linesep.join( ( pred.ToString() for pred in self._current_predicates ) )
+                colour = ( 0, 128, 0 )
+                
+            except ValueError:
+                
+                output = 'Could not parse!'
+                colour = ( 128, 0, 0 )
+                
+            
+        
+        self._result_preview.setPlainText( output )
+        QP.SetForegroundColour( self._result_preview, colour )
+        
+    
+    def EventUpdateText( self, text ):
+        
+        self._UpdateText()
+        
+    
+    def GetValue( self ):
+        
+        self._UpdateText()
+        
+        if len( self._current_predicates ) == 0:
+            
+            raise HydrusExceptions.VetoException( 'Please enter a string that parses into a set of search rules.' )
+            
+        
+        return self._current_predicates
         
     

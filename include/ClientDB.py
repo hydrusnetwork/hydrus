@@ -10185,6 +10185,15 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ) )
                             
+                            cache_file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+                            
+                            for cache_file_service_id in cache_file_service_ids:
+                                
+                                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( cache_file_service_id, service_id )
+                                
+                                self._c.executemany( 'DELETE FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, tag_id ) for hash_id in hash_ids ) )
+                                
+                            
                         
                     elif data_type == HC.CONTENT_TYPE_TAG_PARENTS:
                         
@@ -13468,6 +13477,52 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 383:
+            
+            existing_shortcut_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+            
+            list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
+            
+            for new_name in ( 'media_viewer_media_window', 'preview_media_window' ):
+                
+                if new_name not in existing_shortcut_names:
+                    
+                    for shortcuts in list_of_shortcuts:
+                        
+                        if shortcuts.GetName() == new_name:
+                            
+                            self._SetJSONDump( shortcuts )
+                            
+                        
+                    
+                
+            
+            if 'media_viewer_browser' in existing_shortcut_names:
+                
+                try:
+                    
+                    media_viewer_browser_shortcuts = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'media_viewer_browser' )
+                    
+                    right_up = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, CC.SHORTCUT_PRESS_TYPE_RELEASE, [] )
+                    
+                    if media_viewer_browser_shortcuts.GetCommand( right_up ) is None:
+                        
+                        media_viewer_browser_shortcuts.SetCommand( right_up, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_menu' ) )
+                        
+                        self._SetJSONDump( media_viewer_browser_shortcuts )
+                        
+                    
+                except:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to update the media_viewer_browser shortcuts failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -13641,8 +13696,8 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        combined_files_seen_ids = set( ( key for ( key, value ) in list(combined_files_current_counter.items()) if value != 0 ) )
-        combined_files_seen_ids.update( ( key for ( key, value ) in list(combined_files_pending_counter.items()) if value != 0 ) )
+        combined_files_seen_ids = set( ( key for ( key, value ) in list( combined_files_current_counter.items() ) if value != 0 ) )
+        combined_files_seen_ids.update( ( key for ( key, value ) in list( combined_files_pending_counter.items() ) if value != 0 ) )
         
         combined_files_counts = [ ( tag_id, combined_files_current_counter[ tag_id ], combined_files_pending_counter[ tag_id ] ) for tag_id in combined_files_seen_ids ]
         

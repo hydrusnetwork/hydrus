@@ -344,9 +344,11 @@ def ShouldHaveAnimationBar( media, show_action ):
     
 class Animation( QW.QWidget ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, canvas_type ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self._canvas_type = canvas_type
         
         self.setMouseTracking( True )
         
@@ -370,6 +372,17 @@ class Animation( QW.QWidget ):
         self._video_container = None
         
         self._canvas_qt_pixmap = None
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            shortcut_set = 'media_viewer_media_window'
+            
+        else:
+            
+            shortcut_set = 'preview_media_window'
+            
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
         
     
     def _ClearCanvasBitmap( self ):
@@ -501,51 +514,6 @@ class Animation( QW.QWidget ):
         return not self._paused
         
     
-    def mouseDoubleClickEvent( self, event ):
-        
-        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
-            
-            if event.button() == QC.Qt.LeftButton:
-                
-                self.Pause()
-                
-                hash = self._media.GetHash()
-                mime = self._media.GetMime()
-                
-                client_files_manager = HG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                new_options = HG.client_controller.new_options
-                
-                launch_path = new_options.GetMimeLaunch( mime )
-                
-                HydrusPaths.LaunchFile( path, launch_path )
-                
-                return
-                
-            
-        
-        event.ignore()
-        
-    
-    def mousePressEvent( self, event ):
-        
-        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
-            
-            if event.button() == QC.Qt.LeftButton:
-                
-                self.PausePlay()
-                
-                self.parentWidget().BeginDrag()
-                
-                return
-                
-            
-        
-        event.ignore()
-        
-    
     def paintEvent( self, event ):
         
         if not self._current_frame_drawn:
@@ -578,6 +546,55 @@ class Animation( QW.QWidget ):
     def Play( self ):
         
         self._paused = False
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'pause_media':
+                
+                self.Pause()
+                
+            elif action == 'pause_play_media':
+                
+                self.PausePlay()
+                
+            elif action == 'open_file_in_external_program':
+                
+                if self._media is not None:
+                    
+                    self.Pause()
+                    
+                    ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == 'close_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+                
+                self.window().close()
+                
+            elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+                
+                self.parent().LaunchMediaViewer()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     def resizeEvent( self, event ):
@@ -1134,7 +1151,19 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             
             action = data
             
-            if action == 'switch_between_fullscreen_borderless_and_regular_framed_window':
+            if action == 'exit_application':
+                
+                HG.client_controller.gui.TryToSaveAndClose()
+                
+            elif action == 'exit_application_force_maintenance':
+                
+                HG.client_controller.gui.TryToSaveAndClose( force_shutdown_maintenance = True )
+                
+            elif action == 'restart_application':
+                
+                HG.client_controller.gui.TryToSaveAndClose( restart = True )
+                
+            elif action == 'switch_between_fullscreen_borderless_and_regular_framed_window':
                 
                 self.FullscreenSwitch()
                 
@@ -2236,6 +2265,11 @@ class Canvas( QW.QWidget ):
         self.update()
         
     
+    def EndDrag( self ):
+        
+        self._last_drag_pos = None
+        
+    
     def FlipActiveCustomShortcutName( self, name ):
         
         if name in self._custom_shortcut_names:
@@ -2607,6 +2641,13 @@ class CanvasPanel( Canvas ):
             return
             
         
+        # contextmenu doesn't quite work here yet due to focus issues
+        
+        self.ShowMenu()
+        
+    
+    def ShowMenu( self ):
+        
         menu = QW.QMenu()
         
         if self._current_media is not None:
@@ -2735,6 +2776,11 @@ class CanvasPanel( Canvas ):
             
         
         HG.client_controller.PopupMenu( self, menu )
+        
+    
+    def LaunchMediaViewer( self ):
+        
+        HG.client_controller.pub( 'launch_media_viewer', self._page_key )
         
     
     def MediaFocusWentToExternalProgram( self, page_key ):
@@ -3041,9 +3087,8 @@ class CanvasWithHovers( CanvasWithDetails ):
         CanvasWithDetails.__init__( self, parent )
         
         self._GenerateHoverTopFrame()
-        ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self, self._canvas_key )
         
-        ratings_services = HG.client_controller.services_manager.GetServices( ( HC.RATINGS_SERVICES ) )
+        ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self, self._canvas_key )
         
         ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self, self._canvas_key )
         
@@ -3909,11 +3954,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
                     
-                    self.EventDragBegin( event )
+                    self.BeginDrag()
                     
                 elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
                     
-                    self.EventDragEnd( event )
+                    self.EndDrag()
                     
                 elif event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton:
                     
@@ -3941,6 +3986,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return
                     
                 
+            
             if event.type() == QC.QEvent.Wheel and event.angleDelta().y() != 0:
                 
                 self._SwitchMedia()
@@ -4593,11 +4639,11 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
                     
-                    self.EventDragBegin( event )
+                    self.BeginDrag()
                     
                 elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
                     
-                    self.EventDragEnd( event )
+                    self.EndDrag()
                     
                 elif event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton:
                     
@@ -4882,6 +4928,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventMouseClose )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseClose )
         
+        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )
+        
         if first_hash is None:
             
             first_media = self._GetFirst()
@@ -4986,14 +5034,102 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def mouseReleaseEvent( self, event ):
+    def contextMenuEvent( self, event ):
         
-        if event.button() != QC.Qt.RightButton:
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
             
-            CanvasMediaListNavigable.mouseReleaseEvent( self, event )
+            self.ShowMenu()
             
-            return
+        
+    
+    def EventMouse( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
             
+            shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
+            
+            if shortcut is not None:
+                
+                shortcut_processed = self._ProcessShortcut( shortcut )
+                
+                if shortcut_processed:
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            return True # was: event.ignore()
+            
+        
+    
+    def keyPressEvent( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if modifier == QC.Qt.NoModifier and key in CC.DELETE_KEYS: self._Delete()
+            elif modifier == QC.Qt.ShiftModifier and key in CC.DELETE_KEYS: self._Undelete()
+            elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
+                
+                self._TryToCloseWindow()
+                
+            else:
+                
+                CanvasMediaListNavigable.keyPressEvent( self, event )
+                
+            
+        else:
+            
+            event.ignore()
+            
+        
+    
+    def ProcessApplicationCommand( self, command, canvas_key = None ):
+        
+        if canvas_key is not None and canvas_key != self._canvas_key:
+            
+            return False
+            
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'pause_play_slideshow':
+                
+                self._PausePlaySlideshow()
+                
+            elif action == 'show_menu':
+                
+                self.ShowMenu()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            command_processed = CanvasMediaListNavigable.ProcessApplicationCommand( self, command )
+            
+        
+        return command_processed
+        
+    
+    def ShowMenu( self ):
         
         if self._current_media is not None:
             
@@ -5171,67 +5307,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def keyPressEvent( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if modifier == QC.Qt.NoModifier and key in CC.DELETE_KEYS: self._Delete()
-            elif modifier == QC.Qt.ShiftModifier and key in CC.DELETE_KEYS: self._Undelete()
-            elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
-                
-                self._TryToCloseWindow()
-                
-            else:
-                
-                CanvasMediaListNavigable.keyPressEvent( self, event )
-                
-            
-        else:
-            
-            event.ignore()
-            
-        
-    
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'pause_play_slideshow':
-                
-                self._PausePlaySlideshow()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        if not command_processed:
-            
-            command_processed = CanvasMediaListNavigable.ProcessApplicationCommand( self, command )
-            
-        
-        return command_processed
-        
-    
     def wheelEvent( self, event ):
         
         if self._IShouldCatchShortcutEvent( event = event ):
@@ -5259,12 +5334,31 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                 
             
-        else:
-            
-            return True # was: event.ignore()
-            
+        
+        return True
         
     
+class MediaContainerDragClickReportingFilter( QC.QObject ):
+    
+    def __init__( self, parent ):
+        
+        QC.QObject.__init__( self, parent )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton and event.modifiers() == QC.Qt.NoModifier:
+            
+            self.parent().BeginDrag()
+            
+        elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton and event.modifiers() == QC.Qt.NoModifier:
+            
+            self.parent().EndDrag()
+            
+        
+        return False
+        
+
 class MediaContainer( QW.QWidget ):
     
     def __init__( self, parent, canvas_type ):
@@ -5293,14 +5387,15 @@ class MediaContainer( QW.QWidget ):
         
         self.setMouseTracking( True )
         
-        self._animation_window = Animation( self )
+        self._drag_click_reporting_filter = MediaContainerDragClickReportingFilter( self.parent() )
+        
+        self._animation_window = Animation( self, self._canvas_type )
         self._animation_bar = AnimationBar( self )
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, self._canvas_type, direction = 'up' )
-        self._mpv_window = None
-        self._static_image_window = StaticImage( self )
+        self._static_image_window = StaticImage( self, self._canvas_type )
         
         self._volume_control.adjustSize()
-        self._volume_control.setCursor( QG.Qt.ArrowCursor )
+        self._volume_control.setCursor( QC.Qt.ArrowCursor )
         
         self._animation_window.hide()
         self._animation_bar.hide()
@@ -5322,8 +5417,6 @@ class MediaContainer( QW.QWidget ):
                 media_window.hide()
                 
             elif isinstance( media_window, ClientGUIMPV.mpvWidget ):
-                
-                self._mpv_window = None
                 
                 media_window.SetNoneMedia()
                 
@@ -5373,6 +5466,8 @@ class MediaContainer( QW.QWidget ):
                     
                     destroy_old_media_window = False
                     
+                    self._media_window.hide()
+                    
                 else:
                     
                     self._media_window = self._static_image_window
@@ -5386,6 +5481,8 @@ class MediaContainer( QW.QWidget ):
                     
                     destroy_old_media_window = False
                     
+                    self._media_window.hide()
+                    
                 else:
                     
                     self._media_window = self._animation_window
@@ -5396,21 +5493,9 @@ class MediaContainer( QW.QWidget ):
             
         elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV:
             
-            if isinstance( self._media_window, ClientGUIMPV.mpvWidget ):
-                
-                destroy_old_media_window = False
-                
-            else:
-                
-                if self._mpv_window is None:
-                    
-                    self._mpv_window = HG.client_controller.gui.GetMPVWidget( self )
-                    
-                
-                self._mpv_window.SetCanvasType( self._canvas_type )
-                
-                self._media_window = self._mpv_window
-                
+            self._media_window = HG.client_controller.gui.GetMPVWidget( self )
+            
+            self._media_window.SetCanvasType( self._canvas_type )
             
             self._media_window.SetMedia( self._media, start_paused = self._start_paused )
             
@@ -5419,7 +5504,7 @@ class MediaContainer( QW.QWidget ):
             
             self._animation_bar.SetMediaAndWindow( self._media, self._media_window )
             
-            if self._mpv_window is not None and self._media.HasAudio():
+            if isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio():
                 
                 self._volume_control.show()
                 
@@ -5437,6 +5522,17 @@ class MediaContainer( QW.QWidget ):
             self._volume_control.hide()
             
         
+        # this has to go after setcanvastype on the mpv window so the filters are in the correct order
+        if old_media_window != self._media_window:
+            
+            self._media_window.installEventFilter( self._drag_click_reporting_filter )
+            
+            if old_media_window is not None:
+                
+                old_media_window.removeEventFilter( self._drag_click_reporting_filter )
+                
+            
+        
         if old_media_window is not None and destroy_old_media_window:
             
             self._DestroyOrHideThisMediaWindow( old_media_window )
@@ -5444,8 +5540,6 @@ class MediaContainer( QW.QWidget ):
             # this forces a flush of the last valid background bmp, so we don't get a flicker of a file from five files ago when we last saw a static image
             self.repaint()
             
-        
-        self._media_window.show()
         
     
     def _SizeAndPositionChildren( self ):
@@ -5560,6 +5654,16 @@ class MediaContainer( QW.QWidget ):
                     self._media_window.GotoPreviousOrNextFrame( direction )
                     
                 
+            
+        
+    
+    def LaunchMediaViewer( self ):
+        
+        parent = self.parent()
+        
+        if isinstance( parent, CanvasPanel ):
+            
+            parent.LaunchMediaViewer()
             
         
     
@@ -5715,6 +5819,11 @@ class MediaContainer( QW.QWidget ):
         self.move( QP.TupleToQPoint( initial_position ) )
         
         self._SizeAndPositionChildren()
+        
+        if self._media_window is not None:
+            
+            self._media_window.show()
+            
         
         self.show()
         
@@ -5928,9 +6037,11 @@ class OpenExternallyPanel( QW.QWidget ):
     
 class StaticImage( QW.QWidget ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, canvas_type ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self._canvas_type = canvas_type
         
         self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
         
@@ -5945,6 +6056,17 @@ class StaticImage( QW.QWidget ):
         self._is_rendered = False
         
         self._canvas_qt_pixmap = None
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            shortcut_set = 'media_viewer_media_window'
+            
+        else:
+            
+            shortcut_set = 'preview_media_window'
+            
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
         
     
     def _ClearCanvasBitmap( self ):
@@ -6017,6 +6139,45 @@ class StaticImage( QW.QWidget ):
     def IsRendered( self ):
         
         return self._is_rendered
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'open_file_in_external_program':
+                
+                if self._media is not None:
+                    
+                    ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == 'close_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+                
+                self.window().close()
+                
+            elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+                
+                self.parent().LaunchMediaViewer()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     def SetMedia( self, media ):

@@ -1215,6 +1215,8 @@ class CallAfterEventFilter( QC.QObject ):
             
             event.Execute()
             
+            event.accept()
+            
             return True
             
         
@@ -2426,7 +2428,14 @@ class WidgetEventFilter ( QC.QObject ):
                 
                 self._user_moved_window = False
                 
-        if event_killed: return True
+            
+        
+        if event_killed:
+            
+            event.accept()
+            
+            return True
+            
         
         return False
 

@@ -1,13 +1,14 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import ClientData
+from . import ClientGUICanvas
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIManagement
 from . import ClientGUIMedia
 from . import ClientGUIMenus
-from . import ClientGUICanvas
+from . import ClientGUIResults
 from . import ClientDownloading
 from . import ClientSearch
 from . import ClientGUIShortcuts
@@ -436,7 +437,7 @@ class Page( QW.QSplitter ):
         
         self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key )
         
-        self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, [] )
+        self._media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, file_service_key, [] )
         
         vbox = QP.VBoxLayout( margin = 0 )
         
@@ -772,7 +773,7 @@ class Page( QW.QSplitter ):
             file_service_key = self._management_controller.GetKey( 'file_service' )
             
         
-        media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, media_results )
+        media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, file_service_key, media_results )
         
         self._SwapMediaPanel( media_panel )
         
@@ -1191,9 +1192,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             ( x, y ) = screen_position.toTuple()
             ( child_x, child_y ) = current_page.pos().toTuple()
-                
-            on_child_notebook_somewhere = y > child_y
             
+            on_child_notebook_somewhere = y > child_y
             
             if on_child_notebook_somewhere:
                 
@@ -1828,7 +1828,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         else:
             
             return True # was: event.ignore()
-        
+            
         
     
     def mouseReleaseEvent( self, event ):
@@ -1840,9 +1840,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
-        screen_position = ClientGUIFunctions.ClientToScreen( self, event.pos() )
+        mouse_position = QG.QCursor.pos()
         
-        self._ShowMenu( screen_position )
+        self._ShowMenu( mouse_position )
         
     
     def ShowMenuFromScreenPosition( self, position ):

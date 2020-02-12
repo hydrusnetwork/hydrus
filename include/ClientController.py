@@ -85,12 +85,14 @@ class PubSubEventFilter( QC.QObject ):
                 self._pubsub.Process()
                 
             
+            event.accept()
+            
             return True
             
         
         return False
         
-
+    
 class App( QW.QApplication ):
     
     def __init__( self, pubsub, *args, **kwargs ):

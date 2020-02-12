@@ -1010,6 +1010,10 @@ class LocationsManager( object ):
                 
                 self._petitioned.discard( service_key )
                 
+            elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
+                
+                self._deleted.discard( service_key )
+                
             
         elif data_type == HC.CONTENT_TYPE_URLS:
             
@@ -3792,6 +3796,10 @@ class TagsManager( object ):
         elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
             
             statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
+            
+        elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
+            
+            statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
             
         
         self._cache_is_dirty = True

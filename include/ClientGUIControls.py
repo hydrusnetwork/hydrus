@@ -359,7 +359,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     def _AddTransformation( self ):
         
         transformation_type = ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT
-        data = ' extra text'
+        data = 'extra text'
         
         try:
             
@@ -673,7 +673,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
                 
-                self._transformation_type.addItem( ClientParsing.transformation_type_str_lookup[ t_type], t_type )
+                self._transformation_type.addItem( ClientParsing.transformation_type_str_lookup[ t_type ], t_type )
                 
             
             self._example_string = QW.QLineEdit( self )
@@ -686,15 +686,14 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._example_transformation = QW.QLineEdit( self )
             
-            self._update_example = ClientGUICommon.BetterButton( self, 'update example', self._UpdateExampleText )
+            #
             
-            self._example_string.setEnabled( False )
-            self._example_transformation.setEnabled( False )
+            self._example_string.setReadOnly( True )
+            self._example_transformation.setReadOnly( True )
             
             self._data_text = QW.QLineEdit( self )
             self._data_number = QP.MakeQSpinBox( self, min=0, max=65535 )
             self._data_encoding = ClientGUICommon.BetterChoice( self )
-            self._data_regex_pattern = QW.QLineEdit( self )
             self._data_regex_repl = QW.QLineEdit( self )
             self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone_decode = ClientGUICommon.BetterChoice( self )
@@ -717,7 +716,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._transformation_type.SetValue( transformation_type )
             
-            self._UpdateDataControls()
+            self._data_number.setValue( 1 )
             
             #
             
@@ -729,7 +728,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ( pattern, repl ) = data
                 
-                self._data_regex_pattern.setText( pattern )
+                self._data_text.setText( pattern )
                 self._data_regex_repl.setText( repl )
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
@@ -763,38 +762,54 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             rows = []
             
+            # This mess needs to be all replaced with a nice QFormLayout subclass that can do row hide/show
+            # or just a whole separate panel for each transformation type, but w/e
+            
+            self._data_text_label = ClientGUICommon.BetterStaticText( self, 'string data: ' )
+            self._data_number_label = ClientGUICommon.BetterStaticText( self, 'number data: ' )
+            self._data_encoding_label = ClientGUICommon.BetterStaticText( self, 'encoding data: ' )
+            self._data_regex_repl_label = ClientGUICommon.BetterStaticText( self, 'regex replacement: ' )
+            self._data_date_link_label = ClientGUICommon.BetterStaticText( self, 'date info: ' )
+            self._data_timezone_decode_label = ClientGUICommon.BetterStaticText( self, 'date decode timezone: ' )
+            self._data_timezone_offset_label = ClientGUICommon.BetterStaticText( self, 'timezone offset: ' )
+            self._data_timezone_encode_label = ClientGUICommon.BetterStaticText( self, 'date encode timezone: ' )
+            
             rows.append( ( 'example string: ', self._example_string ) )
             rows.append( ( 'transformed string: ', self._example_transformation ) )
+            rows.append( ( 'transformation type: ', self._transformation_type ) )
+            rows.append( ( self._data_text_label, self._data_text ) )
+            rows.append( ( self._data_number_label, self._data_number ) )
+            rows.append( ( self._data_encoding_label, self._data_encoding ) )
+            rows.append( ( self._data_regex_repl_label, self._data_regex_repl ) )
+            rows.append( ( self._data_date_link_label, self._data_date_link ) )
+            rows.append( ( self._data_timezone_decode_label, self._data_timezone_decode ) )
+            rows.append( ( self._data_timezone_offset_label, self._data_timezone_offset ) )
+            rows.append( ( self._data_timezone_encode_label, self._data_timezone_encode ) )
             
-            example_gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            rows = []
-            
-            rows.append( ( 'string data: ', self._data_text ) )
-            rows.append( ( 'number data: ', self._data_number ) )
-            rows.append( ( 'encoding data: ', self._data_encoding ) )
-            rows.append( ( 'regex pattern: ', self._data_regex_pattern ) )
-            rows.append( ( 'regex replacement: ', self._data_regex_repl ) )
-            rows.append( ( 'date info: ', self._data_date_link ) )
-            rows.append( ( 'date decode timezone: ', self._data_timezone_decode ) )
-            rows.append( ( 'timezone offset: ', self._data_timezone_offset ) )
-            rows.append( ( 'date encode timezone: ', self._data_timezone_encode ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            self._control_gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, example_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._update_example, CC.FLAGS_LONE_BUTTON )
-            QP.AddToLayout( vbox, self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._control_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.widget().setLayout( vbox )
+            
+            self._UpdateDataControls()
             
             #
             
             self._transformation_type.currentIndexChanged.connect( self._UpdateDataControls )
-            self._data_encoding.currentIndexChanged.connect( self._UpdateDataControls )
+            self._transformation_type.currentIndexChanged.connect( self._UpdateExampleText )
+            
+            self._data_text.textEdited.connect( self._UpdateExampleText )
+            self._data_number.valueChanged.connect( self._UpdateExampleText )
+            self._data_encoding.currentIndexChanged.connect( self._UpdateExampleText )
+            self._data_regex_repl.textEdited.connect( self._UpdateExampleText )
+            self._data_timezone_decode.currentIndexChanged.connect( self._UpdateExampleText )
+            self._data_timezone_offset.valueChanged.connect( self._UpdateExampleText )
+            self._data_timezone_encode.currentIndexChanged.connect( self._UpdateExampleText )
+            
             self._data_timezone_decode.currentIndexChanged.connect( self._UpdateDataControls )
             self._data_timezone_encode.currentIndexChanged.connect( self._UpdateDataControls )
             
@@ -803,42 +818,86 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def _UpdateDataControls( self ):
             
-            self._data_text.setEnabled( False )
-            self._data_number.setEnabled( False )
-            self._data_encoding.setEnabled( False )
-            self._data_regex_pattern.setEnabled( False )
-            self._data_regex_repl.setEnabled( False )
-            self._data_timezone_decode.setEnabled( False )
-            self._data_timezone_offset.setEnabled( False )
-            self._data_timezone_encode.setEnabled( False )
+            self._data_text_label.setVisible( False )
+            self._data_number_label.setVisible( False )
+            self._data_encoding_label.setVisible( False )
+            self._data_regex_repl_label.setVisible( False )
+            self._data_date_link_label.setVisible( False )
+            self._data_timezone_decode_label.setVisible( False )
+            self._data_timezone_offset_label.setVisible( False )
+            self._data_timezone_encode_label.setVisible( False )
+            
+            self._data_text.setVisible( False )
+            self._data_number.setVisible( False )
+            self._data_encoding.setVisible( False )
+            self._data_regex_repl.setVisible( False )
+            self._data_date_link.setVisible( False )
+            self._data_timezone_decode.setVisible( False )
+            self._data_timezone_offset.setVisible( False )
+            self._data_timezone_encode.setVisible( False )
             
             transformation_type = self._transformation_type.GetValue()
             
             if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
                 
-                self._data_encoding.setEnabled( True )
+                self._data_encoding_label.setVisible( True )
+                self._data_encoding.setVisible( True )
                 
-            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE ):
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB ):
                 
-                self._data_text.setEnabled( True )
+                self._data_text_label.setVisible( True )
+                self._data_text.setVisible( True )
                 
-                if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+                data_text_label = 'string data: '
+                
+                if transformation_type == ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT:
                     
-                    self._data_timezone_decode.setEnabled( True )
+                    data_text_label = 'text to prepend: '
                     
-                    if self._data_timezone_decode.GetValue() == HC.TIMEZONE_OFFSET:
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT:
+                    
+                    data_text_label = 'text to append: '
+                    
+                elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE ):
+                    
+                    self._data_date_link_label.setVisible( True )
+                    self._data_date_link.setVisible( True )
+                    
+                    if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                         
-                        self._data_timezone_offset.setEnabled( True )
+                        data_text_label = 'date decode phrase: '
+                        
+                        self._data_timezone_decode_label.setVisible( True )
+                        self._data_timezone_decode.setVisible( True )
+                        
+                        if self._data_timezone_decode.GetValue() == HC.TIMEZONE_OFFSET:
+                            
+                            self._data_timezone_offset_label.setVisible( True )
+                            self._data_timezone_offset.setVisible( True )
+                            
+                        
+                    elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+                        
+                        data_text_label = 'date encode phrase: '
+                        
+                        self._data_timezone_encode_label.setVisible( True )
+                        self._data_timezone_encode.setVisible( True )
                         
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
                     
-                    self._data_timezone_encode.setEnabled( True )
+                    data_text_label = 'regex pattern: '
                     
+                    self._data_regex_repl_label.setVisible( True )
+                    self._data_regex_repl.setVisible( True )
+                    
+                
+                self._data_text_label.setText( data_text_label )
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
                 
-                self._data_number.setEnabled( True )
+                self._data_number_label.setVisible( True )
+                self._data_number.setVisible( True )
                 
                 if transformation_type == ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION:
                     
@@ -849,10 +908,30 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     self._data_number.setMinimum( 0 )
                     
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                data_number_label = 'number data: '
                 
-                self._data_regex_pattern.setEnabled( True )
-                self._data_regex_repl.setEnabled( True )
+                if transformation_type == ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
+                    
+                    data_number_label = 'characters to remove: '
+                    
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
+                    
+                    data_number_label = 'characters to remove: '
+                    
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
+                    
+                    data_number_label = 'characters to take: '
+                    
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
+                    
+                    data_number_label = 'characters to take: '
+                    
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION:
+                    
+                    data_number_label = 'number to add: '
+                    
+                
+                self._data_number_label.setText( data_number_label )
                 
             
         
@@ -868,7 +947,14 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 example_transformation = string_converter.Convert( example_string )
                 
-                self._example_transformation.setText( example_transformation )
+                try:
+                    
+                    self._example_transformation.setText( str( example_transformation ) )
+                    
+                except:
+                    
+                    self._example_transformation.setText( repr( example_transformation ) )
+                    
                 
             except Exception as e:
                 
@@ -894,7 +980,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
                 
-                pattern = self._data_regex_pattern.text()
+                pattern = self._data_text.text()
                 repl = self._data_regex_repl.text()
                 
                 data = ( pattern, repl )

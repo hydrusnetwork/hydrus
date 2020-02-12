@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 384</h3></li>
+				<ul>
+					<li>shortcuts:</li>
+					<li>the shortcut system now supports mouse double-clicks--left, right, or middle</li>
+					<li>the shortcuts system now differentiates between press or release single mouse clicks--although complete support for release mouse events may be a bit patchy, as full mouse integration is ongoing</li>
+					<li>the shortcut edit ui is now simpler--the command type is selected by a list, and the individual command sub-panels hide and show as appropriate--no more stupid 'set command' buttons</li>
+					<li>the shortcut edit ui now has a 'restore defaults' button that will restore an individual set back to default settings</li>
+					<li>two new shortcut sets are added--'media_viewer_media_window' and 'preview_media_window'. they control pause, pause/play, open_externally, and close/launch_media_viewer respectively. they work on the static image viewer, the native animation widget, and the new mpv player, and they support mouse clicks. the old pause/play (formerly left-click) and open_externally (double left-click) commands are no longer hardcoded</li>
+					<li>by default, the preview window's media window now launches the media viewer on a middle- or double-left-click</li>
+					<li>'media_viewer_browser' shortcut set now has 'release right-click' bound to 'show_menu', a new command, which is no longer hardcoded</li>
+					<li>most menus across the program can now be opened with the keyboard context menu key</li>
+					<li>the 'global' shortcut set now has 'exit_application', 'exit_application_force_maintenance', and 'restart_application' commands</li>
+					<li>fixed the rating increment/decrement command option not hiding in non-'media' shortcut sets</li>
+					<li>fixed some issues loading edit ui for shortcuts with rating actions</li>
+					<li>significant refactoring and some cleaning of shortcut code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>mpv windows should not longer get a single frame of previous-window-stretch when flicking between one mpv media to another with a different aspect ratio on the same media canvas. when a video is caught in a frame of loading, it should now flicker a frame of black</li>
+					<li>switching from one static image or native animation to another of the same type _should_ be less likely to do a single frame of stretch when transitioning. when an image or animation transition is caught on a new frame, it _should_ now flicker a frame the same colour as the media canvas background</li>
+					<li>the string transformation edit panel's individual transformation rule edit panel has had some more work: much like with shortcuts, the controls now hide and show based on transformation type, the controls' text labels now change based on transformation type, and the example text now updates on any widget change. the manual 'update example' button is removed</li>
+					<li>fixed a typo that caused an error when establishing the correct mouse cursor to use over the volume control when hydrus was using PyQt5 (rather than PySide2)</li>
+					<li>in order to reduce accidental micro-drags that cause mpv load-pause issues, starting a thumbnail drag now takes more pixels and requires a smoother drag to start, let's see how it goes</li>
+					<li>improved the show/hide logic of the floating autocomplete dropdown window. it should now also reliably detect when window focus goes from the dropdown itself to another window</li>
+					<li>fixed a bug where clearing the deletion record of a deleted tag would not remove the record from the fast cache that populates thumbnail tags (making it seem on most file loads that the tag still existed). if you were hit by this previously, please hit _database->regen->a/c cache_ one time to resync the cache</li>
+					<li>relatedly, thumbnails should now correctly live-update their deleted tags on deletion record clearance updates</li>
+					<li>if mpv is not available, opening the about window will now make a popup with the actual import error trace</li>
+					<li>significant refactoring of various ui code</li>
+				</ul>
 				<li><h3>version 383</h3></li>
 				<ul>
 					<li>mpv:</li>
