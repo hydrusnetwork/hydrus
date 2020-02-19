@@ -70,7 +70,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 384
+SOFTWARE_VERSION = 385
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -595,7 +595,7 @@ mime_enum_lookup[ 'video/vnd.rn-realvideo' ] = VIDEO_REALMEDIA
 mime_enum_lookup[ 'application/vnd.rn-realmedia' ] = VIDEO_REALMEDIA
 mime_enum_lookup[ 'video/webm' ] = VIDEO_WEBM
 mime_enum_lookup[ 'video' ] = VIDEO
-mime_enum_lookup[ 'unknown mime' ] = APPLICATION_UNKNOWN
+mime_enum_lookup[ 'unknown filetype' ] = APPLICATION_UNKNOWN
 
 mime_string_lookup = {}
 
@@ -688,7 +688,7 @@ mime_mimetype_string_lookup[ VIDEO_MKV ] = 'video/x-matroska'
 mime_mimetype_string_lookup[ VIDEO_REALMEDIA ] = 'video/vnd.rn-realvideo'
 mime_mimetype_string_lookup[ VIDEO_WEBM ] = 'video/webm'
 mime_mimetype_string_lookup[ UNDETERMINED_WM ] = 'audio/x-ms-wma or video/x-ms-wmv'
-mime_mimetype_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
+mime_mimetype_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown filetype'
 mime_mimetype_string_lookup[ GENERAL_APPLICATION ] = 'application'
 mime_mimetype_string_lookup[ GENERAL_AUDIO ] = 'audio'
 mime_mimetype_string_lookup[ GENERAL_IMAGE ] = 'image'

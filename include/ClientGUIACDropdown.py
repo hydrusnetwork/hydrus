@@ -459,23 +459,6 @@ def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service
     
     HG.client_controller.CallLaterQtSafe(win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast)
     
-class WindowActivationACDropdownEventFilter( QC.QObject ):
-    
-    def __init__( self, parent ):
-        
-        QC.QObject.__init__( self, parent )
-        
-    
-    def eventFilter( self, watched, event ):
-        
-        if event.type() in ( QC.QEvent.WindowActivate, QC.QEvent.WindowDeactivate ):
-            
-            self.parent().DoDropdownHideShow()
-            
-        
-        return False
-        
-    
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( QW.QWidget ):
     
@@ -513,17 +496,11 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._text_ctrl_widget_event_filter = QP.WidgetEventFilter( self._text_ctrl )
         
-        if self._float_mode:
-            
-            self._text_ctrl_widget_event_filter.EVT_SET_FOCUS( self.EventSetFocus )
-            self._text_ctrl_widget_event_filter.EVT_KILL_FOCUS( self.EventKillFocus )
-            
-        
         self._text_ctrl.textChanged.connect( self.EventText )
         
         self._text_ctrl_widget_event_filter.EVT_KEY_DOWN( self.keyPressFilter )
         
-        self._text_ctrl_widget_event_filter.EVT_MOUSEWHEEL( self.EventMouseWheel )
+        self._text_ctrl.installEventFilter( self )
         
         vbox = QP.VBoxLayout( margin = 0 )
         
@@ -551,10 +528,6 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._dropdown_hidden = True
             
-            self._window_activation_ac_dropdown_event_filter = WindowActivationACDropdownEventFilter( self )
-            
-            self._dropdown_window.installEventFilter( self._window_activation_ac_dropdown_event_filter )
-            
         else:
             
             self._dropdown_window = QW.QFrame( self )
@@ -562,6 +535,8 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._dropdown_window.setFrameShape( QW.QFrame.NoFrame )
             #self._dropdown_window.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
             
+        
+        self._dropdown_window.installEventFilter( self )
         
         self._dropdown_notebook = QW.QTabWidget( self._dropdown_window )
         
@@ -807,9 +782,11 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def _ShouldShow( self ):
         
-        i_am_active_and_focused = self.window().isActiveWindow() and self._text_ctrl.hasFocus()
+        current_active_window = QW.QApplication.activeWindow()
         
-        dropdown_is_active = self._dropdown_window.isActiveWindow()
+        i_am_active_and_focused = self.window() == current_active_window and self._text_ctrl.hasFocus()
+        
+        dropdown_is_active = self._dropdown_window == current_active_window
         
         focus_or_active_good = i_am_active_and_focused or dropdown_is_active
         
@@ -1025,70 +1002,75 @@ class AutoCompleteDropdown( QW.QWidget ):
         return True
         
     
-    def EventKillFocus( self, event ):
+    def eventFilter( self, watched, event ):
         
-        if self._float_mode:
+        if watched == self._text_ctrl:
             
-            self._DropdownHideShow()
-            
-        
-        return True # was: event.ignore()
-        
-    
-    def EventMouseWheel( self, event ):
-        
-        current_results_list = self._dropdown_notebook.currentWidget()
-        
-        if self._text_ctrl.text() == '' and len( current_results_list ) == 0:
-            
-            if event.angleDelta().y() > 0:
+            if event.type() == QC.QEvent.Wheel:
                 
-                self.selectUp.emit()
+                current_results_list = self._dropdown_notebook.currentWidget()
                 
-            else:
-                
-                self.selectDown.emit()
-                
-            
-            event.accept()
-            
-        else:
-            
-            if event.modifiers() & QC.Qt.ControlModifier:
-                
-                if event.angleDelta().y() > 0:
+                if self._text_ctrl.text() == '' and len( current_results_list ) == 0:
                     
-                    current_results_list.MoveSelectionUp()
+                    if event.angleDelta().y() > 0:
+                        
+                        self.selectUp.emit()
+                        
+                    else:
+                        
+                        self.selectDown.emit()
+                        
+                    
+                    event.accept()
+                    
+                    return True
                     
                 else:
                     
-                    current_results_list.MoveSelectionDown()
+                    if event.modifiers() & QC.Qt.ControlModifier:
+                        
+                        if event.angleDelta().y() > 0:
+                            
+                            current_results_list.MoveSelectionUp()
+                            
+                        else:
+                            
+                            current_results_list.MoveSelectionDown()
+                            
+                        
+                        event.accept()
+                        
+                        return True
+                        
                     
                 
-                event.accept()
+            elif self._float_mode:
                 
-            else:
+                if event.type() in ( QC.QEvent.FocusOut, QC.QEvent.FocusIn ):
+                    
+                    self._DropdownHideShow()
+                    
+                    return False
+                    
                 
-                event.ignore()
+            
+        elif watched == self._dropdown_window:
+            
+            if self._float_mode and event.type() in ( QC.QEvent.WindowActivate, QC.QEvent.WindowDeactivate ):
+                
+                # we delay this slightly because when you click from dropdown to text, the deactivate event fires before the focusin, leading to a frame of hide
+                HG.client_controller.CallLaterQtSafe( self, 0.05, self._DropdownHideShow )
+                
+                return False
                 
             
         
-        return True
+        return False
         
     
     def EventMove( self, event ):
         
         self._ParentMovedOrResized()
-        
-        return True # was: event.ignore()
-        
-    
-    def EventSetFocus( self, event ):
-        
-        if self._float_mode:
-            
-            self._DropdownHideShow()
-            
         
         return True # was: event.ignore()
         

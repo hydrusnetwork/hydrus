@@ -1202,11 +1202,13 @@ class CallAfterEvent( QC.QEvent ):
             
         
     
-class CallAfterEventFilter( QC.QObject ):
+class CallAfterEventCatcher( QC.QObject ):
     
-    def __init__( self, parent = None ):
+    def __init__( self, parent ):
         
         QC.QObject.__init__( self, parent )
+        
+        self.installEventFilter( self )
         
     
     def eventFilter( self, watched, event ):
@@ -2352,14 +2354,6 @@ class WidgetEventFilter ( QC.QObject ):
             
                 if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
         
-        elif type == QC.QEvent.FocusOut:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_KILL_FOCUS', event )
-            
-        elif type == QC.QEvent.FocusIn:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SET_FOCUS', event )
-            
         elif type == QC.QEvent.MouseMove:
             
             event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOTION', event )
@@ -2464,10 +2458,6 @@ class WidgetEventFilter ( QC.QObject ):
         
         self._AddCallback( 'EVT_KEY_DOWN', callback )
 
-    def EVT_KILL_FOCUS( self, callback ):
-        
-        self._AddCallback( 'EVT_KILL_FOCUS', callback )
-
     def EVT_LEFT_DCLICK( self, callback ):
         
         self._AddCallback( 'EVT_LEFT_DCLICK', callback )
@@ -2519,10 +2509,6 @@ class WidgetEventFilter ( QC.QObject ):
     def EVT_SCROLLWIN( self, callback ):
         
         self._AddCallback( 'EVT_SCROLLWIN', callback )
-
-    def EVT_SET_FOCUS( self, callback ):
-        
-        self._AddCallback( 'EVT_SET_FOCUS', callback )
 
     def EVT_SIZE( self, callback ):
         

@@ -3,7 +3,6 @@ from . import ClientCaches
 from . import ClientData
 from . import ClientDefaults
 from . import ClientFiles
-from . import ClientGUIShortcuts
 from . import ClientImageHandling
 from . import ClientMedia
 from . import ClientNetworkingBandwidth
@@ -5016,6 +5015,8 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids = set( query_hash_ids )
             
         
+        have_cross_referenced_file_service = False
+        
         self._controller.ResetIdleTimer()
         
         system_predicates = search_context.GetSystemPredicates()
@@ -5236,7 +5237,12 @@ class DB( HydrusDB.HydrusDB ):
         # OR round one--if nothing else will be fast, let's prep query_hash_ids now
         if not ( there_are_tags_to_search or there_are_simple_files_info_preds_to_search_for ):
             
-            query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
+            if len( or_predicates ) > 0:
+                
+                query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
+                
+                have_cross_referenced_file_service = True
+                
             
             done_or_predicates = True
             
@@ -5392,6 +5398,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, dupe_hash_ids )
                 
+                have_cross_referenced_file_service = True
+                
             
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
@@ -5450,6 +5458,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, tag_query_hash_ids )
                 
+                have_cross_referenced_file_service = True
+                
                 if query_hash_ids == set():
                     
                     return query_hash_ids
@@ -5477,6 +5487,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, namespace_query_hash_ids )
+                
+                have_cross_referenced_file_service = True
                 
                 if query_hash_ids == set():
                     
@@ -5506,6 +5518,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, wildcard_query_hash_ids )
                 
+                have_cross_referenced_file_service = True
+                
                 if query_hash_ids == set():
                     
                     return query_hash_ids
@@ -5518,7 +5532,12 @@ class DB( HydrusDB.HydrusDB ):
         # OR round two--if file preds will not be fast, let's step in to reduce the file domain search space
         if not ( there_are_simple_files_info_preds_to_search_for or done_or_predicates ):
             
-            query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
+            if len( or_predicates ) > 0:
+                
+                query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
+                
+                have_cross_referenced_file_service = True
+                
             
             done_or_predicates = True
             
@@ -5527,7 +5546,10 @@ class DB( HydrusDB.HydrusDB ):
         
         done_files_info_predicates = False
         
-        if query_hash_ids is None or ( is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ) ):
+        we_need_some_results = query_hash_ids is None
+        we_need_to_cross_reference = file_service_key != CC.COMBINED_FILE_SERVICE_KEY and not have_cross_referenced_file_service
+        
+        if we_need_some_results or we_need_to_cross_reference:
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
@@ -5539,6 +5561,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) ) )
                 
+                have_cross_referenced_file_service = True
                 done_files_info_predicates = True
                 
             
@@ -13503,7 +13526,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     media_viewer_browser_shortcuts = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'media_viewer_browser' )
                     
-                    right_up = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, CC.SHORTCUT_PRESS_TYPE_RELEASE, [] )
+                    from . import ClientGUIShortcuts
+                    
+                    right_up = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_RELEASE, [] )
                     
                     if media_viewer_browser_shortcuts.GetCommand( right_up ) is None:
                         
@@ -13520,6 +13545,106 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self.pub_initial_message( message )
                     
+                
+            
+        
+        if version == 384:
+            
+            close_media_viewer = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' )
+            keep_archive_filter = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' )
+            better_dupe_filter = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' )
+            
+            existing_shortcut_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+            
+            from . import ClientGUIShortcuts
+            
+            updates_to_do = {}
+            
+            shortcuts_and_commands = []
+            
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ), close_media_viewer ) )
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ), close_media_viewer ) )
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ESCAPE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
+            
+            updates_to_do[ 'media_viewer' ] = shortcuts_and_commands
+            
+            shortcuts_and_commands = []
+            
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), close_media_viewer ) )
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
+            
+            updates_to_do[ 'media_viewer_browser' ] = shortcuts_and_commands
+            
+            shortcuts_and_commands = []
+            
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), keep_archive_filter ) )
+            
+            updates_to_do[ 'archive_delete_filter' ] = shortcuts_and_commands
+            
+            shortcuts_and_commands = []
+            
+            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), better_dupe_filter ) )
+            
+            updates_to_do[ 'duplicate_filter' ] = shortcuts_and_commands
+            
+            for ( shortcut_set_name, shortcuts_and_commands ) in updates_to_do.items():
+                
+                if shortcut_set_name in existing_shortcut_names:
+                    
+                    try:
+                        
+                        shortcut_set = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = shortcut_set_name )
+                        
+                        for ( s, c ) in shortcuts_and_commands:
+                            
+                            if shortcut_set.GetCommand( s ) is None:
+                                
+                                shortcut_set.SetCommand( s, c )
+                                
+                            
+                        
+                        self._SetJSONDump( shortcut_set )
+                        
+                    except:
+                        
+                        HydrusData.PrintException( e )
+                        
+                        message = 'Trying to update the "{}" shortcuts failed! Please let hydrus dev know!'.format( shortcut_set_name )
+                        
+                        self.pub_initial_message( message )
+                        
+                    
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
                 
             
         

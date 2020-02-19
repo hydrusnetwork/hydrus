@@ -2652,10 +2652,10 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             QP.AddToLayout( vbox, self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.'), CC.FLAGS_VCENTER )
+            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, 'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.' ), CC.FLAGS_VCENTER )
             
-            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._scale_up_quality,self,'>100% (interpolation) quality:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._scale_down_quality,self,'<100% (decimation) quality:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._scale_up_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._scale_down_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
         if self._mime == HC.APPLICATION_FLASH:
@@ -2721,6 +2721,30 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._preview_start_paused.setEnabled( False )
             self._preview_start_with_embed.setEnabled( False )
+            
+        
+        is_application = self._mime == HC.GENERAL_APPLICATION or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_APPLICATION ]
+        is_image = self._mime == HC.GENERAL_IMAGE or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_IMAGE ]
+        is_audio = self._mime == HC.GENERAL_AUDIO or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_AUDIO ]
+        
+        if not is_image:
+            
+            self._scale_up_quality.setEnabled( False )
+            self._scale_down_quality.setEnabled( False )
+            
+        
+        if is_image or is_application:
+            
+            self._media_start_paused.setEnabled( False )
+            self._preview_start_paused.setEnabled( False )
+            
+        
+        if is_audio:
+            
+            self._media_scale_up.setEnabled( False )
+            self._media_scale_down.setEnabled( False )
+            self._preview_scale_up.setEnabled( False )
+            self._preview_scale_down.setEnabled( False )
             
         
     

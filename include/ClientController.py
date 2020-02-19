@@ -67,13 +67,15 @@ class PubSubEvent( QC.QEvent ):
         QC.QEvent.__init__( self, PubSubEventType )
         
     
-class PubSubEventFilter( QC.QObject ):
+class PubSubEventCatcher( QC.QObject ):
     
     def __init__( self, parent, pubsub ):
         
         QC.QObject.__init__( self, parent )
         
         self._pubsub = pubsub
+        
+        self.installEventFilter( self )
         
     
     def eventFilter( self, watched, event ):
@@ -109,13 +111,9 @@ class App( QW.QApplication ):
         
         self.setQuitOnLastWindowClosed( True )
         
-        self.call_after_catcher = QC.QObject( self )
+        self.call_after_catcher = QP.CallAfterEventCatcher( self )
         
-        self.call_after_catcher.installEventFilter( QP.CallAfterEventFilter( self.call_after_catcher ) )
-        
-        self.pubsub_catcher = QC.QObject( self )
-        
-        self.pubsub_catcher.installEventFilter( PubSubEventFilter( self.pubsub_catcher, self._pubsub ) )
+        self.pubsub_catcher = PubSubEventCatcher( self, self._pubsub )
         
         self.aboutToQuit.connect( self.EventEndSession )
         
@@ -701,11 +699,6 @@ class Controller( HydrusController.HydrusController ):
             raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
         
         return clipboard_text
-        
-    
-    def GetCommandFromShortcut( self, shortcut_names, shortcut ):
-        
-        return self.shortcuts_manager.GetCommand( shortcut_names, shortcut )
         
     
     def GetIdleShutdownWorkDue( self, time_to_stop ):

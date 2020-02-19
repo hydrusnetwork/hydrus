@@ -314,126 +314,137 @@ def GetDefaultShortcuts():
     
     global_shortcuts = ClientGUIShortcuts.ShortcutSet( 'global' )
     
-    global_shortcuts.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'G' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'global_audio_mute_flip' ) )
+    global_shortcuts.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'G' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'global_audio_mute_flip' ) )
     
     shortcuts.append( global_shortcuts )
     
     archive_delete_filter = ClientGUIShortcuts.ShortcutSet( 'archive_delete_filter' )
     
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
     
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_SPACE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F7, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_DELETE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_BACKSPACE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
-    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F7, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_DELETE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_BACKSPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
+    archive_delete_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ) )
     
     shortcuts.append( archive_delete_filter )
     
     duplicate_filter = ClientGUIShortcuts.ShortcutSet( 'duplicate_filter' )
     
-    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' ) )
-    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) )
-    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ) )
+    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' ) )
+    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' ) )
+    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) )
+    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ) )
     
-    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_SPACE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' ) )
-    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' ) )
+    duplicate_filter.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
     
     shortcuts.append( duplicate_filter )
     
     media = ClientGUIShortcuts.ShortcutSet( 'media' )
     
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F4, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_ratings' ) )
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F3, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_tags' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F4, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_ratings' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F3, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_tags' ) )
     
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F7, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' ) )
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F7, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'inbox_file' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F7, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F7, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'inbox_file' ) )
     
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'E' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'E' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ) )
     
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'R' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'remove_file_from_view' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'R' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'remove_file_from_view' ) )
     
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F12, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_the_archive_delete_filter' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F12, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_the_archive_delete_filter' ) )
     
-    media.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'C' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'copy_file' ) )
+    media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'C' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'copy_file' ) )
     
     shortcuts.append( media )
     
     main_gui = ClientGUIShortcuts.ShortcutSet( 'main_gui' )
     
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F5, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'refresh' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_F9, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F5, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'refresh' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F9, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
     
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'I' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'synchronised_wait_switch' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'M' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_media_focus' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'R' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL, CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_hide_splitters' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'S' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_search_focus' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'T' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'U' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'unclose_page' ) )    
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'W' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_page' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Y' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'redo' ) )
-    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Z' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'undo' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'I' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'synchronised_wait_switch' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'M' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_media_focus' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'R' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_hide_splitters' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'S' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_search_focus' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'T' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'U' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'unclose_page' ) )    
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'W' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_page' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Y' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'redo' ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Z' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'undo' ) )
     
     shortcuts.append( main_gui )
     
     media_viewer_browser = ClientGUIShortcuts.ShortcutSet( 'media_viewer_browser' )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_PAGE_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, CC.SHORTCUT_PRESS_TYPE_RELEASE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_menu' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_RELEASE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_menu' ) )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_SCROLL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_RIGHT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_PAGE_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_SCROLL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_HOME, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ) )
     
-    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_END, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_END, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ) )
+    
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
+    media_viewer_browser.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
     
     shortcuts.append( media_viewer_browser )
     
     media_viewer = ClientGUIShortcuts.ShortcutSet( 'media_viewer' )
     
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_SPACE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
     
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'B' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_previous_frame' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'N' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_next_frame' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'B' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_previous_frame' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'N' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_next_frame' ) )
     
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'F' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_fullscreen_borderless_and_regular_framed_window' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'F' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_fullscreen_borderless_and_regular_framed_window' ) )
     
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Z' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( '+' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( '-' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Z' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( '+' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( '-' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
     
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_SCROLL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_SCROLL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
     
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_UP, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_up' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_down' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_left' ) )
-    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_RIGHT, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_right' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_up' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_down' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_left' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_right' ) )
+    
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
+    media_viewer.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ESCAPE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' ) )
     
     shortcuts.append( media_viewer )
     
     media_viewer_video_audio_player = ClientGUIShortcuts.ShortcutSet( 'media_viewer_media_window' )
     
-    media_viewer_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
+    media_viewer_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
     
     shortcuts.append( media_viewer_video_audio_player )
     
     preview_video_audio_player = ClientGUIShortcuts.ShortcutSet( 'preview_media_window' )
     
-    preview_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
-    preview_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_media_viewer' ) )
-    preview_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_media_viewer' ) )
+    preview_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_play_media' ) )
+    preview_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_media_viewer' ) )
+    preview_video_audio_player.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_media_viewer' ) )
     
     shortcuts.append( preview_video_audio_player )
     

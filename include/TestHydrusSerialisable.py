@@ -398,14 +398,14 @@ class TestSerialisables( unittest.TestCase ):
         
         shortcuts.append( ( ClientGUIShortcuts.Shortcut(), 'f7' ) )
         
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_SPACE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), 'space' ) )
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'a' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+a' ) )
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'A' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+a' ) )
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_HOME, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+alt+home' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), 'space' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'a' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+a' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'A' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+a' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT, ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+alt+home' ) )
         
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] ), 'left-click' ) )
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+middle-click' ) )
-        shortcuts.append( ( ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_SHIFT ] ), 'alt+shift+scroll down' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), 'left-click' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+middle-click' ) )
+        shortcuts.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_SCROLL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ), 'alt+shift+scroll down' ) )
         
         for ( shortcut, s ) in shortcuts:
             
@@ -436,14 +436,14 @@ class TestSerialisables( unittest.TestCase ):
         command_2 = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) )
         command_3 = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) )
         
-        k_shortcut_1 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_SPACE, CC.SHORTCUT_PRESS_TYPE_PRESS, [] )
-        k_shortcut_2 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'a' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] )
-        k_shortcut_3 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'A' ), CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] )
-        k_shortcut_4 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, CC.SHORTCUT_KEY_SPECIAL_HOME, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_CTRL ] )
+        k_shortcut_1 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
+        k_shortcut_2 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'a' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
+        k_shortcut_3 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'A' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
+        k_shortcut_4 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT, ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
         
-        m_shortcut_1 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] )
-        m_shortcut_2 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_CTRL ] )
-        m_shortcut_3 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, CC.SHORTCUT_PRESS_TYPE_PRESS, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_SHIFT ] )
+        m_shortcut_1 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
+        m_shortcut_2 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
+        m_shortcut_3 = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_SCROLL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] )
         
         shortcut_set = ClientGUIShortcuts.ShortcutSet( 'test' )
         

@@ -1643,6 +1643,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def AppendGUISession( self, name, load_in_a_page_of_pages = True ):
         
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', 'loading session "{}"\u2026'.format( name ) )
+        
+        HG.client_controller.pub( 'message', job_key )
+        
+        # get that message showing before we do the work of loading session
+        HG.client_controller.app.processEvents()
+        
         try:
             
             session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
@@ -1669,6 +1678,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         page_tuples = session.GetPageTuples()
         
         destination.AppendSessionPageTuples( page_tuples )
+        
+        job_key.Delete()
         
     
     def AppendGUISessionBackup( self, name, timestamp, load_in_a_page_of_pages = True ):

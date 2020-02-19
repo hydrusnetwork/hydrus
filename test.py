@@ -37,9 +37,7 @@ if __name__ == '__main__':
         QP.MonkeyPatchMissingMethods()
         app = QW.QApplication( sys.argv )
         
-        app.call_after_catcher = QC.QObject( app )
-        
-        app.call_after_catcher.installEventFilter( QP.CallAfterEventFilter( app.call_after_catcher ) )
+        app.call_after_catcher = QP.CallAfterEventCatcher( app )
         
         try:
             

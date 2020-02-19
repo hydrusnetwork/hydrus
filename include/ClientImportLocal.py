@@ -140,7 +140,20 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             self._current_action = 'importing'
             
         
-        file_seed.ImportPath( self._file_seed_cache, self._file_import_options )
+        def status_hook( text ):
+            
+            with self._lock:
+                
+                if len( text ) > 0:
+                    
+                    text = text.splitlines()[0]
+                    
+                
+                self._current_action = text
+                
+            
+        
+        file_seed.ImportPath( self._file_seed_cache, self._file_import_options, status_hook = status_hook )
         
         did_substantial_work = True
         

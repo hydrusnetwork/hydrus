@@ -34,7 +34,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        is_custom_or_media = shortcuts_name not in CC.SHORTCUTS_RESERVED_NAMES or shortcuts_name == 'media'
+        is_custom_or_media = shortcuts_name not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES or shortcuts_name == 'media'
         
         self._command_type_choice = ClientGUICommon.BetterChoice( self )
         
@@ -52,13 +52,13 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
             self._command_type_choice.hide()
             
         
-        if shortcuts_name in CC.SHORTCUTS_RESERVED_NAMES:
+        if shortcuts_name in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES:
             
-            choices = CC.simple_shortcut_name_to_action_lookup[ shortcuts_name ]
+            choices = ClientGUIShortcuts.simple_shortcut_name_to_action_lookup[ shortcuts_name ]
             
         else:
             
-            choices = CC.simple_shortcut_name_to_action_lookup[ 'custom' ]
+            choices = ClientGUIShortcuts.simple_shortcut_name_to_action_lookup[ 'custom' ]
             
         
         choices = list( choices )
@@ -614,7 +614,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._this_is_custom = True
         
-        if name in CC.SHORTCUTS_RESERVED_NAMES:
+        if name in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES:
             
             self._this_is_custom = False
             
@@ -623,7 +623,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         self._shortcuts.AddDatas( shortcuts )
             
         
-        #self._shortcuts.SortListItems( 1 )
+        self._shortcuts.Sort( 1 )
         
         #
         
@@ -637,9 +637,9 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        if name in CC.shortcut_names_to_descriptions:
+        if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
             
-            description_text = CC.shortcut_names_to_descriptions[ name ]
+            description_text = ClientGUIShortcuts.shortcut_names_to_descriptions[ name ]
             
             description = ClientGUICommon.BetterStaticText( self, description_text, description_text )
             
@@ -722,7 +722,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = self._name.text()
         
-        if self._this_is_custom and name in CC.SHORTCUTS_RESERVED_NAMES:
+        if self._this_is_custom and name in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES:
             
             raise HydrusExceptions.VetoException( 'That name is reserved--please pick another!' )
             
@@ -784,8 +784,8 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
         
-        reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in CC.SHORTCUTS_RESERVED_NAMES ]
-        custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in CC.SHORTCUTS_RESERVED_NAMES ]
+        reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
+        custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
         self._reserved_shortcuts.AddDatas( reserved_shortcuts )
             
@@ -1072,7 +1072,7 @@ class ShortcutWidget( QW.QWidget ):
     
     def SetValue( self, shortcut ):
         
-        if shortcut.GetShortcutType() == CC.SHORTCUT_TYPE_MOUSE:
+        if shortcut.GetShortcutType() == ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE:
             
             self._mouse_radio.setChecked( True )
             self._mouse_shortcut.SetValue( shortcut )
@@ -1145,8 +1145,8 @@ class MouseShortcutWidget( QW.QWidget ):
         
         self._press_or_release = ClientGUICommon.BetterChoice( self )
         
-        self._press_or_release.addItem( 'press', CC.SHORTCUT_PRESS_TYPE_PRESS )
-        self._press_or_release.addItem( 'release', CC.SHORTCUT_PRESS_TYPE_RELEASE )
+        self._press_or_release.addItem( 'press', ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS )
+        self._press_or_release.addItem( 'release', ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_RELEASE )
         
         layout = QP.HBoxLayout()
         
@@ -1162,7 +1162,7 @@ class MouseShortcutWidget( QW.QWidget ):
         
         data = self._press_or_release.GetValue()
         
-        press_instead_of_release = data == CC.SHORTCUT_PRESS_TYPE_PRESS
+        press_instead_of_release = data == ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS
         
         self._button.SetPressInsteadOfRelease( press_instead_of_release )
         
@@ -1183,7 +1183,7 @@ class MouseShortcutButton( QW.QPushButton ):
     
     def __init__( self, parent, related_radio = None ):
         
-        self._shortcut = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_PRESS_TYPE_PRESS, [] )
+        self._shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
         
         self._press_instead_of_release = True
         
@@ -1255,17 +1255,17 @@ class MouseShortcutButton( QW.QPushButton ):
         
         self._press_instead_of_release = press_instead_of_release
         
-        if self._shortcut.shortcut_press_type != CC.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK and self._shortcut.shortcut_key in ( CC.SHORTCUT_MOUSE_LEFT, CC.SHORTCUT_MOUSE_MIDDLE, CC.SHORTCUT_MOUSE_RIGHT ):
+        if self._shortcut.shortcut_press_type != ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK and self._shortcut.shortcut_key in ( ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT ):
             
             self._shortcut = self._shortcut.Duplicate()
             
             if self._press_instead_of_release:
                 
-                self._shortcut.shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+                self._shortcut.shortcut_press_type = ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS
                 
             else:
                 
-                self._shortcut.shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_RELEASE
+                self._shortcut.shortcut_press_type = ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_RELEASE
                 
             
             self._SetShortcutString()

@@ -11,6 +11,7 @@ import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
+from . import QtPorting as QP
 import locale
 import traceback
 
@@ -73,6 +74,8 @@ class mpvWidget( QW.QWidget ):
         
         self._canvas_type = ClientGUICommon.CANVAS_PREVIEW
         
+        self._looping = True
+        
         # This is necessary since PyQT stomps over the locale settings needed by libmpv.
         # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
         locale.setlocale( locale.LC_NUMERIC, 'C' )
@@ -120,7 +123,34 @@ class mpvWidget( QW.QWidget ):
         
         self._media = None
         
-        self._has_played_once_through = False
+        self._current_seek_to_start_count = 0
+        
+        player = self._player
+        
+        def qt_seek_event():
+            
+            if not QP.isValid( self ):
+                
+                return
+                
+            
+            if self._media is not None and self._player.time_pos <= 1.0:
+                
+                self._current_seek_to_start_count += 1
+                
+                if not self._looping:
+                    
+                    self.Pause()
+                    
+                
+            
+            
+        
+        @player.event_callback( mpv.MpvEventID.SEEK )
+        def seek_event( event ):
+            
+            QP.CallAfter( qt_seek_event )
+            
         
         self.destroyed.connect( self._player.terminate )
         
@@ -215,7 +245,7 @@ class mpvWidget( QW.QWidget ):
                 
                 num_frames = self._media.GetNumFrames()
                 
-                if num_frames is None:
+                if num_frames is None or num_frames == 1:
                     
                     current_frame_index = 0
                     
@@ -256,7 +286,7 @@ class mpvWidget( QW.QWidget ):
     
     def HasPlayedOnceThrough( self ):
         
-        return self._has_played_once_through
+        return self._current_seek_to_start_count > 0
         
 
     def IsPlaying( self ):
@@ -342,9 +372,16 @@ class mpvWidget( QW.QWidget ):
         self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
         
     
+    def SetLooping( self, value ):
+        
+        self._looping = value
+        
+    
     def SetMedia( self, media, start_paused = False ):
         
         self._media = media
+        
+        self._current_seek_to_start_count = 0
         
         if self._media is None:
             
@@ -371,9 +408,9 @@ class mpvWidget( QW.QWidget ):
             
             path = client_files_manager.GetFilePath( hash, mime )
             
-            self._has_played_once_through = False
-            
             self._player.visibility = 'always'
+            
+            self._looping = True
             
             self._player.pause = True
             

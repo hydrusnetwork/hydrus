@@ -2751,24 +2751,9 @@ class MediaSingleton( Media ):
     
     def HasDuration( self ):
         
-        # some funky formats have duration but no frames
-        # some have a single 'frame' but no reported duration
-        
         duration = self._media_result.GetDuration()
         
-        if duration is None or duration == 0:
-            
-            return False
-            
-        
-        num_frames = self._media_result.GetNumFrames()
-        
-        if num_frames is None or num_frames == 0:
-            
-            return False
-            
-        
-        return True
+        return duration is not None and duration > 0
         
     
     def HasImages( self ): return self.IsImage()
@@ -3262,7 +3247,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'mime', 'mime', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )

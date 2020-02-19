@@ -2206,8 +2206,6 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         
         self.ShowMenu()
         
-        event.accept()
-        
     
     def ShowMenu( self ):
         

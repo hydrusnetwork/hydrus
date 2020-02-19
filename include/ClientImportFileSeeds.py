@@ -193,16 +193,26 @@ class FileImportJob( object ):
         self._file_import_options.CheckFileIsValid( size, mime, width, height )
         
     
-    def DoWork( self ):
+    def DoWork( self, status_hook = None ):
         
         if HG.file_import_report_mode:
             
             HydrusData.ShowText( 'File import job starting work.' )
             
         
+        if status_hook is not None:
+            
+            status_hook( 'calculating pre-import status' )
+            
+        
         ( pre_import_status, hash, note ) = self.GenerateHashAndStatus()
         
         if self.IsNewToDB():
+            
+            if status_hook is not None:
+                
+                status_hook( 'generating metadata' )
+                
             
             self.GenerateInfo()
             
@@ -210,7 +220,17 @@ class FileImportJob( object ):
             
             mime = self.GetMime()
             
+            if status_hook is not None:
+                
+                status_hook( 'copying file' )
+                
+            
             HG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
+            
+            if status_hook is not None:
+                
+                status_hook( 'updating database' )
+                
             
             ( import_status, note ) = HG.client_controller.WriteSynchronous( 'import_file', self )
             
@@ -674,7 +694,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             status_hook( 'importing file' )
             
-            self.Import( temp_path, file_import_options )
+            self.Import( temp_path, file_import_options, status_hook = status_hook )
             
         finally:
             
@@ -903,17 +923,17 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.GetHash() is not None
         
     
-    def Import( self, temp_path, file_import_options ):
+    def Import( self, temp_path, file_import_options, status_hook = None ):
         
         file_import_job = FileImportJob( temp_path, file_import_options )
         
-        ( status, hash, note ) = file_import_job.DoWork()
+        ( status, hash, note ) = file_import_job.DoWork( status_hook = status_hook )
         
         self.SetStatus( status, note = note )
         self.SetHash( hash )
         
     
-    def ImportPath( self, file_seed_cache, file_import_options, limited_mimes = None ):
+    def ImportPath( self, file_seed_cache, file_import_options, limited_mimes = None, status_hook = None ):
         
         try:
             
@@ -950,7 +970,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     raise Exception( 'File failed to copy to temp path--see log for error.' )
                     
                 
-                self.Import( temp_path, file_import_options )
+                self.Import( temp_path, file_import_options, status_hook = status_hook )
                 
             finally:
                 

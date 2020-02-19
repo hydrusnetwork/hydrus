@@ -8,6 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 385</h3></li>
+				<ul>
+					<li>mpv:</li>
+					<li>the mpv window is now plugged into the slideshow system, so when an mpv window has played its media once, a media viewer browser currently slideshow-ing will now correctly know to move to the next media</li>
+					<li>slideshows of videos should progress to the next file faster and more smoothly, with no more half-second blit of the start of the movie before the next file loads</li>
+					<li>pausing video/audio is no longer cause for the slideshow to move on--now only the 'has played once through' check will naturally trigger it. you can now more reliably seek/scrub a video during slideshow</li>
+					<li>the mpv window and native animation player is now better about pausing while a seek drag (scrub) is ongoing</li>
+					<li>various music videos that have 1 frame should now show a seekbar correctly for the mpv window, with correct timecode based seeking</li>
+					<li>fixed a bug in the video/audio resizing code that meant zoom in/out cycles would move a video player down a few pixels off center</li>
+					<li>the blank audio mpv window now has basic hardcoded zoom support and will scale down to a too-small viewer window, so you can still access the seek bar</li>
+					<li>fixed some 'has duration' calculations for audio/video that has duration but no frame count</li>
+					<li>.</li>
+					<li>shortcuts:</li>
+					<li>if a shortcut handler on an individual window does not have a double-click mapping for a command--and furthermore if none of its parent windows that are fully plugged in have one either--it will attempt to map the single-click version of the event as a backup. so now if you have an archive/delete filter, you can click fast again and the double-clicks will be interpreted as single-clicks (unless you map double-click to mean something else on the media_window or one of the media_viewer parents)</li>
+					<li>the media viewers across the program are now fully plugged into the shortcuts system for key presses, and half-plugged in for mouse clicks</li>
+					<li>'close_media_viewer' is added to all 'media_viewer' shortcut set types. enter/return/escape are now defaults for 'media_viewer' (applying to all), and middle-click/double left-click are now defaults for 'media_viewer_browser'. this is no longer hardcoded. if you are a madlad, you can now unmap all 'close_media_viewer' commands</li>
+					<li>double left-click is now assigned to 'keep' in the 'archive_delete_filter' shortcut set. due to the new click/double click rules above, this means that by default double clicking a video/audio in the archive/delete filter will now mean 'keep and move on' on that fast second click!</li>
+					<li>edit shortcut set ui now sorts its command list on load</li>
+					<li>significant shortcuts refactoring</li>
+					<li>general shortcuts code and debug code cleanup and improvement</li>
+					<li>.</li>
+					<li>local file import pages and most downloaders will now report more file import steps to their status labels. most will blit by too fast to see, but if it hangs for a bit, you will now see the step it is caught up on. I imagine in most cases, this will be metadata generation for large videos</li>
+					<li>fixed a variety of searches that could return files not filtered to the current file domain (e.g. files in trash while in my files, or not in ipfs while in ipfs) when the search did not include an inclusive tag</li>
+					<li>updated the default danbooru file page parsers to get their new tag format, thank you to a user for submitting these</li>
+					<li>a popup message now appears while sessions are loading. it auto-dismisses once the load is complete</li>
+					<li>the edit media view options dialog (under options->media, launched from the filetype list) is now better at disabling non-applicable widgets based on filetype</li>
+					<li>fixed an issue where clicking from the autocomplete dropdown floating window to the same control's text input could result in a single flicker-frame where the dropdown is hidden</li>
+					<li>tightened the size of the splash screen white background. figuring out appropriate colour from the current stylesheet remains elusive lmao</li>
+					<li>cleaned up and wx->Qt converted a variety of event handling code</li>
+					<li>updated some 'mime' labels across the program to the new 'filetype' wording</li>
+				</ul>
 				<li><h3>version 384</h3></li>
 				<ul>
 					<li>shortcuts:</li>

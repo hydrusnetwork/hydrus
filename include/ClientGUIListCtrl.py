@@ -372,7 +372,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in CC.DELETE_KEYS:
+        if key in ClientGUIShortcuts.DELETE_KEYS:
             
             self.ProcessDeleteAction()
             

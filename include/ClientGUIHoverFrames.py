@@ -802,7 +802,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         all_shortcut_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
         
-        custom_shortcuts_names = [ name for name in all_shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
+        custom_shortcuts_names = [ name for name in all_shortcut_names if name not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
         menu = QW.QMenu()
 

@@ -1349,7 +1349,7 @@ class ListBox( QW.QScrollArea ):
         
         key_code = event.key()
         
-        if self.hasFocus() and key_code in CC.DELETE_KEYS:
+        if self.hasFocus() and key_code in ClientGUIShortcuts.DELETE_KEYS:
             
             self._DeleteActivate()
             
@@ -2974,7 +2974,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in CC.DELETE_KEYS:
+        if key in ClientGUIShortcuts.DELETE_KEYS:
             
             self._Activate()
             

@@ -2260,7 +2260,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._web_browser_path = QW.QLineEdit( mime_panel )
             
-            columns = [ ( 'mime', 20 ), ( 'launch path', -1 ) ]
+            columns = [ ( 'filetype', 20 ), ( 'launch path', -1 ) ]
             
             self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, columns, self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
             
@@ -3297,7 +3297,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._media_viewer_panel )
             
-            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, 'media_viewer_options', 20, 20, [ ( 'mime', 21 ), ( 'media show action', 20 ), ( 'preview show action', 20 ), ( 'zoom info', -1 ) ], data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, 'media_viewer_options', 20, 20, [ ( 'filetype', 21 ), ( 'media show action', 20 ), ( 'preview show action', 20 ), ( 'zoom info', -1 ) ], data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
             
             media_viewer_list_panel.SetListCtrl( self._media_viewer_options )
             
@@ -5255,7 +5255,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in CC.DELETE_KEYS:
+        if key in ClientGUIShortcuts.DELETE_KEYS:
             
             urls = [ QP.GetClientData( self._urls_listbox, selection.row() ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
             

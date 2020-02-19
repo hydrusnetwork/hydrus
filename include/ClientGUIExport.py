@@ -447,7 +447,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.setMinimumSize( QP.TupleToQSize( (220,300) ) )
         
-        columns = [ ( 'number', 8 ), ( 'mime', 20 ), ( 'expected path', -1 ) ]
+        columns = [ ( 'number', 8 ), ( 'filetype', 20 ), ( 'expected path', -1 ) ]
         
         self._paths = ClientGUIListCtrl.BetterListCtrl( self, 'export_files', 24, 64, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True )
         

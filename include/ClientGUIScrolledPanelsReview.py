@@ -2892,7 +2892,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( '#', 4 ), ( 'path', -1 ), ( 'guessed mime', 16 ), ( 'size', 10 ) ]
+        columns = [ ( '#', 4 ), ( 'path', -1 ), ( 'filetype', 16 ), ( 'size', 10 ) ]
         
         self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'input_local_files', 12, 98, columns, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
         

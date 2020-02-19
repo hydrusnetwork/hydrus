@@ -9,16 +9,199 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+SHORTCUT_TYPE_KEYBOARD_CHARACTER = 0
+SHORTCUT_TYPE_MOUSE = 1
+SHORTCUT_TYPE_KEYBOARD_SPECIAL = 2
+SHORTCUT_TYPE_NOT_ALLOWED = 3
+
+SHORTCUT_PRESS_TYPE_PRESS = 0
+SHORTCUT_PRESS_TYPE_RELEASE = 1
+SHORTCUT_PRESS_TYPE_DOUBLE_CLICK = 2
+SHORTCUT_PRESS_TYPE_DRAG = 3
+
+shortcut_press_type_str_lookup = {}
+
+shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_PRESS ] = 'press'
+shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_RELEASE ] = 'release'
+shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_DOUBLE_CLICK ] = 'double'
+shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_DRAG ] = 'drag'
+
+SHORTCUT_MODIFIER_CTRL = 0
+SHORTCUT_MODIFIER_ALT = 1
+SHORTCUT_MODIFIER_SHIFT = 2
+SHORTCUT_MODIFIER_KEYPAD = 3
+SHORTCUT_MODIFIER_GROUP_SWITCH = 4
+
+SHORTCUT_KEY_SPECIAL_SPACE = 0
+SHORTCUT_KEY_SPECIAL_BACKSPACE = 1
+SHORTCUT_KEY_SPECIAL_TAB = 2
+SHORTCUT_KEY_SPECIAL_RETURN = 3
+SHORTCUT_KEY_SPECIAL_ENTER = 4
+SHORTCUT_KEY_SPECIAL_PAUSE = 5
+SHORTCUT_KEY_SPECIAL_ESCAPE = 6
+SHORTCUT_KEY_SPECIAL_INSERT = 7
+SHORTCUT_KEY_SPECIAL_DELETE = 8
+SHORTCUT_KEY_SPECIAL_UP = 9
+SHORTCUT_KEY_SPECIAL_DOWN = 10
+SHORTCUT_KEY_SPECIAL_LEFT = 11
+SHORTCUT_KEY_SPECIAL_RIGHT = 12
+SHORTCUT_KEY_SPECIAL_HOME = 13
+SHORTCUT_KEY_SPECIAL_END = 14
+SHORTCUT_KEY_SPECIAL_PAGE_UP = 15
+SHORTCUT_KEY_SPECIAL_PAGE_DOWN = 16
+SHORTCUT_KEY_SPECIAL_F1 = 17
+SHORTCUT_KEY_SPECIAL_F2 = 18
+SHORTCUT_KEY_SPECIAL_F3 = 19
+SHORTCUT_KEY_SPECIAL_F4 = 20
+SHORTCUT_KEY_SPECIAL_F5 = 21
+SHORTCUT_KEY_SPECIAL_F6 = 22
+SHORTCUT_KEY_SPECIAL_F7 = 23
+SHORTCUT_KEY_SPECIAL_F8 = 24
+SHORTCUT_KEY_SPECIAL_F9 = 25
+SHORTCUT_KEY_SPECIAL_F10 = 26
+SHORTCUT_KEY_SPECIAL_F11 = 27
+SHORTCUT_KEY_SPECIAL_F12 = 28
+
+if HC.PLATFORM_MACOS:
+    
+    DELETE_KEYS = ( QC.Qt.Key_Backspace, QC.Qt.Key_Delete )
+    
+else:
+    
+    DELETE_KEYS = ( QC.Qt.Key_Delete, )
+    
+
+special_key_shortcut_enum_lookup = {}
+
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Space ] = SHORTCUT_KEY_SPECIAL_SPACE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Backspace ] = SHORTCUT_KEY_SPECIAL_BACKSPACE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Tab ] = SHORTCUT_KEY_SPECIAL_TAB
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Return ] = SHORTCUT_KEY_SPECIAL_RETURN
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Enter ] = SHORTCUT_KEY_SPECIAL_ENTER
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Pause ] = SHORTCUT_KEY_SPECIAL_PAUSE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Escape ] = SHORTCUT_KEY_SPECIAL_ESCAPE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Insert ] = SHORTCUT_KEY_SPECIAL_INSERT
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Delete ] = SHORTCUT_KEY_SPECIAL_DELETE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Up ] = SHORTCUT_KEY_SPECIAL_UP
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Down ] = SHORTCUT_KEY_SPECIAL_DOWN
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Left ] = SHORTCUT_KEY_SPECIAL_LEFT
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Right ] = SHORTCUT_KEY_SPECIAL_RIGHT
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Home ] = SHORTCUT_KEY_SPECIAL_HOME
+special_key_shortcut_enum_lookup[ QC.Qt.Key_End ] = SHORTCUT_KEY_SPECIAL_END
+special_key_shortcut_enum_lookup[ QC.Qt.Key_PageUp ] = SHORTCUT_KEY_SPECIAL_PAGE_UP
+special_key_shortcut_enum_lookup[ QC.Qt.Key_PageDown ] = SHORTCUT_KEY_SPECIAL_PAGE_DOWN
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F1 ] = SHORTCUT_KEY_SPECIAL_F1
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F2 ] = SHORTCUT_KEY_SPECIAL_F2
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F3 ] = SHORTCUT_KEY_SPECIAL_F3
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F4 ] = SHORTCUT_KEY_SPECIAL_F4
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F5 ] = SHORTCUT_KEY_SPECIAL_F5
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F6 ] = SHORTCUT_KEY_SPECIAL_F6
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F7 ] = SHORTCUT_KEY_SPECIAL_F7
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F8 ] = SHORTCUT_KEY_SPECIAL_F8
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F9 ] = SHORTCUT_KEY_SPECIAL_F9
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F10 ] = SHORTCUT_KEY_SPECIAL_F10
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F11 ] = SHORTCUT_KEY_SPECIAL_F11
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F12 ] = SHORTCUT_KEY_SPECIAL_F12
+
+special_key_shortcut_str_lookup = {}
+
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_SPACE ] = 'space'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_BACKSPACE ] = 'backspace'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_TAB ] = 'tab'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_RETURN ] = 'return'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_ENTER ] = 'enter'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAUSE ] = 'pause'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_ESCAPE ] = 'escape'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_INSERT ] = 'insert'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_DELETE ] = 'delete'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_UP ] = 'up'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_DOWN ] = 'down'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_LEFT ] = 'left'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_RIGHT ] = 'right'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_HOME ] = 'home'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_END ] = 'end'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAGE_DOWN ] = 'page down'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAGE_UP ] = 'page up'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F1 ] = 'f1'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F2 ] = 'f2'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F3 ] = 'f3'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F4 ] = 'f4'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F5 ] = 'f5'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F6 ] = 'f6'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F7 ] = 'f7'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F8 ] = 'f8'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F9 ] = 'f9'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F10 ] = 'f10'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F11 ] = 'f11'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F12 ] = 'f12'
+
+SHORTCUT_MOUSE_LEFT = 0
+SHORTCUT_MOUSE_RIGHT = 1
+SHORTCUT_MOUSE_MIDDLE = 2
+SHORTCUT_MOUSE_SCROLL_UP = 3
+SHORTCUT_MOUSE_SCROLL_DOWN = 4
+SHORTCUT_MOUSE_SCROLL_LEFT = 5
+SHORTCUT_MOUSE_SCROLL_RIGHT = 6
+
+shortcut_mouse_string_lookup = {}
+
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'left-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_MIDDLE ] = 'middle-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_UP ] = 'scroll up'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
+
+shortcut_names_to_descriptions = {}
+
+shortcut_names_to_descriptions[ 'global' ] = 'Actions for the whole program. Should work in the main gui or a media viewer.'
+shortcut_names_to_descriptions[ 'archive_delete_filter' ] = 'Navigation actions for the media viewer during an archive/delete filter. Mouse shortcuts should work.'
+shortcut_names_to_descriptions[ 'duplicate_filter' ] = 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.'
+shortcut_names_to_descriptions[ 'media' ] = 'Actions to alter metadata for media in the media viewer or the thumbnail grid.'
+shortcut_names_to_descriptions[ 'main_gui' ] = 'Actions to control pages in the main window of the program.'
+shortcut_names_to_descriptions[ 'media_viewer_browser' ] = 'Navigation actions for the regular browsable media viewer.'
+shortcut_names_to_descriptions[ 'media_viewer' ] = 'Zoom and pan and player actions for any media viewer.'
+shortcut_names_to_descriptions[ 'media_viewer_media_window' ] = 'Actions for any video or audio player in a media viewer window.'
+shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any video or audio player in a preview window.'
+
+# shortcut commands
+
+SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
+
+SHORTCUTS_GLOBAL_ACTIONS = [ 'global_audio_mute', 'global_audio_unmute', 'global_audio_mute_flip', 'exit_application', 'exit_application_force_maintenance', 'restart_application' ]
+SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'export_files', 'export_files_quick_auto_export', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_set_alternate', 'duplicate_media_set_alternate_collections', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_focused_king', 'duplicate_media_set_same_quality', 'open_known_url' ]
+SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'pause_media', 'pause_play_media', 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode', 'close_media_viewer' ]
+SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous', 'pause_play_slideshow', 'show_menu', 'close_media_viewer' ]
+SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'refresh_all_pages', 'refresh_page_of_pages_pages', 'new_page', 'new_page_of_pages', 'new_duplicate_filter_page', 'new_gallery_downloader_page', 'new_url_downloader_page', 'new_simple_downloader_page', 'new_watcher_downloader_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders', 'flip_debug_force_idle_mode_do_not_set_this', 'show_and_focus_manage_tags_favourite_tags', 'show_and_focus_manage_tags_related_tags', 'show_and_focus_manage_tags_file_lookup_script_tags', 'show_and_focus_manage_tags_recent_tags', 'focus_media_viewer' ]
+SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better_and_delete_other', 'duplicate_filter_this_is_better_but_keep_both', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_false_positive', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back', 'close_media_viewer' ]
+SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archive_delete_filter_delete', 'archive_delete_filter_skip', 'archive_delete_filter_back', 'close_media_viewer' ]
+SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS = [ 'pause_media', 'pause_play_media', 'open_file_in_external_program', 'close_media_viewer' ]
+SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS = [ 'pause_media', 'pause_play_media', 'open_file_in_external_program', 'launch_media_viewer' ]
+
+simple_shortcut_name_to_action_lookup = {}
+
+simple_shortcut_name_to_action_lookup[ 'global' ] = SHORTCUTS_GLOBAL_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'media' ] = SHORTCUTS_MEDIA_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'media_viewer' ] = SHORTCUTS_MEDIA_VIEWER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'media_viewer_browser' ] = SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'main_gui' ] = SHORTCUTS_MAIN_GUI_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'duplicate_filter' ] = SHORTCUTS_DUPLICATE_FILTER_ACTIONS + SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'archive_delete_filter' ] = SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'media_viewer_media_window' ] = SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'preview_media_window' ] = SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'custom' ] = SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
+
 # ok, the problem here is that I get key codes that are converted, so if someone does shift+1 on a US keyboard, this ends up with Shift+! same with ctrl+alt+ to get accented characters
 # it isn't really a big deal since everything still lines up, but the QGuiApplicationPrivate::platformIntegration()->possibleKeys(e) to get some variant of 'yeah this is just !' seems unavailable for python
 # it is basically a display bug, but it'd be nice to have it working right
 def ConvertQtKeyToShortcutKey( key_qt ):
     
-    if key_qt in CC.special_key_shortcut_enum_lookup:
+    if key_qt in special_key_shortcut_enum_lookup:
         
-        key_ord = CC.special_key_shortcut_enum_lookup[ key_qt ]
+        key_ord = special_key_shortcut_enum_lookup[ key_qt ]
         
-        return ( CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL, key_ord )
+        return ( SHORTCUT_TYPE_KEYBOARD_SPECIAL, key_ord )
         
     else:
         
@@ -33,11 +216,11 @@ def ConvertQtKeyToShortcutKey( key_qt ):
             
             casefold_key_ord = ord( key_chr )
             
-            return ( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, casefold_key_ord )
+            return ( SHORTCUT_TYPE_KEYBOARD_CHARACTER, casefold_key_ord )
             
         except:
             
-            return ( CC.SHORTCUT_TYPE_NOT_ALLOWED, key_ord )
+            return ( SHORTCUT_TYPE_NOT_ALLOWED, key_ord )
             
         
     
@@ -47,13 +230,13 @@ def ConvertKeyEventToShortcut( event ):
     
     ( shortcut_type, key_ord ) = ConvertQtKeyToShortcutKey( key_qt )
     
-    if shortcut_type != CC.SHORTCUT_TYPE_NOT_ALLOWED:
+    if shortcut_type != SHORTCUT_TYPE_NOT_ALLOWED:
         
         modifiers = []
         
         if event.modifiers() & QC.Qt.AltModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
+            modifiers.append( SHORTCUT_MODIFIER_ALT )
             
         
         if HC.PLATFORM_MACOS:
@@ -67,25 +250,25 @@ def ConvertKeyEventToShortcut( event ):
         
         if event.modifiers() & ctrl:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_CTRL )
+            modifiers.append( SHORTCUT_MODIFIER_CTRL )
             
         
         if event.modifiers() & QC.Qt.ShiftModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_SHIFT )
+            modifiers.append( SHORTCUT_MODIFIER_SHIFT )
             
         
         if event.modifiers() & QC.Qt.GroupSwitchModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_GROUP_SWITCH )
+            modifiers.append( SHORTCUT_MODIFIER_GROUP_SWITCH )
             
         
         if event.modifiers() & QC.Qt.KeypadModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+            modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
             
         
-        shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+        shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
         
         shortcut = Shortcut( shortcut_type, key_ord, shortcut_press_type, modifiers )
         
@@ -117,56 +300,56 @@ def ConvertMouseEventToShortcut( event ):
     
     key = None
     
-    shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+    shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
     
     if event.type() == QC.QEvent.MouseButtonPress:
         
         if event.buttons() & QC.Qt.LeftButton:
             
-            key = CC.SHORTCUT_MOUSE_LEFT
+            key = SHORTCUT_MOUSE_LEFT
             
         elif event.buttons() & QC.Qt.MiddleButton:
             
-            key = CC.SHORTCUT_MOUSE_MIDDLE
+            key = SHORTCUT_MOUSE_MIDDLE
             
         elif event.buttons() & QC.Qt.RightButton:
             
-            key = CC.SHORTCUT_MOUSE_RIGHT
+            key = SHORTCUT_MOUSE_RIGHT
             
         
     elif event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
         
         if event.type() == QC.QEvent.MouseButtonRelease:
             
-            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_RELEASE
+            shortcut_press_type = SHORTCUT_PRESS_TYPE_RELEASE
             
         elif event.type() == QC.QEvent.MouseButtonDblClick:
             
-            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
+            shortcut_press_type = SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
             
         
         if event.button() == QC.Qt.LeftButton:
             
-            key = CC.SHORTCUT_MOUSE_LEFT
+            key = SHORTCUT_MOUSE_LEFT
             
         elif event.button() == QC.Qt.MiddleButton:
             
-            key = CC.SHORTCUT_MOUSE_MIDDLE
+            key = SHORTCUT_MOUSE_MIDDLE
             
         elif event.button() == QC.Qt.RightButton:
             
-            key = CC.SHORTCUT_MOUSE_RIGHT
+            key = SHORTCUT_MOUSE_RIGHT
             
         
     elif event.type() == QC.QEvent.Wheel:
         
         if event.angleDelta().y() > 0:
             
-            key = CC.SHORTCUT_MOUSE_SCROLL_UP
+            key = SHORTCUT_MOUSE_SCROLL_UP
             
         elif event.angleDelta().y() < 0:
             
-            key = CC.SHORTCUT_MOUSE_SCROLL_DOWN
+            key = SHORTCUT_MOUSE_SCROLL_DOWN
             
         
     
@@ -176,30 +359,30 @@ def ConvertMouseEventToShortcut( event ):
         
         if event.modifiers() & QC.Qt.AltModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
+            modifiers.append( SHORTCUT_MODIFIER_ALT )
             
         
         if event.modifiers() & QC.Qt.ControlModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_CTRL )
+            modifiers.append( SHORTCUT_MODIFIER_CTRL )
             
         
         if event.modifiers() & QC.Qt.ShiftModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_SHIFT )
+            modifiers.append( SHORTCUT_MODIFIER_SHIFT )
             
         
         if event.modifiers() & QC.Qt.GroupSwitchModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_GROUP_SWITCH )
+            modifiers.append( SHORTCUT_MODIFIER_GROUP_SWITCH )
             
         
         if event.modifiers() & QC.Qt.KeypadModifier:
             
-            modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+            modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
             
         
-        shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, shortcut_press_type, modifiers )
+        shortcut = Shortcut( SHORTCUT_TYPE_MOUSE, key, shortcut_press_type, modifiers )
         
         if HG.gui_report_mode:
             
@@ -210,6 +393,40 @@ def ConvertMouseEventToShortcut( event ):
         
     
     return None
+    
+def AncestorShortcutsHandlers( widget: QW.QWidget ):
+    
+    shortcuts_handlers = []
+    
+    window = widget.window()
+    
+    if window == widget:
+        
+        return shortcuts_handlers
+        
+    
+    widget = widget.parent()
+    
+    while True:
+        
+        child_shortcuts_handlers = [ child for child in widget.children() if isinstance( child, ShortcutsHandler ) ]
+        
+        shortcuts_handlers.extend( child_shortcuts_handlers )
+        
+        if widget == window:
+            
+            break
+            
+        
+        widget = widget.parent()
+        
+        if widget is None:
+            
+            break
+            
+        
+    
+    return shortcuts_handlers
     
 def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlw_classes_who_can_pass_up = None ):
     
@@ -253,17 +470,17 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         if shortcut_type is None:
             
-            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
+            shortcut_type = SHORTCUT_TYPE_KEYBOARD_SPECIAL
             
         
         if shortcut_key is None:
             
-            shortcut_key = CC.SHORTCUT_KEY_SPECIAL_F7
+            shortcut_key = SHORTCUT_KEY_SPECIAL_F7
             
         
         if shortcut_press_type is None:
             
-            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+            shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
             
         
         if modifiers is None:
@@ -271,7 +488,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             modifiers = []
             
         
-        if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER and ClientData.OrdIsAlphaUpper( shortcut_key ):
+        if shortcut_type == SHORTCUT_TYPE_KEYBOARD_CHARACTER and ClientData.OrdIsAlphaUpper( shortcut_key ):
             
             shortcut_key += 32 # convert A to a
             
@@ -322,34 +539,34 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             
             # these are dicts that convert fixed wx enums to new stuff
             wx_to_qt_flat_conversion = {
-                32 : CC.SHORTCUT_KEY_SPECIAL_SPACE,
-                8 : CC.SHORTCUT_KEY_SPECIAL_BACKSPACE,
-                9 : CC.SHORTCUT_KEY_SPECIAL_TAB,
-                13 : CC.SHORTCUT_KEY_SPECIAL_RETURN,
-                310 : CC.SHORTCUT_KEY_SPECIAL_PAUSE,
-                27 : CC.SHORTCUT_KEY_SPECIAL_ESCAPE,
-                322 : CC.SHORTCUT_KEY_SPECIAL_INSERT,
-                127 : CC.SHORTCUT_KEY_SPECIAL_DELETE,
-                315 : CC.SHORTCUT_KEY_SPECIAL_UP,
-                317 : CC.SHORTCUT_KEY_SPECIAL_DOWN,
-                314 : CC.SHORTCUT_KEY_SPECIAL_LEFT,
-                316 : CC.SHORTCUT_KEY_SPECIAL_RIGHT,
-                313 : CC.SHORTCUT_KEY_SPECIAL_HOME,
-                312 : CC.SHORTCUT_KEY_SPECIAL_END,
-                367 : CC.SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
-                366 : CC.SHORTCUT_KEY_SPECIAL_PAGE_UP,
-                340 : CC.SHORTCUT_KEY_SPECIAL_F1,
-                341 : CC.SHORTCUT_KEY_SPECIAL_F2,
-                342 : CC.SHORTCUT_KEY_SPECIAL_F3,
-                343 : CC.SHORTCUT_KEY_SPECIAL_F4,
-                344 : CC.SHORTCUT_KEY_SPECIAL_F5,
-                345 : CC.SHORTCUT_KEY_SPECIAL_F6,
-                346 : CC.SHORTCUT_KEY_SPECIAL_F7,
-                347 : CC.SHORTCUT_KEY_SPECIAL_F8,
-                348 : CC.SHORTCUT_KEY_SPECIAL_F9,
-                349 : CC.SHORTCUT_KEY_SPECIAL_F10,
-                350 : CC.SHORTCUT_KEY_SPECIAL_F11,
-                351 : CC.SHORTCUT_KEY_SPECIAL_F12
+                32 : SHORTCUT_KEY_SPECIAL_SPACE,
+                8 : SHORTCUT_KEY_SPECIAL_BACKSPACE,
+                9 : SHORTCUT_KEY_SPECIAL_TAB,
+                13 : SHORTCUT_KEY_SPECIAL_RETURN,
+                310 : SHORTCUT_KEY_SPECIAL_PAUSE,
+                27 : SHORTCUT_KEY_SPECIAL_ESCAPE,
+                322 : SHORTCUT_KEY_SPECIAL_INSERT,
+                127 : SHORTCUT_KEY_SPECIAL_DELETE,
+                315 : SHORTCUT_KEY_SPECIAL_UP,
+                317 : SHORTCUT_KEY_SPECIAL_DOWN,
+                314 : SHORTCUT_KEY_SPECIAL_LEFT,
+                316 : SHORTCUT_KEY_SPECIAL_RIGHT,
+                313 : SHORTCUT_KEY_SPECIAL_HOME,
+                312 : SHORTCUT_KEY_SPECIAL_END,
+                367 : SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
+                366 : SHORTCUT_KEY_SPECIAL_PAGE_UP,
+                340 : SHORTCUT_KEY_SPECIAL_F1,
+                341 : SHORTCUT_KEY_SPECIAL_F2,
+                342 : SHORTCUT_KEY_SPECIAL_F3,
+                343 : SHORTCUT_KEY_SPECIAL_F4,
+                344 : SHORTCUT_KEY_SPECIAL_F5,
+                345 : SHORTCUT_KEY_SPECIAL_F6,
+                346 : SHORTCUT_KEY_SPECIAL_F7,
+                347 : SHORTCUT_KEY_SPECIAL_F8,
+                348 : SHORTCUT_KEY_SPECIAL_F9,
+                349 : SHORTCUT_KEY_SPECIAL_F10,
+                350 : SHORTCUT_KEY_SPECIAL_F11,
+                351 : SHORTCUT_KEY_SPECIAL_F12
             }
             
             # regular keys, but numpad, that are tracked in wx by combined unique enum
@@ -372,25 +589,25 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
                 }
             
             wx_to_qt_numpad_conversion = {
-                377 : CC.SHORTCUT_KEY_SPECIAL_UP,
-                379 : CC.SHORTCUT_KEY_SPECIAL_DOWN,
-                376 : CC.SHORTCUT_KEY_SPECIAL_LEFT,
-                378 : CC.SHORTCUT_KEY_SPECIAL_RIGHT,
-                375 : CC.SHORTCUT_KEY_SPECIAL_HOME,
-                382 : CC.SHORTCUT_KEY_SPECIAL_END,
-                381 : CC.SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
-                380 : CC.SHORTCUT_KEY_SPECIAL_PAGE_UP,
-                385 : CC.SHORTCUT_KEY_SPECIAL_DELETE,
-                370 : CC.SHORTCUT_KEY_SPECIAL_ENTER
+                377 : SHORTCUT_KEY_SPECIAL_UP,
+                379 : SHORTCUT_KEY_SPECIAL_DOWN,
+                376 : SHORTCUT_KEY_SPECIAL_LEFT,
+                378 : SHORTCUT_KEY_SPECIAL_RIGHT,
+                375 : SHORTCUT_KEY_SPECIAL_HOME,
+                382 : SHORTCUT_KEY_SPECIAL_END,
+                381 : SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
+                380 : SHORTCUT_KEY_SPECIAL_PAGE_UP,
+                385 : SHORTCUT_KEY_SPECIAL_DELETE,
+                370 : SHORTCUT_KEY_SPECIAL_ENTER
                 }
             
             ( shortcut_type, shortcut_key, modifiers ) = old_serialisable_info
             
-            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
+            if shortcut_type == SHORTCUT_TYPE_KEYBOARD_CHARACTER:
                 
                 if shortcut_key in wx_to_qt_flat_conversion:
                     
-                    shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
+                    shortcut_type = SHORTCUT_TYPE_KEYBOARD_SPECIAL
                     shortcut_key = wx_to_qt_flat_conversion[ shortcut_key ]
                     
                 elif shortcut_key in wx_to_qt_numpad_ascii_conversion:
@@ -399,24 +616,24 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
                     
                     modifiers = list( modifiers )
                     
-                    modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+                    modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
                     
                     modifiers.sort()
                     
                 elif shortcut_key in wx_to_qt_numpad_conversion:
                     
-                    shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
+                    shortcut_type = SHORTCUT_TYPE_KEYBOARD_SPECIAL
                     shortcut_key = wx_to_qt_numpad_conversion[ shortcut_key ]
                     
                     modifiers = list( modifiers )
                     
-                    modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+                    modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
                     
                     modifiers.sort()
                     
                 
             
-            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
+            if shortcut_type == SHORTCUT_TYPE_KEYBOARD_CHARACTER:
                 
                 if ClientData.OrdIsAlphaUpper( shortcut_key ):
                     
@@ -433,7 +650,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             
             ( shortcut_type, shortcut_key, modifiers ) = old_serialisable_info
             
-            shortcut_press_type = CC.SHORTCUT_PRESS_TYPE_PRESS
+            shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
             
             new_serialisable_info = ( shortcut_type, shortcut_key, shortcut_press_type, modifiers )
             
@@ -441,53 +658,72 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def ConvertToSingleClick( self ):
+        
+        if self.IsDoubleClick():
+            
+            new_shortcut = self.Duplicate()
+            
+            new_shortcut.shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
+            
+            return new_shortcut
+            
+        
+        return self
+        
+    
     def GetShortcutType( self ):
         
         return self.shortcut_type
+        
+    
+    def IsDoubleClick( self ):
+        
+        return self.shortcut_type == SHORTCUT_TYPE_MOUSE and self.shortcut_press_type == SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
         
     
     def ToString( self ):
         
         components = []
         
-        if CC.SHORTCUT_MODIFIER_CTRL in self.modifiers:
+        if SHORTCUT_MODIFIER_CTRL in self.modifiers:
             
             components.append( 'ctrl' )
             
         
-        if CC.SHORTCUT_MODIFIER_ALT in self.modifiers:
+        if SHORTCUT_MODIFIER_ALT in self.modifiers:
             
             components.append( 'alt' )
             
         
-        if CC.SHORTCUT_MODIFIER_SHIFT in self.modifiers:
+        if SHORTCUT_MODIFIER_SHIFT in self.modifiers:
             
             components.append( 'shift' )
             
         
-        if CC.SHORTCUT_MODIFIER_GROUP_SWITCH in self.modifiers:
+        if SHORTCUT_MODIFIER_GROUP_SWITCH in self.modifiers:
             
             components.append( 'Mode_switch' )
             
         
-        if self.shortcut_press_type != CC.SHORTCUT_PRESS_TYPE_PRESS:
+        if self.shortcut_press_type != SHORTCUT_PRESS_TYPE_PRESS:
             
-            action_name = '{} '.format( CC.shortcut_press_type_str_lookup[ self.shortcut_press_type ] )
+            action_name = '{} '.format( shortcut_press_type_str_lookup[ self.shortcut_press_type ] )
             
         else:
             
             action_name = ''
             
         
-        if self.shortcut_type == CC.SHORTCUT_TYPE_MOUSE and self.shortcut_key in CC.shortcut_mouse_string_lookup:
+        if self.shortcut_type == SHORTCUT_TYPE_MOUSE and self.shortcut_key in shortcut_mouse_string_lookup:
             
-            action_name += CC.shortcut_mouse_string_lookup[ self.shortcut_key ]
+            action_name += shortcut_mouse_string_lookup[ self.shortcut_key ]
             
-        elif self.shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL and self.shortcut_key in CC.special_key_shortcut_str_lookup:
+        elif self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_SPECIAL and self.shortcut_key in special_key_shortcut_str_lookup:
             
-            action_name += CC.special_key_shortcut_str_lookup[ self.shortcut_key ]
+            action_name += special_key_shortcut_str_lookup[ self.shortcut_key ]
             
-        elif self.shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER:
+        elif self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_CHARACTER:
             
             try:
                 
@@ -514,7 +750,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         s = '+'.join( components )
         
-        if CC.SHORTCUT_MODIFIER_KEYPAD in self.modifiers:
+        if SHORTCUT_MODIFIER_KEYPAD in self.modifiers:
             
             s += ' (on numpad)'
             
@@ -584,7 +820,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 modifiers = []
                 
-                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_CHARACTER, key, CC.SHORTCUT_PRESS_TYPE_PRESS, modifiers )
+                shortcut = Shortcut( SHORTCUT_TYPE_KEYBOARD_CHARACTER, key, SHORTCUT_PRESS_TYPE_PRESS, modifiers )
                 
                 if serialisable_service_key is None:
                     
@@ -684,11 +920,47 @@ class ShortcutsHandler( QC.QObject ):
         self._shortcuts_names = list( initial_shortcuts_names )
         
     
-    def _ProcessShortcut( self, shortcut ):
+    def _ProcessShortcut( self, shortcut: Shortcut ):
         
         shortcut_processed = False
         
-        command = HG.client_controller.GetCommandFromShortcut( self._shortcuts_names, shortcut )
+        command = HG.client_controller.shortcuts_manager.GetCommand( self._shortcuts_names, shortcut )
+        
+        if command is None and shortcut.IsDoubleClick():
+            
+            # ok, so user double-clicked
+            # if a parent wants to catch this (for instance the media viewer when we double-click a video), then we want that parent to have it
+            # but if no parent wants it, we can try converting it to a single-click to see if that does anything
+            
+            ancestor_shortcuts_handlers = AncestorShortcutsHandlers( self._parent )
+            
+            all_ancestor_shortcut_names = HydrusData.MassUnion( [ ancestor_shortcuts_handler.GetShortcutNames() for ancestor_shortcuts_handler in ancestor_shortcuts_handlers ] )
+            
+            ancestor_command = HG.client_controller.shortcuts_manager.GetCommand( all_ancestor_shortcut_names, shortcut )
+            
+            if ancestor_command is None:
+                
+                if HG.shortcut_report_mode:
+                    
+                    message = 'Shortcut "' + shortcut.ToString() + '" did not match any command. The single click version is now being attempted.'
+                    
+                    HydrusData.ShowText( message )
+                    
+                
+                shortcut = shortcut.ConvertToSingleClick()
+                
+                command = HG.client_controller.shortcuts_manager.GetCommand( self._shortcuts_names, shortcut )
+                
+            else:
+                
+                if HG.shortcut_report_mode:
+                    
+                    message = 'Shortcut "' + shortcut.ToString() + '" did not match any command. A parent seems to want it, however, so the single click version will not be attempted.'
+                    
+                    HydrusData.ShowText( message )
+                    
+                
+            
         
         if command is not None:
             
@@ -806,8 +1078,56 @@ class ShortcutsHandler( QC.QObject ):
         
         if shortcut_set_name not in self._shortcuts_names:
             
-            self._shortcuts_names.append( shortcut_set_name )
+            reserved_names = [ name for name in self._shortcuts_names if name in SHORTCUTS_RESERVED_NAMES ]
+            custom_names = [ name for name in self._shortcuts_names if name not in SHORTCUTS_RESERVED_NAMES ]
             
+            if shortcut_set_name in SHORTCUTS_RESERVED_NAMES:
+                
+                reserved_names.append( shortcut_set_name )
+                
+            else:
+                
+                custom_names.append( shortcut_set_name )
+                
+            
+            self._shortcuts_names = reserved_names + custom_names
+            
+        
+    
+    def FlipShortcuts( self, shortcut_set_name ):
+        
+        if shortcut_set_name in self._shortcuts_names:
+            
+            self.RemoveShortcuts( shortcut_set_name )
+            
+        else:
+            
+            self.AddShortcuts( shortcut_set_name )
+            
+        
+    
+    def GetCustomShortcutNames( self ):
+        
+        custom_names = [ name for name in self._shortcuts_names if name not in SHORTCUTS_RESERVED_NAMES ]
+        
+        custom_names.sort()
+        
+        return custom_names
+        
+    
+    def GetShortcutNames( self ):
+        
+        return list( self._shortcuts_names )
+        
+    
+    def HasShortcuts( self, shortcut_set_name ):
+        
+        return shortcut_set_name in self._shortcuts_names
+        
+    
+    def ProcessShortcut( self, shortcut ):
+        
+        return self._ProcessShortcut( shortcut )
         
     
     def RemoveShortcuts( self, shortcut_set_name ):
@@ -850,6 +1170,10 @@ class ShortcutsManager( object ):
     
     def GetCommand( self, shortcuts_names, shortcut ):
         
+        # process more specific shortcuts with higher priority
+        shortcuts_names = list( shortcuts_names )
+        shortcuts_names.reverse()
+        
         for name in shortcuts_names:
             
             if name in self._shortcuts:
@@ -858,9 +1182,9 @@ class ShortcutsManager( object ):
                 
                 if command is not None:
                     
-                    if HG.gui_report_mode:
+                    if HG.shortcut_report_mode:
                         
-                        HydrusData.ShowText( 'command matched: ' + repr( command ) )
+                        HydrusData.ShowText( 'Shortcut "{}" matched on "{}" set to "{}" command.'.format( shortcut.ToString(), name, repr( command ) ) )
                         
                     
                     return command

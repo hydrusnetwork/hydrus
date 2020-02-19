@@ -83,6 +83,8 @@ python3-PyYAML python3-requests python3-Send2Trash
 python3-service_identity python3-Twisted
 ffmpeg-4
 python3-pyside2
+python3-QtPy
+python3-python-mpv
 You might need to install the shiboken2 module from pip since it looks like it is not currently packaged.
 Instead of PySide2 (python3-pyside2 and the shiboken2 module) you can also use PyQt5 (python3-sip, python3-qt5).
 

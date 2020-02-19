@@ -424,7 +424,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventFrameNewPage )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventFrameNewPage )
-        self._widget_event_filter.EVT_SET_FOCUS( self.EventFocus )
         self._widget_event_filter.EVT_ICONIZE( self.EventIconize )
         
         self._widget_event_filter.EVT_MOVE( self.EventMove )
@@ -3796,16 +3795,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         event.ignore()
         
     
-    def EventFocus( self, event ):
-        
-        page = self._notebook.GetCurrentMediaPage()
-        
-        if page is not None:
-            
-            page.SetMediaFocus()
-            
-        
-    
     def EventFrameNewPage( self, event ):
         
         screen_position = QG.QCursor.pos()
@@ -5885,8 +5874,6 @@ class FrameSplashPanel( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self.setForegroundRole( QG.QPalette.Text )
-        
         self._controller = controller
         
         self._my_status = FrameSplashStatus( self._controller, self )
@@ -5921,7 +5908,7 @@ class FrameSplashPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._image_label, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._image_label, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._title_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._status_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._status_sub_label, CC.FLAGS_EXPAND_PERPENDICULAR )
