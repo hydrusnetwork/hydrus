@@ -100,7 +100,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( info_panel )
         
-        columns = [ ( 'location', -1 ), ( 'portable?', 11 ), ( 'free space', 12 ), ( 'file weight', 10 ), ( 'current usage', 24 ), ( 'ideal usage', 24 ) ]
+        columns = [ ( 'location', -1 ), ( 'portable?', 11 ), ( 'free space', 12 ), ( 'current usage', 24 ), ( 'weight', 8 ), ( 'ideal usage', 24 ) ]
         
         self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, 'db_migration_locations', 8, 36, columns, self._ConvertLocationToListCtrlTuples )
         self._current_media_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
@@ -110,8 +110,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         current_media_locations_listctrl_panel.SetListCtrl( self._current_media_locations_listctrl )
         
         current_media_locations_listctrl_panel.AddButton( 'add new location for files', self._SelectPathToAdd )
-        current_media_locations_listctrl_panel.AddButton( 'increase file weight', self._IncreaseWeight, enabled_check_func = self._CanIncreaseWeight )
-        current_media_locations_listctrl_panel.AddButton( 'decrease file weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
+        current_media_locations_listctrl_panel.AddButton( 'increase location weight', self._IncreaseWeight, enabled_check_func = self._CanIncreaseWeight )
+        current_media_locations_listctrl_panel.AddButton( 'decrease location weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
+        current_media_locations_listctrl_panel.AddButton( 'remove location', self._RemoveSelectedPath, enabled_check_func = self._CanRemoveLocation )
         
         self._thumbnails_location = QW.QLineEdit( info_panel )
         self._thumbnails_location.setEnabled( False )
@@ -249,8 +250,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if location in self._locations_to_ideal_weights:
                 
-                selection_includes_ideal_locations = True
-                
                 ideal_weight = self._locations_to_ideal_weights[ location ]
                 
                 is_big = ideal_weight > 1
@@ -292,6 +291,30 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         return False
         
     
+    def _CanRemoveLocation( self ):
+        
+        ( locations_to_file_weights, locations_to_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
+        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        
+        if len( locations ) > 0:
+            
+            location = locations[0]
+            
+            if location in self._locations_to_ideal_weights:
+                
+                others_can_take_slack = len( self._locations_to_ideal_weights ) > 1
+                
+                if others_can_take_slack:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
     def _ClearThumbnailLocation( self ):
         
         self._ideal_thumbnails_location_override = None
@@ -314,6 +337,35 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         pretty_location = location
         
+        if os.path.exists( location ):
+            
+            pretty_location = location
+            
+            try:
+                
+                free_space = HydrusPaths.GetFreeSpace( location )
+                pretty_free_space = HydrusData.ToHumanBytes( free_space )
+                
+            except Exception as e:
+                
+                message = 'There was a problem finding the free space for "' + location + '"! Perhaps this location does not exist?'
+                
+                HydrusData.Print( message )
+                
+                HydrusData.PrintException( e )
+                
+                free_space = 0
+                pretty_free_space = 'problem finding free space'
+                
+            
+        else:
+            
+            pretty_location = 'DOES NOT EXIST: {}'.format( location )
+            
+            free_space = 0
+            pretty_free_space = 'DOES NOT EXIST'
+            
+        
         portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
         portable = not os.path.isabs( portable_location )
         
@@ -324,24 +376,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         else:
             
             pretty_portable = 'no'
-            
-        
-        try:
-            
-            free_space = HydrusPaths.GetFreeSpace( location )
-            pretty_free_space = HydrusData.ToHumanBytes( free_space )
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            message = 'There was a problem finding the free space for "' + location + '"! Perhaps this location does not exist?'
-            
-            QW.QMessageBox.warning( self, 'Warning', message )
-            HydrusData.ShowText( message )
-            
-            free_space = 0
-            pretty_free_space = 'problem finding free space'
             
         
         fp = locations_to_file_weights[ location ] / 256.0
@@ -381,6 +415,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
+        total_ideal_weight = sum( self._locations_to_ideal_weights.values() )
+        
         if location in self._locations_to_ideal_weights:
             
             ideal_weight = self._locations_to_ideal_weights[ location ]
@@ -402,8 +438,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         if location in self._locations_to_ideal_weights:
-            
-            total_ideal_weight = sum( self._locations_to_ideal_weights.values() )
             
             ideal_fp = self._locations_to_ideal_weights[ location ] / total_ideal_weight
             
@@ -458,8 +492,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_ideal_usage = 'nothing'
             
         
-        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_ideal_weight, pretty_current_usage, pretty_ideal_usage )
-        sort_tuple = ( location, portable, free_space, ideal_weight, current_usage, ideal_usage )
+        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_current_usage, pretty_ideal_weight, pretty_ideal_usage )
+        sort_tuple = ( location, portable, free_space, current_usage, ideal_weight, ideal_usage )
         
         return ( display_tuple, sort_tuple )
         
@@ -623,6 +657,19 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Rebalance( self ):
         
+        for location in self._GetListCtrlLocations():
+            
+            if not os.path.exists( location ):
+                
+                message = 'The path "{}" does not exist! Please ensure all the locations on this dialog are valid before trying to rebalance your files.'.format( location )
+                
+                QW.QMessageBox.critical( self, 'Error', message )
+                
+                return
+                
+            
+        
+        
         message = 'Moving files can be a slow and slightly laggy process, with the UI intermittently hanging, which sometimes makes manually stopping a large ongoing job difficult. Would you like to set a max runtime on this job?'
         
         yes_tuples = []
@@ -689,13 +736,27 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             QW.QMessageBox.warning( self, 'Warning', 'You cannot empty every single current file location--please add a new place for the files to be moved to and then try again.' )
             
         
-        if location in locations_to_file_weights:
+        if os.path.exists( location ):
             
-            message = 'Are you sure you want to remove this location? This will schedule all of the files it is currently responsible for to be moved elsewhere.'
+            if location in locations_to_file_weights:
+                
+                message = 'Are you sure you want to remove this location? This will schedule all of the files it is currently responsible for to be moved elsewhere.'
+                
+            else:
+                
+                message = 'Are you sure you want to remove this location?'
+                
             
         else:
             
-            message = 'Are you sure you want to remove this location? The files it would be responsible for will be shared amongst the other file locations.'
+            if location in locations_to_file_weights:
+                
+                message = 'This path does not exist, but it seems to have files. This could be a critical error that has occurred while the client is open (maybe a drive unmounting?). I recommend you do not remove it here and instead shut the client down immediately and fix the problem, then restart it, which will run the \'recover missing file locations\' routine if needed.'
+                
+            else:
+                
+                message = 'This path does not exist. Just checking, but I recommend you remove it.'
+                
             
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -707,6 +768,18 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
             
             self._Update()
+            
+        
+    
+    def _RemoveSelectedPath( self ):
+        
+        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        
+        if len( locations ) > 0:
+            
+            location = locations[0]
+            
+            self._RemovePath( location )
             
         
     
@@ -797,18 +870,18 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._rebalance_button.setEnabled( True )
             
-            QP.SetForegroundColour( self._rebalance_status_st, (128,0,0) )
-            
             self._rebalance_status_st.setText( 'files need to be moved' )
+            self._rebalance_status_st.setObjectName( 'HydrusInvalid' )
             
         else:
             
             self._rebalance_button.setEnabled( False )
             
-            QP.SetForegroundColour( self._rebalance_status_st, (0,128,0) )
-            
             self._rebalance_status_st.setText( 'all files are in their ideal locations' )
+            self._rebalance_status_st.setObjectName( 'HydrusValid' )
             
+        
+        self._rebalance_status_st.style().polish( self._rebalance_status_st )
         
     
 def THREADMigrateDatabase( controller, source, portable_locations, dest ):
@@ -2925,17 +2998,16 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self )
         self._delete_after_success_st.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
-        
-        QP.SetForegroundColour( self._delete_after_success_st, (127,0,0) )
+        self._delete_after_success_st.setObjectName( 'HydrusWarning' )
         
         self._delete_after_success = QW.QCheckBox( 'delete original files after successful import', self )
         self._delete_after_success.clicked.connect( self.EventDeleteAfterSuccessCheck )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'import now', self._DoImport )
-        QP.SetForegroundColour( self._add_button, (0,128,0) )
+        self._add_button.setObjectName( 'HydrusAccept' )
         
         self._tag_button = ClientGUICommon.BetterButton( self, 'import with tags', self._AddTags )
-        QP.SetForegroundColour( self._tag_button, (0,128,0) )
+        self._tag_button.setObjectName( 'HydrusAccept' )
         
         gauge_sizer = QP.HBoxLayout()
         

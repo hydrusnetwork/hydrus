@@ -25,37 +25,54 @@ def GetDisplaySize( window ):
     
     return QW.QApplication.desktop().availableGeometry( window ).size()
     
-def GetSafePosition( position ):
-    
-    ( p_x, p_y ) = position
+def GetSafePosition( position: QC.QPoint ):
     
     # some window managers size the windows just off screen to cut off borders
     # so choose a test position that's a little more lenient
-    ( test_x, test_y ) = ( p_x + FUZZY_PADDING, p_y + FUZZY_PADDING )
     
-    screen = QW.QApplication.screenAt( QC.QPoint( test_x, test_y ) )
+    fuzzy_point = QC.QPoint( FUZZY_PADDING, FUZZY_PADDING )
     
-    if screen:
+    test_position = position + fuzzy_point
     
-        display_index = QW.QApplication.screens().index( screen )
+    screen = QW.QApplication.screenAt( test_position )
+    
+    if screen is None:
+        
+        try:
+            
+            first_display = QW.QApplication.screens()[0]
+            
+            rescue_position = first_display.availableGeometry().topLeft() + fuzzy_point
+            
+            rescue_screen = QW.QApplication.screenAt( rescue_position )
+            
+            if rescue_screen == first_display:
+                
+                message = 'A window that wanted to display at "{}" was rescued from apparent off-screen to the new location at "{}".'.format( position, rescue_position )
+                
+                return ( rescue_position, message )
+                
+            
+        except Exception as e:
+            
+            # user is using IceMongo Linux, a Free Libre Open Source derivation of WeasleBlue Linux, with the iJ4 5-D inverted Window Managing system, which has a holographically virtualised desktop system
+            
+            HydrusData.PrintException( e )
+            
+        
+        message = 'A window that wanted to display at "{}" could not be rescued from off-screen! Please let hydrus dev know!'
+        
+        return ( None, message )
         
     else:
         
-        display_index = None
+        return ( position, None )
         
     
-    if display_index is None:
-        
-        return ( -1, -1 )
-        
-    else:
-        
-        return position
-        
+def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
     
-def GetSafeSize( tlw, min_size, gravity ):
-    
-    ( min_width, min_height ) = min_size
+    min_width = min_size.width()
+    min_height = min_size.height()
     
     frame_padding = tlw.frameGeometry().size() - tlw.size()
     
@@ -128,9 +145,9 @@ def GetSafeSize( tlw, min_size, gravity ):
     width = min( display_available_size.width() - 2 * CHILD_POSITION_PADDING, width )
     height = min( display_available_size.height() - 2 * CHILD_POSITION_PADDING, height )
     
-    return ( width, height )
+    return QC.QSize( width, height )
     
-def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
+def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSize ):
     
     new_options = HG.client_controller.new_options
     
@@ -138,9 +155,13 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
     
     if not tlw.isMaximized() and not tlw.isFullScreen():
         
-        ( current_width, current_height ) = tlw.size().toTuple()
+        current_size = tlw.size()
         
-        ( desired_delta_width, desired_delta_height ) = desired_size_delta
+        current_width = current_size.width()
+        current_height = current_size.height()
+        
+        desired_delta_width = desired_size_delta.width()
+        desired_delta_height = desired_size_delta.height()
         
         desired_width = current_width
         
@@ -156,19 +177,23 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
             desired_height = current_height + desired_delta_height + FUZZY_PADDING
             
         
-        ( width, height ) = GetSafeSize( tlw, ( desired_width, desired_height ), default_gravity )
+        desired_size = QC.QSize( desired_width, desired_height )
         
-        if width > current_width or height > current_height:
+        new_size = GetSafeSize( tlw, desired_size, default_gravity )
+        
+        if new_size.width() > current_width or new_size.height() > current_height:
             
-            size = QC.QSize( width, height )
-            
-            tlw.resize( size )
+            tlw.resize( new_size )
             
             #tlw.setMinimumSize( tlw.sizeHint() )
             
             SlideOffScreenTLWUpAndLeft( tlw )
             
         
+    
+def GetMouseScreen():
+    
+    return QW.QApplication.screenAt( QG.QCursor.pos() )
     
 def MouseIsOnMyDisplay( window ):
     
@@ -181,11 +206,11 @@ def MouseIsOnMyDisplay( window ):
     
     window_screen = window_handle.screen()
     
-    mouse_screen = QW.QApplication.screenAt( QG.QCursor.pos() )
+    mouse_screen = GetMouseScreen()
     
     return mouse_screen is window_screen
     
-def SaveTLWSizeAndPosition( tlw, frame_key ):
+def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     if tlw.isMinimized():
         
@@ -201,18 +226,18 @@ def SaveTLWSizeAndPosition( tlw, frame_key ):
     
     if not ( maximised or fullscreen ):
         
-        safe_position = GetSafePosition( ( tlw.x(), tlw.y() ) )
+        ( safe_position, position_message ) = GetSafePosition( tlw.pos() )
         
-        if safe_position != ( -1, -1 ):
+        if safe_position is not None:
             
-            last_size = tlw.size().toTuple()
-            last_position = safe_position
+            last_size = ( tlw.size().width(), tlw.size().height() )
+            last_position = ( safe_position.x(), safe_position.y() )
             
         
     
     new_options.SetFrameLocation( frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
     
-def SetInitialTLWSizeAndPosition( tlw, frame_key ):
+def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     new_options = HG.client_controller.new_options
     
@@ -220,72 +245,104 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
     
     parent = tlw.parentWidget()
     
+    if parent is None:
+        
+        parent_window = None
+        
+    else:
+        
+        parent_window = parent.window()
+        
+    
     if remember_size and last_size is not None:
         
         ( width, height ) = last_size
         
-        tlw.resize( QC.QSize( width, height ) )
+        new_size = QC.QSize( width, height )
         
     else:
         
-        ( min_width, min_height ) = tlw.sizeHint().toTuple()
-        
-        ( width, height ) = GetSafeSize( tlw, ( min_width, min_height ), default_gravity )
+        new_size = GetSafeSize( tlw, tlw.sizeHint(), default_gravity )
         
     
-    tlw.resize( QC.QSize( width, height ) )
+    tlw.resize( new_size )
     
-    min_width = min( 240, width )
-    min_height = min( 240, height )
+    min_width = min( 240, new_size.width() )
+    min_height = min( 240, new_size.height() )
     
-    tlw.setMinimumSize( QP.TupleToQSize( ( min_width, min_height ) ) )
+    tlw.setMinimumSize( QC.QSize( min_width, min_height ) )
     
     #
     
+    child_position_point = QC.QPoint( CHILD_POSITION_PADDING, CHILD_POSITION_PADDING )
+    
+    desired_position = child_position_point
+    
+    we_care_about_off_screen_messages = True
+    slide_up_and_left = False
+    
     if remember_position and last_position is not None:
         
-        safe_position = GetSafePosition( last_position )
+        ( x, y ) = last_position
         
-        if safe_position != QC.QPoint( -1, -1 ):
-            
-            tlw.move( QP.TupleToQPoint( safe_position ) )
-            
+        desired_position = QC.QPoint( x, y )
         
     elif default_position == 'topleft':
         
-        if parent is not None:
+        if parent_window is None:
             
-            if isinstance( parent, QW.QWidget ):
-                
-                parent_tlw = parent.window()
-                
-            else:
-                
-                parent_tlw = parent
-                
+            we_care_about_off_screen_messages = False
             
-            ( parent_x, parent_y ) = parent_tlw.pos().toTuple()
+            screen = GetMouseScreen()
             
-            tlw.move( QP.TupleToQPoint( ( parent_x + CHILD_POSITION_PADDING, parent_y + CHILD_POSITION_PADDING ) ) )
+            if screen is not None:
+                
+                desired_position = screen.availableGeometry().topLeft() + QC.QPoint( CHILD_POSITION_PADDING, CHILD_POSITION_PADDING )
+                
             
         else:
             
-            safe_position = GetSafePosition( ( 0 + CHILD_POSITION_PADDING, 0 + CHILD_POSITION_PADDING ) )
+            parent_tlw = parent_window.window()
             
-            if safe_position != QC.QPoint( -1, -1 ):
-                
-                tlw.move( QP.TupleToQPoint( safe_position ) )
-                
+            desired_position = parent_tlw.pos() + QC.QPoint( CHILD_POSITION_PADDING, CHILD_POSITION_PADDING )
             
         
-        SlideOffScreenTLWUpAndLeft( tlw )
+        slide_up_and_left = True
         
     elif default_position == 'center':
         
-        if parent is not None:
+        if parent_window is None:
             
-            QP.CenterOnWindow( parent, tlw )
+            we_care_about_off_screen_messages = False
             
+            screen = GetMouseScreen()
+            
+            if screen is not None:
+                
+                desired_position = screen.availableGeometry().center()
+                
+            
+        else:
+            
+            desired_position = parent_window.frameGeometry().center() - tlw.rect().center()
+            
+        
+    
+    ( safe_position, position_message ) = GetSafePosition( desired_position )
+    
+    if we_care_about_off_screen_messages and position_message is not None:
+        
+        HydrusData.ShowText( position_message )
+        
+    
+    if safe_position is not None:
+        
+        tlw.move( safe_position )
+        
+    
+    if slide_up_and_left:
+        
+        SlideOffScreenTLWUpAndLeft( tlw )
         
     
     # Comment from before the Qt port: if these aren't callafter, the size and pos calls don't stick if a restore event happens
@@ -692,11 +749,11 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
     def _InitialiseButtons( self ):
         
         self._apply = QW.QPushButton( 'apply', self )
-        QP.SetForegroundColour( self._apply, (0,128,0) )
+        self._apply.setObjectName( 'HydrusAccept' )
         self._apply.clicked.connect( self.EventDialogButtonApply )
         
         self._cancel = QW.QPushButton( 'cancel', self )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         self._cancel.clicked.connect( self.EventDialogButtonCancel )
         
         if self._hide_buttons:

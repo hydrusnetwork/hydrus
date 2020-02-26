@@ -274,7 +274,7 @@ class FileDropTarget( QC.QObject ):
     
     def OnDrop( self, x, y ):
         
-        screen_position = ClientGUIFunctions.ClientToScreen( self._parent, ( x, y ) )
+        screen_position = ClientGUIFunctions.ClientToScreen( self._parent, QC.QPoint( x, y ) )
         
         drop_tlw = QW.QApplication.topLevelAt( screen_position )
         my_tlw = self._parent.window()

@@ -216,6 +216,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'preview_audio_mute' ] = False
         self._dictionary[ 'booleans' ][ 'preview_uses_its_own_audio_volume' ] = True
         
+        self._dictionary[ 'booleans' ][ 'always_loop_gifs' ] = True
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -381,6 +383,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'subscription_file_error_cancel_threshold' ] = 5
         
+        self._dictionary[ 'noneable_integers' ][ 'media_viewer_cursor_autohide_time_ms' ] = 700
+        
         #
         
         self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList()
@@ -413,6 +417,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'safebooru tag search'
         self._dictionary[ 'strings' ][ 'has_audio_label' ] = '\U0001F50A'
         self._dictionary[ 'strings' ][ 'has_duration_label' ] = ' \u23F5 '
+        self._dictionary[ 'strings' ][ 'mpv_conf_path_portable' ] = HydrusPaths.ConvertAbsPathToPortablePath( os.path.join( HC.STATIC_DIR, 'mpv-conf', 'default_mpv.conf' ) )
         
         self._dictionary[ 'string_list' ] = {}
         
@@ -1077,7 +1082,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             if isinstance( colour, QG.QColor ):
                 
-                ( r, g, b, a ) = colour.toTuple()
+                c = colour
+                
+                ( r, g, b ) = ( c.red(), c.green(), c.blue() )
                 
             else:
                 

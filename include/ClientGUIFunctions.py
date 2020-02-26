@@ -279,9 +279,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
     return True
     
-def ClientToScreen( win, pos ):
-    
-    if isinstance( pos, tuple ): pos = QP.TupleToQPoint( pos )
+def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
     
     tlw = win.window()
     
@@ -306,6 +304,20 @@ def ConvertTextToPixels( window, char_dimensions ):
 def ConvertTextToPixelWidth( window, char_cols ):
     
     return int( window.fontMetrics().boundingRect( char_cols * 'x' ).width() * MAGIC_TEXT_PADDING )
+    
+def DialogIsOpen():
+    
+    tlws = QW.QApplication.topLevelWidgets()
+    
+    for tlw in tlws:
+        
+        if isinstance( tlw, QP.Dialog ) and tlw.isModal():
+            
+            return True
+            
+        
+    
+    return False
     
 def GetTLWParents( widget ):
     

@@ -1190,10 +1190,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 return self
                 
             
-            ( x, y ) = screen_position.toTuple()
-            ( child_x, child_y ) = current_page.pos().toTuple()
-            
-            on_child_notebook_somewhere = y > child_y
+            on_child_notebook_somewhere = screen_position.y() > current_page.pos().y()
             
             if on_child_notebook_somewhere:
                 

@@ -138,9 +138,10 @@ def AddAudioVolumeMenu( menu, canvas_type ):
     
     ClientGUIMenus.AppendMenu( menu, volume_menu, 'volume' )
     
-def CalculateCanvasMediaSize( media, canvas_size, show_action ):
+def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
     
-    ( canvas_width, canvas_height ) = canvas_size.toTuple()
+    canvas_width = canvas_size.width()
+    canvas_height = canvas_size.height()
     
     if ShouldHaveAnimationBar( media, show_action ):
         
@@ -290,7 +291,7 @@ def CalculateMediaContainerSize( media, zoom, show_action ):
             height = height + thumb_height
             
         
-        return ( width, height )
+        return QC.QSize( width, height )
         
     else:
         
@@ -303,7 +304,7 @@ def CalculateMediaContainerSize( media, zoom, show_action ):
             media_height += animated_scanbar_height
             
         
-        return ( media_width, media_height )
+        return QC.QSize( media_width, media_height )
         
     
 def CalculateMediaSize( media, zoom ):
@@ -369,11 +370,11 @@ class Animation( QW.QWidget ):
         self._left_down_event = None
         
         self._something_valid_has_been_drawn = False
-        self._has_played_once_through = False
+        self._playthrough_count = 0
         
         self._num_frames = 1
         
-        self._looping = True
+        self._stop_for_slideshow = False
         
         self._current_frame_index = 0
         self._current_frame_drawn = False
@@ -411,7 +412,12 @@ class Animation( QW.QWidget ):
         
         if self._video_container is None:
             
-            self._video_container = ClientRendering.RasterContainerVideo( self._media, self.size().toTuple(), init_position = self._current_frame_index )
+            size = self.size()
+            
+            width = size.width()
+            height = size.height()
+            
+            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( width, height ), init_position = self._current_frame_index )
             
         
         if not self._video_container.HasFrame( self._current_frame_index ):
@@ -520,7 +526,7 @@ class Animation( QW.QWidget ):
     
     def HasPlayedOnceThrough( self ):
         
-        return self._has_played_once_through
+        return self._playthrough_count > 0
         
     
     def IsPlaying( self ):
@@ -613,7 +619,10 @@ class Animation( QW.QWidget ):
     
     def resizeEvent( self, event ):
         
-        ( my_width, my_height ) = self.size().toTuple()
+        size = self.size()
+        
+        my_width = size.width()
+        my_height = size.height()
         
         if my_width > 0 and my_height > 0:
             
@@ -664,12 +673,17 @@ class Animation( QW.QWidget ):
             
         
     
-    def SetLooping( self, value ):
+    def StopForSlideshow( self, value ):
         
-        self._looping = value
+        self._stop_for_slideshow = value
         
     
     def SetMedia( self, media, start_paused = False ):
+        
+        if media == self._media:
+            
+            return
+            
         
         self._media = media
         
@@ -678,7 +692,9 @@ class Animation( QW.QWidget ):
         self._ClearCanvasBitmap()
         
         self._something_valid_has_been_drawn = False
-        self._has_played_once_through = False
+        self._playthrough_count = 0
+        
+        self._stop_for_slideshow = False
         
         if self._media is not None:
             
@@ -742,16 +758,29 @@ class Animation( QW.QWidget ):
                         
                         if next_frame_index == 0:
                             
-                            self._has_played_once_through = True
+                            self._playthrough_count += 1
                             
-                            if self._looping:
+                            do_times_to_play_gif_pause = False
+                            
+                            if self._media.GetMime() == HC.IMAGE_GIF and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                                 
-                                self._current_frame_index = next_frame_index
-                                self._current_timestamp_ms = 0
+                                times_to_play_gif = self._video_container.GetTimesToPlayGIF()
+                                
+                                # 0 is infinite
+                                if times_to_play_gif != 0 and self._playthrough_count >= times_to_play_gif:
+                                    
+                                    do_times_to_play_gif_pause = True
+                                    
+                                
+                            
+                            if self._stop_for_slideshow or do_times_to_play_gif_pause:
+                                
+                                self._paused = True
                                 
                             else:
                                 
-                                self._paused = True
+                                self._current_frame_index = next_frame_index
+                                self._current_timestamp_ms = 0
                                 
                             
                         else:
@@ -832,14 +861,14 @@ class AnimationBar( QW.QWidget ):
             return 0
             
         
-        ( my_width, my_height ) = self.size().toTuple()
+        my_width = self.size().width()
         
         return int( ( my_width - width_offset ) * index / ( self._num_frames - 1 ) )
         
     
     def _GetXFromTimestamp( self, timestamp_ms, width_offset = 0 ):
         
-        ( my_width, my_height ) = self.size().toTuple()
+        my_width = self.size().width()
         
         return int( ( my_width - width_offset ) * timestamp_ms / self._duration_ms )
         
@@ -850,7 +879,7 @@ class AnimationBar( QW.QWidget ):
         
         ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._last_drawn_info
         
-        ( my_width, my_height ) = self.size().toTuple()
+        my_width = self.size().width()
         
         painter.setPen( QC.Qt.NoPen )
         
@@ -961,9 +990,9 @@ class AnimationBar( QW.QWidget ):
         
         if len( s ) > 0:
             
-            ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, s ).toTuple()
+            text_width = painter.fontMetrics().size( QC.Qt.TextSingleLine, s ).width()
             
-            QP.DrawText( painter, my_width-x-3, 3, s )
+            QP.DrawText( painter, my_width - text_width - 3, 3, s )
             
         
     
@@ -999,7 +1028,7 @@ class AnimationBar( QW.QWidget ):
                 return
                 
             
-            ( my_width, my_height ) = self.size().toTuple()
+            my_width = self.size().width()
             
             if event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton:
                 
@@ -1560,9 +1589,9 @@ class Canvas( QW.QWidget ):
             return
             
         
-        ( my_width, my_height ) = self.size().toTuple()
+        size = self.size()
         
-        if my_width > 0 and my_height > 0:
+        if size.width() > 0 and size.height() > 0:
             
             self._SizeAndPositionMediaContainer()
             
@@ -1609,13 +1638,9 @@ class Canvas( QW.QWidget ):
     
     def _GetMediaContainerSize( self ):
         
-        ( my_width, my_height ) = self.size().toTuple()
-        
         ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
         
-        ( media_width, media_height ) = CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
-        
-        new_size = ( media_width, media_height )
+        new_size = CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
         
         return new_size
         
@@ -1945,10 +1970,10 @@ class Canvas( QW.QWidget ):
         
         ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
         
-        ( media_width, media_height ) = CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
+        media_size = CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
         
-        x = ( my_size.width() - media_width ) // 2
-        y = ( my_size.height() - media_height ) // 2
+        x = ( my_size.width() - media_size.width() ) // 2
+        y = ( my_size.height() - media_size.height() ) // 2
         
         self._media_window_pos = QC.QPoint( x, y )
         
@@ -2012,9 +2037,9 @@ class Canvas( QW.QWidget ):
         
         new_size = self._GetMediaContainerSize()
         
-        if new_size != self._media_container.size().toTuple():
+        if new_size != self._media_container.size():
             
-            self._media_container.setFixedSize( QP.TupleToQSize( new_size ) )
+            self._media_container.setFixedSize( new_size )
             
         
         if self._media_window_pos == self._media_container.pos():
@@ -2037,9 +2062,15 @@ class Canvas( QW.QWidget ):
             return
             
         
-        ( media_window_width, media_window_height ) = self._media_container.size().toTuple()
+        media_window_size = self._media_container.size()
         
-        ( new_media_window_width, new_media_window_height ) = CalculateMediaContainerSize( self._current_media, new_zoom, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV )
+        media_window_width = media_window_size.width()
+        media_window_height = media_window_size.height()
+        
+        new_media_window_size = CalculateMediaContainerSize( self._current_media, new_zoom, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV )
+        
+        new_media_window_width = new_media_window_size.width()
+        new_media_window_height = new_media_window_size.height()
         
         my_size = self.size()
         
@@ -2205,10 +2236,6 @@ class Canvas( QW.QWidget ):
                 return
                 
             
-            ( my_width, my_height ) = self.size().toTuple()
-            
-            ( media_width, media_height ) = self._current_media.GetResolution()
-            
             if self._current_zoom == 1.0:
                 
                 new_zoom = self._canvas_zoom
@@ -2257,13 +2284,13 @@ class Canvas( QW.QWidget ):
     
     def resizeEvent( self, event ):
         
-        ( my_width, my_height ) = self.size().toTuple()
+        my_size = self.size()
         
         if self._current_media is not None:
             
-            ( media_width, media_height ) = self._media_container.size().toTuple()
+            media_container_size = self._media_container.size()
             
-            if my_width != media_width or my_height != media_height:
+            if my_size != media_container_size:
                 
                 self._ReinitZoom()
                 
@@ -2542,15 +2569,11 @@ class Canvas( QW.QWidget ):
                 
                 initial_size = self._GetMediaContainerSize()
                 
-                ( initial_width, initial_height ) = initial_size
-                
-                if self._current_media.GetLocationsManager().IsLocal() and initial_width > 0 and initial_height > 0:
+                if self._current_media.GetLocationsManager().IsLocal() and initial_size.width() > 0 and initial_size.height() > 0:
                     
                     ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
                     
-                    pos = ( self._media_window_pos.x(), self._media_window_pos.y() )
-                    
-                    self._media_container.SetMedia( self._current_media, initial_size, pos, media_show_action, media_start_paused, media_start_with_embed )
+                    self._media_container.SetMedia( self._current_media, initial_size, self._media_window_pos, media_show_action, media_start_paused, media_start_with_embed )
                     
                     self._PrefetchNeighbours()
                     
@@ -2825,22 +2848,23 @@ class CanvasWithDetails( Canvas ):
     
     def _DrawBackgroundDetails( self, painter ):
         
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
         if self._current_media is None:
             
             text = self._GetNoMediaText()
             
-            ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
+            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
             
-            ( my_width, my_height ) = self.size().toTuple()
-            
-            x = ( my_width - width ) // 2
-            y = ( my_height - height ) // 2
+            x = ( my_width - text_size.width() ) // 2
+            y = ( my_height - text_size.height() ) // 2
             
             QP.DrawText( painter, x, y, text )
             
         else:
-            
-            ( client_width, client_height ) = self.size().toTuple()
             
             # tags on the top left
             
@@ -2893,11 +2917,12 @@ class CanvasWithDetails( Canvas ):
                 
                 painter.setPen( QG.QPen( QG.QColor( r, g, b ) ) )
                 
-                ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string ).toTuple()
+                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string )
                 
                 QP.DrawText( painter, 5, current_y, display_string )
                 
-                current_y += y
+                current_y += text_size.height()
+                
             
             # top right
             
@@ -2911,7 +2936,7 @@ class CanvasWithDetails( Canvas ):
             
             like_services.reverse()
             
-            like_rating_current_x = client_width - 16 - 2 # -2 to line up exactly with the floating panel
+            like_rating_current_x = my_width - 16 - 2 # -2 to line up exactly with the floating panel
             
             for like_service in like_services:
                 
@@ -2939,7 +2964,7 @@ class CanvasWithDetails( Canvas ):
                 
                 numerical_width = ClientRatings.GetNumericalWidth( service_key )
                 
-                ClientRatings.DrawNumerical( painter, client_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
+                ClientRatings.DrawNumerical( painter, my_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
                 
                 current_y += 20
                 
@@ -2964,7 +2989,7 @@ class CanvasWithDetails( Canvas ):
                 
                 for icon in icons_to_show:
                     
-                    painter.drawPixmap( client_width+icon_x-18, current_y, icon )
+                    painter.drawPixmap( my_width + icon_x - 18, current_y, icon )
                     
                     icon_x -= 18
                     
@@ -2979,11 +3004,11 @@ class CanvasWithDetails( Canvas ):
             
             for remote_string in remote_strings:
                 
-                ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, remote_string ).toTuple()
+                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, remote_string )
                 
-                QP.DrawText( painter, client_width-text_width-3, current_y, remote_string )
+                QP.DrawText( painter, my_width - text_size.width() - 3, current_y, remote_string )
                 
-                current_y += text_height + 4
+                current_y += text_size.height() + 4
                 
             
             # urls
@@ -2994,11 +3019,11 @@ class CanvasWithDetails( Canvas ):
             
             for ( display_string, url ) in url_tuples:
                 
-                ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string ).toTuple()
+                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string )
                 
-                QP.DrawText( painter, client_width-text_width-3, current_y, display_string )
+                QP.DrawText( painter, my_width - text_size.width() - 3, current_y, display_string )
                 
-                current_y += text_height + 4
+                current_y += text_size.height() + 4
                 
             
             # top-middle
@@ -3009,20 +3034,20 @@ class CanvasWithDetails( Canvas ):
             
             if len( title_string ) > 0:
                 
-                ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, title_string ).toTuple()
+                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, title_string )
                 
-                QP.DrawText( painter, (client_width-x)//2, current_y, title_string )
+                QP.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, title_string )
                 
-                current_y += y + 3
+                current_y += text_size.height() + 3
                 
             
             info_string = self._GetInfoString()
             
-            ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, info_string ).toTuple()
+            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, info_string )
             
-            QP.DrawText( painter, (client_width-x)//2, current_y, info_string )
+            QP.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, info_string )
             
-            current_y += y + 3
+            current_y += text_size.height() + 3
             
             self._DrawAdditionalTopMiddleInfo( painter, current_y )
             
@@ -3032,9 +3057,9 @@ class CanvasWithDetails( Canvas ):
             
             if len( index_string ) > 0:
                 
-                ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, index_string ).toTuple()
+                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, index_string )
                 
-                QP.DrawText( painter, client_width-x-3, client_height-y-3, index_string )
+                QP.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, index_string )
                 
             
         
@@ -3080,6 +3105,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         #
         
         self._timer_cursor_hide_job = None
+        self._last_cursor_autohide_touch_time = HydrusData.GetNowFloat()
         
         self._widget_event_filter.EVT_MOTION( self.EventMouseMove )
         
@@ -3195,7 +3221,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
             
-            self._PutOffCursorHide()
+            self._InitiateCursorHideWait()
             
         else:
             
@@ -3251,31 +3277,68 @@ class CanvasWithHovers( CanvasWithDetails ):
         return command_processed
         
     
-    def _PutOffCursorHide( self ):
+    def _HideCursorCheck( self ):
         
-        if self._timer_cursor_hide_job is not None:
-            
-            self._timer_cursor_hide_job.Cancel()
-            
+        hide_time_ms = HG.client_controller.new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' )
         
-        self._timer_cursor_hide_job = HG.client_controller.CallLaterQtSafe( self, 0.8, self._HideCursor )
-        
-    
-    def _HideCursor( self ):
-        
-        if not CC.CAN_HIDE_MOUSE:
+        if hide_time_ms is None:
             
             return
             
         
+        hide_time = hide_time_ms / 1000
+        
+        can_hide = HydrusData.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
+        
+        can_check_again = self.underMouse()
+        
+        if not CC.CAN_HIDE_MOUSE:
+            
+            can_hide = False
+            
+        
         if HG.client_controller.MenuIsOpen():
             
-            self._PutOffCursorHide()
+            can_hide = False
             
-        else:
+        
+        if ClientGUIFunctions.DialogIsOpen():
+            
+            can_hide = False
+            
+            can_check_again = False
+            
+        
+        if can_hide:
             
             self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
             
+        elif can_check_again:
+            
+            self._RestartCursorHideCheckJob()
+            
+        
+    
+    def _InitiateCursorHideWait( self ):
+        
+        self._last_cursor_autohide_touch_time = HydrusData.GetNowFloat()
+        
+        self._RestartCursorHideCheckJob()
+        
+    
+    def _RestartCursorHideCheckJob( self ):
+        
+        if self._timer_cursor_hide_job is not None:
+            
+            timer_is_running_or_finished = self._timer_cursor_hide_job.CurrentlyWorking() or self._timer_cursor_hide_job.IsWorkComplete()
+            
+            if not timer_is_running_or_finished:
+                
+                return
+                
+            
+        
+        self._timer_cursor_hide_job = HG.client_controller.CallLaterQtSafe( self, 0.1, self._HideCursorCheck )
         
     
     def TryToDoPreClose( self ):
@@ -3551,12 +3614,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             text = 'Loading pairs\u2026'
             
-            ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
+            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
             
-            ( my_width, my_height ) = self.size().toTuple()
+            my_size = self.size()
             
-            x = ( my_width - width ) // 2
-            y = ( my_height - height ) // 2
+            x = ( my_size.width() - text_size.width() ) // 2
+            y = ( my_size.height() - text_size.height() ) // 2
             
             QP.DrawText( painter, x, y, text )
             
@@ -4406,7 +4469,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     def KeepCursorAlive( self ):
         
-        self._PutOffCursorHide()
+        self._InitiateCursorHideWait()
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -5455,6 +5518,11 @@ class MediaContainer( QW.QWidget ):
             HydrusData.ShowText( 'MPV is not available!' )
             
         
+        if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and self._media.GetMime() == HC.IMAGE_GIF and not self._media.HasDuration():
+            
+            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
+            
+        
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
             raise Exception( 'This media should not be shown in the media viewer!' )
@@ -5551,12 +5619,15 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            ( my_width, my_height ) = self.size().toTuple()
+            my_size = self.size()
+            
+            my_width = my_size.width()
+            my_height = my_size.height()
             
             if self._media_window is None:
                 
-                self._embed_button.setFixedSize( QP.TupleToQSize( ( my_width, my_height ) ) )
-                self._embed_button.move( QP.TupleToQPoint( ( 0, 0 ) ) )
+                self._embed_button.setFixedSize( QC.QSize( my_width, my_height ) )
+                self._embed_button.move( QC.QPoint( 0, 0 ) )
                 
             else:
                 
@@ -5579,18 +5650,18 @@ class MediaContainer( QW.QWidget ):
                         volume_width = 0
                         
                     
-                    self._animation_bar.setFixedSize( QP.TupleToQSize( ( my_width - volume_width, animated_scanbar_height ) ) )
-                    self._animation_bar.move( QP.TupleToQPoint( ( 0, my_height - animated_scanbar_height ) ) )
+                    self._animation_bar.setFixedSize( QC.QSize( my_width - volume_width, animated_scanbar_height ) )
+                    self._animation_bar.move( QC.QPoint( 0, my_height - animated_scanbar_height ) )
                     
                     if self._volume_control.isVisibleTo( self ):
                         
-                        self._volume_control.setFixedSize( QP.TupleToQSize( ( volume_width, animated_scanbar_height ) ) )
-                        self._volume_control.move( QP.TupleToQPoint( ( self._animation_bar.width(), my_height - animated_scanbar_height ) ) )
+                        self._volume_control.setFixedSize( QC.QSize( volume_width, animated_scanbar_height ) )
+                        self._volume_control.move( QC.QPoint( self._animation_bar.width(), my_height - animated_scanbar_height ) )
                         
                     
                 
-                self._media_window.setFixedSize( QP.TupleToQSize( ( media_width, media_height ) ) )
-                self._media_window.move( QP.TupleToQPoint( ( 0, 0 ) ) )
+                self._media_window.setFixedSize( QC.QSize( media_width, media_height ) )
+                self._media_window.move( QC.QPoint( 0, 0 ) )
                 
             
         
@@ -5801,7 +5872,7 @@ class MediaContainer( QW.QWidget ):
         self._embed_button.show()
         
     
-    def SetMedia( self, media, initial_size, initial_position, show_action, start_paused, start_with_embed ):
+    def SetMedia( self, media: ClientMedia.MediaSingleton, initial_size, initial_position, show_action, start_paused, start_with_embed ):
         
         self._media = media
         
@@ -5820,8 +5891,8 @@ class MediaContainer( QW.QWidget ):
             self._MakeMediaWindow()
             
         
-        self.setFixedSize( QP.TupleToQSize( initial_size ) )
-        self.move( QP.TupleToQPoint( initial_position ) )
+        self.setFixedSize( initial_size )
+        self.move( initial_position )
         
         self._SizeAndPositionChildren()
         
@@ -5854,7 +5925,7 @@ class MediaContainer( QW.QWidget ):
         
         if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
             
-            self._media_window.SetLooping( not self._slideshow_mode )
+            self._media_window.StopForSlideshow( self._slideshow_mode )
             
         
     
@@ -5875,10 +5946,13 @@ class EmbedButton( QW.QWidget ):
     
     def _Redraw( self, painter ):
         
-        ( x, y ) = self.size().toTuple()
+        my_size = self.size()
         
-        center_x = x // 2
-        center_y = y // 2
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        center_x = my_width // 2
+        center_y = my_height // 2
         radius = min( 50, center_x, center_y ) - 5
         
         new_options = HG.client_controller.new_options
@@ -5889,9 +5963,7 @@ class EmbedButton( QW.QWidget ):
         
         if self._thumbnail_qt_pixmap is not None:
             
-            ( thumb_width, thumb_height ) = self._thumbnail_qt_pixmap.size().toTuple()
-            
-            scale = x / thumb_width
+            scale = my_width / self._thumbnail_qt_pixmap.width()
             
             painter.setTransform( QG.QTransform().scale( scale, scale ) )
             
@@ -5932,7 +6004,7 @@ class EmbedButton( QW.QWidget ):
 
         painter.setBrush( QG.QBrush( QG.QColor( QC.Qt.transparent ) ) )
         
-        painter.drawRect( 0, 0, x, y )
+        painter.drawRect( 0, 0, my_width, my_height )
         
     
     def paintEvent( self, event ):

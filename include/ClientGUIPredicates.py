@@ -193,7 +193,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             self._ok = QW.QPushButton( 'ok', self )
             self._ok.clicked.connect( self._DoOK )
-            QP.SetForegroundColour( self._ok, (0,128,0) )
+            self._ok.setObjectName( 'HydrusAccept' )
             
             hbox = QP.HBoxLayout()
             
@@ -776,9 +776,9 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         self._hashes = QW.QPlainTextEdit( self )
         
-        init_size = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
+        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
         
-        self._hashes.setMinimumSize( QP.TupleToQSize( init_size ) )
+        self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
         
         choices = [ 'sha256', 'md5', 'sha1', 'sha512' ]
         
@@ -1500,9 +1500,9 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         self._hashes = QW.QPlainTextEdit( self )
         
-        init_size = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
+        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
         
-        self._hashes.setMinimumSize( QP.TupleToQSize( init_size ) )
+        self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
         
         self._max_hamming = QP.MakeQSpinBox( self, max=256, width = 60 )
         

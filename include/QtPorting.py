@@ -60,24 +60,6 @@ def MonkeyPatchMissingMethods():
     
     if qtpy.PYQT5:
         
-        def QPointToTuple( self ):
-            
-            return ( self.x(), self.y() )
-        
-        def QSizeToTuple( self ):
-            
-            return ( self.width(), self.height() )
-        
-        def QColorToTuple( self ):
-            
-            return ( self.red(), self.green(), self.blue(), self.alpha() )
-        
-        QC.QPoint.toTuple = QPointToTuple
-        QC.QPointF.toTuple = QPointToTuple
-        QC.QSize.toTuple = QSizeToTuple
-        QC.QSizeF.toTuple = QSizeToTuple
-        QG.QColor.toTuple = QColorToTuple
-        
         def MonkeyPatchGetSaveFileName( original_function ):
             
             def new_function( *args, **kwargs ):
@@ -1157,13 +1139,6 @@ def AddShortcut( widget, modifier, key, callable, *args ):
     shortcut.setContext( QC.Qt.WidgetWithChildrenShortcut )
     
     shortcut.activated.connect( lambda: callable( *args ) )
-
-
-def AdjustColour( colour, percent ):
-
-    percent = percent / 100
-    
-    return QG.QColor( colour.red() + colour.red() * percent, colour.green() + colour.green() * percent, colour.blue() + colour.blue() * percent, colour.alpha() )
     
 class BusyCursor:
     
@@ -1304,45 +1279,13 @@ def CenterOnWindow( parent, window ):
     
     parent_window = parent.window()
     
-    window.move( parent_window.mapToGlobal( parent_window.rect().center() ) - window.rect().center() )
-
-def CenterOnScreen( window ):
-    
-    window.move( QW.QApplication.desktop().availableGeometry().center() - window.rect().center() )
+    window.move( parent_window.frameGeometry().center() - window.rect().center() )
 
 def WarningHandler( msg_type, context, str ):
     
     if msg_type == QC.QtWarningMsg:
         
         print( str )
-
-
-def TupleToQColor( tup):
-    
-    return QG.QColor( *tup )
-
-
-def TupleToQPoint( tup ):
-    
-    if isinstance( tup, QC.QPoint ):
-
-        raise ValueError( 'Unnecessary use of TupleToQPoint' )
-
-    else:
-
-        return QC.QPoint( tup[ 0 ], tup[ 1 ] )
-
-
-def TupleToQSize( tup ):
-    
-    if isinstance( tup, QC.QSize ):
-        
-        raise ValueError( 'Unnecessary use of TupleToQSize' )
-        
-    else:
-        
-        return QC.QSize( tup[0], tup[1] )
-
 
 def ListWidgetDelete( widget, idx ):
     
@@ -1454,8 +1397,10 @@ def SetBackgroundColour( widget, colour ):
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, colour.name()) )
         
     elif isinstance( colour, tuple ):
-
-        widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, TupleToQColor( colour ).name() ) )
+        
+        colour = QG.QColor( *colour )
+        
+        widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, colour.name() ) )
         
     else:
 
@@ -1478,15 +1423,17 @@ def SetForegroundColour( widget, colour ):
     if isinstance( colour, QG.QColor ):
 
         widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, colour.name()) )
-
+        
     elif isinstance( colour, tuple ):
-
-        widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, TupleToQColor( colour ).name() ) )
-
+        
+        colour = QG.QColor( *colour )
+        
+        widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, colour.name() ) )
+        
     else:
 
         widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, QG.QColor( colour ).name() ) )
-
+        
 
 def SetStringSelection( combobox, string ):
     

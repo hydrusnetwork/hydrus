@@ -86,23 +86,17 @@ def CatchExceptionClient( etype, value, tb ):
     
     time.sleep( 1 )
     
-def ColourIsBright( colour ):
+def ColourIsBright( colour: QG.QColor ):
     
-    ( r, g, b, a ) = colour.toTuple()
-    
-    brightness_estimate = ( r + g + b ) // 3
-    
-    it_is_bright = brightness_estimate > 127
+    it_is_bright = colour.valueF() > 0.75
     
     return it_is_bright
     
-def ColourIsGreyish( colour ):
+def ColourIsGreyish( colour: QG.QColor ):
     
-    ( r, g, b, a ) = colour.toTuple()
+    it_is_greyish = colour.hsvSaturationF() < 0.12
     
-    greyish = r // 16 == g // 16 and g // 16 == b // 16
-    
-    return greyish
+    return it_is_greyish
     
 def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
@@ -201,33 +195,29 @@ def ConvertZoomToPercentage( zoom ):
     
     return pretty_zoom
     
-def GetAlphaOfColour( colour, alpha ):
-    
-    ( r, g, b, a ) = colour.toTuple()
-    
-    return QG.QColor( r, g, b, alpha )
-    
 def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
-    ( r, g, b, a ) = colour.toTuple()
+    new_hue = colour.hsvHueF()
     
-    if ColourIsGreyish( colour ):
+    if new_hue == -1: # completely achromatic
         
-        if ColourIsBright( colour ):
-            
-            colour = QG.QColor( int(g*(1-0.05*intensity)), b, r )
-            
-        else:
-            
-            colour = QG.QColor( int(g*(1+0.05*intensity)/2), b, r )
-            
+        new_hue = 0.5
         
     else:
         
-        colour = QG.QColor( g, b, r )
+        new_hue = ( new_hue + 0.33 ) % 1.0
         
     
-    return GetLighterDarkerColour( colour, intensity )
+    new_saturation = colour.hsvSaturationF()
+    
+    if ColourIsGreyish( colour ):
+        
+        new_saturation = 0.2
+        
+    
+    new_colour = QG.QColor.fromHsvF( new_hue, new_saturation, colour.valueF(), colour.alphaF() )
+    
+    return GetLighterDarkerColour( new_colour, intensity )
     
 def GetLighterDarkerColour( colour, intensity = 3 ):
     
@@ -236,19 +226,15 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         return colour
         
     
+    qt_intensity = 100 + ( 20 * intensity )
+    
     if ColourIsBright( colour ):
         
-        return QP.AdjustColour( colour, -5*intensity )
+        return colour.darker( qt_intensity )
         
     else:
         
-        ( r, g, b, a ) = colour.toTuple()
-        
-        ( r, g, b ) = [ max( value, 32 ) for value in ( r, g, b ) ]
-        
-        colour = QG.QColor( r, g, b )
-        
-        return QP.AdjustColour( colour, 5*intensity )
+        return colour.lighter( qt_intensity )
         
     
 def GetSortTypeChoices():

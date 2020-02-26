@@ -1979,22 +1979,20 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         self._contents = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content ) for serialisable_content in serialisable_contents ]
         
     
-    def GetActionTextAndColour( self ):
+    def GetActionTextAndAction( self ):
         
         action_text = ''
         
         if self._action == HC.CONTENT_UPDATE_PEND:
             
             action_text += 'ADD'
-            action_colour = ( 127, 255, 127 )
             
         elif self._action == HC.CONTENT_UPDATE_PETITION:
             
             action_text += 'DELETE'
-            action_colour = ( 255, 127, 127 )
             
         
-        return ( action_text, action_colour )
+        return ( action_text, self._action )
         
     
     def GetApproval( self, contents ):

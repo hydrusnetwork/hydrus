@@ -6,6 +6,7 @@ from . import ClientGUIShortcuts
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
+from . import HydrusImageHandling
 from . import HydrusPaths
 import os
 from qtpy import QtCore as QC
@@ -74,7 +75,7 @@ class mpvWidget( QW.QWidget ):
         
         self._canvas_type = ClientGUICommon.CANVAS_PREVIEW
         
-        self._looping = True
+        self._stop_for_slideshow = False
         
         # This is necessary since PyQT stomps over the locale settings needed by libmpv.
         # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
@@ -93,17 +94,7 @@ class mpvWidget( QW.QWidget ):
         
         #self._player[ 'input-default-bindings' ] = True
         
-        mpv_config_path = os.path.join( HC.STATIC_DIR, 'mpv-conf', 'mpv.conf' )
-        
-        #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
-        if hasattr( mpv, '_mpv_load_config_file' ):
-            
-            mpv._mpv_load_config_file( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
-            
-        else:
-            
-            HydrusData.Print( 'Failed to load mpv.conf--has the API changed?' )
-            
+        self.UpdateConf()
         
         #self._player.osc = True #Set to enable the mpv UI. Requires that mpv captures mouse/key events, otherwise it won't work.
         
@@ -123,6 +114,8 @@ class mpvWidget( QW.QWidget ):
         
         self._media = None
         
+        self._times_to_play_gif = 0
+        
         self._current_seek_to_start_count = 0
         
         player = self._player
@@ -138,7 +131,12 @@ class mpvWidget( QW.QWidget ):
                 
                 self._current_seek_to_start_count += 1
                 
-                if not self._looping:
+                if self._stop_for_slideshow:
+                    
+                    self.Pause()
+                    
+                
+                if self._times_to_play_gif != 0 and self._current_seek_to_start_count >= self._times_to_play_gif:
                     
                     self.Pause()
                     
@@ -156,6 +154,7 @@ class mpvWidget( QW.QWidget ):
         
         HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
         HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
+        HG.client_controller.sub( self, 'UpdateConf', 'notify_new_options' )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [], catch_mouse = True )
         
@@ -372,14 +371,30 @@ class mpvWidget( QW.QWidget ):
         self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
         
     
-    def SetLooping( self, value ):
+    def StopForSlideshow( self, value ):
         
-        self._looping = value
+        self._stop_for_slideshow = value
         
     
     def SetMedia( self, media, start_paused = False ):
         
+        if media == self._media:
+            
+            return
+            
+        
         self._media = media
+        
+        self._times_to_play_gif = 0
+        
+        if self._media is not None and self._media.GetMime() == HC.IMAGE_GIF and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+            
+            hash = self._media.GetHash()
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_GIF )
+            
+            self._times_to_play_gif = HydrusImageHandling.GetTimesToPlayGIF( path )
+            
         
         self._current_seek_to_start_count = 0
         
@@ -410,7 +425,7 @@ class mpvWidget( QW.QWidget ):
             
             self._player.visibility = 'always'
             
-            self._looping = True
+            self._stop_for_slideshow = False
             
             self._player.pause = True
             
@@ -443,3 +458,19 @@ class mpvWidget( QW.QWidget ):
         
         self._player.volume = self._GetCorrectCurrentVolume()
         
+    
+    def UpdateConf( self ):
+        
+        mpv_config_path = HydrusPaths.ConvertPortablePathToAbsPath( HG.client_controller.new_options.GetString( 'mpv_conf_path_portable' ) )
+        
+        #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
+        if hasattr( mpv, '_mpv_load_config_file' ):
+            
+            mpv._mpv_load_config_file( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
+            
+        else:
+            
+            HydrusData.Print( 'Failed to load mpv.conf--has the API changed?' )
+            
+        
+    

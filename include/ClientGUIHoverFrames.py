@@ -71,10 +71,12 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             if should_resize:
                 
-                self.resize( QP.TupleToQSize( my_ideal_size ) )
+                self.setGeometry( QC.QRect( my_ideal_position, my_ideal_size ) )
                 
-            
-            self.move( QP.TupleToQPoint( my_ideal_position ) )
+            else:
+                
+                self.move( my_ideal_position )
+                
             
             self._position_initialised = True
             
@@ -161,11 +163,28 @@ class FullscreenHoverFrame( QW.QFrame ):
             
         else:
             
-            ( mouse_x, mouse_y ) = QG.QCursor.pos().toTuple()
+            mouse_pos = QG.QCursor.pos()
             
-            ( my_width, my_height ) = self.size().toTuple()
+            mouse_x = mouse_pos.x()
+            mouse_y = mouse_pos.y()
             
-            ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
+            my_size = self.size()
+            
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            my_pos = self.pos()
+            
+            my_x = my_pos.x()
+            my_y = my_pos.y()
+            
+            ( should_resize, my_ideal_size, my_ideal_pos ) = self._GetIdealSizeAndPosition()
+            
+            my_ideal_width = my_ideal_size.width()
+            my_ideal_height = my_ideal_size.height()
+            
+            my_ideal_x = my_ideal_pos.x()
+            my_ideal_y = my_ideal_pos.y()
             
             if my_ideal_width == -1:
                 
@@ -177,13 +196,11 @@ class FullscreenHoverFrame( QW.QFrame ):
                 my_ideal_height = max( my_height, 50 )
                 
             
-            ( my_x, my_y ) = self.pos().toTuple()
+            in_ideal_x = my_ideal_x <= mouse_x <= my_ideal_x + my_ideal_width
+            in_ideal_y = my_ideal_y <= mouse_y <= my_ideal_y + my_ideal_height
             
-            in_ideal_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
-            in_ideal_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
-            
-            in_actual_x = my_x <= mouse_x and mouse_x <= my_x + my_width
-            in_actual_y = my_y <= mouse_y and mouse_y <= my_y + my_height
+            in_actual_x = my_x <= mouse_x <= my_x + my_width
+            in_actual_y = my_y <= mouse_y <= my_y + my_height
             
             # we test both ideal and actual here because setposition is not always honoured by the OS
             # for instance, in some Linux window managers on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
@@ -194,17 +211,7 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             menu_open = HG.client_controller.MenuIsOpen()
             
-            dialog_open = False
-            
-            tlws = QW.QApplication.topLevelWidgets()
-            
-            for tlw in tlws:
-                
-                if isinstance( tlw, QW.QDialog ) and not isinstance( tlw, ClientGUICanvas.CanvasFrame ) and tlw.isModal():
-                    
-                    dialog_open = True
-                    
-                
+            dialog_is_open = ClientGUIFunctions.DialogIsOpen()
             
             mime = self._current_media.GetMime()
             
@@ -215,8 +222,8 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
             
-            ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_open and not menu_open
-            ready_to_hide = not menu_open and not mouse_is_over_self_or_child and ( not in_position or dialog_open or not hide_focus_is_good )
+            ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open
+            ready_to_hide = not menu_open and not mouse_is_over_self_or_child and ( not in_position or dialog_is_open or not hide_focus_is_good )
             
             def get_logic_report_string():
                 
@@ -229,7 +236,7 @@ class FullscreenHoverFrame( QW.QFrame ):
                 tuples.append( ( 'ideal winsize: ', ( my_ideal_width, my_ideal_height ) ) )
                 tuples.append( ( 'in position: ', in_position ) )
                 tuples.append( ( 'menu open: ', menu_open ) )
-                tuples.append( ( 'dialog open: ', dialog_open ) )
+                tuples.append( ( 'dialog open: ', dialog_is_open ) )
                 tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
                 tuples.append( ( 'focus is good: ', focus_is_good ) )
                 tuples.append( ( 'focus is on descendant: ', focus_is_on_descendant ) )
@@ -457,19 +464,25 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent_window.size().toTuple()
+        parent_size = parent_window.size()
         
-        ( my_width, my_height ) = self.size().toTuple()
+        parent_width = parent_size.width()
+        parent_height = parent_size.height()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
         
         my_ideal_width = int( parent_width * 0.2 )
         my_ideal_height = self.minimumSizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) ) )
+        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) ) )
         
-        return ( should_resize, ideal_size, ideal_position.toTuple() )
+        return ( should_resize, ideal_size, ideal_position )
         
     
     def _ResetComparisonStatements( self ):
@@ -602,9 +615,14 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent_window.size().toTuple()
+        parent_size = parent_window.size()
         
-        ( my_width, my_height ) = self.size().toTuple()
+        parent_width = parent_size.width()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
         
         my_ideal_width = int( parent_width * 0.6 )
         
@@ -612,10 +630,10 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width * 0.2 ), 0 ) )
+        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width * 0.2 ), 0 ) )
         
-        return ( should_resize, ideal_size, ideal_position.toTuple() )
+        return ( should_resize, ideal_size, ideal_position )
         
     
     def _ManageShortcuts( self ):
@@ -1098,9 +1116,14 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent_window.size().toTuple()
+        parent_size = parent_window.size()
         
-        ( my_width, my_height ) = self.size().toTuple()
+        parent_width = parent_size.width()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
         
         my_ideal_width = int( parent_width * 0.2 )
         
@@ -1108,10 +1131,10 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width - my_ideal_width ), 0 ) )
+        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width - my_ideal_width ), 0 ) )
         
-        return ( should_resize, ideal_size, ideal_position.toTuple() )
+        return ( should_resize, ideal_size, ideal_position )
         
     
     def _ResetData( self ):
@@ -1257,9 +1280,15 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent_window.size().toTuple()
+        parent_size = parent_window.size()
         
-        ( my_width, my_height ) = self.size().toTuple()
+        parent_width = parent_size.width()
+        parent_height = parent_size.height()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
         
         my_ideal_width = int( parent_width * 0.2 )
         
@@ -1267,10 +1296,10 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( 0, 0 ) )
+        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( 0, 0 ) )
         
-        return ( should_resize, ideal_size, ideal_position.toTuple() )
+        return ( should_resize, ideal_size, ideal_position )
         
     
     def _ResetTags( self ):

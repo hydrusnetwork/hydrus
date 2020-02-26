@@ -453,6 +453,8 @@ def GetGIFFrameDurations( path ):
     
     pil_image = GeneratePILImage( path )
     
+    times_to_play_gif = GetTimesToPlayGIFFromPIL( pil_image )
+    
     frame_durations = []
     
     i = 0
@@ -488,7 +490,7 @@ def GetGIFFrameDurations( path ):
         i += 1
         
     
-    return frame_durations
+    return ( frame_durations, times_to_play_gif )
     
 def GetImagePixelHash( path, mime ):
     
@@ -513,7 +515,7 @@ def GetImageProperties( path, mime ):
         
         if num_frames > 1:
             
-            durations = GetGIFFrameDurations( path )
+            ( durations, times_to_play_gif ) = GetGIFFrameDurations( path )
             
             duration = sum( durations )
             
@@ -670,6 +672,25 @@ def GetThumbnailResolution( image_resolution, bounding_dimensions ):
     thumbnail_height = max( int( thumbnail_height ), 1 )
     
     return ( thumbnail_width, thumbnail_height )
+    
+def GetTimesToPlayGIF( path ):
+    
+    pil_image = GeneratePILImage( path )
+    
+    return GetTimesToPlayGIFFromPIL( pil_image )
+    
+def GetTimesToPlayGIFFromPIL( pil_image ):
+    
+    if 'loop' in pil_image.info:
+        
+        times_to_play_gif = pil_image.info[ 'loop' ]
+        
+    else:
+        
+        times_to_play_gif = 1
+        
+    
+    return times_to_play_gif
     
 def IsDecompressionBomb( path ):
     

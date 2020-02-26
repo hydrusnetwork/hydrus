@@ -85,11 +85,11 @@ def DrawNumerical( painter, x, y, service_key, rating_state, rating ):
             
             if shape == CIRCLE:
                 
-                painter.drawEllipse( QC.QPointF( x+7+x_delta, y+7 ), 6, 6 )
+                painter.drawEllipse( QC.QPointF( x + 7 + x_delta, y + 7 ), 6, 6 )
                 
             elif shape == SQUARE:
                 
-                painter.drawRect( x+2+x_delta, y+2, 12, 12 )
+                painter.drawRect( x + 2 + x_delta, y + 2, 12, 12 )
                 
             elif shape == STAR:
                 

@@ -103,9 +103,9 @@ def CreateTopImage( width, title, payload_description, text ):
         
         for ( wrapped_text, y ) in wrapped_texts_with_ys:
             
-            ( t_width, t_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, wrapped_text ).toTuple()
+            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, wrapped_text )
             
-            QP.DrawText( painter, (width-t_width)//2, y, wrapped_text )
+            QP.DrawText( painter, ( width - text_size.width() ) // 2, y, wrapped_text )
             
         
     
@@ -310,9 +310,9 @@ def LoadFromPng( path ):
     
 def TextExceedsWidth( painter, text, width ):
     
-    ( t_width, t_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
+    text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
     
-    return t_width > width
+    return text_size.width() > width
     
 def WrapText( painter, text, width ):
     

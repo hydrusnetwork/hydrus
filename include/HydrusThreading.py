@@ -782,6 +782,27 @@ class SchedulableJob( object ):
             
         
     
+class SingleJob( SchedulableJob ):
+    
+    def __init__( self, controller, scheduler, initial_delay, work_callable ):
+        
+        SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
+        
+        self._work_complete = threading.Event()
+        
+    
+    def IsWorkComplete( self ):
+        
+        return self._work_complete.is_set()
+        
+    
+    def Work( self ):
+        
+        SchedulableJob.Work( self )
+        
+        self._work_complete.set()
+        
+    
 class RepeatingJob( SchedulableJob ):
     
     def __init__( self, controller, scheduler, initial_delay, period, work_callable ):
@@ -807,7 +828,7 @@ class RepeatingJob( SchedulableJob ):
         self._scheduler.WorkTimesHaveChanged()
         
     
-    def IsFinishedWorking( self ):
+    def IsRepeatingWorkFinished( self ):
         
         return self._stop_repeating.is_set()
         

@@ -421,7 +421,7 @@ class Controller( object ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, initial_delay, call )
+        job = HydrusThreading.SingleJob( self, self._job_scheduler, initial_delay, call )
         
         self._job_scheduler.AddJob( job )
         

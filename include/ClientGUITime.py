@@ -137,8 +137,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
             label = 'As you are in advanced mode, these options have extremely low limits. This is intended only for testing and small scale private network tasks. Do not use very fast check times for real world use on public websites, as it is wasteful and rude, hydrus will be overloaded with high-CPU parsing work, and you may get your IP banned.'
             
             st = ClientGUICommon.BetterStaticText( self, label = label )
-            
-            QP.SetForegroundColour( st, ( 127, 0, 0 ) )
+            st.setObjectName( 'HydrusWarning' )
             
             st.setWordWrap( True )
             

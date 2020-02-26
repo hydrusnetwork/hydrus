@@ -595,7 +595,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._shortcuts = ClientGUIListCtrl.BetterListCtrl( self, 'shortcuts', 20, 20, [ ( 'shortcut', 20 ), ( 'command', -1 ) ], data_to_tuples_func = self._ConvertSortTupleToPrettyTuple, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
         
-        self._shortcuts.setMinimumSize( QP.TupleToQSize( (360,480) ) )
+        self._shortcuts.setMinimumSize( QC.QSize( 360, 480 ) )
         
         self._add = QW.QPushButton( 'add', self )
         self._add.clicked.connect( self.AddShortcut )
@@ -760,7 +760,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrl( reserved_panel, 'reserved_shortcuts', 6, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, activation_callback = self._EditReserved )
         
-        self._reserved_shortcuts.setMinimumSize( QP.TupleToQSize( (320,200) ) )
+        self._reserved_shortcuts.setMinimumSize( QC.QSize( 320, 200 ) )
         
         self._edit_reserved_button = ClientGUICommon.BetterButton( reserved_panel, 'edit', self._EditReserved )
         self._restore_defaults_button = ClientGUICommon.BetterButton( reserved_panel, 'restore defaults', self._RestoreDefaults )

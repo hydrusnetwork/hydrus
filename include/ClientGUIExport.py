@@ -445,7 +445,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.SetTagsBox( t )
         
-        self._tags_box.setMinimumSize( QP.TupleToQSize( (220,300) ) )
+        self._tags_box.setMinimumSize( QC.QSize( 220, 300 ) )
         
         columns = [ ( 'number', 8 ), ( 'filetype', 20 ), ( 'expected path', -1 ) ]
         
@@ -471,10 +471,10 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
         
         self._delete_files_after_export = QW.QCheckBox( 'delete files from client after export?', self )
-        QP.SetForegroundColour( self._delete_files_after_export, QG.QColor( 127, 0, 0 ) )
+        self._delete_files_after_export.setObjectName( 'HydrusWarning' )
         
         self._export_symlinks = QW.QCheckBox( 'EXPERIMENTAL: export symlinks', self )
-        QP.SetForegroundColour( self._export_symlinks, QG.QColor( 127, 0, 0 ) )
+        self._export_symlinks.setObjectName( 'HydrusWarning' )
         
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         

@@ -135,7 +135,9 @@ class ResizingScrolledPanel( QW.QScrollArea ):
             
             if isinstance( window, ( ClientGUITopLevelWindows.DialogThatResizes, ClientGUITopLevelWindows.FrameThatResizes ) ):
                 
-                ClientGUITopLevelWindows.ExpandTLWIfPossible( window, window._frame_key, ( width_increase, height_increase ) )
+                desired_size_delta = QC.QSize( width_increase, height_increase )
+                
+                ClientGUITopLevelWindows.ExpandTLWIfPossible( window, window._frame_key, desired_size_delta )
                 
             
         

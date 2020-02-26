@@ -729,16 +729,16 @@ class PopupMessageManager( QW.QWidget ):
             
             if there_is_stuff_to_display:
                 
-                ( parent_width, parent_height ) = gui_frame.size().toTuple()
+                parent_size = gui_frame.size()
                 
-                ( my_width, my_height ) = self.size().toTuple()
+                my_size = self.size()
                 
-                my_x = ( parent_width - my_width ) - 20
-                my_y = ( parent_height - my_height ) - 25
+                my_x = ( parent_size.width() - my_size.width() ) - 20
+                my_y = ( parent_size.height() - my_size.height() ) - 25
                 
                 if gui_frame.isVisible():
                     
-                    my_position = ClientGUIFunctions.ClientToScreen( gui_frame, ( my_x, my_y ) )
+                    my_position = ClientGUIFunctions.ClientToScreen( gui_frame, QC.QPoint( my_x, my_y ) )
                     
                     if my_position != self.pos():
                         

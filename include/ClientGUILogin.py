@@ -109,7 +109,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             value = control.text()
             
-            colour = ( 127, 0, 0 )
+            hydrus_text = 'invalid'
             
             if value == '':
                 
@@ -132,7 +132,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     st_label = 'looks good \u2713'
                     
-                    colour = ( 0, 127, 0 )
+                    hydrus_text = 'valid'
                     
                 except Exception as e:
                     
@@ -141,7 +141,8 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
             control_st.setText( st_label )
-            QP.SetForegroundColour( control_st, colour )
+            control_st.setProperty( 'hydrus_text', hydrus_text )
+            control_st.style().polish( control_st )
             
         
     
@@ -315,8 +316,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
         warning_st.setWordWrap( True )
-        
-        QP.SetForegroundColour( warning_st, (128,0,0) )
+        warning_st.setObjectName( 'HydrusWarning' )
         
         QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )

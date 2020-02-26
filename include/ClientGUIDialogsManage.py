@@ -87,11 +87,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         self._apply = QW.QPushButton( 'apply', self )
         self._apply.clicked.connect( self.EventOK )
-        QP.SetForegroundColour( self._apply, (0,128,0) )
+        self._apply.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -340,7 +340,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._ok = QW.QPushButton( 'ok', self )
         self._ok.clicked.connect( self.EventOK )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         #
         

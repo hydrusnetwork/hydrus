@@ -2192,7 +2192,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         MediaPanel.__init__( self, parent, page_key, file_service_key, media_results )
         
-        self._last_client_size = ( 20, 20 )
+        self._last_size = QC.QSize( 20, 20 )
         self._num_columns = 1
         
         self._drag_init_coordinates = None
@@ -2239,9 +2239,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         earliest_y = y_start
         
-        ( client_width, client_height ) = QP.ScrollAreaVisibleRect( self ).size().toTuple()
-        
-        last_y = earliest_y + client_height
+        last_y = earliest_y + QP.ScrollAreaVisibleRect( self ).size().height()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
@@ -2258,11 +2256,11 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _CreateNewDirtyPage( self ):
         
-        ( client_width, client_height ) = self.size().toTuple()
+        my_width = self.size().width()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( HG.client_controller.bitmap_manager.GetQtImage( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 32 ) )
+        self._dirty_canvas_pages.append( HG.client_controller.bitmap_manager.GetQtImage( my_width, self._num_rows_per_canvas_page * thumbnail_span_height, 32 ) )
         
     
     def _DeleteAllDirtyPages( self ):
@@ -2298,8 +2296,6 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _DrawCanvasPage( self, page_index, canvas_page ):
         
-        ( bmp_width, bmp_height ) = canvas_page.size().toTuple()
-        
         painter = QG.QPainter( canvas_page )
         
         new_options = HG.client_controller.new_options
@@ -2312,22 +2308,23 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         if new_options.GetNoneableString( 'media_background_bmp_path' ) is not None:
-
+            
             comp_mode = painter.compositionMode()
             
             painter.setCompositionMode( QG.QPainter.CompositionMode_Source )
             
             painter.setBackground( QG.QBrush( QC.Qt.transparent ) )
-
+            
             painter.eraseRect( painter.viewport() )
-
+            
             painter.setCompositionMode( comp_mode )
             
         else: 
         
             painter.setBackground( QG.QBrush( bg_colour ) )
-
+            
             painter.eraseRect( painter.viewport() )
+            
         
         #
         
@@ -2631,9 +2628,12 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _RecalculateVirtualSize( self, called_from_resize_event = False ):
         
-        ( client_width, client_height ) = QP.ScrollAreaVisibleRect( self ).size().toTuple()
+        my_size = QP.ScrollAreaVisibleRect( self ).size()
         
-        if client_width > 0 and client_height > 0:
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        if my_width > 0 and my_height > 0:
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
@@ -2646,7 +2646,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 num_rows += 1
                 
             
-            virtual_width = client_width
+            virtual_width = my_width
             
             virtual_height = num_rows * thumbnail_span_height
             
@@ -2661,9 +2661,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 virtual_height += top_up
                 
             
-            virtual_height = max( virtual_height, client_height )
+            virtual_height = max( virtual_height, my_height )
             
-            if ( virtual_width, virtual_height ) != self.widget().size().toTuple():
+            virtual_size = QC.QSize( virtual_width, virtual_height )
+            
+            if virtual_size != self.widget().size():
                 
                 self.widget().resize( QC.QSize( virtual_width, virtual_height ) )
                 
@@ -2673,10 +2675,6 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
             
-            return ( virtual_width, virtual_height )
-            
-        
-        return ( 0, 0 )
         
     
     def _RedrawMedia( self, thumbnails ):
@@ -2716,25 +2714,29 @@ class MediaPanelThumbnails( MediaPanel ):
         old_num_rows = self._num_rows_per_canvas_page
         old_num_columns = self._num_columns
         
-        ( old_client_width, old_client_height ) = self._last_client_size
+        old_width = self._last_size.width()
+        old_height = self._last_size.height()
         
-        ( client_width, client_height ) = QP.ScrollAreaVisibleRect( self ).size().toTuple()
+        my_size = QP.ScrollAreaVisibleRect( self ).size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        num_rows = ( client_height // thumbnail_span_height )
+        num_rows = ( my_height // thumbnail_span_height )
         
         self._num_rows_per_actual_page = max( 1, num_rows )
         self._num_rows_per_canvas_page = max( 1, num_rows // 2 )
         
-        self._num_columns = max( 1, client_width // thumbnail_span_width )
+        self._num_columns = max( 1, my_width // thumbnail_span_width )
         
-        client_dimensions_changed = old_client_width != client_width or old_client_height != client_height
+        dimensions_changed = old_width != my_width or old_height != my_height
         thumb_layout_changed = old_num_columns != self._num_columns or old_num_rows != self._num_rows_per_canvas_page
         
-        if client_dimensions_changed or thumb_layout_changed:
+        if dimensions_changed or thumb_layout_changed:
             
-            width_got_bigger = old_client_width < client_width
+            width_got_bigger = old_width < my_width
             
             if thumb_layout_changed or width_got_bigger:
                 
@@ -2889,13 +2891,15 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if we_started_dragging_on_this_panel:
                 
-                ( old_x, old_y ) = self._drag_init_coordinates.toTuple()
+                old_drag_pos = self._drag_init_coordinates
                 
                 global_mouse_pos = QG.QCursor.pos()
                 
-                ( delta_x, delta_y ) = ( global_mouse_pos.x() - old_x, global_mouse_pos.y() - old_y )
+                delta_pos = global_mouse_pos - old_drag_pos
                 
-                we_moved = abs( delta_x ) + abs( delta_y ) > 0
+                total_absolute_pixels_moved = delta_pos.manhattanLength()
+                
+                we_moved = total_absolute_pixels_moved > 0
                 
                 if we_moved:
                     
@@ -2905,7 +2909,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 # prefire deal here is mpv lags on initial click, which can cause a drag (and hence an immediate pause) event by accident when mouserelease isn't processed quick
                 # so now we'll say we can't start a drag unless we get a smooth ramp to our pixel delta threshold
                 clean_drag_started = self._drag_prefire_event_count >= 10
-                moved_a_decent_bit_from_start = abs( delta_x ) > 15 or abs( delta_y ) > 15
+                moved_a_decent_bit_from_start = total_absolute_pixels_moved > 20
                 
                 if clean_drag_started and moved_a_decent_bit_from_start:
                     
@@ -3054,12 +3058,11 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if background_pixmap is not None:
                 
-                # if instead of size we go bottomRight, that works to keep scrolling, but the scrolling doesn't cause a full refresh _or something_
-                ( client_x, client_y ) = QP.ScrollAreaVisibleRect( self._parent ).size().toTuple()
+                my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
                 
-                ( background_bmp_width, background_bmp_height ) = background_pixmap.size().toTuple()
+                pixmap_size = background_pixmap.size()
                 
-                painter.drawPixmap( client_x - background_bmp_width, client_y - background_bmp_height, background_pixmap )
+                painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
                 
             
             for page_index in page_indices_to_draw:
@@ -3105,7 +3108,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._RecalculateVirtualSize( called_from_resize_event = True )
         
-        self._last_client_size = QP.ScrollAreaVisibleRect( self ).size().toTuple()
+        self._last_size = QP.ScrollAreaVisibleRect( self ).size()
         
     
     def contextMenuEvent( self, event ):
@@ -4660,18 +4663,18 @@ class Thumbnail( Selectable ):
                     
                     painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
                     
-                    ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, upper_summary ).toTuple()
+                    text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, upper_summary )
                     
                     box_x = thumbnail_border
                     box_y = thumbnail_border
                     box_width = width - ( thumbnail_border * 2 )
-                    box_height = text_height + 2
+                    box_height = text_size.height() + 2
                     
                     painter.setPen( QG.QPen( QC.Qt.NoPen ) )
                     
                     painter.drawRect( box_x, box_y, box_width, box_height )
                     
-                    text_x = ( width - text_width ) // 2
+                    text_x = ( width - text_size.width() ) // 2
                     text_y = box_y + TEXT_BORDER
                     
                     painter.setPen( QG.QPen( text_colour_with_alpha ) )
@@ -4689,7 +4692,10 @@ class Thumbnail( Selectable ):
                     
                     painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
                     
-                    ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, lower_summary ).toTuple()
+                    text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, lower_summary )
+                    
+                    text_width = text_size.width()
+                    text_height = text_size.height()
                     
                     box_width = text_width + ( TEXT_BORDER * 2 )
                     box_height = text_height + ( TEXT_BORDER * 2 )
@@ -4798,7 +4804,10 @@ class Thumbnail( Selectable ):
             
             painter.setFont( QW.QApplication.font() )
             
-            ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, num_files_str ).toTuple()
+            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, num_files_str )
+            
+            text_width = text_size.width()
+            text_height = text_size.height()
             
             painter.setBrush( QG.QBrush( CC.COLOUR_UNSELECTED ) )
             

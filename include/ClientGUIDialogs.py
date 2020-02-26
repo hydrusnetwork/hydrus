@@ -110,16 +110,10 @@ class Dialog( QP.Dialog ):
             
             parent_tlw = self.parentWidget().window()                
             
-            ( pos_x, pos_y ) = parent_tlw.pos().toTuple()
+            pos = parent_tlw.pos() + QC.QPoint( 50, 50 )
             
-            pos = QC.QPoint( pos_x + 50, pos_y + 50 )
+            self.move( pos )
             
-        else:
-            
-            pos = None
-            
-        
-        if pos: self.move( pos )
         
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
         
@@ -151,14 +145,12 @@ class Dialog( QP.Dialog ):
             
         
     
-    def SetInitialSize( self, size ):
-        
-        ( width, height ) = size if isinstance( size, tuple ) else size.toTuple()
+    def SetInitialSize( self, size: QC.QSize ):
         
         display_size = ClientGUITopLevelWindows.GetDisplaySize( self )
         
-        width = min( display_size.width(), width )
-        height = min( display_size.height(), height )
+        width = min( display_size.width(), size.width() )
+        height = min( display_size.height(), size.height() )
         
         self.resize( QC.QSize( width, height ) )
         
@@ -229,11 +221,11 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._ok = QW.QPushButton( 'OK', self )
         self._ok.clicked.connect( self.EventOK )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -357,11 +349,11 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self._ok = QW.QPushButton( 'ok', self )
         self._ok.clicked.connect( self.accept )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -513,11 +505,11 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self._ok = QW.QPushButton( 'OK', self )
         self._ok.clicked.connect( self.EventOK )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
     
@@ -609,11 +601,11 @@ class DialogInputTags( Dialog ):
         self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -695,11 +687,11 @@ class DialogInputUPnPMapping( Dialog ):
         self._duration = QP.MakeQSpinBox( self, min=0, max=86400 )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -976,11 +968,11 @@ class DialogSelectFromURLTree( Dialog ):
         self._tree = QP.TreeWidgetWithInheritedCheckState( self )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -1189,11 +1181,11 @@ class DialogTextEntry( Dialog ):
             
         
         self._ok = ClientGUICommon.BetterButton( self, 'ok', self.done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._ok, (0,128,0) )
+        self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'cancel', self )
         self._cancel.clicked.connect( self.reject )
-        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.setObjectName( 'HydrusCancel' )
         
         #
         
@@ -1298,13 +1290,13 @@ class DialogYesYesNo( Dialog ):
         for ( label, data ) in yes_tuples:
             
             yes_button = ClientGUICommon.BetterButton( self, label, self._DoYes, data )
-            QP.SetForegroundColour( yes_button, (0,128,0) )
+            yes_button.setObjectName( 'HydrusAccept' )
             
             yes_buttons.append( yes_button )
             
         
         self._no = ClientGUICommon.BetterButton( self, no_label, self.done, QW.QDialog.Rejected )
-        QP.SetForegroundColour( self._no, (128,0,0) )
+        self._no.setObjectName( 'HydrusCancel' )
         
         #
         

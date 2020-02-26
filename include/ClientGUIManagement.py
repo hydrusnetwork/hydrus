@@ -3638,7 +3638,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._process = QW.QPushButton( 'process', self._petition_panel )
         self._process.clicked.connect( self.EventProcess )
-        QP.SetForegroundColour( self._process, (0,128,0) )
+        self._process.setObjectName( 'HydrusAccept' )
         self._process.setEnabled( False )
         
         self._modify_petitioner = QW.QPushButton( 'modify petitioner', self._petition_panel )
@@ -3714,8 +3714,11 @@ class ManagementPanelPetitions( ManagementPanel ):
         if self._current_petition is None:
             
             self._action_text.setText( '' )
+            self._action_text.setProperty( 'hydrus_text', 'default' )
+            
             self._reason_text.setPlainText( '' )
-            QP.SetBackgroundColour( self._reason_text, QP.GetSystemColour( QG.QPalette.Window ) )
+            self._reason_text.setProperty( 'hydrus_text', 'default' )
+            
             self._contents.clear()
             self._process.setEnabled( False )
             
@@ -3729,16 +3732,24 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         else:
             
-            ( action_text, action_colour ) = self._current_petition.GetActionTextAndColour()
+            ( action_text, action ) = self._current_petition.GetActionTextAndAction()
+            
+            if action == HC.CONTENT_UPDATE_PEND:
+                
+                hydrus_text = 'valid'
+                
+            elif action == HC.CONTENT_UPDATE_PETITION:
+                
+                hydrus_text = 'invalid'
+                
             
             self._action_text.setText( action_text )
-            QP.SetForegroundColour( self._action_text, action_colour )
+            self._action_text.setProperty( 'hydrus_text', hydrus_text )
             
             reason = self._current_petition.GetReason()
             
             self._reason_text.setPlainText( reason )
-            
-            QP.SetBackgroundColour( self._reason_text, action_colour )
+            self._reason_text.setProperty( 'hydrus_text', hydrus_text )
             
             if self._last_petition_type_fetched[0] in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
                 
@@ -3764,6 +3775,9 @@ class ManagementPanelPetitions( ManagementPanel ):
                 self._modify_petitioner.setEnabled( True )
                 
             
+        
+        self._action_text.style().polish( self._action_text )
+        self._reason_text.style().polish( self._reason_text )
         
         self._ShowHashes( [] )
         

@@ -489,11 +489,11 @@ class FileRWLock( object ):
         self.there_is_an_active_writer = False
         
     
-class QtAwareJob(HydrusThreading.SchedulableJob):
+class QtAwareJob( HydrusThreading.SingleJob ):
     
     def __init__( self, controller, scheduler, window, initial_delay, work_callable ):
         
-        HydrusThreading.SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
+        HydrusThreading.SingleJob.__init__( self, controller, scheduler, initial_delay, work_callable )
         
         self._window = window
         
@@ -527,7 +527,7 @@ class QtAwareJob(HydrusThreading.SchedulableJob):
             self._is_cancelled.set()
             
         
-        return HydrusThreading.SchedulableJob.IsCancelled( self )
+        return HydrusThreading.SingleJob.IsCancelled( self )
         
     
     def IsDead( self ):
@@ -573,7 +573,7 @@ class QtAwareRepeatingJob(HydrusThreading.RepeatingJob):
             self._is_cancelled.set()
             
         
-        return HydrusThreading.SchedulableJob.IsCancelled( self )
+        return HydrusThreading.SingleJob.IsCancelled( self )
         
     
     def IsDead( self ):

@@ -925,18 +925,18 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 text = 'tag passes!'
                 
-                colour = ( 0, 128, 0 )
+                self._test_result_st.setObjectName( 'HydrusValid' )
                 
             else:
                 
                 text = 'tag blocked!'
                 
-                colour = ( 128, 0, 0 )
+                self._test_result_st.setObjectName( 'HydrusInvalid' )
                 
             
         
-        QP.SetForegroundColour( self._test_result_st, colour )
         self._test_result_st.setText( text )
+        self._test_result_st.style().polish( self._test_result_st )
         
     
     def EventSimpleBlacklistNamespaceCheck( self, index ):
@@ -956,7 +956,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         index = index.row()
         
         if index != -1:
-               
+            
             tag_slice = QP.GetClientData( self._simple_blacklist_global_checkboxes, index )
             
             self._AdvancedAddBlacklist( tag_slice )
@@ -3981,7 +3981,15 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        return ( list( self._background_colour.toTuple() ), list( self._text_colour.toTuple() ), self._namespace_info, self._separator, self._example_tags, self._show )
+        bc = self._background_colour
+        
+        background_colour_rgba = [ bc.red(), bc.green(), bc.blue(), bc.alpha() ]
+        
+        tc = self._text_colour
+        
+        text_colour_rgba = [ tc.red(), tc.green(), tc.blue(), tc.alpha() ]
+        
+        return ( background_colour_rgba, text_colour_rgba, self._namespace_info, self._separator, self._example_tags, self._show )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):

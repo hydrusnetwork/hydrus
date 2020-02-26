@@ -1298,13 +1298,15 @@ class ReviewServicePanel( QW.QWidget ):
             if service_paused:
                 
                 self._pause_play_button.setText( 'paused' )
-                QP.SetForegroundColour( self._pause_play_button, (128,0,0) )
+                self._pause_play_button.setObjectName( 'HydrusCancel' )
                 
             else:
                 
                 self._pause_play_button.setText( 'working' )
-                QP.SetForegroundColour( self._pause_play_button, (0,128,0) )
+                self._pause_play_button.setObjectName( 'HydrusAccept' )
                 
+            
+            self._pause_play_button.style().polish( self._pause_play_button )
             
             self._metadata_st.setText( self._service.GetNextUpdateDueString() )
             

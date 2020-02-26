@@ -1149,14 +1149,16 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 string_match.Test( self._example_string.text() )
                 
                 self._example_string_matches.setText( 'Example matches ok!' )
-                QP.SetForegroundColour( self._example_string_matches, (0,128,0) )
+                self._example_string_matches.setObjectName( 'HydrusValid' )
+                self._example_string_matches.style().polish( self._example_string_matches )
                 
             except HydrusExceptions.StringMatchException as e:
                 
                 reason = str( e )
                 
                 self._example_string_matches.setText( 'Example does not match - '+reason )
-                QP.SetForegroundColour( self._example_string_matches, (128,0,0) )
+                self._example_string_matches.setObjectName( 'HydrusInvalid' )
+                self._example_string_matches.style().polish( self._example_string_matches )
                 
             
         

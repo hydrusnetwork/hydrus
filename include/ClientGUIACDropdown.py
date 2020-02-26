@@ -521,7 +521,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._dropdown_window.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
             self._dropdown_window.setLineWidth( 2 )
             
-            self._dropdown_window.move( ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( 0, 0 ) ) )
+            self._dropdown_window.move( ClientGUIFunctions.ClientToScreen( self._text_ctrl, QC.QPoint( 0, 0 ) ) )
             
             self._dropdown_window_widget_event_filter = QP.WidgetEventFilter( self._dropdown_window )
             self._dropdown_window_widget_event_filter.EVT_CLOSE( self.EventCloseDropdown )
@@ -802,11 +802,14 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def _ShowDropdown( self ):
         
-        ( text_width, text_height ) = self._text_ctrl.size().toTuple()
+        text_size = self._text_ctrl.size()
+        
+        text_width = text_size.width()
+        text_height = text_size.height()
         
         if self._text_ctrl.isVisible():
             
-            desired_dropdown_position = ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( 0, text_height ) )
+            desired_dropdown_position = ClientGUIFunctions.ClientToScreen( self._text_ctrl, QC.QPoint( 0, text_height ) )
             
             if self._last_attempted_dropdown_position != desired_dropdown_position:
                 

@@ -1258,7 +1258,10 @@ class ListBox( QW.QScrollArea ):
                 
                 ( x, y ) = ( x_start, current_index * text_height )
                 
-                ( this_text_width, this_text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
+                this_text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
+                
+                this_text_width = this_text_size.width()
+                this_text_height = this_text_size.height()
                 
                 painter.drawText( QC.QRectF( x, y, this_text_width, this_text_height ), text )
                 
@@ -1320,11 +1323,11 @@ class ListBox( QW.QScrollArea ):
         
         self.setWidgetResizable( True )
         
-        ( my_x, my_y ) = self.widget().size().toTuple()
+        my_size = self.widget().size()
         
         text_height = self.fontMetrics().height()
         
-        ideal_virtual_size = QC.QSize( my_x, text_height * len( self._ordered_terms ) )
+        ideal_virtual_size = QC.QSize( my_size.width(), text_height * len( self._ordered_terms ) )
         
         if ideal_virtual_size != self.widget().size():
             
@@ -2759,11 +2762,9 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._DataHasChanged()
         
     
-    def SetNamespaceColour( self, namespace, colour ):
+    def SetNamespaceColour( self, namespace, colour: QG.QColor ):
         
-        ( r, g, b, a ) = colour.toTuple()
-        
-        colour_tuple = ( r, g, b )
+        colour_tuple = ( colour.red(), colour.green(), colour.blue() )
         
         for ( existing_namespace, existing_colour ) in self._terms:
             

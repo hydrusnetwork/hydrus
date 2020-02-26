@@ -6,6 +6,7 @@ from qtpy import QtWidgets as QW
 
 STYLESHEET_DIR = os.path.join( HC.BASE_DIR, 'static', 'qss' )
 
+DEFAULT_HYDRUS_STYLESHEET = ''
 ORIGINAL_STYLE_NAME = None
 CURRENT_STYLE_NAME = None
 ORIGINAL_STYLESHEET = None
@@ -43,6 +44,23 @@ def GetAvailableStylesheets():
     return stylesheet_filenames
     
 def InitialiseDefaults():
+    
+    global DEFAULT_HYDRUS_STYLESHEET
+    
+    try:
+        
+        with open( os.path.join( STYLESHEET_DIR, 'default_hydrus.qss' ), 'r', encoding = 'utf-8' ) as f:
+            
+            DEFAULT_HYDRUS_STYLESHEET = f.read()
+            
+        
+    except Exception as e:
+        
+        HydrusData.Print( 'Failed to load default hydrus qss:' )
+        HydrusData.PrintException( e )
+        
+        DEFAULT_HYDRUS_STYLESHEET = ''
+        
     
     global ORIGINAL_STYLE_NAME
     global CURRENT_STYLE_NAME
@@ -85,13 +103,17 @@ def SetStyleFromName( name ):
     
 def SetStyleSheet( stylesheet ):
     
+    global DEFAULT_HYDRUS_STYLESHEET
+    
+    stylesheet_to_use = DEFAULT_HYDRUS_STYLESHEET + os.linesep * 2 + stylesheet
+    
     global CURRENT_STYLESHEET
     
-    if CURRENT_STYLESHEET != stylesheet:
+    if CURRENT_STYLESHEET != stylesheet_to_use:
         
-        QW.QApplication.instance().setStyleSheet( stylesheet )
+        QW.QApplication.instance().setStyleSheet( stylesheet_to_use )
         
-        CURRENT_STYLESHEET = stylesheet
+        CURRENT_STYLESHEET = stylesheet_to_use
         
     
 def SetStylesheetFromPath( filename ):

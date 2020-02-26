@@ -346,7 +346,7 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
-    def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ):
+    def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
         
@@ -981,7 +981,11 @@ class Controller( HydrusController.HydrusController ):
             
             qt_stylesheet_name = self.new_options.GetNoneableString( 'qt_stylesheet_name' )
             
-            if qt_stylesheet_name is not None:
+            if qt_stylesheet_name is None:
+                
+                ClientGUIStyle.ClearStylesheet()
+                
+            else:
                 
                 try:
                     

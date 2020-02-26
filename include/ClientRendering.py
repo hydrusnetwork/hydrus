@@ -105,7 +105,7 @@ class ImageRenderer( object ):
             
         else:
             
-            numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, self._numpy_image, target_resolution.toTuple() )
+            numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, self._numpy_image, ( target_resolution.width(), target_resolution.height() ) )
             
         
         return numpy_image
@@ -231,6 +231,8 @@ class RasterContainerVideo( RasterContainer ):
         self._buffer_start_index = -1
         self._buffer_end_index = -1
         
+        self._times_to_play_gif = 0
+        
         self._stop = False
         
         self._render_event = threading.Event()
@@ -325,7 +327,7 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.IMAGE_GIF:
             
-            self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
+            ( self._durations, self._times_to_play_gif ) = HydrusImageHandling.GetGIFFrameDurations( self._path )
             
             self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
             
@@ -613,6 +615,11 @@ class RasterContainerVideo( RasterContainer ):
     def GetSize( self ):
         
         return self._target_resolution
+        
+    
+    def GetTimesToPlayGIF( self ):
+        
+        return self._times_to_play_gif
         
     
     def GetTimestampMS( self, frame_index ):

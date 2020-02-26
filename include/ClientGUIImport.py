@@ -879,8 +879,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         warning = 'WARNING: Import folders check (and potentially move/delete!) the contents of all subdirectories as well as the base directory!'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
-        
-        QP.SetForegroundColour( warning_st, (128,0,0) )
+        warning_st.setObjectName( 'HydrusWarning' )
         
         QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, import_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )

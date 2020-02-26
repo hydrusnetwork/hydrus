@@ -1,0 +1,90 @@
+/*
+Default QSS for hydrus. This is prepended to any stylesheet loaded in hydrus.
+Copying these entries in your own stylesheets should override these settings.
+This will get more work in future.
+*/
+
+/*
+
+Here are some text and background colours
+
+*/
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+	color: #008000;
+}
+
+QLineEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+	color: #800000;
+}
+
+QLineEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+/* Example: Your files are going to be deleted! */
+
+QLabel#HydrusWarning
+{
+	color: #800000;
+}
+
+QCheckBox#HydrusWarning
+{
+	color: #800000;
+}
+
+/*
+
+Buttons on dialogs
+
+*/
+
+QPushButton#HydrusAccept
+{
+	color: #008000;
+}
+
+QPushButton#HydrusCancel
+{
+	color: #800000;
+}
+
+/*
+
+This is the green/red button that switches 'include current tags' and similar states on/off
+
+*/
+
+QPushButton#HydrusOnOffButton[hydrus_on=true]
+{
+	color: #008000;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false]
+{
+	color: #800000;
+}
+

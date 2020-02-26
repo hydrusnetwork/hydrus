@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 386</h3></li>
+				<ul>
+					<li>gifs and mpv:</li>
+					<li>the client now parses gifs for loop count metadata (some gifs say they should only be played x times through, usually 1). options->media now has a checkbox to control whether this value should be obeyed. both the native viewer and the mpv viewer should follow this. default value is still to loop indefinitely</li>
+					<li>if gifs are set to play with the mpv player, those without duration will now still be loaded in the native image viewer. the media viewing options ui now notes this</li>
+					<li>the mpv.conf file used in the mpv window can now be changed under options->media. it _should_ update the conf for all open mpv players on options dialog ok. added to the hydrus static mpv-conf directory are three new 'test' mpv confs for high quality and two audio normalisation tests. all test feedback and recommended conf info is welcome</li>
+					<li>.</li>
+					<li>ui cleanup and improvements:</li>
+					<li>the media viewer mouse autohide time is now customisable under options->media, including disabling it completely. it defaults to 700ms</li>
+					<li>improved the timing and reliability of the media viewer mouse autohide code</li>
+					<li>the mouse should now never autohide while a dialog is open</li>
+					<li>improved the bad colours of the splash screen. it should now be all one colour now, no ugly stand-out white square or other hardcoded colours. hydev also deployed his unparalleled gimp skills to get a white fade around the transparent-background hydrus icon, so it should look correct in darkmodes as well</li>
+					<li>created a default_hydrus.qss file in the qss folder in order to handle formerly hardcoded colours using hydrus-specific classnames and properties. as well as being loaded by default, this qss file is prepended to any custom stylesheet, so any custom stylesheet that includes its own versions of the hydrus-specific entries will override the defaults. this qss will get more work in future</li>
+					<li>added on/off buttons to hydrus default qss and converted existing object to use class and properties to obey this</li>
+					<li>added a variety of valid/invalid/warning text colours to hydrus default qss and converted existing text objects to use classnames to obey this</li>
+					<li>added accept/cancel buttons to hydrus default qss and converted all green/red buttons across the program to use classnames to obey this</li>
+					<li>the migrate database dialog now has an outright 'remove location' button to reduce confusion and speed up removal of high weight locations</li>
+					<li>if a location does not exist on the migrate database dialog, it will now stop throwing multiple error popups every time the list slightly changes, and will complain if file rebalancing is attempted, and will provide different 'remove' yes/no messages if that missing location currently has files or not</li>
+					<li>slight ui touch-ups to the migrate database dialog</li>
+					<li>if a window that remembers its position attempts to re-position to a location not on a current display, the windowing system now attempts to rescue it to the primary display, with appropriate popup messages given and errors caught more gracefully</li>
+					<li>extended these off-screen rescue calls to windows that pull their position from their parent. e.g. if you open the options dialog while the main gui is half over the left side of your screen, it should rescue to the primary display</li>
+					<li>windows that position off the center of their parent now calculate that reliably on the parent window, not just the parent widget, which never really worked as intended</li>
+					<li>windows that have no position memory and no parent to pull center/topleft position from will now appear center/topleft of the monitor your mouse is on</li>
+					<li>the splash screen now appears centered on the monitor your mouse is on</li>
+					<li>cleaned up and improved a bunch of window/screen coodinate code, moving 'space on screen' calculations to 'space on screen minus taskbar' and similar</li>
+					<li>unified a 'dialog is open' check across the program</li>
+					<li>cleaned up the old wx->Qt size, coordinate, and colour conversion code</li>
+					<li>cleaned up some old wx->Qt calculation code</li>
+					<li>improved 'light' and 'grey' colour detection code to now work in HSV</li>
+					<li>improved colour changing code to now work in HSV</li>
+					<li>improved some internal single-shot scheduled job code</li>
+				</ul>
 				<li><h3>version 385</h3></li>
 				<ul>
 					<li>mpv:</li>
@@ -29,6 +61,7 @@
 					<li>significant shortcuts refactoring</li>
 					<li>general shortcuts code and debug code cleanup and improvement</li>
 					<li>.</li>
+					<li>the rest:</li>
 					<li>local file import pages and most downloaders will now report more file import steps to their status labels. most will blit by too fast to see, but if it hangs for a bit, you will now see the step it is caught up on. I imagine in most cases, this will be metadata generation for large videos</li>
 					<li>fixed a variety of searches that could return files not filtered to the current file domain (e.g. files in trash while in my files, or not in ipfs while in ipfs) when the search did not include an inclusive tag</li>
 					<li>updated the default danbooru file page parsers to get their new tag format, thank you to a user for submitting these</li>

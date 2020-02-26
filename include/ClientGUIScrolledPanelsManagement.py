@@ -1793,8 +1793,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 label = 'As you are in advanced mode, these options have very low and high limits. Be very careful about lowering delay time or raising max number of connections too far, as things will break.'
                 
                 st = ClientGUICommon.BetterStaticText( general, label = label )
-                
-                QP.SetForegroundColour( st, ( 127, 0, 0 ) )
+                st.setObjectName( 'HydrusWarning' )
                 
                 st.setWordWrap( True )
                 
@@ -3284,11 +3283,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg = QW.QCheckBox( self )
             self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
+            self._always_loop_gifs = QW.QCheckBox( self )
+            self._always_loop_gifs.setToolTip( 'Some GIFS have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' )
+            
+            self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
+            
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( self )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( self )
             
             self._media_zooms = QW.QLineEdit( self )
             self._media_zooms.textChanged.connect( self.EventZoomsChanged )
+            
+            self._mpv_conf_path = QP.FilePickerCtrl( self )
             
             self._animated_scanbar_height = QP.MakeQSpinBox( self, min=1, max=255 )
             self._animated_scanbar_nub_width = QP.MakeQSpinBox( self, min=1, max=63 )
@@ -3311,8 +3317,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._disable_cv_for_gifs.setChecked( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
+            self._always_loop_gifs.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
+            self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
             self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
+            self._mpv_conf_path.SetPath( HydrusPaths.ConvertPortablePathToAbsPath( self._new_options.GetString( 'mpv_conf_path_portable' ) ) )
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
             
@@ -3339,9 +3348,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
+            rows.append( ( 'Always Loop GIFs:', self._always_loop_gifs ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
+            rows.append( ( 'MPV conf path:', self._mpv_conf_path ) )
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
             rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
+            rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
             rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
@@ -3543,12 +3555,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 media_zooms = [ float( media_zoom ) for media_zoom in self._media_zooms.text().split( ',' ) ]
                 
-                QP.SetBackgroundColour( self._media_zooms, QP.GetSystemColour( QG.QPalette.Window ) )
+                self._media_zooms.setProperty( 'hydrus_text', 'default' )
                 
             except ValueError:
                 
-                QP.SetBackgroundColour( self._media_zooms, QG.QColor( 255, 127, 127 ) )
+                self._media_zooms.setObjectName( 'HydrusInvalid' )
                 
+            
+            self._media_zooms.style().polish( self._media_zooms )
             
             self._media_zooms.update()
             
@@ -3560,8 +3574,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.isChecked() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
+            self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_gifs.isChecked() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
             self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
+            
+            self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )
+            
+            self._new_options.SetString( 'mpv_conf_path_portable', HydrusPaths.ConvertAbsPathToPortablePath( self._mpv_conf_path.GetPath() ) )
             
             self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
             self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
@@ -4392,9 +4411,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             results = self._namespace_colours.GetSelectedNamespaceColours()
             
-            for ( namespace, colour ) in list(results.items()):
+            for ( namespace, ( r, g, b ) ) in list( results.items() ):
                 
-                colour = QW.QColorDialog.getColor( QP.TupleToQColor( colour ), self, 'Namespace colour', QW.QColorDialog.ShowAlphaChannel )
+                colour = QG.QColor( r, g, b )
+                
+                colour = QW.QColorDialog.getColor( colour, self, 'Namespace colour', QW.QColorDialog.ShowAlphaChannel )
                 
                 if colour.isValid():
                 
@@ -5032,7 +5053,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._current_media = [ m.Duplicate() for m in media ]
         
         self._multiple_files_warning = ClientGUICommon.BetterStaticText( self, label = 'Warning: you are editing urls for multiple files!\nBe very careful about adding URLs here, as they will apply to everything.\nAdding the same URL to multiple files is only appropriate for gallery-type URLs!' )
-        QP.SetForegroundColour( self._multiple_files_warning, (128,0,0) )
+        self._multiple_files_warning.setObjectName( 'HydrusWarning' )
         
         if len( self._current_media ) == 1:
             

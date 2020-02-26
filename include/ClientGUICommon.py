@@ -499,9 +499,13 @@ class BufferedWindow( QW.QWidget ):
         
         if 'size' in kwargs:
             
-            ( x, y ) = kwargs[ 'size' ].toTuple()
+            size = kwargs[ 'size' ]
             
-            self.setFixedSize( x, y )
+            if isinstance( size, QC.QSize ):
+                
+                self.setFixedSize( kwargs[ 'size' ] )
+                
+            
         
     
     def _Draw( self, painter ):
@@ -935,24 +939,20 @@ class AlphaColourControl( QW.QWidget ):
         
         colour = self._colour_picker.GetColour()
         
-        ( r, g, b, a ) = colour.toTuple() # no alpha support here, so it'll be 255
-        
         a = self._alpha_selector.value()
         
-        colour = QG.QColor( r, g, b, a )
+        colour.setAlpha( a )
         
         return colour
         
     
-    def SetValue( self, colour ):
+    def SetValue( self, colour: QG.QColor ):
         
-        ( r, g, b, a ) = colour.toTuple()
+        picker_colour = QG.QColor( colour.rgb() )
         
-        picker_colour = QG.QColor( r, g, b )
+        self._colour_picker.SetColour( QG.QColor( colour.rgb() ) )
         
-        self._colour_picker.SetColour( picker_colour )
-        
-        self._alpha_selector.setValue( a )
+        self._alpha_selector.setValue( colour.alpha() )
         
     
 class ExportPatternButton( BetterButton ):
@@ -1828,17 +1828,22 @@ class OnOffButton( QW.QPushButton ):
         QW.QPushButton.__init__( self, parent )
         QW.QPushButton.setText( self, label )
         
+        self.setObjectName( 'HydrusOnOffButton' )
+        
         self._page_key = page_key
         self._topic = topic
         self._on_label = on_label
         
-        if off_label is None: self._off_label = on_label
-        else: self._off_label = off_label
+        if off_label is None:
+            
+            self._off_label = on_label
+            
+        else:
+            
+            self._off_label = off_label
+            
         
-        self._on = start_on
-        
-        if self._on: QP.SetForegroundColour( self, (0,128,0) )
-        else: QP.SetForegroundColour( self, (128,0,0) )
+        self.setProperty( 'hydrus_on', start_on )
         
         self.clicked.connect( self.EventButton )
         
@@ -1847,29 +1852,25 @@ class OnOffButton( QW.QPushButton ):
     
     def EventButton( self ):
         
-        if self._on:
-            
-            self._on = False
-            
-            self.setText( self._off_label )
-            
-            QP.SetForegroundColour( self, (128,0,0) )
-            
-            HG.client_controller.pub( self._topic, self._page_key, False )
-            
-        else:
-            
-            self._on = True
+        self.setProperty( 'hydrus_on', not self.property( 'hydrus_on' ) )
+        
+        new_value = self.property( 'hydrus_on' )
+        
+        if new_value:
             
             self.setText( self._on_label )
             
-            QP.SetForegroundColour( self, (0,128,0) )
+        else:
             
-            HG.client_controller.pub( self._topic, self._page_key, True )
+            self.setText( self._off_label )
             
         
+        HG.client_controller.pub( self._topic, self._page_key, new_value )
+        
+        self.style().polish( self )
+        
     
-    def IsOn( self ): return self._on
+    def IsOn( self ): return self.property( 'hydrus_on' )
     
 class RatingLike( QW.QWidget ):
     
@@ -1886,7 +1887,7 @@ class RatingLike( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( QP.TupleToQSize( (16,16) ) )
+        self.setMinimumSize( QC.QSize( 16, 16 ) )
         
     
     def _Draw( self, painter ):
@@ -2105,7 +2106,7 @@ class RatingNumerical( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( QP.TupleToQSize( (my_width,16) ) )
+        self.setMinimumSize( QC.QSize( my_width, 16 ) )
         
     
     def _Draw( self, painter ):
@@ -2115,36 +2116,35 @@ class RatingNumerical( QW.QWidget ):
     
     def _GetRatingFromClickEvent( self, event ):
         
+        click_pos = event.pos()
+        
         x = event.pos().x()
         y = event.pos().y()
         
-        ( my_width, my_height ) = self.size().toTuple()
+        BORDER = 1
         
-        # assuming a border of 2 on every side here
+        my_active_size = self.size() - QC.QSize( BORDER * 2, BORDER * 2 )
         
-        my_active_width = my_width - 4
-        my_active_height = my_height - 4
+        adjusted_click_pos = click_pos - QC.QPoint( BORDER, BORDER )
         
-        x_adjusted = x - 2
-        y_adjusted = y - 2
+        my_active_rect = QC.QRect( QC.QPoint( 0, 0 ), my_active_size )
         
-        if 0 <= y and y <= my_active_height:
+        if my_active_rect.contains( adjusted_click_pos ):
             
-            if 0 <= x and x <= my_active_width:
+            x_adjusted = x - BORDER
             
-                proportion_filled = x_adjusted / my_active_width
+            proportion_filled = x_adjusted / my_active_size.width()
+            
+            if self._allow_zero:
                 
-                if self._allow_zero:
-                    
-                    rating = round( proportion_filled * self._num_stars ) / self._num_stars
-                    
-                else:
-                    
-                    rating = int( proportion_filled * self._num_stars ) / ( self._num_stars - 1 )
-                    
+                rating = round( proportion_filled * self._num_stars ) / self._num_stars
                 
-                return rating
+            else:
                 
+                rating = int( proportion_filled * self._num_stars ) / ( self._num_stars - 1 )
+                
+            
+            return rating
             
         
         return None

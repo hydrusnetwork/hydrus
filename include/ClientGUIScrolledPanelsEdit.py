@@ -197,7 +197,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         self._checkboxes = QP.CheckListBox( self )
         
-        self._checkboxes.setMinimumSize( QP.TupleToQSize( (320,420) ) )
+        self._checkboxes.setMinimumSize( QC.QSize( 320, 420 ) )
         
         try:
             
@@ -2535,11 +2535,18 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 continue
                 
             
-            self._media_show_action.addItem( CC.media_viewer_action_string_lookup[ action ], action )
+            s = CC.media_viewer_action_string_lookup[ action ]
+            
+            if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and self._mime in ( HC.IMAGE_GIF, HC.GENERAL_ANIMATION ):
+                
+                s += ' (will show image gifs with native viewer)'
+                
+            
+            self._media_show_action.addItem( s, action )
             
             if action != CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                self._preview_show_action.addItem( CC.media_viewer_action_string_lookup[ action ], action )
+                self._preview_show_action.addItem( s, action )
                 
             
         
@@ -4448,7 +4455,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message = 'Subscriptions do not work well if they get too large! If any sub has >200,000 items, separate it into smaller pieces immediately!'
         
         st = ClientGUICommon.BetterStaticText( self, message )
-        QP.SetForegroundColour( st, ( 127, 0, 0 ) )
+        st.setObjectName( 'HydrusWarning' )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -4457,7 +4464,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message = 'SUBSCRIPTIONS ARE CURRENTLY GLOBALLY PAUSED! CHECK THE NETWORK MENU TO UNPAUSE THEM.'
             
             st = ClientGUICommon.BetterStaticText( self, message )
-            QP.SetForegroundColour( st, (127,0,0) )
+            st.setObjectName( 'HydrusWarning' )
             
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -6866,7 +6873,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             url_class.Test( example_url )
             
             self._example_url_classes.setText( 'Example matches ok!' )
-            QP.SetForegroundColour( self._example_url_classes, (0,128,0) )
+            self._example_url_classes.setObjectName( 'HydrusValid' )
             
             normalised = url_class.Normalise( example_url )
             
@@ -6961,11 +6968,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             reason = str( e )
             
             self._example_url_classes.setText( 'Example does not match - '+reason )
-            QP.SetForegroundColour( self._example_url_classes, (128,0,0) )
+            self._example_url_classes.setObjectName( 'HydrusInvalid' )
             
             self._normalised_url.setText( '' )
             self._api_url.setText( '' )
-
+            
+        
+        self._example_url_classes.style().polish( self._example_url_classes )
+        
         self._update_already_in_progress = False
         
     

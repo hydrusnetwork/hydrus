@@ -3650,19 +3650,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        dialog_open = False
+        dialog_is_open = ClientGUIFunctions.DialogIsOpen()
         
-        tlws = QW.QApplication.topLevelWidgets()
-        
-        for tlw in tlws:
-            
-            if isinstance( tlw, QP.Dialog ) and tlw.isModal():
-                
-                dialog_open = True
-                
-            
-        
-        if self.isMinimized() or dialog_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
+        if self.isMinimized() or dialog_is_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
             
             self._controller.CallLaterQtSafe( self, 0.5, self.AddModalMessage, job_key )
             
@@ -5896,8 +5886,6 @@ class FrameSplashPanel( QW.QWidget ):
         
         self._image_label.setAlignment( QC.Qt.AlignCenter )
         
-        QP.SetBackgroundColour( self._image_label, ( 255, 255, 255 ) )
-        
         self._title_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
         self._status_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
         self._status_sub_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
@@ -6071,7 +6059,12 @@ class FrameSplash( QW.QWidget ):
         
         self.setLayout( self._vbox )
         
-        QP.CenterOnScreen( self )
+        screen = ClientGUITopLevelWindows.GetMouseScreen()
+        
+        if screen is not None:
+            
+            self.move( screen.availableGeometry().center() - self.rect().center() )
+            
         
         self.show()
         

@@ -18,7 +18,7 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
         
         self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.parentWidget().done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._commit, (0,128,0) )
+        self._commit.setObjectName( 'HydrusAccept' )
         
         self._back = ClientGUICommon.BetterButton( self, 'go back', self.parentWidget().done, QW.QDialog.Rejected )
         
@@ -41,10 +41,10 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
         
         self._commit = ClientGUICommon.BetterButton( self, 'commit', self.parentWidget().done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._commit, (0,128,0) )
+        self._commit.setObjectName( 'HydrusAccept' )
         
         self._forget = ClientGUICommon.BetterButton( self, 'forget', self.parentWidget().done, QW.QDialog.Rejected )
-        QP.SetForegroundColour( self._forget, (128,0,0) )
+        self._forget.setObjectName( 'HydrusCancel' )
         
         def cancel_callback( parent ):
             
@@ -78,11 +78,11 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
         
         self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.Accepted )
-        QP.SetForegroundColour( self._yes, ( 0, 128, 0 ) )
+        self._yes.setObjectName( 'HydrusAccept' )
         self._yes.setText( yes_label )
         
         self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.Rejected )
-        QP.SetForegroundColour( self._no, ( 128, 0, 0 ) )
+        self._no.setObjectName( 'HydrusCancel' )
         self._no.setText( no_label )
         
         #
