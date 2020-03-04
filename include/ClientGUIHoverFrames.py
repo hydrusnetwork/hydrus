@@ -3,7 +3,7 @@ from . import ClientData
 from . import ClientDragDrop
 from . import ClientGUICanvas
 from . import ClientGUICommon
-from . import ClientGUIDialogs
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIMediaControls
@@ -11,7 +11,6 @@ from . import ClientGUIMenus
 from . import ClientGUIMPV
 from . import ClientGUITopLevelWindows
 from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIShortcuts
 from . import ClientGUIShortcutControls
 from . import ClientMedia
@@ -209,7 +208,7 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             in_position = ( in_ideal_x or in_actual_x ) and ( in_ideal_y or in_actual_y )
             
-            menu_open = HG.client_controller.MenuIsOpen()
+            menu_open = CGC.core().MenuIsOpen()
             
             dialog_is_open = ClientGUIFunctions.DialogIsOpen()
             
@@ -850,7 +849,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             ClientGUIMenus.AppendMenu( menu, defaults_menu, 'set default shortcuts' )
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def EventDragButton( self ):

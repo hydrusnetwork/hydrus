@@ -1,8 +1,4 @@
-from . import ClientCaches
 from . import ClientConstants as CC
-from . import ClientData
-from . import ClientDefaults
-from . import ClientDownloading
 from . import ClientGUIACDropdown
 from . import ClientGUICommon
 from . import ClientGUIControls
@@ -12,23 +8,17 @@ from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
-from . import ClientGUIMediaControls
 from . import ClientGUIPanels
 from . import ClientGUIPredicates
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIScrolledPanelsReview
-from . import ClientGUISerialisable
 from . import ClientGUIShortcuts
-from . import ClientGUITagSuggestions
 from . import ClientGUITopLevelWindows
 from . import ClientNetworkingContexts
 from . import ClientNetworkingJobs
 from . import ClientNetworkingSessions
-from . import ClientImporting
 from . import ClientMedia
 from . import ClientRatings
-from . import ClientSerialisable
 from . import ClientServices
 from . import ClientGUIStyle
 from . import ClientGUITime
@@ -44,9 +34,9 @@ from . import HydrusSerialisable
 from . import HydrusTagArchive
 from . import HydrusTags
 from . import HydrusText
-import itertools
 import os
 import random
+import re
 import traceback
 import urllib.parse
 from . import QtPorting as QP
@@ -3657,11 +3647,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_media_collect = ClientGUICommon.CheckboxCollect( self, silent = True )
             
-            self._sort_by = QW.QListWidget( self )
-            self._sort_by.itemDoubleClicked.connect( self.EventRemoveSortBy )
+            namespace_sorting_box = ClientGUICommon.StaticBox( self, 'namespace sorting' )
             
-            self._new_sort_by = QW.QLineEdit( self )
-            self._new_sort_by.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._new_sort_by, self.AddSortBy ) )
+            self._namespace_sort_by = ClientGUIListBoxes.QueueListBox( namespace_sorting_box, 8, self._ConvertNamespaceTupleToSortString, self._AddNamespaceSort, self._EditNamespaceSort )
             
             #
             
@@ -3689,17 +3677,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._fallback_media_sort.SetSort( media_sort )
                 
             
-            for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]:
-                
-                item = QW.QListWidgetItem()
-                item.setText( '-'.join( sort_by ) )
-                item.setData( QC.Qt.UserRole, sort_by )
-                self._sort_by.addItem( item )
-                
+            self._namespace_sort_by.AddDatas( [ tuple( sort_by ) for ( namespace_gumpf, sort_by ) in HC.options[ 'sort_by' ] ] )
             
             self._save_page_sort_on_change.setChecked( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
             
             #
+            
+            sort_by_text = 'You can manage your namespace sorting schemes here.'
+            sort_by_text += os.linesep
+            sort_by_text += 'The client will sort media by comparing their namespaces, moving from left to right until an inequality is found.'
+            sort_by_text += os.linesep
+            sort_by_text += 'Any namespaces here will also appear in your collect-by dropdowns.'
+            
+            namespace_sorting_box.Add( ClientGUICommon.BetterStaticText( namespace_sorting_box, sort_by_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            namespace_sorting_box.Add( self._namespace_sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             rows = []
             
@@ -3712,47 +3703,58 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            sort_by_text = 'You can manage new namespace sorting schemes here.'
-            sort_by_text += os.linesep
-            sort_by_text += 'The client will sort media by comparing their namespaces, moving from left to right until an inequality is found.'
-            sort_by_text += os.linesep
-            sort_by_text += 'Any changes will be shown in the sort-by dropdowns of any new pages you open.'
-            
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,sort_by_text), CC.FLAGS_VCENTER )
-            QP.AddToLayout( vbox, self._sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._new_sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, namespace_sorting_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
         
-        def AddSortBy( self ):
+        def _AddNamespaceSort( self ):
             
-            sort_by_string = self._new_sort_by.text()
-
-            if sort_by_string != '':
-
-                try: sort_by = sort_by_string.split( '-' )
-                except:
-
-                    QW.QMessageBox.critical( self, 'Error', 'Could not parse that sort by string!' )
-
-                    return
-
-                item = QW.QListWidgetItem()
-                item.setText( sort_by_string )
-                item.setData( QC.Qt.UserRole, sort_by )
-                self._sort_by.addItem( item )
-                
-                self._new_sort_by.setText( '' )
-                
+            default = ( 'creator', 'series', 'page' )
+            
+            return self._EditNamespaceSort( default )
             
         
-        def EventRemoveSortBy( self ):
+        def _ConvertNamespaceTupleToSortString( self, namespaces ):
             
-            selection = QP.ListWidgetGetSelection( self._sort_by )
+            return '-'.join( namespaces )
             
-            if selection != -1: QP.ListWidgetDelete( self._sort_by, selection )
+        
+        def _EditNamespaceSort( self, namespaces ):
+            
+            # users might want to add a namespace with a hyphen in it, so in lieu of a nice list to edit we'll just escape for now mate
+            correct_char = '-'
+            escaped_char = '\\-'
+            
+            escaped_namespaces = [ namespace.replace( correct_char, escaped_char ) for namespace in namespaces ]
+            
+            edit_string = '-'.join( escaped_namespaces )
+            
+            message = 'Write the namespaces you would like to sort by here, separated by hyphens. Any namespace in any of your sort definitions will be added to the collect-by menu.'
+            message += os.linesep * 2
+            message += 'If the namespace you want to add has a hyphen, like \'creator-id\', instead type it with a backslash escape, like \'creator\\-id-page\'.'
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False, default = edit_string ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    edited_string = dlg.GetValue()
+                    
+                    edited_escaped_namespaces = re.split( r'(?<!\\)\-', edited_string )
+                    
+                    edited_namespaces = [ namespace.replace( escaped_char, correct_char ) for namespace in edited_escaped_namespaces ]
+                    
+                    edited_namespaces = [ HydrusTags.CleanTag( namespace ) for namespace in edited_namespaces if HydrusTags.TagOK( namespace ) ]
+                    
+                    if len( edited_namespaces ) > 0:
+                        
+                        return tuple( edited_namespaces )
+                        
+                    
+                
+                raise HydrusExceptions.VetoException()
+                
             
         
         def UpdateOptions( self ):
@@ -3762,12 +3764,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.isChecked() )
             self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
             
-            sort_by_choices = []
-            
-            for sort_by in [ QP.GetClientData( self._sort_by, i ) for i in range( self._sort_by.count() ) ]:
-                
-                sort_by_choices.append( ( 'namespaces', sort_by ) )
-                
+            sort_by_choices = [ ( 'namespaces', list( data ) ) for data in self._namespace_sort_by.GetData() ]
             
             HC.options[ 'sort_by' ] = sort_by_choices
             

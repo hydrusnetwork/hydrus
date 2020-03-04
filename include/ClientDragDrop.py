@@ -2,7 +2,6 @@ from . import ClientGUIFunctions
 from . import HydrusConstants as HC
 from . import HydrusGlobals as HG
 from . import HydrusPaths
-import json
 import os
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG

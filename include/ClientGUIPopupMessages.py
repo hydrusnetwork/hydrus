@@ -2,13 +2,10 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIControls
-from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
-from . import ClientGUIScrolledPanels
 from . import ClientGUITopLevelWindows
 from . import ClientThreading
-from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
@@ -17,8 +14,6 @@ import sys
 import traceback
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
-from . import QtPorting as QP
 from . import QtPorting as QP
 
 class PopupWindow( QW.QFrame ):
@@ -207,7 +202,7 @@ class PopupMessage( PopupWindow ):
             
             new_text += os.linesep * 2
             
-            new_text += text[:self.TEXT_CUTOFF]
+            new_text += text[ : self.TEXT_CUTOFF ]
             
             text = new_text
             
@@ -494,7 +489,7 @@ class PopupMessage( PopupWindow ):
             
             text = popup_traceback
             
-            self._tb_text.setText( self._ProcessText(text) )
+            self._tb_text.setText( self._ProcessText( text ) )
             
             self._show_tb_button.show()
             

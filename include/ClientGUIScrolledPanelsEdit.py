@@ -1,6 +1,5 @@
 from . import ClientConstants as CC
 from . import ClientDefaults
-from . import ClientDownloading
 from . import ClientDuplicates
 from . import ClientImporting
 from . import ClientGUICommon
@@ -11,7 +10,6 @@ from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
-from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
 from . import ClientGUIFileSeedCache
 from . import ClientGUIGallerySeedLog
@@ -27,7 +25,6 @@ from . import ClientNetworkingContexts
 from . import ClientNetworkingDomain
 from . import ClientParsing
 from . import ClientPaths
-from . import ClientSearch
 from . import ClientTags
 import collections
 from . import HydrusConstants as HC
@@ -5288,124 +5285,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._subscriptions.UpdateDatas( subscriptions )
                 
-            
-        
-    
-class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, tag_display_manager ):
-        
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
-        
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
-        
-        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
-        
-        self._tag_services.setMinimumWidth( min_width )
-        
-        #
-        
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) ) )
-        
-        services.sort( key = lambda s: s.GetName() )
-        
-        for service in services:
-            
-            service_key = service.GetServiceKey()
-            name = service.GetName()
-            
-            page = self._Panel( self._tag_services, tag_display_manager, service_key )
-            
-            select = service_key == CC.COMBINED_TAG_SERVICE_KEY
-            
-            self._tag_services.addTab( page, name )
-            if select: self._tag_services.setCurrentWidget( page )
-            
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        intro = 'Please note this new system is under construction. It is neither completely functional nor as efficient as intended.'
-        
-        st = ClientGUICommon.BetterStaticText( self, intro )
-        st.setWordWrap( True )
-        
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.widget().setLayout( vbox )
-        
-    
-    def GetValue( self ):
-        
-        tag_display_manager = ClientTags.TagDisplayManager()
-        
-        for page in self._tag_services.GetPages():
-            
-            ( service_key, tag_display_types_to_tag_filters ) = page.GetValue()
-            
-            for ( tag_display_type, tag_filter ) in tag_display_types_to_tag_filters.items():
-                
-                tag_display_manager.SetTagFilter( tag_display_type, service_key, tag_filter )
-                
-            
-        
-        return tag_display_manager
-        
-    
-    class _Panel( QW.QWidget ):
-        
-        def __init__( self, parent, tag_display_manager, service_key ):
-            
-            QW.QWidget.__init__( self, parent )
-            
-            single_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key )
-            selection_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, service_key )
-            
-            self._service_key = service_key
-            
-            #
-            
-            message = 'This filters which tags will show on \'single\' file views such as the media viewer and thumbnail banners.'
-            
-            self._single_tag_filter_button = ClientGUITags.TagFilterButton( self, message, single_tag_filter, label_prefix = 'tags shown: ' )
-            
-            message = 'This filters which tags will show on \'selection\' file views such as the \'selection tags\' list on regular search pages.'
-            
-            self._selection_tag_filter_button = ClientGUITags.TagFilterButton( self, message, selection_tag_filter, label_prefix = 'tags shown: ' )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Tag filter for single file views: ', self._single_tag_filter_button ) )
-            rows.append( ( 'Tag filter for multiple file views: ', self._selection_tag_filter_button ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            vbox = QP.VBoxLayout()
-            
-            if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                message = 'These filters apply to all tag services.'
-                
-                QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            QP.AddToLayout( vbox, gridbox )
-            
-            self.setLayout( vbox )
-            
-        
-        def GetValue( self ):
-            
-            tag_display_types_to_tag_filters = {}
-            
-            tag_display_types_to_tag_filters[ ClientTags.TAG_DISPLAY_SINGLE_MEDIA ] = self._single_tag_filter_button.GetValue()
-            tag_display_types_to_tag_filters[ ClientTags.TAG_DISPLAY_SELECTION_LIST ] = self._selection_tag_filter_button.GetValue()
-            
-            return ( self._service_key, tag_display_types_to_tag_filters )
             
         
     

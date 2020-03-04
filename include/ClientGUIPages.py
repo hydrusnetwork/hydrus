@@ -1,32 +1,23 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
-from . import ClientData
 from . import ClientGUICanvas
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIManagement
-from . import ClientGUIMedia
 from . import ClientGUIMenus
 from . import ClientGUIResults
-from . import ClientDownloading
 from . import ClientSearch
 from . import ClientGUIShortcuts
 from . import ClientThreading
 import collections
-import hashlib
 from . import HydrusData
 from . import HydrusExceptions
+from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 from . import HydrusText
-from . import HydrusThreading
-import inspect
 import os
-import sys
-import time
-import traceback
-from . import QtPorting as QP
-from . import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -517,7 +508,7 @@ class Page( QW.QSplitter ):
         
         def clean_up_old_panel():
             
-            if self._controller.MenuIsOpen():
+            if CGC.core().MenuIsOpen():
                 
                 self._controller.CallLaterQtSafe( self, 0.5, clean_up_old_panel )
                 
@@ -1105,6 +1096,22 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
+    def _DuplicatePage( self, index ):
+        
+        if index == -1 or index > self.count() - 1:
+            
+            return False
+            
+        
+        page = self.widget( index )
+        
+        session = GUISession( 'dupe page session' )
+        
+        session.AddPageTuple( page )
+        
+        self.InsertSessionPageTuples( index + 1, session.GetPageTuples() )
+        
+    
     def _GetDefaultPageInsertionIndex( self ):
         
         new_options = self._controller.new_options
@@ -1484,10 +1491,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 ClientGUIMenus.AppendMenuItem( menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
                 
                 if can_go_left:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
                     
                 
                 if can_go_right:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
                     
                 
@@ -1503,6 +1512,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             ClientGUIMenus.AppendMenuItem( menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
             
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'duplicate page', 'Duplicate this page.', self._DuplicatePage, tab_index )
+            
             if more_than_one_tab:
                 
                 ClientGUIMenus.AppendSeparator( menu )
@@ -1517,10 +1530,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                 
                 if can_move_left:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, 'move left', 'Move this page one to the left.', self._ShiftPage, tab_index, delta=-1 )
                     
                 
                 if can_move_right:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, 'move right', 'Move this page one to the right.', self._ShiftPage, tab_index, 1 )
                     
                 
@@ -1589,7 +1604,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
             
         
-        self._controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def _SortPagesByFileCount( self, order ):
@@ -1715,47 +1730,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         forced_insertion_index = starting_index
         
-        done_first_page = False
-        
-        for page_tuple in page_tuples:
-            
-            ( page_type, page_data ) = page_tuple
-            
-            if page_type == 'pages':
-                
-                ( name, subpage_tuples ) = page_data
-                
-                try:
-                    
-                    page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False, select_page = False )
-                    
-                    page.AppendSessionPageTuples( subpage_tuples )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                
-            elif page_type == 'page':
-                
-                ( management_controller, initial_hashes ) = page_data
-                
-                try:
-                    
-                    select_page = not done_first_page
-                    
-                    self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
-                    
-                    done_first_page = True
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                
-            
-            forced_insertion_index += 1
-            
+        self.InsertSessionPageTuples( forced_insertion_index, page_tuples )
         
     
     def ChooseNewPage( self ):
@@ -1862,7 +1837,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def EventMiddleClick( self, event ):
         
-        if self._controller.MenuIsOpen():
+        if CGC.core().MenuIsOpen():
             
             return
             
@@ -2289,6 +2264,51 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         return False
+        
+    
+    def InsertSessionPageTuples( self, forced_insertion_index, page_tuples ):
+        
+        done_first_page = False
+        
+        for page_tuple in page_tuples:
+            
+            ( page_type, page_data ) = page_tuple
+            
+            if page_type == 'pages':
+                
+                ( name, subpage_tuples ) = page_data
+                
+                try:
+                    
+                    page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False, select_page = False )
+                    
+                    page.AppendSessionPageTuples( subpage_tuples )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                
+            elif page_type == 'page':
+                
+                ( management_controller, initial_hashes ) = page_data
+                
+                try:
+                    
+                    select_page = not done_first_page
+                    
+                    self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
+                    
+                    done_first_page = True
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                
+            
+            forced_insertion_index += 1
+            
         
     
     def IsMultipleWatcherPage( self ):
@@ -2875,7 +2895,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        def handle_e( e ):
+        def handle_e( page_tuple, e ):
             
             HydrusData.ShowText( 'Attempting to save a page to the session failed! Its data tuple and error follows! Please close it or see if you can clear any potentially invalid data from it!' )
             
@@ -2902,7 +2922,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        handle_e( e )
+                        handle_e( page_tuple, e )
                         
                     
                 
@@ -2936,7 +2956,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except Exception as e:
                 
-                handle_e( e )
+                handle_e( page_tuple, e )
                 
             
         
@@ -2945,7 +2965,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        def handle_e( e ):
+        def handle_e( serialisable_page_tuple, e ):
             
             HydrusData.ShowText( 'A page failed to load! Its serialised data and error follows!' )
             
@@ -2972,7 +2992,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        handle_e( e )
+                        handle_e( spt, e )
                         
                     
                 
@@ -3004,7 +3024,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except Exception as e:
                 
-                handle_e( e )
+                handle_e( serialisable_page_tuple, e )
                 
             
         

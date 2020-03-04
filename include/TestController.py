@@ -343,7 +343,7 @@ class Controller( object ):
     
     def CallBlockingToQt( self, win, func, *args, **kwargs ):
         
-        def qt_code( win, job_key ):
+        def qt_code( win: QW.QWidget, job_key: ClientThreading.JobKey ):
             
             try:
                 
@@ -358,11 +358,11 @@ class Controller( object ):
                 
             except (HydrusExceptions.QtDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException) as e:
                 
-                job_key.SetVariable( 'error', e )
+                job_key.SetErrorException( e )
                 
             except Exception as e:
                 
-                job_key.SetVariable( 'error', e )
+                job_key.SetErrorException( e )
                 
                 HydrusData.Print( 'CallBlockingToQt just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
@@ -398,11 +398,11 @@ class Controller( object ):
             return result
             
         
-        error = job_key.GetIfHasVariable( 'error' )
-        
-        if error is not None:
+        if job_key.HadError():
             
-            raise error
+            e = job_key.GetErrorException()
+            
+            raise e
             
         
         raise HydrusExceptions.ShutdownException()

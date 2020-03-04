@@ -1,12 +1,11 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
-from . import ClientCaches
 from . import ClientData
-from . import ClientDownloading
 from . import ClientDragDrop
 from . import ClientExporting
 from . import ClientGUIAsync
 from . import ClientGUICommon
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
@@ -22,8 +21,6 @@ from . import ClientGUIMPV
 from . import ClientGUIPages
 from . import ClientGUIParsing
 from . import ClientGUIPopupMessages
-from . import ClientGUIPredicates
-from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIScrolledPanelsReview
@@ -34,11 +31,9 @@ from . import ClientGUITags
 from . import ClientGUITopLevelWindows
 from . import ClientMedia
 from . import ClientNetworkingContexts
-from . import ClientNetworkingJobs
 from . import ClientParsing
 from . import ClientPaths
 from . import ClientRendering
-from . import ClientSearch
 from . import ClientServices
 from . import ClientTags
 from . import ClientThreading
@@ -67,7 +62,6 @@ import sys
 import threading
 import time
 import traceback
-import types
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -678,7 +672,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         text = 'This will automatically set up your client with the Public Tag Repository, just as if you had added it manually under services->manage services.'
         text += os.linesep * 2
-        text += 'Be aware that the PTR has hundreds of millions of mappings. Processing takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
+        text += 'Be aware that the PTR has been growing since 2011 and now has hundreds of millions of mappings. As of 2020-03, it requires about 4GB of bandwidth and file storage, and your database itself will grow by 25GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
+        text += os.linesep * 2
+        text += 'If you are on a mechanical HDD or do not have the space on your SSD, cancel out now.'
         
         if have_it_already:
             
@@ -2627,7 +2623,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagDisplayManagerPanel( dlg, self._controller.tag_display_manager )
+            panel = ClientGUITags.EditTagDisplayManagerPanel( dlg, self._controller.tag_display_manager )
             
             dlg.SetPanel( panel )
             
@@ -2916,6 +2912,32 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         if result == QW.QDialog.Accepted:
             
             self._controller.Write( 'regenerate_similar_files' )
+            
+        
+    
+    def _RepopulateFTSCache( self ):
+        
+        message = 'This will go through all the tag definitions in the database and make sure there is a correct fast-search record for it.'
+        message += os.linesep * 2
+        message += 'It may take a long time, and the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_text_title', 'repopulating and updating tag text search cache' )
+            
+            self._controller.pub( 'message', job_key )
+            
+            status_hook = lambda s: job_key.SetVariable( 'popup_text_1', s )
+            
+            self._controller.Write( 'repopulate_fts_cache', status_hook = status_hook )
+            
+            job_key.Delete( 3 )
             
         
     
@@ -3210,7 +3232,7 @@ Do not ever forget your password! If you do, you'll have to manually insert a ya
 
 The password is cleartext here but obscured in the entry dialog. Enter a blank password to remove.'''
         
-        with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, min_char_width = 24 ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
@@ -3570,7 +3592,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It typically happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes, during which your gui may hang. A popup message will show its status.'
+        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It also truncates the database files, recovering unused space back to your hard drive. It typically happens automatically every few months, but you can force it here.'
+        text += os.linesep * 2
+        text += 'If you have no reason to run this, it is usually pointless. If you have a very large database on an HDD instead of an SSD, it may take upwards of an hour, during which your gui may hang. A popup message will show its status.'
         text += os.linesep * 2
         text += 'A \'soft\' vacuum will only reanalyze those databases that are due for a check in the normal db maintenance cycle. If nothing is due, it will return immediately.'
         text += os.linesep * 2
@@ -3914,47 +3938,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         HG.client_controller.pub( 'notify_new_colourset' )
         
     
-    def FleshOutPredicates( self, predicates ):
-        
-        good_predicates = []
-        
-        for predicate in predicates:
-            
-            predicate = predicate.GetCountlessCopy()
-            
-            ( predicate_type, value, inclusive ) = predicate.GetInfo()
-            
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
-                
-                with ClientGUITopLevelWindows.DialogEdit( self, 'input predicate', hide_buttons = True ) as dlg:
-                    
-                    panel = ClientGUIPredicates.InputFileSystemPredicate( dlg, predicate_type )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        good_predicates.extend( panel.GetValue() )
-                        
-                    
-                
-            elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
-                
-                good_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
-                
-            elif predicate_type == HC.PREDICATE_TYPE_LABEL:
-                
-                continue
-            
-            else:
-                
-                good_predicates.append( predicate )
-                
-            
-        
-        return good_predicates
-        
-    
     def GenerateMenuInfo( self, name ):
         
         def undo():
@@ -4053,7 +4036,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             file_maintenance_menu = QW.QMenu( submenu )
             
-            ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'review scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
+            ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'manage scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
             ClientGUIMenus.AppendSeparator( file_maintenance_menu )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_idle' )
@@ -4061,16 +4044,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             current_value = check_manager.GetCurrentValue()
             func = check_manager.Invert
             
-            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
+            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_active' )
             
             current_value = check_manager.GetCurrentValue()
             func = check_manager.Invert
             
-            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
+            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
             
-            ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'file maintenance' )
+            ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'files' )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
@@ -4082,7 +4065,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
                 
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'maintainance' )
             
             submenu = QW.QMenu( menu )
             
@@ -4093,6 +4076,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'repopulate and correct tag text search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateFTSCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
@@ -5382,7 +5366,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         db_going_to_hang_if_we_hit_it = HG.client_controller.DBCurrentlyDoingJob()
-        menu_open = HG.client_controller.MenuIsOpen()
+        menu_open = CGC.core().MenuIsOpen()
         
         if db_going_to_hang_if_we_hit_it or menu_open:
             

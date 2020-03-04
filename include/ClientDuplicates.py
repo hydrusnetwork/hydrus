@@ -72,8 +72,6 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
                 service_key = bytes.fromhex( service_key_encoded )
                 
-                from . import ClientTags
-                
                 tag_filter = ClientTags.TagFilter()
                 
                 tag_service_actions.append( ( service_key, action, tag_filter ) )

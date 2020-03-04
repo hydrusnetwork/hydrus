@@ -153,6 +153,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( data, favicon )
         
+        time.sleep( 0.5 )
+        
     
     def _test_file_repo( self, service ):
         

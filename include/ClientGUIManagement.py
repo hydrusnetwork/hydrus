@@ -7,6 +7,7 @@ from . import ClientGUIACDropdown
 from . import ClientGUICanvas
 from . import ClientGUICommon
 from . import ClientGUIControls
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
@@ -898,7 +899,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._active_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._filtering_panel, self._page_key, predicates )
         
-        self._ac_read = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, allow_all_known_files = False )
+        self._ac_read = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
         
@@ -1327,7 +1328,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _UpdatePotentialDuplicatesCount( self, potential_duplicates_count ):
         
-        self._num_potential_duplicates.setText( HydrusData.ToHumanInt(potential_duplicates_count)+' potential pairs.' )
+        self._num_potential_duplicates.setText( '{} potential pairs.'.format( HydrusData.ToHumanInt( potential_duplicates_count ) ) )
         
         if potential_duplicates_count > 0:
             
@@ -2071,7 +2072,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         ClientGUIMenus.AppendSeparator( menu )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'bundle multiple pasted queries into one importer (advanced)', 'If you are pasting many small queries at once (such as md5 lookups), check this to smooth out the workflow.', merge_simultaneous_pends_to_one_importer, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, start_gallery_queues_paused, not merge_simultaneous_pends_to_one_importer )
         
-        HG.client_controller.PopupMenu( self._cog_button, menu )
+        CGC.core().PopupMenu( self._cog_button, menu )
         
     
     def _ShowSelectedImportersFiles( self, show = 'presented' ):
@@ -3218,6 +3219,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def _RefreshFormulae( self ):
         
+        self._formulae.blockSignals( True )
+        
         self._formulae.clear()
         
         to_select = None
@@ -3239,6 +3242,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 to_select = i
                 
             
+        
+        self._formulae.blockSignals( False )
         
         if to_select is not None:
             
@@ -4299,7 +4304,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                 
             
-            HG.client_controller.PopupMenu( self, menu )
+            CGC.core().PopupMenu( self, menu )
             
         
     

@@ -1,6 +1,7 @@
 from . import ClientGUIScrolledPanelsButtonQuestions
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUITopLevelWindows
+from . import HydrusConstants as HC
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from qtpy import QtWidgets as QW
@@ -131,6 +132,48 @@ def SelectFromListButtons( win, title, choice_tuples ):
         else:
             
             raise HydrusExceptions.CancelledException()
+            
+        
+    
+def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
+    
+    if service_keys is None:
+        
+        services = HG.client_controller.services_manager.GetServices( service_types )
+        
+        service_keys = [ service.GetServiceKey() for service in services ]
+        
+    
+    if unallowed is not None:
+        
+        service_keys.difference_update( unallowed )
+        
+    
+    if len( service_keys ) == 0:
+        
+        return None
+        
+    elif len( service_keys ) == 1:
+        
+        ( service_key, ) = service_keys
+        
+        return service_key
+        
+    else:
+        
+        services = { HG.client_controller.services_manager.GetService( service_key ) for service_key in service_keys }
+        
+        choice_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
+        
+        try:
+            
+            service_key = SelectFromList( HG.client_controller.gui, 'select service', choice_tuples )
+            
+            return service_key
+            
+        except HydrusExceptions.CancelledException:
+            
+            return None
             
         
     

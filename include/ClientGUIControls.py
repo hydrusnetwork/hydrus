@@ -1,13 +1,11 @@
-from . import ClientCaches
 from . import ClientConstants as CC
-from . import ClientData
 from . import ClientGUICommon
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
-from . import ClientGUIShortcuts
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
 from . import ClientParsing
@@ -17,7 +15,6 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusText
-import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -1371,9 +1368,10 @@ class NetworkJobControl( QW.QFrame ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
+        
         ClientGUIMenus.AppendMenuCheckItem( menu, 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', self._auto_override_bandwidth_rules, self.FlipAutoOverrideBandwidth )
         
-        HG.client_controller.PopupMenu( self._cog_button, menu )
+        CGC.core().PopupMenu( self._cog_button, menu )
         
     
     def _OverrideBandwidthIfAppropriate( self ):

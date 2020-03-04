@@ -2,7 +2,6 @@ from . import ClientConstants as CC
 from . import ClientExporting
 from . import ClientGUIACDropdown
 from . import ClientGUICommon
-from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
@@ -18,12 +17,10 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusPaths
 import os
-import stat
 import time
 import traceback
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -222,7 +219,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._query_box, self._page_key, predicates )
         
-        self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False )
+        self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         #
         

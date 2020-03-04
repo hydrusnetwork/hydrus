@@ -13,6 +13,7 @@ import re
 
 re_newlines = re.compile( '[\r\n]+' )
 re_multiple_spaces = re.compile( r'\s+' )
+# want to keep the 'leading space' part here, despite tag.strip() elsewhere, in case of some crazy '- test' tag
 re_leading_space_or_garbage = re.compile( r'^(\s|-|system:)+' )
 re_leading_single_colon = re.compile( '^:(?!:)' )
 re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew

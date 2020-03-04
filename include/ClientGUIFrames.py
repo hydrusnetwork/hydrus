@@ -1,8 +1,6 @@
 from . import ClientConstants as CC
-from . import ClientGUICommon
 from . import ClientGUITopLevelWindows
 from . import HydrusConstants as HC
-from . import HydrusData
 from . import HydrusGlobals as HG
 import os
 from qtpy import QtWidgets as QW

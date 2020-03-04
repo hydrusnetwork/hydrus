@@ -2,11 +2,11 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import ClientCaches
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientDuplicates
 from . import ClientGUICommon
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
@@ -17,7 +17,6 @@ from . import ClientGUIMediaControls
 from . import ClientGUIMenus
 from . import ClientGUIMPV
 from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsButtonQuestions
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIShortcuts
@@ -27,17 +26,10 @@ from . import ClientMedia
 from . import ClientPaths
 from . import ClientRatings
 from . import ClientRendering
-from . import ClientSearch
 from . import ClientTags
-from . import ClientThreading
-import gc
 from . import HydrusImageHandling
 from . import HydrusPaths
-from . import HydrusSerialisable
 from . import HydrusTags
-import os
-import time
-from . import QtPorting as QP
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -1345,7 +1337,12 @@ class Canvas( QW.QWidget ):
         
         self._UpdateBackgroundColour()
         
-        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, initial_shortcuts_names = ( 'media', 'media_viewer' ) )
+        catch_mouse = False
+        
+        # once we have catch_mouse full shortcut support for canvases, swap out this out for an option to swallow activating clicks
+        ignore_activating_mouse_click = catch_mouse and not self.PREVIEW_WINDOW
+        
+        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, initial_shortcuts_names = ( 'media', 'media_viewer' ), catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -2271,12 +2268,9 @@ class Canvas( QW.QWidget ):
         self.SetMedia( None )
         
     
-    def BeginDrag( self, point = None ):
+    def BeginDrag( self ):
         
-        if point is None:
-            
-            point = self.mapFromGlobal( QG.QCursor.pos() )
-            
+        point = self.mapFromGlobal( QG.QCursor.pos() )
         
         self._last_drag_pos = point
         self._current_drag_is_touch = False
@@ -2778,7 +2772,7 @@ class CanvasPanel( Canvas ):
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def LaunchMediaViewer( self ):
@@ -3138,9 +3132,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             return True
             
         
-        point = event.pos()
-        
-        self.BeginDrag( point = point )
+        self.BeginDrag()
         
         return True # was: event.ignore()
         
@@ -3161,7 +3153,8 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         CC.CAN_HIDE_MOUSE = True
         
-        event_pos = event.pos()
+        # due to the mouse setPos below, the event pos can get funky I think due to out of order coordinate setting events, so we'll poll current value directly
+        event_pos = self.mapFromGlobal( QG.QCursor.pos() )
         
         show_mouse = self.cursor() == QG.QCursor( QC.Qt.ArrowCursor )
         
@@ -3297,7 +3290,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             can_hide = False
             
         
-        if HG.client_controller.MenuIsOpen():
+        if CGC.core().MenuIsOpen():
             
             can_hide = False
             
@@ -5035,7 +5028,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if interval is None:
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15' ) as dlg:
+            with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15', min_char_width = 12 ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
@@ -5079,7 +5072,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._current_media is not None and self._RunningSlideshow():
                 
-                if self._media_container.ReadyToSlideshow() and not HG.client_controller.MenuIsOpen():
+                if self._media_container.ReadyToSlideshow() and not CGC.core().MenuIsOpen():
                     
                     self._ShowNext()
                     
@@ -5371,7 +5364,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
-            HG.client_controller.PopupMenu( self, menu )
+            CGC.core().PopupMenu( self, menu )
             
         
     

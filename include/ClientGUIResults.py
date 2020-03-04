@@ -4,6 +4,7 @@ from . import ClientData
 from . import ClientDragDrop
 from . import ClientFiles
 from . import ClientGUICanvas
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
@@ -1138,9 +1139,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _RecalculateVirtualSize( self ): pass
+    def _RecalculateVirtualSize( self, called_from_resize_event = False ):
+        
+        pass
+        
     
-    def _RedrawMedia( self, media ): pass
+    def _RedrawMedia( self, media ):
+        
+        pass
+        
     
     def _Remove( self, file_filter ):
         
@@ -2604,7 +2611,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if media_to_use is not None:
             
-            current_position = self._sorted_media.index( media_to_use )
+            try:
+                
+                current_position = self._sorted_media.index( media_to_use )
+                
+            except HydrusExceptions.DataMissing:
+                
+                self._SetFocusedMedia( None )
+                
+                return
+                
             
             new_position = current_position + columns + ( self._num_columns * rows )
             
@@ -2623,7 +2639,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._ScrollToMedia( new_media )
             
-        
         
     
     def _RecalculateVirtualSize( self, called_from_resize_event = False ):
@@ -3989,7 +4004,7 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def MaintainPageCache( self ):

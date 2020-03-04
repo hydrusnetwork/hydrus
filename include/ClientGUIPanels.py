@@ -14,8 +14,6 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusNATPunch
-from . import HydrusNetwork
 from . import HydrusPaths
 import os
 import time

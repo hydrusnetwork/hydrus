@@ -9,11 +9,12 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 from . import HydrusTags
+from . import HydrusText
 import re
 import time
 
-IGNORED_TAG_SEARCH_CHARACTERS = '[](){}"\''
-IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : None for char in IGNORED_TAG_SEARCH_CHARACTERS }
+IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
+IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : ' ' for char in IGNORED_TAG_SEARCH_CHARACTERS }
 
 def ConvertTagToSearchable( tag ):
     
@@ -34,17 +35,20 @@ def ConvertTagToSearchable( tag ):
     
     tag = tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
     
+    tag = HydrusText.re_multiple_spaces.sub( ' ', tag )
+    
+    tag = tag.strip()
+    
     return tag
-
+    
 def ConvertEntryTextToSearchText( entry_text ):
     
-    entry_text = HydrusTags.CleanTag( entry_text )
+    wildcard_text = entry_text
     
     entry_text = ConvertTagToSearchable( entry_text )
     
     ( namespace, subtag ) = HydrusTags.SplitTag( entry_text )
     
-    wildcard_text = entry_text
     search_text = entry_text
     
     if len( subtag ) > 0 and not subtag.endswith( '*' ):

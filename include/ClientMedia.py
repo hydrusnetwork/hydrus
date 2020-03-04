@@ -3035,6 +3035,27 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return deal_with_none( x.GetDuration() )
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
+                
+                def sort_key( x ):
+                    
+                    num_frames = x.GetNumFrames()
+                    
+                    if num_frames is None or num_frames == 0:
+                        
+                        return -1
+                        
+                    
+                    duration = x.GetDuration()
+                    
+                    if duration is None or duration == 0:
+                        
+                        return -1
+                        
+                    
+                    return num_frames / duration
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_HAS_AUDIO:
                 
                 def sort_key( x ):
@@ -3186,25 +3207,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         if sort_metatype == 'system':
             
-            sort_string_lookup = {}
-            
-            sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = 'dimensions: duration'
-            sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = 'dimensions: height'
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = 'dimensions: number of pixels'
-            sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = 'dimensions: resolution ratio'
-            sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = 'dimensions: width'
-            sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = 'file: approximate bitrate'
-            sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = 'file: filesize'
-            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = 'file: filetype'
-            sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = 'file: has audio'
-            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'file: time imported'
-            sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'file: modified time'
-            sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = 'random'
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = 'tags: number of tags'
-            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = 'views: media views'
-            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = 'views: media viewtime'
-            
-            sort_string += sort_string_lookup[ sort_data ]
+            sort_string += CC.sort_type_string_lookup[ sort_data ]
             
         elif sort_metatype == 'namespaces':
             
@@ -3244,6 +3247,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_FRAMERATE ] = ( 'slowest first', 'fastest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )

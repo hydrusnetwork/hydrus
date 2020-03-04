@@ -8,10 +8,8 @@ from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusImageHandling
 from . import HydrusPaths
-import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 import locale
 import traceback

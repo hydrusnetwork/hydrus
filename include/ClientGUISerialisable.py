@@ -1,19 +1,13 @@
-from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIFunctions
 from . import ClientGUIScrolledPanels
-from . import ClientParsing
 from . import ClientSerialisable
-from . import ClientThreading
-from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusPaths
 from . import HydrusSerialisable
 import os
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 
 class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):

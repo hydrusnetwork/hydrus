@@ -1,16 +1,11 @@
 from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientDownloading
 from . import ClientThreading
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusPaths
 from . import HydrusSerialisable
-from . import HydrusTags
-import threading
 import traceback
 import os
 import sqlite3
@@ -236,24 +231,6 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         
         return colour.lighter( qt_intensity )
         
-    
-def GetSortTypeChoices():
-
-    sort_choices = list( CC.SORT_CHOICES )
-    
-    for ( namespaces_text, namespaces_list ) in HC.options[ 'sort_by' ]:
-        
-        sort_choices.append( ( namespaces_text, tuple( namespaces_list ) ) )
-        
-    
-    service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-    
-    for service_key in service_keys:
-        
-        sort_choices.append( ( 'rating', service_key ) )
-        
-    
-    return sort_choices
     
 def MergeCounts( min_a, max_a, min_b, max_b ):
     

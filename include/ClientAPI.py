@@ -3,7 +3,6 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
-import os
 import threading
 
 CLIENT_API_PERMISSION_ADD_URLS = 0

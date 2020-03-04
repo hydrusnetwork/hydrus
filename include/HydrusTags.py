@@ -296,3 +296,16 @@ def StripTextOfGumpf( t ):
     
     return t
     
+def TagOK( t ):
+    
+    try:
+        
+        CheckTagNotEmpty( CleanTag( t ) )
+        
+        return True
+        
+    except:
+        
+        return False
+        
+    

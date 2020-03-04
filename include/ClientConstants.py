@@ -299,27 +299,82 @@ SORT_FILES_BY_MEDIA_VIEWTIME = 11
 SORT_FILES_BY_APPROX_BITRATE = 12
 SORT_FILES_BY_HAS_AUDIO = 13
 SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP = 14
+SORT_FILES_BY_FRAMERATE = 15
+
+SYSTEM_SORT_TYPES = []
+
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_DURATION )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FRAMERATE )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_HEIGHT )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_WIDTH )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_RATIO )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_PIXELS )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FILESIZE )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_IMPORT_TIME )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_APPROX_BITRATE )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_HAS_AUDIO )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MIME )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_RANDOM )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_TAGS )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MEDIA_VIEWS )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MEDIA_VIEWTIME )
+
+system_sort_type_submetatype_string_lookup = {}
+
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_DURATION ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_HEIGHT ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_PIXELS ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RATIO ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_WIDTH ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'file'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'file'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MIME ] = 'file'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'file'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'file'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'file'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RANDOM ] = None
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'tags'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'views'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWTIME ] = 'views'
+
+sort_type_basic_string_lookup = {}
+
+sort_type_basic_string_lookup[ SORT_FILES_BY_DURATION ] = 'duration'
+sort_type_basic_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'framerate'
+sort_type_basic_string_lookup[ SORT_FILES_BY_HEIGHT ] = 'height'
+sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_PIXELS ] = 'number of pixels'
+sort_type_basic_string_lookup[ SORT_FILES_BY_RATIO ] = 'resolution ratio'
+sort_type_basic_string_lookup[ SORT_FILES_BY_WIDTH ] = 'width'
+sort_type_basic_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'approximate bitrate'
+sort_type_basic_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'filesize'
+sort_type_basic_string_lookup[ SORT_FILES_BY_MIME ] = 'filetype'
+sort_type_basic_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'has audio'
+sort_type_basic_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'time imported'
+sort_type_basic_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'modified time'
+sort_type_basic_string_lookup[ SORT_FILES_BY_RANDOM ] = 'random'
+sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'number of tags'
+sort_type_basic_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'media views'
+sort_type_basic_string_lookup[ SORT_FILES_BY_MEDIA_VIEWTIME ] = 'media viewtime'
+
+sort_type_string_lookup = {}
+
+for sort_type in SYSTEM_SORT_TYPES:
+    
+    ms = system_sort_type_submetatype_string_lookup[ sort_type ]
+    s = sort_type_basic_string_lookup[ sort_type ]
+    
+    if ms is not None:
+        
+        s = '{}: {}'.format( ms, s )
+        
+    
+    sort_type_string_lookup[ sort_type ] = s
+    
 
 SORT_ASC = 0
 SORT_DESC = 1
-
-SORT_CHOICES = []
-
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_FILESIZE ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_DURATION ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_IMPORT_TIME ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_MIME ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_RANDOM ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_WIDTH ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_HEIGHT ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_RATIO ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_NUM_PIXELS ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_NUM_TAGS ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_MEDIA_VIEWS ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_MEDIA_VIEWTIME ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_APPROX_BITRATE ) )
-SORT_CHOICES.append( ( 'system', SORT_FILES_BY_HAS_AUDIO ) )
 
 STATUS_UNKNOWN = 0
 STATUS_SUCCESSFUL_AND_NEW = 1

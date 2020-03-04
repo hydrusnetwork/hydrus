@@ -1,5 +1,4 @@
 from . import ClientConstants as CC
-from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIFunctions
@@ -9,19 +8,61 @@ from . import ClientGUIShortcuts
 from . import ClientGUITime
 from . import ClientRatings
 from . import ClientSearch
-import datetime
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusText
 import os
 import re
-import string
+import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 
+def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
+    
+    window = widget.window()
+    
+    good_predicates = []
+    
+    for predicate in predicates:
+        
+        predicate = predicate.GetCountlessCopy()
+        
+        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        
+        if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+            
+            from . import ClientGUITopLevelWindows
+            
+            with ClientGUITopLevelWindows.DialogEdit( window, 'input predicate', hide_buttons = True ) as dlg:
+                
+                panel = InputFileSystemPredicate( dlg, predicate_type )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    good_predicates.extend( panel.GetValue() )
+                    
+                
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
+            
+            good_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_LABEL:
+            
+            continue
+            
+        else:
+            
+            good_predicates.append( predicate )
+            
+        
+    
+    return good_predicates
+    
 class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, predicate_type ):

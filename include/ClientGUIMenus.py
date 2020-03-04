@@ -1,8 +1,6 @@
-import collections
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
-import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -59,7 +57,7 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
     menu_item.setCheckable( True )
     menu_item.setChecked( initial_value )
-
+    
     menu.addAction( menu_item )
     
     BindMenuItem( menu_item, callable, *args, **kwargs )

@@ -1,7 +1,7 @@
-from . import ClientCaches
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIMenus
@@ -23,7 +23,6 @@ from . import LogicExpressionQueryParser
 import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 
 def AppendLoadingPredicate( predicates ):
@@ -57,7 +56,7 @@ def CacheCanBeUsedForInput( search_text_for_cache, new_search_text ):
     
 def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusual_predicate_types, under_construction_or_predicate ):
     
-    ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
+    ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
     
     if search_text in ( '', ':', '*' ):
         
@@ -78,7 +77,7 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
                 
             else:
                 
-                ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+                ( namespace, subtag ) = HydrusTags.SplitTag( entry_text )
                 
                 if namespace != '' and subtag in ( '', '*' ):
                     
@@ -137,7 +136,7 @@ def InsertStaticPredicatesForWrite( predicates, parsed_search_text, tag_service_
     
     return predicates
     
-def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_callable, file_search_context, synchronised, include_unusual_predicate_types, initial_matches_fetched, search_text_for_current_cache, cached_results, under_construction_or_predicate ):
+def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_callable, file_search_context, synchronised, include_unusual_predicate_types, initial_matches_fetched, search_text_for_current_cache, cached_results, under_construction_or_predicate, force_system_everything ):
     
     next_search_is_probably_fast = False
     
@@ -147,7 +146,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_call
     file_service_key = file_search_context.GetFileServiceKey()
     tag_service_key = file_search_context.GetTagServiceKey()
     
-    ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
+    ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
     
     if search_text in ( '', ':', '*' ):
         
@@ -173,7 +172,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_call
                 
                 search_text_for_current_cache = None
                 
-                cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key )
+                cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key, force_system_everything = force_system_everything )
                 
                 matches = cached_results
                 
@@ -1279,7 +1278,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeFileService, service.GetServiceKey() )
             
         
-        HG.client_controller.PopupMenu( self._file_repo_button, menu )
+        CGC.core().PopupMenu( self._file_repo_button, menu )
         
     
     def RefreshFavouriteTags( self ):
@@ -1328,12 +1327,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current tag domain to ' + service.GetName() + '.', self._ChangeTagService, service.GetServiceKey() )
             
         
-        HG.client_controller.PopupMenu( self._tag_repo_button, menu )
+        CGC.core().PopupMenu( self._tag_repo_button, menu )
         
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_search_context, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True ):
+    def __init__( self, parent, page_key, file_search_context, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False ):
         
         file_service_key = file_search_context.GetFileServiceKey()
         tag_service_key = file_search_context.GetTagServiceKey()
@@ -1374,6 +1373,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._or_rewind.hide()
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
+        self._force_system_everything = force_system_everything
         
         button_hbox_1 = QP.HBoxLayout()
         
@@ -1489,7 +1489,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _BroadcastCurrentText( self, shift_down ):
         
-        ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
         ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
         
@@ -1559,7 +1559,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
+        favs_list = ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
@@ -1575,7 +1575,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._list_height_num_chars = 8
             
         
-        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
+        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
     
     def _ParseSearchText( self ):
@@ -1595,6 +1595,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             entry_text = raw_entry
             
         
+        entry_text = HydrusTags.CleanTag( entry_text )
+        
         explicit_wildcard = '*' in entry_text
         
         ( wildcard_text, search_text ) = ClientSearch.ConvertEntryTextToSearchText( entry_text )
@@ -1607,7 +1609,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         else:
             
-            tag = HydrusTags.CleanTag( entry_text )
+            tag = entry_text
             
             cache_text = search_text[:-1] # take off the trailing '*' for the cache text
             
@@ -1625,7 +1627,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
             
         
-        return ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate )
+        return ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate )
         
     
     def _RewindORConstruction( self ):
@@ -1663,12 +1665,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         HG.client_controller.CallLaterQtSafe(self, 0.2, self.SetStubPredicates, job_key, stub_predicates)
         
-        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._media_callable, self._file_search_context, self._synchronised.IsOn(), self._include_unusual_predicate_types, self._initial_matches_fetched, self._search_text_for_current_cache, self._cached_results, self._under_construction_or_predicate )
+        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._media_callable, self._file_search_context, self._synchronised.IsOn(), self._include_unusual_predicate_types, self._initial_matches_fetched, self._search_text_for_current_cache, self._cached_results, self._under_construction_or_predicate, self._force_system_everything )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
         
-        ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
         looking_at_search_results = self._dropdown_notebook.currentWidget() == self._search_results_list
         
@@ -1873,7 +1875,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
+        favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
@@ -1882,7 +1884,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._list_height_num_chars = 8
         
-        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
+        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
     
     def _ParseSearchText( self ):

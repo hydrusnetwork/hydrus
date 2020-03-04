@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 387</h3></li>
+				<ul>
+					<li>the sort-files-by dropdown is now a button that launches a nested menu. it still supports mouse wheel events. it should now be quicker to find what you want!</li>
+					<li>added 'sort by framerate' to regular file sort. it works for file search at the db level as well, when mixed with system:limit</li>
+					<li>under options->sort/collect, the namespace sort-by ui has finally had its makeover. it now has add/edit/delete buttons and up/down buttons for reordering how the entries will appear. it also deals with bad input better. furthermore, namespaces that have hyphens (like 'creator-id') are now supported in namespace sort (and hence collect-by dropdowns!)!</li>
+					<li>numerical (multi-star) ratings can now be set by dragging the mouse across the line of stars</li>
+					<li>added 'duplicate page' to the page tab right-click menu! it just makes a copy of the page or page of pages right beside it</li>
+					<li>system:everything will now always show up in non-query-page autocomplete dropdowns (such as in the file maintenance dialog)</li>
+					<li>wrote a maintenance routine to repopulate and correct the tag text search cache. it is possible to trigger this (though it is typically pointless) from the database->maintain menu</li>
+					<li>updated the characters that are ignored in autocomplete tag text search rules, which help skip over unusual characters and assist word-break discovery for searching for tags like '[intensifies]'. as well as the previous brackets, braces, paretheses, quotes, and double-quotes, now slash, backslash, hyphens, and underscores(!) are ignored. searching for 'bbb' will now match a tag 'aaa-bbb', and searching for 'blue_eyes', 'blue-eyes', 'blue eyes', or 'eyes' will match all of 'blue_eyes'. 'blue-eyes', and 'blue eyes'!</li>
+					<li>to effect the above change, the client will take a few seconds to a minute to update</li>
+					<li>the above tag text search rules now collapse contiguous unusual characters, or combinations of whitespace and characters, better</li>
+					<li>namespace and simple wildcard search inputs no longer have the tag text search rules applied to them, meaning you can now search for these unusual characters more specifically when desired</li>
+					<li>updated the derpibooru gallery search objects to use their api, thanks to a user's submission. this re-enables the 'no filter' mode</li>
+					<li>added watcher support for tvch.moe, which works with an existing 4chan-style parser</li>
+					<li>the 'add the ptr' help item now warns the user about the ptr's modern drive storage requirements (4GB download+files, 25GB db). the help files are also updated</li>
+					<li>I believe I fixed the sometimes crazy fast media drag-move that could happen in archive/delete and duplicate filters</li>
+					<li>fixed an old uncaught wx->qt issue with the simple downloader where editing the formulae would throw an error</li>
+					<li>fixed a bug in the 'move highlighted thumbnail' code in the rare case where the currently focused thumbnail can not be found</li>
+					<li>text input dialogs are now mostly wider</li>
+					<li>refactored some ui code, cleaning up core objects and import hierarchy</li>
+					<li>did some controller/gui refactoring, pushing on untangling things</li>
+					<li>cleaned up a bunch of no-longer-used import statements</li>
+					<li>misc ui code cleanup</li>
+					<li>slight rewording of database menu</li>
+					<li>prepped shortcuts system to ignore a window-activating click (for the media viewer filters), but can't turn it on yet as media viewer clicks are not yet fully plugged in</li>
+				</ul>
 				<li><h3>version 386</h3></li>
 				<ul>
 					<li>gifs and mpv:</li>

@@ -11,7 +11,6 @@ from . import HydrusTags
 from . import HydrusThreading
 import os
 import re
-import stat
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 

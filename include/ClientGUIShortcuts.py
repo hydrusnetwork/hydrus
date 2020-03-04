@@ -904,7 +904,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ShortcutsHandler( QC.QObject ):
     
-    def __init__( self, parent, initial_shortcuts_names = None, catch_mouse = False ):
+    def __init__( self, parent: QW.QWidget, initial_shortcuts_names = None, catch_mouse = False, ignore_activating_mouse_click = False ):
         
         QC.QObject.__init__( self, parent )
         
@@ -918,6 +918,15 @@ class ShortcutsHandler( QC.QObject ):
         self._parent = parent
         self._parent.installEventFilter( self )
         self._shortcuts_names = list( initial_shortcuts_names )
+        
+        self._ignore_activating_mouse_click = ignore_activating_mouse_click
+        
+        self._frame_activated_time = 0.0
+        
+        if self._catch_mouse and self._ignore_activating_mouse_click:
+            
+            self._deactivation_catcher = ShortcutsDeactivationCatcher( self, parent )
+            
         
     
     def _ProcessShortcut( self, shortcut: Shortcut ):
@@ -1034,6 +1043,16 @@ class ShortcutsHandler( QC.QObject ):
             
             if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
                 
+                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.1 ):
+                    
+                    if event.type() == QC.QEvent.MouseButtonRelease:
+                        
+                        self._frame_activated_time = 0.0
+                        
+                    
+                    return False
+                    
+                
                 i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, event = event )
                 
                 shortcut = ConvertMouseEventToShortcut( event )
@@ -1141,6 +1160,32 @@ class ShortcutsHandler( QC.QObject ):
     def SetShortcuts( self, shortcut_set_names ):
         
         self._shortcuts_names = list( shortcut_set_names )
+        
+    
+    def FrameActivated( self ):
+        
+        self._frame_activated_time = HydrusData.GetNowPrecise()
+        
+    
+class ShortcutsDeactivationCatcher( QC.QObject ):
+    
+    def __init__( self, shortcuts_handler: ShortcutsHandler, widget: QW.QWidget ):
+        
+        QC.QObject.__init__( self, shortcuts_handler )
+        
+        self._shortcuts_handler = shortcuts_handler
+        
+        widget.window().installEventFilter( self )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.WindowActivate:
+            
+            self._shortcuts_handler.FrameActivated()
+            
+        
+        return False
         
     
 class ShortcutsManager( object ):

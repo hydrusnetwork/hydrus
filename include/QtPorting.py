@@ -2496,7 +2496,7 @@ class CollectComboCtrl( QW.QComboBox ):
 
         sort_by = HC.options[ 'sort_by' ]
 
-        for (sort_by_type, namespaces) in sort_by:
+        for ( sort_by_type, namespaces ) in sort_by:
             
             text_and_data_tuples.update( namespaces )
             
@@ -2560,12 +2560,13 @@ class CollectComboCtrl( QW.QComboBox ):
         collect_strings = self.GetCheckedStrings()
 
         if len( collect_strings ) > 0:
-
+            
             description = 'collect by ' + '-'.join( collect_strings )
-
+            
         else:
 
             description = 'no collections'
+            
 
         return ( namespaces, rating_service_keys, description )
 

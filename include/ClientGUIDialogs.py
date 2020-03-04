@@ -1,101 +1,23 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
-from . import ClientData
-from . import ClientDefaults
-from . import ClientDownloading
-from . import ClientDragDrop
-from . import ClientExporting
-from . import ClientCaches
-from . import ClientFiles
 from . import ClientGUIACDropdown
 from . import ClientGUIFrames
-from . import ClientGUICommon
-from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
-from . import ClientGUIImport
+from . import ClientGUICommon
 from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIPredicates
 from . import ClientGUIShortcuts
-from . import ClientGUITime
 from . import ClientGUITopLevelWindows
-from . import ClientImporting
-from . import ClientTags
-from . import ClientThreading
-import collections
-import gc
 from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusNATPunch
-from . import HydrusNetwork
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import HydrusThreading
-import itertools
 import os
-import random
 import re
-import queue
-import shutil
-import stat
-import string
-import threading
-import time
 import traceback
-import yaml
 from . import HydrusData
-from . import ClientSearch
 from . import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
 
-# Option Enums
-
-def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
-    
-    if service_keys is None:
-        
-        services = HG.client_controller.services_manager.GetServices( service_types )
-        
-        service_keys = [ service.GetServiceKey() for service in services ]
-        
-    
-    if unallowed is not None:
-        
-        service_keys.difference_update( unallowed )
-        
-    
-    if len( service_keys ) == 0:
-        
-        return None
-        
-    elif len( service_keys ) == 1:
-        
-        ( service_key, ) = service_keys
-        
-        return service_key
-        
-    else:
-        
-        services = { HG.client_controller.services_manager.GetService( service_key ) for service_key in service_keys }
-        
-        choice_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
-        
-        try:
-            
-            service_key = ClientGUIDialogsQuick.SelectFromList( HG.client_controller.gui, 'select service', choice_tuples )
-            
-            return service_key
-            
-        except HydrusExceptions.CancelledException:
-            
-            return None
-            
-        
-    
 class Dialog( QP.Dialog ):
     
     def __init__( self, parent, title, style = QC.Qt.Dialog, position = 'topleft' ):
@@ -829,17 +751,21 @@ class DialogModifyAccounts( Dialog ):
         
         #
         
-        for ( string, value ) in HC.lifetimes:
+        for ( label, value ) in HC.lifetimes:
             
             if value is not None:
                 
-                self._add_to_expires.addItem( string, value ) # don't want 'add no limit'
+                self._add_to_expires.addItem( label, value ) # don't want 'add no limit'
                 
             
         
         self._add_to_expires.setCurrentIndex( 1 ) # three months
         
-        for ( string, value ) in HC.lifetimes: self._set_expires.addItem( string, value )
+        for ( label, value ) in HC.lifetimes:
+            
+            self._set_expires.addItem( label, value )
+            
+        
         self._set_expires.setCurrentIndex( 1 ) # three months
         
         #
@@ -1146,7 +1072,7 @@ class DialogSelectImageboard( Dialog ):
 
 class DialogTextEntry( Dialog ):
     
-    def __init__( self, parent, message, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False ):
+    def __init__( self, parent, message, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ):
         
         if suggestions is None:
             
@@ -1169,6 +1095,10 @@ class DialogTextEntry( Dialog ):
         self._text = QW.QLineEdit( self )
         self._text.textChanged.connect( self.EventText )
         self._text.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text, self.EnterText ) )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._text, min_char_width )
+        
+        self._text.setMinimumWidth( width )
         
         if password_entry:
             

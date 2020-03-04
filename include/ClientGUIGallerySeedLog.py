@@ -1,8 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
-from . import ClientGUIDialogs
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUISerialisable
@@ -11,7 +10,6 @@ from . import ClientGUITopLevelWindows
 from . import ClientImportGallerySeeds
 from . import ClientPaths
 from . import ClientSerialisable
-from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
@@ -573,7 +571,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
 class GallerySeedLogStatusControl( QW.QFrame ):

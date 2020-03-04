@@ -2,15 +2,10 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import HydrusConstants as HC
 from . import HydrusData
-from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusSerialisable
 import re
 import os
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
-from . import QtPorting as QP
 
 def GetClientDefaultOptions():
     
@@ -517,8 +512,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     from . import ClientNetworkingContexts
     
     KB = 1024
-    MB = 1024 ** 2
-    GB = 1024 ** 3
+    MB = KB ** 2
+    GB = KB ** 3
     
     #
     

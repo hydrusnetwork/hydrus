@@ -1,23 +1,17 @@
-from . import ClientCaches
 from . import ClientData
 from . import ClientConstants as CC
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIMenus
-from . import ClientGUITopLevelWindows
 from . import ClientMedia
 from . import ClientPaths
 from . import ClientRatings
-from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusText
 import os
 import re
-import sys
-import threading
-import time
 import traceback
 from . import QtPorting as QP
 from qtpy import QtCore as QC
@@ -357,7 +351,7 @@ class BetterColourControl( QP.ColourPickerCtrl ):
         ClientGUIMenus.AppendMenuItem( menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', HG.client_controller.pub, 'clipboard', 'text', hex_string )
         ClientGUIMenus.AppendMenuItem( menu, 'import a hex colour from the clipboard', 'Look at the clipboard for a colour in the format #FF0000, and set the colour.', self._ImportHexFromClipboard )
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
 class BetterNotebook( QW.QTabWidget ):
@@ -724,44 +718,29 @@ class ChoiceSort( QW.QWidget ):
         
         self._management_controller = management_controller
         
-        self._sort_type_choice = BetterChoice( self )
+        self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
+        
+        self._sort_type_button = BetterButton( self, 'sort', self._SortTypeButtonClick )
         self._sort_asc_choice = BetterChoice( self )
         
         asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
         
         self._sort_asc_choice.setMinimumWidth( asc_width )
         
-        sort_types = ClientData.GetSortTypeChoices()
+        type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 10 )
         
-        choice_tuples = []
-        
-        for sort_type in sort_types:
-            
-            example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
-            
-            choice_tuples.append( ( example_sort.GetSortTypeString(), sort_type ) )
-            
-        
-        choice_tuples.sort()
-        
-        for ( display_string, value ) in choice_tuples:
-            
-            self._sort_type_choice.addItem( display_string, value )
-            
-        
-        type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_choice, 10 )
-        
-        self._sort_type_choice.setMinimumWidth( type_width )
+        self._sort_type_button.setMinimumWidth( type_width )
         
         self._sort_asc_choice.addItem( '', CC.SORT_ASC )
         
+        self._UpdateSortTypeLabel()
         self._UpdateAscLabels()
         
         #
         
         hbox = QP.HBoxLayout( margin = 0 )
         
-        QP.AddToLayout( hbox, self._sort_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._sort_type_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._sort_asc_choice, CC.FLAGS_VCENTER )
         
         self.setLayout( hbox )
@@ -785,7 +764,6 @@ class ChoiceSort( QW.QWidget ):
                 
             
         
-        self._sort_type_choice.currentIndexChanged.connect( self.EventSortTypeChoice )
         self._sort_asc_choice.currentIndexChanged.connect( self.EventSortAscChoice )
         
     
@@ -807,12 +785,151 @@ class ChoiceSort( QW.QWidget ):
     
     def _GetCurrentSort( self ):
         
-        sort_type = self._sort_type_choice.GetValue()
         sort_asc = self._sort_asc_choice.GetValue()
         
-        media_sort = ClientMedia.MediaSort( sort_type, sort_asc )
+        media_sort = ClientMedia.MediaSort( self._sort_type, sort_asc )
         
         return media_sort
+        
+    
+    def _PopulateSortMenuOrList( self, menu = None ):
+        
+        sort_types = []
+        
+        menu_items_and_sort_types = []
+        
+        submetatypes_to_menus = {}
+        
+        for system_sort_type in CC.SYSTEM_SORT_TYPES:
+            
+            sort_type = ( 'system', system_sort_type )
+            
+            sort_types.append( sort_type )
+            
+            if menu is not None:
+                
+                submetatype = CC.system_sort_type_submetatype_string_lookup[ system_sort_type ]
+                
+                if submetatype is None:
+                    
+                    menu_to_add_to = menu
+                    
+                else:
+                    
+                    if submetatype not in submetatypes_to_menus:
+                        
+                        submenu = QW.QMenu( menu )
+                        
+                        submetatypes_to_menus[ submetatype ] = submenu
+                        
+                        ClientGUIMenus.AppendMenu( menu, submenu, submetatype )
+                        
+                    
+                    menu_to_add_to = submetatypes_to_menus[ submetatype ]
+                    
+                
+                label = CC.sort_type_basic_string_lookup[ system_sort_type ]
+                
+                menu_item = ClientGUIMenus.AppendMenuItem( menu_to_add_to, label, 'Select this sort type.', self._SetSortType, sort_type )
+                
+                menu_items_and_sort_types.append( ( menu_item, sort_type ) )
+                
+            
+        
+        namespace_sort_types = HC.options[ 'sort_by' ]
+        
+        if len( namespace_sort_types ) > 0:
+            
+            if menu is not None:
+                
+                submenu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'namespaces' )
+                
+            
+            for ( namespaces_text, namespaces_list ) in namespace_sort_types:
+                
+                sort_type = ( namespaces_text, tuple( namespaces_list ) )
+                
+                sort_types.append( sort_type )
+                
+                if menu is not None:
+                    
+                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
+                    
+                    label = example_sort.GetSortTypeString()
+                    
+                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
+                    
+                    menu_items_and_sort_types.append( ( menu_item, sort_type ) )
+                    
+                
+            
+        
+        rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        
+        if len( rating_service_keys ) > 0:
+            
+            if menu is not None:
+                
+                submenu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'ratings' )
+                
+            
+            for service_key in rating_service_keys:
+                
+                sort_type = ( 'rating', service_key )
+                
+                sort_types.append( sort_type )
+                
+                if menu is not None:
+                    
+                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
+                    
+                    label = example_sort.GetSortTypeString()
+                    
+                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
+                    
+                    menu_items_and_sort_types.append( ( menu_item, sort_type ) )
+                    
+                
+            
+        
+        if menu is not None:
+            
+            for ( menu_item, sort_choice ) in menu_items_and_sort_types:
+                
+                if sort_choice == self._sort_type:
+                    
+                    menu_item.setCheckable( True )
+                    menu_item.setChecked( True )
+                    
+                
+            
+        
+        return sort_types
+        
+    
+    def _SortTypeButtonClick( self ):
+        
+        menu = QW.QMenu()
+        
+        self._PopulateSortMenuOrList( menu = menu )
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def _SetSortType( self, sort_type ):
+        
+        self._sort_type = sort_type
+        
+        self._UpdateSortTypeLabel()
+        self._UpdateAscLabels( set_default_asc = True )
+        
+        self._UserChoseASort()
+        
+        self._BroadcastSort()
         
     
     def _UpdateAscLabels( self, set_default_asc = False ):
@@ -850,6 +967,13 @@ class ChoiceSort( QW.QWidget ):
             
             self._sort_asc_choice.setEnabled( False )
             
+        
+    
+    def _UpdateSortTypeLabel( self ):
+        
+        example_sort = ClientMedia.MediaSort( self._sort_type, CC.SORT_ASC )
+        
+        self._sort_type_button.setText( example_sort.GetSortTypeString() )
         
     
     def _UserChoseASort( self ):
@@ -892,25 +1016,44 @@ class ChoiceSort( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def EventSortTypeChoice( self, index ):
-        
-        self._UserChoseASort()
-        
-        self._UpdateAscLabels( set_default_asc = True )
-        
-        self._BroadcastSort()
-        
-    
     def GetSort( self ):
         
         return self._GetCurrentSort()
         
     
+    def wheelEvent( self, event ):
+        
+        if event.angleDelta().y() > 0:
+            
+            index_delta = -1
+            
+        else:
+            
+            index_delta = 1
+            
+        
+        sort_types = self._PopulateSortMenuOrList()
+        
+        if self._sort_type in sort_types:
+            
+            index = sort_types.index( self._sort_type )
+            
+            new_index = ( index + index_delta ) % len( sort_types )
+            
+            new_sort_type = sort_types[ new_index ]
+            
+            self._SetSortType( new_sort_type )
+            
+        
+        event.accept()
+        
+    
     def SetSort( self, media_sort ):
         
-        self._sort_type_choice.SetValue( media_sort.sort_type )
+        self._sort_type = media_sort.sort_type
         self._sort_asc_choice.SetValue( media_sort.sort_asc )
         
+        self._UpdateSortTypeLabel()
         self._UpdateAscLabels()
         
     
@@ -950,7 +1093,7 @@ class AlphaColourControl( QW.QWidget ):
         
         picker_colour = QG.QColor( colour.rgb() )
         
-        self._colour_picker.SetColour( QG.QColor( colour.rgb() ) )
+        self._colour_picker.SetColour( picker_colour )
         
         self._alpha_selector.setValue( colour.alpha() )
         
@@ -983,7 +1126,7 @@ class ExportPatternButton( BetterButton ):
         
         ClientGUIMenus.AppendMenuItem( menu, 'a particular tag, if the file has it - (\u2026)', 'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(\u2026)' )
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
 class Gauge( QW.QProgressBar ):
@@ -1390,9 +1533,8 @@ class ListBook( QW.QWidget ):
         index = self._GetIndex( key )
         
         if index != -1 and index != QP.ListWidgetGetSelection( self._list_box ) :
-                
-                self._Select( index )
-                
+            
+            self._Select( index )
             
         
     
@@ -1483,7 +1625,7 @@ class MenuBitmapButton( BetterBitmapButton ):
                 
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
 class MenuButton( BetterButton ):
@@ -1526,7 +1668,7 @@ class MenuButton( BetterButton ):
                 
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def SetMenuItems( self, menu_items ):
@@ -1889,6 +2031,8 @@ class RatingLike( QW.QWidget ):
         
         self.setMinimumSize( QC.QSize( 16, 16 ) )
         
+        self._dirty = True
+        
     
     def _Draw( self, painter ):
         
@@ -2108,6 +2252,15 @@ class RatingNumerical( QW.QWidget ):
         
         self.setMinimumSize( QC.QSize( my_width, 16 ) )
         
+        self._last_rating_set = None
+        
+        self._dirty = True
+        
+    
+    def _ClearRating( self ):
+        
+        self._last_rating_set = None
+        
     
     def _Draw( self, painter ):
         
@@ -2150,9 +2303,39 @@ class RatingNumerical( QW.QWidget ):
         return None
         
     
+    def _SetRating( self, rating ):
+        
+        self._last_rating_set = rating
+        
+    
     def EventLeftDown( self, event ):
         
-        raise NotImplementedError()
+        rating = self._GetRatingFromClickEvent( event )
+        
+        self._SetRating( rating )
+        
+    
+    def EventRightDown( self, event ):
+        
+        self._ClearRating()
+        
+    
+    def GetServiceKey( self ):
+        
+        return self._service_key
+        
+    
+    def mouseMoveEvent( self, event ):
+        
+        if event.buttons() & QC.Qt.LeftButton:
+            
+            rating = self._GetRatingFromClickEvent( event )
+            
+            if rating != self._last_rating_set:
+                
+                self._SetRating( rating )
+                
+            
         
     
     def paintEvent( self, event ):
@@ -2160,16 +2343,6 @@ class RatingNumerical( QW.QWidget ):
         painter = QG.QPainter( self )
         
         self._Draw( painter )
-        
-    
-    def EventRightDown( self, event ):
-        
-        raise NotImplementedError()
-        
-    
-    def GetServiceKey( self ):
-        
-        return self._service_key
         
     
 class RatingNumericalDialog( RatingNumerical ):
@@ -2180,6 +2353,17 @@ class RatingNumericalDialog( RatingNumerical ):
         
         self._rating_state = ClientRatings.NULL
         self._rating = None
+        
+    
+    def _ClearRating( self ):
+        
+        RatingNumerical._ClearRating( self )
+        
+        self._rating_state = ClientRatings.NULL
+        
+        self._dirty = True
+        
+        self.update()
         
     
     def _Draw( self, painter ):
@@ -2193,11 +2377,15 @@ class RatingNumericalDialog( RatingNumerical ):
         self._dirty = False
         
     
-    def EventLeftDown( self, event ):
+    def _SetRating( self, rating ):
         
-        rating = self._GetRatingFromClickEvent( event )
+        RatingNumerical._SetRating( self, rating )
         
-        if rating is not None:
+        if rating is None:
+            
+            self._ClearRating()
+            
+        else:
             
             self._rating_state = ClientRatings.SET
             
@@ -2207,15 +2395,6 @@ class RatingNumericalDialog( RatingNumerical ):
             
             self.update()
             
-        
-    
-    def EventRightDown( self, event ):
-        
-        self._rating_state = ClientRatings.NULL
-        
-        self._dirty = True
-        
-        self.update()
         
     
     def GetRating( self ):
@@ -2230,13 +2409,7 @@ class RatingNumericalDialog( RatingNumerical ):
     
     def SetRating( self, rating ):
         
-        self._rating_state = ClientRatings.SET
-        
-        self._rating = rating
-        
-        self._dirty = True
-        
-        self.update()
+        self._SetRating( rating )
         
     
     def SetRatingState( self, rating_state ):
@@ -2259,12 +2432,28 @@ class RatingNumericalCanvas( RatingNumerical ):
         self._rating_state = None
         self._rating = None
         
+        self._hashes = set()
+        
         name = self._service.GetName()
         
         self.setToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _ClearRating( self ):
+        
+        RatingNumerical._ClearRating( self )
+        
+        if self._current_media is not None:
+            
+            rating = None
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
         
     
     def _Draw( self, painter ):
@@ -2283,26 +2472,11 @@ class RatingNumericalCanvas( RatingNumerical ):
         self._dirty = False
         
     
-    def EventLeftDown( self, event ):
+    def _SetRating( self, rating ):
         
-        if self._current_media is not None:
-            
-            rating = self._GetRatingFromClickEvent( event )
-            
-            if rating is not None:
-                
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
-                
-                HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
-                
-            
+        RatingNumerical._SetRating( self, rating )
         
-    
-    def EventRightDown( self, event ):
-        
-        if self._current_media is not None:
-            
-            rating = None
+        if self._current_media is not None and rating is not None:
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
@@ -2314,7 +2488,7 @@ class RatingNumericalCanvas( RatingNumerical ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 for content_update in content_updates:
                     
@@ -2425,16 +2599,17 @@ class RegexButton( BetterButton ):
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'favourites' )
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def _ManageFavourites( self ):
         
         regex_favourites = HC.options[ 'regex_favourites' ]
         
+        from . import ClientGUITopLevelWindows
+        from . import ClientGUIScrolledPanelsEdit
+        
         with ClientGUITopLevelWindows.DialogEdit( self, 'manage regex favourites' ) as dlg:
-            
-            from . import ClientGUIScrolledPanelsEdit
             
             panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( dlg, regex_favourites )
             

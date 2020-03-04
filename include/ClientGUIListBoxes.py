@@ -2,10 +2,11 @@ from . import ClientCaches
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIMenus
+from . import ClientGUIPredicates
 from . import ClientGUIShortcuts
-from . import ClientGUITopLevelWindows
 from . import ClientMedia
 from . import ClientSearch
 from . import ClientSerialisable
@@ -788,7 +789,7 @@ class QueueListBox( QW.QWidget ):
             
             self._edit_button.setEnabled( True )
             
-                
+        
     
     def GetCount( self ):
         
@@ -1679,7 +1680,7 @@ class ListBoxTags( ListBox ):
                 
             
         
-        predicates = HG.client_controller.gui.FleshOutPredicates( predicates )
+        predicates = ClientGUIPredicates.FleshOutPredicates( self, predicates )
         
         if len( predicates ) > 0:
             
@@ -1711,7 +1712,7 @@ class ListBoxTags( ListBox ):
                 
             
         
-        predicates = HG.client_controller.gui.FleshOutPredicates( predicates )
+        predicates = ClientGUIPredicates.FleshOutPredicates( self, predicates )
         
         for predicate in predicates:
             
@@ -1817,6 +1818,9 @@ class ListBoxTags( ListBox ):
                 
                 title = 'manage tag siblings'
                 
+            
+            from . import ClientGUITopLevelWindows
+            from . import ClientGUISerialisable
             
             with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
                 
@@ -2157,7 +2161,7 @@ class ListBoxTags( ListBox ):
                 ClientGUIMenus.AppendMenuItem( menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
                 
             
-            HG.client_controller.PopupMenu( self, menu )
+            CGC.core().PopupMenu( self, menu )
             
         
     
@@ -2440,12 +2444,13 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
     
 class ListBoxTagsAC( ListBoxTagsPredicates ):
     
-    def __init__( self, parent, callable, service_key, **kwargs ):
+    def __init__( self, parent, callable, service_key, float_mode, **kwargs ):
         
         ListBoxTagsPredicates.__init__( self, parent, **kwargs )
         
         self._callable = callable
         self._service_key = service_key
+        self._float_mode = float_mode
         
         self._predicates = {}
         
@@ -2456,7 +2461,16 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
         
         predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
         
-        predicates = HG.client_controller.gui.FleshOutPredicates( predicates )
+        if self._float_mode:
+            
+            widget = self.window().parent()
+            
+        else:
+            
+            widget = self
+            
+        
+        predicates = ClientGUIPredicates.FleshOutPredicates( widget, predicates )
         
         if len( predicates ) > 0:
             

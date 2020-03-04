@@ -1,16 +1,7 @@
 from . import ClientConstants as CC
-from . import ClientCaches
-from . import ClientDefaults
 from . import ClientGUICommon
-from . import ClientGUIDialogs
 from . import ClientGUIFunctions
-from . import ClientImporting
-from . import ClientTags
-import collections
 from . import HydrusConstants as HC
-from . import HydrusData
-import os
-from . import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG

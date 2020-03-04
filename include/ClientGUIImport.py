@@ -1,9 +1,8 @@
 from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientDownloading
 from . import ClientGUIACDropdown
 from . import ClientGUICommon
 from . import ClientGUIControls
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFileSeedCache
@@ -15,12 +14,9 @@ from . import ClientGUIMenus
 from . import ClientGUIOptionsPanels
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIShortcuts
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
 from . import ClientImporting
-from . import ClientImportFileSeeds
-from . import ClientImportGallerySeeds
 from . import ClientImportLocal
 from . import ClientImportOptions
 from . import ClientTags
@@ -348,8 +344,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def AddQuickNamespace( self ):
             
-            from . import ClientGUIDialogs
-            
             with ClientGUIDialogs.DialogInputNamespaceRegex( self ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
@@ -372,8 +366,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             for old_data in data_to_edit:
                 
                 ( namespace, regex ) = old_data
-                
-                from . import ClientGUIDialogs
                 
                 with ClientGUIDialogs.DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                     
@@ -1197,7 +1189,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddFilenameTaggingOptions( self ):
         
-        service_key = ClientGUIDialogs.SelectServiceKey( HC.TAG_SERVICES )
+        service_key = ClientGUIDialogsQuick.SelectServiceKey( HC.TAG_SERVICES )
         
         if service_key is None:
             
@@ -2223,7 +2215,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             ClientGUIMenus.AppendMenuItem( menu, 'set to default', 'Set this tag import options to defer to the defaults.', self._SetDefault )
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def GetValue( self ):

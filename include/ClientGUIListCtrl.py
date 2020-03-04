@@ -1,7 +1,7 @@
 from . import ClientConstants as CC
-from . import ClientData
 from . import ClientDragDrop
 from . import ClientGUICommon
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientSerialisable
 from . import ClientGUIShortcuts
@@ -12,7 +12,6 @@ from . import HydrusSerialisable
 import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 
 def SafeNoneInt( value ):
@@ -191,7 +190,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             return
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
     def _SortDataInfo( self ):

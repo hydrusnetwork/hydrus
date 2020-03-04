@@ -2584,7 +2584,7 @@ class ServiceIPFS( ServiceRemote ):
             
             HydrusData.ShowException( e )
             
-            job_key.SetVariable( 'popup_text_1', 'error' )
+            job_key.SetErrorException( e )
             
             job_key.Cancel()
             

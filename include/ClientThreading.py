@@ -8,6 +8,7 @@ from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusThreading
 import os
+import typing
 from . import QtPorting as QP
 
 class JobKey( object ):
@@ -42,6 +43,8 @@ class JobKey( object ):
         
         self._longer_pause_period = 1000
         self._next_longer_pause = HydrusData.GetNow() + self._longer_pause_period
+        
+        self._exception = None
         
         self._urls = []
         self._variable_lock = threading.Lock()
@@ -179,6 +182,18 @@ class JobKey( object ):
         return self._creation_time
         
     
+    def GetErrorException( self ) -> Exception:
+        
+        if self._exception is None:
+            
+            raise Exception( 'No exception to return!' )
+            
+        else:
+            
+            return self._exception
+            
+        
+    
     def GetIfHasVariable( self, name ):
         
         with self._variable_lock:
@@ -205,6 +220,11 @@ class JobKey( object ):
             
             return list( self._urls )
             
+        
+    
+    def HadError( self ):
+        
+        return self._exception is not None
         
     
     def HasVariable( self, name ):
@@ -275,6 +295,13 @@ class JobKey( object ):
         
     
     def SetCancellable( self, value ): self._cancellable = value
+    
+    def SetErrorException( self, e: Exception ):
+        
+        self._exception = e
+        
+        self.Cancel()
+        
     
     def SetPausable( self, value ): self._pausable = value
     

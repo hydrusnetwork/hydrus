@@ -1,4 +1,3 @@
-
 import os
 import sys
 from qtpy import QtCore as QC
@@ -8,14 +7,19 @@ from . import QtPorting as QP
    
 from . import ClientAPI
 from . import ClientCaches
-from . import ClientData
+from . import ClientConstants as CC
+from . import ClientDB
 from . import ClientDaemons
 from . import ClientDefaults
 from . import ClientDownloading
 from . import ClientFiles
-from . import ClientGUIMenus
+from . import ClientGUI
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIShortcuts
 from . import ClientGUIStyle
+from . import ClientGUITopLevelWindows
 from . import ClientImportSubscriptions
 from . import ClientManagers
 from . import ClientNetworking
@@ -24,7 +28,6 @@ from . import ClientNetworkingDomain
 from . import ClientNetworkingLogin
 from . import ClientNetworkingSessions
 from . import ClientOptions
-from . import ClientPaths
 from . import ClientTags
 from . import ClientThreading
 import hashlib
@@ -38,20 +41,12 @@ from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusThreading
 from . import HydrusVideoHandling
-from . import ClientConstants as CC
-from . import ClientDB
-from . import ClientGUI
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIScrolledPanelsManagement
-from . import ClientGUITopLevelWindows
 import gc
 import psutil
 import signal
 import threading
 import time
 import traceback
-from . import QtPorting as QP
 
 if not HG.twisted_is_broke:
     
@@ -135,6 +130,8 @@ class App( QW.QApplication ):
     
 class Controller( HydrusController.HydrusController ):
     
+    my_instance = None
+    
     def __init__( self, db_dir ):
         
         self._last_shutdown_was_bad = False
@@ -170,12 +167,13 @@ class Controller( HydrusController.HydrusController ):
         self._last_last_session_hash = None
         
         self._last_mouse_position = None
-        self._menu_open = False
         self._previously_idle = False
         self._idle_started = None
         
         self.client_files_manager = None
         self.services_manager = None
+        
+        Controller.my_instance = self
         
     
     def _InitDB( self ):
@@ -260,6 +258,19 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    @staticmethod
+    def instance() -> 'Controller':
+        
+        if Controller.my_instance is None:
+            
+            raise Exception( 'Controller is not yet initialised!' )
+            
+        else:
+            
+            return Controller.my_instance
+            
+        
+    
     def AcquirePageKey( self ):
         
         with self._page_key_lock:
@@ -272,9 +283,9 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CallBlockingToQt(self, win, func, *args, **kwargs):
+    def CallBlockingToQt( self, win, func, *args, **kwargs ):
         
-        def qt_code( win, job_key ):
+        def qt_code( win: QW.QWidget, job_key: ClientThreading.JobKey ):
             
             try:
                 
@@ -296,11 +307,11 @@ class Controller( HydrusController.HydrusController ):
                 
             except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
-                job_key.SetVariable( 'error', e )
+                job_key.SetErrorException( e )
                 
             except Exception as e:
                 
-                job_key.SetVariable( 'error', e )
+                job_key.SetErrorException( e )
                 
                 HydrusData.Print( 'CallBlockingToQt just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
@@ -336,11 +347,11 @@ class Controller( HydrusController.HydrusController ):
             return result
             
         
-        error = job_key.GetIfHasVariable( 'error' )
-        
-        if error is not None:
+        if job_key.HadError():
             
-            raise error
+            e = job_key.GetErrorException()
+            
+            raise e
             
         
         raise HydrusExceptions.ShutdownException()
@@ -935,7 +946,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 while True:
                     
-                    with ClientGUIDialogs.DialogTextEntry( self._splash, 'Enter your password.', allow_blank = True, password_entry = True ) as dlg:
+                    with ClientGUIDialogs.DialogTextEntry( self._splash, 'Enter your password.', allow_blank = True, password_entry = True, min_char_width = 24 ) as dlg:
                         
                         if dlg.exec() == QW.QDialog.Accepted:
                             
@@ -1168,21 +1179,6 @@ class Controller( HydrusController.HydrusController ):
         QP.CallAfter( do_gui_refs, self.gui )
         
     
-    def MenubarMenuIsOpen( self ):
-        
-        self._menu_open = True
-        
-    
-    def MenubarMenuIsClosed( self ):
-        
-        self._menu_open = False
-        
-    
-    def MenuIsOpen( self ):
-        
-        return self._menu_open
-        
-    
     def PageAlive( self, page_key ):
         
         with self._page_key_lock:
@@ -1197,20 +1193,6 @@ class Controller( HydrusController.HydrusController ):
             
             return page_key in self._closed_page_keys
             
-        
-    
-    def PopupMenu( self, window, menu ):
-        
-        if not menu.isEmpty():
-            
-            self._menu_open = True
-            
-            menu.exec_( QG.QCursor.pos() ) # This could also be window.mapToGlobal( QC.QPoint( 0, 0 ) ), but in practice, popping up at the current cursor position feels better.
-            
-            self._menu_open = False
-            
-        
-        ClientGUIMenus.DestroyMenu( window, menu )
         
     
     def PrepStringForDisplay( self, text ):
@@ -1326,6 +1308,10 @@ class Controller( HydrusController.HydrusController ):
     def Run( self ):
         
         QP.MonkeyPatchMissingMethods()
+        
+        from . import ClientGUICore
+        
+        ClientGUICore.GUICore()
         
         self.app = App( self._pubsub, sys.argv )
         

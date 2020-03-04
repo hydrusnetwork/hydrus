@@ -1,12 +1,11 @@
-import bs4
 from . import ClientConstants as CC
-from . import ClientData
 from . import ClientDefaults
 from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIMenus
 from . import ClientGUIControls
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
@@ -26,15 +25,12 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
-from . import HydrusTags
 from . import HydrusText
 import itertools
-import json
 import os
 import sys
 import threading
 import traceback
-import time
 from . import QtPorting as QP
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -4216,7 +4212,7 @@ class ScriptManagementControl( QW.QWidget ):
             ClientGUIMenus.AppendMenuItem( menu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
             
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
         
     

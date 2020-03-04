@@ -1,15 +1,9 @@
-from . import ClientData
 from . import ClientConstants as CC
 from . import HydrusConstants as HC
-from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusText
 import threading
 import traceback
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 from . import QtPorting as QP
 
 class AsyncQtUpdater( object ):

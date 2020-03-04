@@ -3,7 +3,6 @@ from . import ClientCaches
 from . import ClientData
 from . import ClientDefaults
 from . import ClientFiles
-from . import ClientImageHandling
 from . import ClientMedia
 from . import ClientNetworkingBandwidth
 from . import ClientNetworkingContexts
@@ -25,15 +24,12 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusDB
 from . import HydrusExceptions
-from . import HydrusFileHandling
 from . import HydrusGlobals as HG
-from . import HydrusImageHandling
 from . import HydrusNetwork
 from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusTags
-from . import HydrusVideoHandling
 from . import ClientConstants as CC
 import os
 import psutil
@@ -43,6 +39,7 @@ import sqlite3
 import stat
 import time
 import traceback
+import typing
 from qtpy import QtWidgets as QW
 from . import QtPorting as QP
 
@@ -4562,7 +4559,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetFileSystemPredicates( self, service_key ):
+    def _GetFileSystemPredicates( self, service_key, force_system_everything = False ):
         
         service_id = self._GetServiceId( service_key )
         
@@ -4586,7 +4583,7 @@ class DB( HydrusDB.HydrusDB ):
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            if num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
+            if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
                 
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
                 
@@ -4617,7 +4614,7 @@ class DB( HydrusDB.HydrusDB ):
                 num_archive = num_local - num_inbox
                 
             
-            if num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
+            if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
                 
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
                 
@@ -11257,6 +11254,49 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RepopulateAndUpdateFTSTags( self, status_hook: typing.Optional[ typing.Callable[ [ str ], None ] ] = None ):
+        
+        BLOCK_SIZE = 1000
+        
+        select_statement = 'SELECT subtag_id FROM subtags;'
+        
+        for ( i, group_of_subtag_ids ) in enumerate( HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, select_statement, BLOCK_SIZE ) ):
+            
+            if status_hook is not None:
+                
+                message = 'Regenerating tag text search cache\u2026 {}'.format( HydrusData.ToHumanInt( i * BLOCK_SIZE ) )
+                
+                status_hook( message )
+                
+            
+            for subtag_id in group_of_subtag_ids:
+                
+                ( subtag, ) = self._c.execute( 'SELECT subtag FROM subtags WHERE subtag_id = ?;', ( subtag_id, ) ).fetchone()
+                
+                subtag_searchable = ClientSearch.ConvertTagToSearchable( subtag )
+                
+                do_it = True
+                
+                result = self._c.execute( 'SELECT subtag FROM subtags_fts4 WHERE docid = ?;', ( subtag_id, ) ).fetchone()
+                
+                if result is not None:
+                    
+                    ( subtag_fts, ) = result
+                    
+                    if subtag_fts == subtag_searchable:
+                        
+                        do_it = False
+                        
+                    
+                
+                if do_it:
+                    
+                    self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
+                    
+                
+            
+        
+    
     def _ReportOverupdatedDB( self, version ):
         
         def qt_code():
@@ -11731,6 +11771,7 @@ class DB( HydrusDB.HydrusDB ):
             simple_sorts.append( CC.SORT_FILES_BY_IMPORT_TIME )
             simple_sorts.append( CC.SORT_FILES_BY_FILESIZE )
             simple_sorts.append( CC.SORT_FILES_BY_DURATION )
+            simple_sorts.append( CC.SORT_FILES_BY_FRAMERATE )
             simple_sorts.append( CC.SORT_FILES_BY_WIDTH )
             simple_sorts.append( CC.SORT_FILES_BY_HEIGHT )
             simple_sorts.append( CC.SORT_FILES_BY_RATIO )
@@ -11757,6 +11798,10 @@ class DB( HydrusDB.HydrusDB ):
                     elif sort_data == CC.SORT_FILES_BY_DURATION:
                         
                         query = 'SELECT hash_id, duration FROM files_info WHERE hash_id = ?;'
+                        
+                    elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
+                        
+                        query = 'SELECT hash_id, num_frames, duration FROM files_info WHERE hash_id = ?;'
                         
                     elif sort_data == CC.SORT_FILES_BY_WIDTH:
                         
@@ -11808,6 +11853,23 @@ class DB( HydrusDB.HydrusDB ):
                         else:
                             
                             return width / height
+                            
+                        
+                    
+                elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
+                    
+                    def key( row ):
+                        
+                        num_frames = row[1]
+                        duration = row[2]
+                        
+                        if num_frames is None or duration is None or num_frames == 0 or duration == 0:
+                            
+                            return -1
+                            
+                        else:
+                            
+                            return num_frames / duration
                             
                         
                     
@@ -13648,7 +13710,61 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
+        if version == 386:
+            
+            try:
+                
+                status_hook = lambda s: self._controller.pub( 'splash_set_status_subtext', s )
+                
+                self._RepopulateAndUpdateFTSTags( status_hook = status_hook )
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Failed to repopulate fts tag cache:' )
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update the tag search cache failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'tvch.moe thread', 'tvch.moe thread json api', 'derpibooru gallery page', 'derpibooru gallery page api' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search', 'derpibooru tag search - no filter' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ '4chan-style thread api parser', 'derpibooru gallery page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
@@ -14213,6 +14329,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
+        elif action == 'repopulate_fts_cache': self._RepopulateAndUpdateFTSTags( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )

@@ -1,8 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
-from . import ClientGUIDialogs
+from . import ClientGUICore as CGC
 from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUISerialisable
@@ -12,7 +11,6 @@ from . import ClientImportFileSeeds
 from . import ClientImportOptions
 from . import ClientPaths
 from . import ClientSerialisable
-from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -691,7 +689,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
         
-        HG.client_controller.PopupMenu( self, menu )
+        CGC.core().PopupMenu( self, menu )
         
     
 class FileSeedCacheStatusControl( QW.QFrame ):

@@ -2,16 +2,13 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientDefaults
 from . import ClientDragDrop
-from . import ClientExporting
 from . import ClientFiles
 from . import ClientGUIACDropdown
 from . import ClientGUIAsync
 from . import ClientGUICharts
 from . import ClientGUICommon
-from . import ClientGUIControls
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
-from . import ClientGUIFrames
 from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
@@ -20,7 +17,6 @@ from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIPanels
 from . import ClientGUIPopupMessages
-from . import ClientGUIShortcuts
 from . import ClientGUITags
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
@@ -43,19 +39,16 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusFileHandling
 from . import HydrusGlobals as HG
-from . import HydrusNATPunch
 from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusTagArchive
 from . import HydrusText
 import os
 import queue
-import stat
 import sys
 import threading
 import time
 import traceback
-from . import QtPorting as QP
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -2516,7 +2509,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         
-        self._tag_ac_input = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context )
+        self._tag_ac_input = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         self._run_search_st = ClientGUICommon.BetterStaticText( self._search_panel, label = 'no results yet' )
         
