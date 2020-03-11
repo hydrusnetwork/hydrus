@@ -360,7 +360,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
                 
-                tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+                tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
                 
                 for tag_service_id in tag_service_ids:
                     
@@ -404,7 +404,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'CREATE TABLE ' + tag_id_map_table_name + ' ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );' )
             
         
-        if service_type in HC.TAG_SERVICES:
+        if service_type in HC.REAL_TAG_SERVICES:
             
             self._GenerateMappingsTables( service_id )
             
@@ -422,7 +422,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
             
-            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
             for tag_service_id in tag_service_ids:
                 
@@ -760,7 +760,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids = set()
         
-        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+        tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
         
         for tag_service_id in tag_service_ids:
             
@@ -1679,6 +1679,12 @@ class DB( HydrusDB.HydrusDB ):
         
         self._SetJSONDump( login_manager )
         
+        favourite_search_manager = ClientSearch.FavouriteSearchManager()
+        
+        ClientDefaults.SetDefaultFavouriteSearchManagerData( favourite_search_manager )
+        
+        self._SetJSONDump( favourite_search_manager )
+        
         tag_display_manager = ClientTags.TagDisplayManager()
         
         self._SetJSONDump( tag_display_manager )
@@ -1807,7 +1813,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
                 
-                tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+                tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
                 
                 for tag_service_id in tag_service_ids:
                     
@@ -1979,7 +1985,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DROP TABLE ' + tag_id_map_table_name + ';' )
             
         
-        if service_type in HC.TAG_SERVICES:
+        if service_type in HC.REAL_TAG_SERVICES:
             
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
             
@@ -2002,7 +2008,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
             
-            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
             for tag_service_id in tag_service_ids:
                 
@@ -2968,9 +2974,9 @@ class DB( HydrusDB.HydrusDB ):
         return ( table_join, predicate_string )
         
     
-    def _DuplicatesGetRandomPotentialDuplicateHashes( self, search_context, both_files_match ):
+    def _DuplicatesGetRandomPotentialDuplicateHashes( self, file_search_context, both_files_match ):
         
-        file_service_key = search_context.GetFileServiceKey()
+        file_service_key = file_search_context.GetFileServiceKey()
         
         file_service_id = self._GetServiceId( file_service_key )
         
@@ -2983,7 +2989,7 @@ class DB( HydrusDB.HydrusDB ):
             allowed_hash_ids = None
             preferred_hash_ids = None
             
-            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+            if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
                 ( table_join, predicate_string ) = self._DuplicatesGetPotentialDuplicatePairsTableJoinInfoOnFileService( file_service_key )
                 
@@ -2991,7 +2997,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 is_complicated_search = True
                 
-                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
+                query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
                 
                 if both_files_match:
                     
@@ -3063,14 +3069,14 @@ class DB( HydrusDB.HydrusDB ):
         return self._DuplicatesGetFileHashesByDuplicateType( file_service_key, hash, HC.DUPLICATE_POTENTIAL, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
         
     
-    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, search_context, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context, both_files_match ):
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
         # we also want to maximise per-decision value
         
         # now we will fetch some unknown pairs
         
-        file_service_key = search_context.GetFileServiceKey()
+        file_service_key = file_search_context.GetFileServiceKey()
         
         file_service_id = self._GetServiceId( file_service_key )
         
@@ -3079,13 +3085,13 @@ class DB( HydrusDB.HydrusDB ):
             allowed_hash_ids = None
             preferred_hash_ids = None
             
-            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+            if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
                 ( table_join, predicate_string ) = self._DuplicatesGetPotentialDuplicatePairsTableJoinInfoOnFileService( file_service_key )
                 
             else:
                 
-                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
+                query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
                 
                 if both_files_match:
                     
@@ -3215,19 +3221,19 @@ class DB( HydrusDB.HydrusDB ):
         return batch_of_pairs_of_hashes
         
     
-    def _DuplicatesGetPotentialDuplicatesCount( self, search_context, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context, both_files_match ):
         
-        file_service_key = search_context.GetFileServiceKey()
+        file_service_key = file_search_context.GetFileServiceKey()
         
         with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
             
-            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+            if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
                 ( table_join, predicate_string ) = self._DuplicatesGetPotentialDuplicatePairsTableJoinInfoOnFileService( file_service_key )
                 
             else:
                 
-                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
+                query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
                 
@@ -4026,7 +4032,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_id == self._combined_tag_service_id:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -4266,7 +4272,16 @@ class DB( HydrusDB.HydrusDB ):
         return tag_ids
         
     
-    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, include_current = True, include_pending = True, add_namespaceless = False, collapse_siblings = False, job_key = None ):
+    def _GetAutocompletePredicates( self, tag_search_context = None, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, add_namespaceless = False, collapse_siblings = False, job_key = None ):
+        
+        if tag_search_context is None:
+            
+            tag_search_context = ClientSearch.TagSearchContext()
+            
+        
+        tag_service_key = tag_search_context.service_key
+        include_current = tag_search_context.include_current_tags
+        include_pending = tag_search_context.include_pending_tags
         
         tag_ids = self._GetAutocompleteTagIds( tag_service_key, search_text, exact_match, job_key = job_key )
         
@@ -4280,7 +4295,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_id == self._combined_tag_service_id:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -4315,7 +4330,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 tags_and_counts_generator = ( ( self._tag_ids_to_tags_cache[ id ], ids_to_count[ id ] ) for id in ids_to_count.keys() )
                 
-                predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
+                predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
                 
                 if collapse_siblings:
                     
@@ -4575,9 +4590,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
             
-        elif service_type in HC.TAG_SERVICES:
+        elif service_type in HC.REAL_TAG_SERVICES:
             
             service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
@@ -4585,17 +4600,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH ] ] )
             
             if have_ratings:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.FILE_SERVICES:
             
@@ -4616,7 +4631,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
                 
             
             show_inbox_and_archive = True
@@ -4628,39 +4643,39 @@ class DB( HydrusDB.HydrusDB ):
             
             if show_inbox_and_archive:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = num_inbox ) )
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = num_archive ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = num_inbox ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = num_archive ) )
                 
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = num_local ) )
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = num_local ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             if have_ratings:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
             
         
         def sys_preds_key( s ):
             
             t = s.GetType()
             
-            if t == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING:
+            if t == ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING:
                 
                 return ( 0, 0 )
                 
-            elif t == HC.PREDICATE_TYPE_SYSTEM_INBOX:
+            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX:
                 
                 return ( 1, 0 )
                 
-            elif t == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE:
+            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE:
                 
                 return ( 2, 0 )
                 
@@ -4715,7 +4730,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_data = []
         
-        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+        tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
         
         for tag_service_id in tag_service_ids:
             
@@ -4897,7 +4912,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = False, hash_ids_table_name = None ):
+    def _GetHashIdsFromNamespace( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace, include_siblings = False, hash_ids_table_name = None ):
         
         if not self._NamespaceExists( namespace ):
             
@@ -4906,13 +4921,15 @@ class DB( HydrusDB.HydrusDB ):
         
         file_service_id = self._GetServiceId( file_service_key )
         
+        tag_service_key = tag_search_context.service_key
+        
         namespace_id = self._GetNamespaceId( namespace )
         
         predicate_string = 'namespace_id = {}'.format( namespace_id )
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -4920,6 +4937,9 @@ class DB( HydrusDB.HydrusDB ):
             
             search_tag_service_ids = [ tag_service_id ]
             
+        
+        include_current_tags = tag_search_context.include_current_tags
+        include_pending_tags = tag_search_context.include_pending_tags
         
         tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
         
@@ -4962,7 +4982,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -5000,7 +5020,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromQuery( self, search_context, job_key = None, query_hash_ids = None, apply_implicit_limit = True, sort_by = None, limit_sort_by = None ):
+    def _GetHashIdsFromQuery( self, file_search_context: ClientSearch.FileSearchContext, job_key = None, query_hash_ids = None, apply_implicit_limit = True, sort_by = None, limit_sort_by = None ):
         
         if job_key is None:
             
@@ -5016,10 +5036,15 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.ResetIdleTimer()
         
-        system_predicates = search_context.GetSystemPredicates()
+        system_predicates = file_search_context.GetSystemPredicates()
         
-        file_service_key = search_context.GetFileServiceKey()
-        tag_service_key = search_context.GetTagServiceKey()
+        file_service_key = file_search_context.GetFileServiceKey()
+        tag_search_context = file_search_context.GetTagSearchContext()
+        
+        tag_service_key = tag_search_context.service_key
+        
+        include_current_tags = tag_search_context.include_current_tags
+        include_pending_tags = tag_search_context.include_pending_tags
         
         file_service_id = self._GetServiceId( file_service_key )
         tag_service_id = self._GetServiceId( tag_service_key )
@@ -5029,23 +5054,20 @@ class DB( HydrusDB.HydrusDB ):
         
         file_service_type = file_service.GetServiceType()
         
-        tags_to_include = search_context.GetTagsToInclude()
-        tags_to_exclude = search_context.GetTagsToExclude()
+        tags_to_include = file_search_context.GetTagsToInclude()
+        tags_to_exclude = file_search_context.GetTagsToExclude()
         
-        namespaces_to_include = search_context.GetNamespacesToInclude()
-        namespaces_to_exclude = search_context.GetNamespacesToExclude()
+        namespaces_to_include = file_search_context.GetNamespacesToInclude()
+        namespaces_to_exclude = file_search_context.GetNamespacesToExclude()
         
-        wildcards_to_include = search_context.GetWildcardsToInclude()
-        wildcards_to_exclude = search_context.GetWildcardsToExclude()
-        
-        include_current_tags = search_context.IncludeCurrentTags()
-        include_pending_tags = search_context.IncludePendingTags()
+        wildcards_to_include = file_search_context.GetWildcardsToInclude()
+        wildcards_to_exclude = file_search_context.GetWildcardsToExclude()
         
         simple_preds = system_predicates.GetSimpleInfo()
         
         king_filter = system_predicates.GetKingFilter()
         
-        or_predicates = search_context.GetORPredicates()
+        or_predicates = file_search_context.GetORPredicates()
         
         need_file_domain_cross_reference = file_service_key != CC.COMBINED_FILE_SERVICE_KEY
         there_are_tags_to_search = len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0
@@ -5185,7 +5207,7 @@ class DB( HydrusDB.HydrusDB ):
             
             # updating all this regular search code to do OR and AND naturally will be a big job getting right, so let's get a functional inefficient solution and then optimise later as needed
             # -tag stuff and various other exclude situations remain a pain to do quickly assuming OR
-            # the future extension of this will be creating an OR_search_context with all the OR_pred's subpreds and have that naturally query_hash_ids.update throughout this func based on search_context search_type
+            # the future extension of this will be creating an OR_search_context with all the OR_pred's subpreds and have that naturally query_hash_ids.update throughout this func based on file_search_context search_type
             # this func is called at one of several potential points, kicking in if query_hash_ids are needed but preferring tags or system preds to step in
             
             or_predicates = list( or_predicates )
@@ -5208,7 +5230,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     # blue eyes
                     
-                    or_search_context = search_context.Duplicate()
+                    or_search_context = file_search_context.Duplicate()
                     
                     or_search_context.SetPredicates( [ or_subpredicate ] )
                     
@@ -5467,11 +5489,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None:
                     
-                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True )
+                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True )
                     
                 elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
                     
-                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True, hash_ids_table_name = 'file_inbox' )
+                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True, hash_ids_table_name = 'file_inbox' )
                     
                 else:
                     
@@ -5479,7 +5501,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True, hash_ids_table_name = temp_table_name )
+                        namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True, hash_ids_table_name = temp_table_name )
                         
                     
                 
@@ -5664,7 +5686,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True, hash_ids_table_name = temp_table_name )
+                unwanted_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True, hash_ids_table_name = temp_table_name )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -6026,7 +6048,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -6100,7 +6122,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -6316,7 +6338,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -6360,7 +6382,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
@@ -7411,7 +7433,7 @@ class DB( HydrusDB.HydrusDB ):
         inclusive = True
         pending_count = 0
         
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_to_counts.items() if tag not in search_tags ]
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_to_counts.items() if tag not in search_tags ]
         
         return predicates
         
@@ -7720,7 +7742,7 @@ class DB( HydrusDB.HydrusDB ):
             
             info_types_missed = info_types.difference( info_types_hit )
             
-            if service_type in HC.TAG_SERVICES:
+            if service_type in HC.REAL_TAG_SERVICES:
                 
                 common_tag_info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_TAGS }
                 
@@ -7759,7 +7781,7 @@ class DB( HydrusDB.HydrusDB ):
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_petitions where service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = self._c.execute( 'SELECT COUNT( * ) FROM file_inbox NATURAL JOIN current_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
-                elif service_type in HC.TAG_SERVICES:
+                elif service_type in HC.REAL_TAG_SERVICES:
                     
                     ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
                     
@@ -8874,7 +8896,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 our_num_files = our_results[ HC.SERVICE_INFO_NUM_FILES ]
                 
-                other_services = [ service for service in self._GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != tag_service_key ]
+                other_services = [ service for service in self._GetServices( HC.REAL_TAG_SERVICES ) if service.GetServiceKey() != tag_service_key ]
                 
                 other_num_files = []
                 
@@ -10142,7 +10164,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                         
                     
-                elif service_type in HC.TAG_SERVICES:
+                elif service_type in HC.REAL_TAG_SERVICES:
                     
                     if data_type == HC.CONTENT_TYPE_MAPPINGS:
                         
@@ -10957,7 +10979,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'modal_message', job_key )
             
-            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
             
             message = 'generating local tag cache'
@@ -11080,7 +11102,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( self._null_namespace_id, ) = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) ).fetchone()
         
-        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+        tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
         file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
         
         repository_service_ids = self._GetServiceIds( HC.REPOSITORIES )
@@ -12428,7 +12450,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 tag_ids = set()
                 
-                tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+                tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
                 
                 for tag_service_id in tag_service_ids:
                     
@@ -13763,6 +13785,77 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 387:
+            
+            result = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
+            
+            if result is None:
+                
+                favourite_search_manager = ClientSearch.FavouriteSearchManager()
+                
+                ClientDefaults.SetDefaultFavouriteSearchManagerData( favourite_search_manager )
+                
+                self._SetJSONDump( favourite_search_manager )
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'e621 file page', 'e621 gallery page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'e621 tag search' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'e621 file page parser', 'e621 gallery page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.DeleteLoginScripts( [ 'e-hentai login 2018.11.08', 'e-hentai login 2018.11.12' ] )
+                
+                #
+                
+                if not login_manager.DomainHasALoginScript( 'e-hentai.org' ):
+                    
+                    login_manager.DeleteLoginDomain( 'e-hentai.org' )
+                    
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         

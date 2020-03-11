@@ -86,13 +86,15 @@ class TestClientDB( unittest.TestCase ):
     
     def test_autocomplete( self ):
         
+        tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        
         TestClientDB._clear_db()
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c*' )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c*' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'series:*' )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'series:*' )
         
         self.assertEqual( result, [] )
         
@@ -126,12 +128,12 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c*', add_namespaceless = True )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
         
         for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
@@ -139,12 +141,12 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c*', add_namespaceless = False )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
         
         for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
@@ -152,27 +154,15 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'ser*' )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'ser*' )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'series:c*' )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'series:c*' )
         
-        pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 )
-        
-        ( read_pred, ) = result
-        
-        self.assertEqual( read_pred.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
-        
-        self.assertEqual( pred, read_pred )
-        
-        #
-        
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'car', exact_match = True )
-        
-        pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 )
+        pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 )
         
         ( read_pred, ) = result
         
@@ -182,14 +172,28 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c', exact_match = True )
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'car', exact_match = True )
+        
+        pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 )
+        
+        ( read_pred, ) = result
+        
+        self.assertEqual( read_pred.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        
+        self.assertEqual( pred, read_pred )
+        
+        #
+        
+        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c', exact_match = True )
         
         self.assertEqual( result, [] )
         
     
     def test_export_folders( self ):
         
-        file_search_context = ClientSearch.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test' ) ] )
+        tag_search_context = ClientSearch.TagSearchContext( service_key = HydrusData.GenerateKey() )
+        
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), tag_search_context = tag_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' ) ] )
         
         export_folder = ClientExporting.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
         
@@ -208,7 +212,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( inclusive, namespace, result ) in tests:
                 
-                predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) ]
+                predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) ]
                 
                 search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -236,7 +240,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( inclusive, tag, result ) in tests:
                 
-                predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive ) ]
+                predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive ) ]
                 
                 search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -260,15 +264,15 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -296,112 +300,112 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 1, 1, 1, ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 0, 0, 0, 0, ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 1, 1, 1, ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 0, 0, 0, 0, ) ), 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 100, ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 0, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '\u2248', 100, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '\u2248', 0, ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 100, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0, ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 100, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 100, ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 0, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '\u2248', 100, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '\u2248', 0, ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 100, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0, ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 100, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0, ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True, 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False, 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( hash, ), 'sha256' ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 'sha256' ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( hash, ), 'sha256' ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 'sha256' ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 200 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 60 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 200 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 200 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 199 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 200 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 60 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 200 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 200 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 199 ), 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, None, 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, None, 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGES, 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_JPEG, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.VIDEO, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGES, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_JPEG, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, HC.VIDEO, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 1 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 1 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 1 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 1 ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 1 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '\u2248', 0 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '\u2248', 1 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 0 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 1 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 1 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '\u2248', 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '\u2248', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 1 ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 1, 1 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 200, 201 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 4, 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 1, 1 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 200, 201 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 4, 1 ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( hash, ), 5 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 5 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( hash, ), 5 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 5 ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'KB' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'MB' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'GB' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'KB' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'MB' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'GB' ) ), 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 201 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 200 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 200 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 60 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 200 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 200 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 199 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 201 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 200 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 200 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 60 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 200 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 200 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 199 ), 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 100, 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 1, 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 0, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 100, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 1, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 0, 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -420,17 +424,17 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 1 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 1 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 1 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 1 ), 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -493,53 +497,53 @@ class TestClientDB( unittest.TestCase ):
         
         preds = []
         
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car' ) )
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'bus' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'bus' ) )
         
-        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
-        
-        tests.append( ( [ or_pred ], 1 ) )
-        
-        preds = []
-        
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car' ) )
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ) ) )
-        
-        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        or_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, preds )
         
         tests.append( ( [ or_pred ], 1 ) )
         
         preds = []
         
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'truck' ) )
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'bus' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ) ) )
         
-        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        or_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        tests.append( ( [ or_pred ], 1 ) )
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'truck' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'bus' ) )
+        
+        or_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, preds )
         
         tests.append( ( [ or_pred ], 0 ) )
         
         preds = []
         
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'truck', inclusive = False ) )
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'bus' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'truck', inclusive = False ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'bus' ) )
         
-        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        or_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, preds )
         
         tests.append( ( [ or_pred ], 1 ) )
         
         preds = []
         
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car' ) )
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'truck' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'truck' ) )
         
-        or_pred_1 = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        or_pred_1 = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, preds )
         
         preds = []
         
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'maker:toyota' ) )
-        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'maker:ford' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'maker:toyota' ) )
+        preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'maker:ford' ) )
         
-        or_pred_2 = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        or_pred_2 = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, preds )
         
         tests.append( ( [ or_pred_1, or_pred_2 ], 1 ) )
         
@@ -578,17 +582,17 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.4, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.4, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -604,15 +608,15 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, None, 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -639,10 +643,10 @@ class TestClientDB( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 1 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 0 ) )
-        predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 1 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 0 ) )
+        predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
         
         self.assertEqual( set( result ), set( predicates ) )
         
@@ -715,7 +719,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, predicates = [] )
+                tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+                
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = [] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, False )
                 
@@ -735,7 +741,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
                 
@@ -745,7 +751,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
                 

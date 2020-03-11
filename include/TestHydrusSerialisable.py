@@ -96,9 +96,9 @@ class TestSerialisables( unittest.TestCase ):
         d[ 'test3' ] = 5
         
         d[ 6 ] = HydrusSerialisable.SerialisableDictionary( { i : 'test' + str( i ) for i in range( 20 ) } )
-        d[ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test pred 1' ) ] = 56
+        d[ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test pred 1' ) ] = 56
         
-        d[ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test pred 2' ) ] = HydrusSerialisable.SerialisableList( [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test' + str( i ) ) for i in range( 10 ) ] )
+        d[ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test pred 2' ) ] = HydrusSerialisable.SerialisableList( [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' + str( i ) ) for i in range( 10 ) ] )
         
         self.assertEqual( len( list(d.keys()) ), 7 )
         

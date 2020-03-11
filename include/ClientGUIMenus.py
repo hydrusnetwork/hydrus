@@ -1,6 +1,7 @@
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
+from . import HydrusText
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -24,7 +25,7 @@ def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **k
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( label )
+    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
@@ -49,7 +50,7 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( label )
+    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
@@ -75,7 +76,7 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( label )
+    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
@@ -101,7 +102,7 @@ def AppendMenuLabel( menu, label, description = '' ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( label )
+    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )

@@ -1489,16 +1489,22 @@ class FilesMaintenanceManager( object ):
                 
                 for service_key in [ CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]:
                     
-                    service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+                    service_keys_to_content_updates = { service_key : [ content_update ] }
                     
                     self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( hash, ) ) )
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                
+                self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                 
                 if not self._pubbed_message_about_bad_file_record_delete:
                     
                     self._pubbed_message_about_bad_file_record_delete = True
                     
-                    message = 'During file maintenance, a file was found to be missing or invalid. Its record has been removed from the database. Any known URLs for the file have been written to "{}".'.format( error_dir )
+                    message = 'During file maintenance, a file was found to be missing or invalid. Its file record has been removed from the database without leaving a deletion record (so it can be easily reimported). Any known URLs for the file have been written to "{}".'.format( error_dir )
                     message += os.linesep * 2
                     message += 'More file records may have been removed, but this message will not appear again during this boot.'
                     

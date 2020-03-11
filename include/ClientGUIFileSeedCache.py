@@ -364,7 +364,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def __init__( self, parent, controller, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalPixmaps.listctrl, self._ShowFileSeedCacheFrame )
+        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.global_pixmaps().listctrl, self._ShowFileSeedCacheFrame )
         
         self._controller = controller
         self._file_seed_cache_get_callable = file_seed_cache_get_callable

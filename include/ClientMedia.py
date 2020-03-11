@@ -498,7 +498,7 @@ class MediaResult( object ):
         
         service_type = service.GetServiceType()
         
-        if service_type in HC.TAG_SERVICES:
+        if service_type in HC.REAL_TAG_SERVICES:
             
             self._tags_manager.DeletePending( service_key )
             
@@ -615,7 +615,7 @@ class MediaResult( object ):
         
         service_type = service.GetServiceType()
         
-        if service_type in HC.TAG_SERVICES:
+        if service_type in HC.REAL_TAG_SERVICES:
             
             self._tags_manager.ProcessContentUpdate( service_key, content_update )
             
@@ -851,16 +851,9 @@ class LocationsManager( object ):
         pending = self.GetPendingRemote()
         petitioned = self.GetPetitionedRemote()
         
-        remote_services = HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) )
+        remote_services = list( HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
         
-        remote_services = list( remote_services )
-        
-        def key( s ):
-            
-            return s.GetName()
-            
-        
-        remote_services.sort( key = key )
+        remote_services.sort( key = lambda s: s.GetName() )
         
         remote_service_strings = []
         
@@ -1116,6 +1109,21 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
     def DoesACollect( self ):
         
         return len( self.namespaces ) > 0 or len( self.rating_service_keys ) > 0
+        
+    
+    def ToString( self ):
+        
+        s_list = list( self.namespaces )
+        s_list.extend( [ HG.client_controller.services_manager.GetName( service_key ) for service_key in self.rating_service_keys if HG.client_controller.services_manager.ServiceExists( service_key ) ] )
+        
+        if len( s_list ) == 0:
+            
+            return 'no collections'
+            
+        else:
+            
+            return ', '.join( s_list )
+            
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT ] = MediaCollect
@@ -3269,6 +3277,17 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def ToString( self ):
+        
+        sort_type_string = self.GetSortTypeString()
+        
+        ( asc_string, desc_string, sort_gumpf ) = self.GetSortAscStrings()
+        
+        asc_desc_string = asc_string if self.sort_asc else desc_string
+        
+        return '{}, {}'.format( sort_type_string, asc_desc_string )
+        
+    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT ] = MediaSort
 
 class SortedList( object ):
@@ -3680,16 +3699,16 @@ class TagsManager( object ):
         return slice
         
     
-    def GetNumTags( self, service_key, tag_display_type, include_current_tags = True, include_pending_tags = False ):
+    def GetNumTags( self, tag_search_context: ClientSearch.TagSearchContext, tag_display_type ):
         
         num_tags = 0
         
         service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
         
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+        statuses_to_tags = service_keys_to_statuses_to_tags[ tag_search_context.service_key ]
         
-        if include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
-        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+        if tag_search_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+        if tag_search_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
         
         return num_tags
         

@@ -93,7 +93,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     #
     
-    painter.drawPixmap( width-16-5, 5, CC.GlobalPixmaps.file_repository )
+    painter.drawPixmap( width-16-5, 5, CC.global_pixmaps().file_repository )
     
     #
     

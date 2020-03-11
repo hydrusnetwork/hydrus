@@ -5,7 +5,6 @@ import io
 from . import HydrusConstants as HC
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusSerialisable
 from . import HydrusText
 import locale
 import os
@@ -576,6 +575,21 @@ def GetEmptyDataDict():
     data = collections.defaultdict( default_dict_list )
     
     return data
+    
+def GetNonDupeName( original_name, disallowed_names ):
+    
+    i = 1
+    
+    non_dupe_name = original_name
+    
+    while non_dupe_name in disallowed_names:
+        
+        non_dupe_name = original_name + ' (' + str( i ) + ')'
+        
+        i += 1
+        
+    
+    return non_dupe_name
     
 def GetNow():
     
@@ -1355,81 +1369,6 @@ class HydrusYAMLBase( yaml.YAMLObject ):
     yaml_loader = yaml.SafeLoader
     yaml_dumper = yaml.SafeDumper
     
-class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER
-    SERIALISABLE_NAME = 'Account Identifier'
-    SERIALISABLE_VERSION = 1
-    
-    TYPE_ACCOUNT_KEY = 1
-    TYPE_CONTENT = 2
-    
-    def __init__( self, account_key = None, content = None ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        if account_key is not None:
-            
-            self._type = self.TYPE_ACCOUNT_KEY
-            self._data = account_key
-            
-        elif content is not None:
-            
-            self._type = self.TYPE_CONTENT
-            self._data = content
-            
-        
-    
-    def __eq__( self, other ):
-        
-        if isinstance( other, AccountIdentifier ):
-            
-            return self.__hash__() == other.__hash__()
-            
-        
-        return NotImplemented
-        
-    
-    def __hash__( self ): return ( self._type, self._data ).__hash__()
-    
-    def __repr__( self ): return 'Account Identifier: ' + str( ( self._type, self._data ) )
-    
-    def _GetSerialisableInfo( self ):
-        
-        if self._type == self.TYPE_ACCOUNT_KEY:
-            
-            serialisable_data = self._data.hex()
-            
-        elif self._type == self.TYPE_CONTENT:
-            
-            serialisable_data = self._data.GetSerialisableTuple()
-            
-        
-        return ( self._type, serialisable_data )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self._type, serialisable_data ) = serialisable_info
-        
-        if self._type == self.TYPE_ACCOUNT_KEY:
-            
-            self._data = bytes.fromhex( serialisable_data )
-            
-        elif self._type == self.TYPE_CONTENT:
-            
-            self._data = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
-            
-        
-    
-    def GetData( self ): return self._data
-    
-    def HasAccountKey( self ): return self._type == self.TYPE_ACCOUNT_KEY
-    
-    def HasContent( self ): return self._type == self.TYPE_CONTENT
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER ] = AccountIdentifier
-
 class AccountType( HydrusYAMLBase ):
     
     yaml_tag = '!AccountType'

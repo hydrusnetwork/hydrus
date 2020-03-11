@@ -1,6 +1,4 @@
-from . import ClientCaches
 from . import ClientConstants as CC
-from . import ClientData
 from . import ClientGUIACDropdown
 from . import ClientGUICommon
 from . import ClientGUIControls
@@ -13,13 +11,11 @@ from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUITopLevelWindows
 from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
 from . import ClientGUITagSuggestions
 from . import ClientManagers
 from . import ClientMedia
-from . import ClientMigration
 from . import ClientTags
 import collections
 from . import HydrusConstants as HC
@@ -42,7 +38,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, tag_display_manager ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._tag_services = ClientGUICommon.BetterNotebook( self )
         
@@ -52,9 +48,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) ) )
-        
-        services.sort( key = lambda s: s.GetName() )
+        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) )
         
         for service in services:
             
@@ -169,7 +163,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1194,7 +1188,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
+        services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
@@ -1369,7 +1363,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if page is not None:
             
-            QP.CallAfter( page.SetTagBoxFocus )
+            HG.client_controller.CallAfterQtSafe( page, page.SetTagBoxFocus )
+            
         
     
     def ProcessApplicationCommand( self, command ):
@@ -1474,13 +1469,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items.append( ( 'normal', 'Hard-replace all applicable tags with their siblings and add missing parents. (All service siblings and parents)', 'Fix siblings and parents.', call ) )
             
-            self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.family, menu_items )
+            self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().family, menu_items )
             self._do_siblings_and_parents.setToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )
             
-            self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.copy, self._Copy )
+            self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().copy, self._Copy )
             self._copy_button.setToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
             
-            self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.paste, self._Paste )
+            self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().paste, self._Paste )
             self._paste_button.setToolTip( 'Paste newline-separated tags from the clipboard into here.' )
             
             self._show_deleted = False
@@ -1518,7 +1513,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 menu_items.append( ( 'normal', 'modify users who added the selected tags', 'Modify the users who added the selected tags.', self._ModifyMappers ) )
                 
             
-            self._cog_button = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.cog, menu_items )
+            self._cog_button = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().cog, menu_items )
             
             #
             
@@ -2295,9 +2290,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
-        services = [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ) ]
+        services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        services.extend( [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ) ] )
         
         for service in services:
             
@@ -3100,9 +3095,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
-        services = [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ) ]
+        services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        services.extend( [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ) ] )
         
         for service in services:
             
@@ -3174,7 +3169,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if page is not None:
             
-            QP.CallAfter( page.SetTagBoxFocus )
+            HG.client_controller.CallAfterQtSafe( page, page.SetTagBoxFocus )
             
         
     

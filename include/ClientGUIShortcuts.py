@@ -843,7 +843,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     service_type = service.GetServiceType()
                     
-                    if service_type in HC.TAG_SERVICES:
+                    if service_type in HC.REAL_TAG_SERVICES:
                         
                         content_type = HC.CONTENT_TYPE_MAPPINGS
                         

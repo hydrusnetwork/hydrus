@@ -221,6 +221,14 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         return colour
         
     
+    # darker/lighter works by multiplying value, so when it is closer to 0, lmao
+    breddy_darg_made = 0.25
+    
+    if colour.value() < breddy_darg_made:
+        
+        colour = QG.QColor.fromHslF( colour.hsvHueF(), colour.hsvSaturationF(), breddy_darg_made, colour.alphaF() )
+        
+    
     qt_intensity = 100 + ( 20 * intensity )
     
     if ColourIsBright( colour ):

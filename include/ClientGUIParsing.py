@@ -51,7 +51,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the downloader sharing help', 'Open the help page for sharing downloaders in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -520,7 +520,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -755,7 +755,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the context variable formula help', 'Open the help page for context variable formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1205,7 +1205,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the html formula help', 'Open the help page for html formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1561,7 +1561,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the json formula help', 'Open the help page for json formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1797,7 +1797,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the content parsers help', 'Open the help page for content parsers in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -2870,7 +2870,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -4065,10 +4065,10 @@ class ScriptManagementControl( QW.QWidget ):
         
         self._status.setWordWrap( True )
         
-        self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalPixmaps.link, self.LinkButton )
+        self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.global_pixmaps().link, self.LinkButton )
         self._link_button.setToolTip( 'urls found by the script' )
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalPixmaps.stop, self.CancelButton )
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.global_pixmaps().stop, self.CancelButton )
         
         #
         
@@ -4247,13 +4247,13 @@ class TestPanel( QW.QWidget ):
         
         self._example_data_raw_description = ClientGUICommon.BetterStaticText( raw_data_panel )
         
-        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalPixmaps.copy, self._Copy )
+        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().copy, self._Copy )
         self._copy_button.setToolTip( 'Copy the current example data to the clipboard.' )
         
-        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalPixmaps.link, self._FetchFromURL )
+        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().link, self._FetchFromURL )
         self._fetch_button.setToolTip( 'Fetch data from a URL.' )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalPixmaps.paste, self._Paste )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( 'Paste the current clipboard data into here.' )
         
         self._example_data_raw_preview = QW.QPlainTextEdit( raw_data_panel )
@@ -4506,10 +4506,10 @@ class TestPanelPageParser( TestPanel ):
         
         self._example_data_post_conversion_description = ClientGUICommon.BetterStaticText( post_conversion_panel )
         
-        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalPixmaps.copy, self._CopyPostConversion )
+        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().copy, self._CopyPostConversion )
         self._copy_button_post_conversion.setToolTip( 'Copy the current post conversion data to the clipboard.' )
         
-        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalPixmaps.refresh, self._RefreshDataPreviews )
+        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
         self._example_data_post_conversion_preview = QW.QPlainTextEdit( post_conversion_panel )
         self._example_data_post_conversion_preview.setReadOnly( True )
         
@@ -4636,10 +4636,10 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         self._example_data_post_separation_description = ClientGUICommon.BetterStaticText( post_separation_panel )
         
-        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalPixmaps.copy, self._CopyPostSeparation )
+        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().copy, self._CopyPostSeparation )
         self._copy_button_post_separation.setToolTip( 'Copy the current post separation data to the clipboard.' )
         
-        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalPixmaps.refresh, self._RefreshDataPreviews )
+        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
         self._example_data_post_separation_preview = QW.QPlainTextEdit( post_separation_panel )
         self._example_data_post_separation_preview.setReadOnly( True )
         

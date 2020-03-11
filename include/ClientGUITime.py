@@ -18,7 +18,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( 'Show help regarding these checker options.' )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )

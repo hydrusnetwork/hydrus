@@ -491,7 +491,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             expand_parents = True
             
-            self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._tag_autocomplete_all = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             
             self._tags_paste_button = ClientGUICommon.BetterButton( self._tags_panel, 'paste tags', self._PasteTags )
             
@@ -507,7 +507,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             expand_parents = True
             
-            self._single_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._tag_autocomplete_selection = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             
             self.SetSelectedPaths( [] )
             
@@ -522,7 +522,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._load_from_txt_files_checkbox = QW.QCheckBox( 'try to load tags from neighbouring .txt files', self._checkboxes_panel )
             
-            txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.GlobalPixmaps.help, self._ShowTXTHelp )
+            txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.global_pixmaps().help, self._ShowTXTHelp )
             txt_files_help_button.setToolTip( 'Show help regarding importing tags from .txt files.' )
             
             self._filename_namespace = QW.QLineEdit( self._checkboxes_panel )
@@ -577,11 +577,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             #
             
             self._tags_panel.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._tags_panel.Add( self._tag_box )
+            self._tags_panel.Add( self._tag_autocomplete_all, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._tags_panel.Add( self._tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._single_tags_panel.Add( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._single_tags_panel.Add( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._single_tags_panel.Add( self._tag_autocomplete_selection, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._single_tags_panel.Add( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             txt_hbox = QP.HBoxLayout()
@@ -801,12 +801,12 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                         
                     
                 
-                self._single_tag_box.setEnabled( True )
+                self._tag_autocomplete_selection.setEnabled( True )
                 self._single_tags_paste_button.setEnabled( True )
                 
             else:
                 
-                self._single_tag_box.setEnabled( False )
+                self._tag_autocomplete_selection.setEnabled( False )
                 self._single_tags_paste_button.setEnabled( False )
                 
             
@@ -1189,7 +1189,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddFilenameTaggingOptions( self ):
         
-        service_key = ClientGUIDialogsQuick.SelectServiceKey( HC.TAG_SERVICES )
+        service_key = ClientGUIDialogsQuick.SelectServiceKey( HC.REAL_TAG_SERVICES )
         
         if service_key is None:
             
@@ -1465,7 +1465,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
+        services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
@@ -1704,14 +1704,14 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
-        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.file_pause, self.PauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
         self._files_pause_button.setToolTip( 'pause/play files' )
         
         self._gallery_panel = ClientGUICommon.StaticBox( self, 'gallery parser' )
         
         self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, ellipsize_end = True )
         
-        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.GlobalPixmaps.gallery_pause, self.PauseGallery )
+        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.global_pixmaps().gallery_pause, self.PauseGallery )
         self._gallery_pause_button.setToolTip( 'pause/play search' )
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, page_key = self._page_key )
@@ -1849,20 +1849,20 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             if files_paused:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.global_pixmaps().file_play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.global_pixmaps().file_pause )
                 
             
             if gallery_paused:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.gallery_play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.global_pixmaps().gallery_play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.gallery_pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.global_pixmaps().gallery_pause )
                 
             
             if gallery_paused:
@@ -2253,7 +2253,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'file imports' )
         
-        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalPixmaps.file_pause, self.PauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
         self._files_pause_button.setToolTip( 'pause/play files' )
         
         self._file_status = ClientGUICommon.BetterStaticText( imports_panel, ellipsize_end = True )
@@ -2266,7 +2266,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, ellipsize_end = True )
         
-        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.GlobalPixmaps.gallery_pause, self.PauseChecking )
+        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.global_pixmaps().gallery_pause, self.PauseChecking )
         self._checking_pause_button.setToolTip( 'pause/play checking' )
         
         self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, ellipsize_end = True )
@@ -2446,11 +2446,11 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                     file_status = 'pausing, ' + file_status
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.global_pixmaps().file_play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.file_pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.global_pixmaps().file_pause )
                 
             
             self._file_status.setText( file_status )
@@ -2464,7 +2464,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                     watcher_status = 'paused'
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.gallery_play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.global_pixmaps().gallery_play )
                 
             else:
                 
@@ -2480,7 +2480,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                         
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.gallery_pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.global_pixmaps().gallery_pause )
                 
             
             self._watcher_status.setText( watcher_status )

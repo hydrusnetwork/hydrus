@@ -131,7 +131,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
             
             service_type = service.GetServiceType()
             
-            if service_type in HC.TAG_SERVICES:
+            if service_type in HC.REAL_TAG_SERVICES:
                 
                 self._tag_service_keys.addItem( service_name, service_key )
                 
@@ -172,7 +172,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
             
             self._flip_or_set_action.SetValue( action )
             
-            if service_type in HC.TAG_SERVICES:
+            if service_type in HC.REAL_TAG_SERVICES:
                 
                 QP.SetStringSelection( self._tag_service_keys, service_name )
                 
@@ -753,7 +753,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( 'Show help regarding editing shortcuts.' )
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )

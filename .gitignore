@@ -36,3 +36,15 @@ local.properties
 ### Some rules to keep out installation-specific stuff that's generated when Hydrus is run from source
 logs/
 crash.log
+
+# hydev note: updating this to ignore user's db files
+# I nonetheless recommend you use the -d switch to put your db somewhere else if you run and update from git source
+db/*.db
+db/*.db-shm
+db/*.db-wal
+db/*.crt
+db/*.key
+db/*.log
+db/client_files/
+db/server_files/
+db/missing_and_invalid_files/

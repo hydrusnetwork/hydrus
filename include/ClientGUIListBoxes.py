@@ -5,7 +5,7 @@ from . import ClientGUICommon
 from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIMenus
-from . import ClientGUIPredicates
+from . import ClientGUISearch
 from . import ClientGUIShortcuts
 from . import ClientMedia
 from . import ClientSearch
@@ -985,8 +985,8 @@ class ListBox( QW.QScrollArea ):
                 
                 s = term
                 
-                include_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
-                exclude_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term, False ) )
+                include_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
+                exclude_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term, False ) )
                 
             
         
@@ -1613,7 +1613,7 @@ class ListBoxTags( ListBox ):
         
         if isinstance( term, ClientSearch.Predicate ):
             
-            if term.GetType() == HC.PREDICATE_TYPE_TAG:
+            if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
                 
                 return term.GetValue()
                 
@@ -1632,7 +1632,7 @@ class ListBoxTags( ListBox ):
         
         namespace_colours = self._GetNamespaceColours()
         
-        if isinstance( term, ClientSearch.Predicate ) and term.GetType() == HC.PREDICATE_TYPE_OR_CONTAINER:
+        if isinstance( term, ClientSearch.Predicate ) and term.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
             
             texts_and_namespaces = term.GetTextsAndNamespaces( or_under_construction = self.ors_are_under_construction )
             
@@ -1676,11 +1676,11 @@ class ListBoxTags( ListBox ):
                 
             else:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
                 
             
         
-        predicates = ClientGUIPredicates.FleshOutPredicates( self, predicates )
+        predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
         
         if len( predicates ) > 0:
             
@@ -1708,11 +1708,11 @@ class ListBoxTags( ListBox ):
                 
             else:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
                 
             
         
-        predicates = ClientGUIPredicates.FleshOutPredicates( self, predicates )
+        predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
         
         for predicate in predicates:
             
@@ -1895,7 +1895,7 @@ class ListBoxTags( ListBox ):
                     
                     if isinstance( term, ClientSearch.Predicate ):
                         
-                        if term.GetType() == HC.PREDICATE_TYPE_TAG and term.IsInclusive():
+                        if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG and term.IsInclusive():
                             
                             selected_tags.add( term.GetValue() )
                             
@@ -2190,7 +2190,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         term = self._GetTerm( index )
         
-        if term.GetType() in ( HC.PREDICATE_TYPE_LABEL, HC.PREDICATE_TYPE_PARENT ):
+        if term.GetType() in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
             
             return False
             
@@ -2209,7 +2209,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         term = self._GetTerm( index )
         
-        if term.GetType() == HC.PREDICATE_TYPE_LABEL:
+        if term.GetType() == ClientSearch.PREDICATE_TYPE_LABEL:
             
             return False
             
@@ -2272,7 +2272,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
             term = self._GetTerm( index )
             
-            if term.GetType() == HC.PREDICATE_TYPE_PARENT:
+            if term.GetType() == ClientSearch.PREDICATE_TYPE_PARENT:
                 
                 indices.append( index )
                 
@@ -2442,6 +2442,18 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
             
         
     
+    def SetPredicates( self, predicates ):
+        
+        self._Clear()
+        
+        for predicate in predicates:
+            
+            self._AppendTerm( predicate )
+            
+        
+        self._DataHasChanged()
+        
+    
 class ListBoxTagsAC( ListBoxTagsPredicates ):
     
     def __init__( self, parent, callable, service_key, float_mode, **kwargs ):
@@ -2459,7 +2471,7 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
         
         shift_down = QW.QApplication.keyboardModifiers() & QC.Qt.ShiftModifier
         
-        predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
+        predicates = [ term for term in self._selected_terms if term.GetType() != ClientSearch.PREDICATE_TYPE_PARENT ]
         
         if self._float_mode:
             
@@ -2470,7 +2482,7 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
             widget = self
             
         
-        predicates = ClientGUIPredicates.FleshOutPredicates( widget, predicates )
+        predicates = ClientGUISearch.FleshOutPredicates( widget, predicates )
         
         if len( predicates ) > 0:
             
@@ -2532,12 +2544,12 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
                         
                         # now only apply this to simple tags, not wildcards and system tags
                         
-                        if skip_ors and predicate.GetType() == HC.PREDICATE_TYPE_OR_CONTAINER:
+                        if skip_ors and predicate.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
                             
                             continue
                             
                         
-                        if skip_countless and predicate.GetType() in ( HC.PREDICATE_TYPE_PARENT, HC.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
+                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
                             
                             continue
                             
@@ -3337,7 +3349,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def _Activate( self ):
         
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
         
         if len( predicates ) > 0:
             

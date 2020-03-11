@@ -1,5 +1,5 @@
 from . import ClientConstants as CC
-from . import ClientDragDrop
+from . import ClientGUIDragDrop
 from . import ClientGUICommon
 from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
@@ -992,7 +992,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         self.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
         self.setAcceptDrops( True )
-        self.installEventFilter( ClientDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
+        self.installEventFilter( ClientGUIDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
         
     
     def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):

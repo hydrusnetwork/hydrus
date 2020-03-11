@@ -414,6 +414,26 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self.SetLoginScripts( login_scripts )
         
     
+    def DomainHasALoginScript( self, login_domain ):
+        
+        with self._lock:
+            
+            if login_domain in self._domains_to_login_info:
+                
+                ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = self._domains_to_login_info[ login_domain ]
+                
+                ( login_script_key, login_script_name ) = login_script_key_and_name
+                
+                if login_script_key in self._login_script_keys_to_login_scripts or login_script_name in self._login_script_names_to_login_scripts:
+                    
+                    return True
+                    
+                
+            
+            return False
+            
+        
+    
     def GenerateLoginProcess( self, network_context ):
         
         with self._lock:

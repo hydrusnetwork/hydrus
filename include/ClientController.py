@@ -28,6 +28,7 @@ from . import ClientNetworkingDomain
 from . import ClientNetworkingLogin
 from . import ClientNetworkingSessions
 from . import ClientOptions
+from . import ClientSearch
 from . import ClientTags
 from . import ClientThreading
 import hashlib
@@ -357,6 +358,11 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
+    def CallAfterQtSafe( self, window, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
+        
+        return self.CallLaterQtSafe( window, 0, func, *args, **kwargs )
+        
+    
     def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
@@ -588,7 +594,7 @@ class Controller( HydrusController.HydrusController ):
         
         if not self.options[ 'pause_repo_sync' ]:
             
-            services = self.services_manager.GetServices( HC.REPOSITORIES )
+            services = self.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
             
             for service in services:
                 
@@ -895,6 +901,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.file_viewing_stats_manager = ClientManagers.FileViewingStatsManager( self )
         
+        #
+        
         self.pub( 'splash_set_status_subtext', 'tag display' )
         
         tag_display_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER )
@@ -909,6 +917,27 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.tag_display_manager = tag_display_manager
+        
+        #
+        
+        self.pub( 'splash_set_status_subtext', 'favourite searches' )
+        
+        favourite_search_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
+        
+        if favourite_search_manager is None:
+            
+            favourite_search_manager = ClientSearch.FavouriteSearchManager()
+            
+            ClientDefaults.SetDefaultFavouriteSearchManagerData( favourite_search_manager )
+            
+            favourite_search_manager._dirty = True
+            
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your favourite searches manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
+        self.favourite_search_manager = favourite_search_manager
+        
+        #
         
         self.pub( 'splash_set_status_subtext', 'tag siblings' )
         
@@ -926,7 +955,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.bitmap_manager = ClientManagers.BitmapManager( self )
             
-            CC.GlobalPixmaps.STATICInitialise()
+            CC.GlobalPixmaps()
             
         
         self.pub( 'splash_set_status_subtext', 'image caches' )
@@ -1413,6 +1442,15 @@ class Controller( HydrusController.HydrusController ):
                 self.network_engine.session_manager.SetClean()
                 
             
+            if self.favourite_search_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'favourite searches manager' )
+                
+                self.WriteSynchronous( 'serialisable', self.favourite_search_manager )
+                
+                self.favourite_search_manager.SetClean()
+                
+            
             if self.tag_display_manager.IsDirty():
                 
                 self.pub( 'splash_set_status_subtext', 'tag display manager' )
@@ -1630,7 +1668,7 @@ class Controller( HydrusController.HydrusController ):
     
     def SynchroniseAccounts( self ):
         
-        services = self.services_manager.GetServices( HC.RESTRICTED_SERVICES )
+        services = self.services_manager.GetServices( HC.RESTRICTED_SERVICES, randomised = True )
         
         for service in services:
             

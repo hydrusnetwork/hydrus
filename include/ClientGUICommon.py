@@ -1,9 +1,7 @@
-from . import ClientData
 from . import ClientConstants as CC
 from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIMenus
-from . import ClientMedia
 from . import ClientPaths
 from . import ClientRatings
 from . import HydrusConstants as HC
@@ -12,7 +10,6 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 import os
 import re
-import traceback
 from . import QtPorting as QP
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -76,7 +73,11 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
         QP.AddToLayout( gridbox, st, text_flags )
         QP.AddToLayout( gridbox, control, cflags )
         
-    if add_stretch_at_end: gridbox.setRowStretch( gridbox.rowCount(), 1 )
+    
+    if add_stretch_at_end:
+        
+        gridbox.setRowStretch( gridbox.rowCount(), 1 )
+        
     
     return gridbox
     
@@ -541,84 +542,6 @@ class BufferedWindowIcon( BufferedWindow ):
             
         
     
-class CheckboxCollect( QW.QWidget ):
-    
-    def __init__( self, parent, management_controller = None, silent = False ):
-        
-        QW.QWidget.__init__( self, parent )
-        
-        # this is trash, rewrite it to deal with the media_collect object, not the management controller
-        
-        self._management_controller = management_controller
-        
-        if self._management_controller is not None and self._management_controller.HasVariable( 'media_collect' ):
-            
-            self._media_collect = self._management_controller.GetVariable( 'media_collect' )
-            
-        else:
-            
-            self._media_collect = HG.client_controller.new_options.GetDefaultCollect()
-            
-        
-        self._silent = silent
-        
-        self._collect_comboctrl = QP.CollectComboCtrl( self, self._media_collect )
-        
-        self._collect_unmatched = BetterChoice( self )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._collect_unmatched, 19 )
-        
-        self._collect_unmatched.setMinimumWidth( width )
-        
-        self._collect_unmatched.addItem( 'collect unmatched', True )
-        self._collect_unmatched.addItem( 'leave unmatched', False )
-        
-        #
-        
-        self._collect_unmatched.SetValue( self._media_collect.collect_unmatched )
-        
-        #
-        
-        hbox = QP.HBoxLayout( margin = 0 )
-        
-        QP.AddToLayout( hbox, self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_VCENTER )
-        
-        self.setLayout( hbox )
-        
-        #
-        
-        self._collect_comboctrl.SetValue( 'no collections' ) # initialising to this because if there are no collections, no broadcast call goes through
-        
-        self._collect_unmatched.currentIndexChanged.connect( self.CollectValuesChanged )
-        self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
-        
-    
-    def GetValue( self ):
-        
-        return self._media_collect
-        
-    
-    def CollectValuesChanged( self ):
-        
-        ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
-        
-        collect_unmatched = self._collect_unmatched.GetValue()
-        
-        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = collect_unmatched )
-        
-        self._collect_comboctrl.SetValue( description )
-        
-        if not self._silent and self._management_controller is not None:
-            
-            self._management_controller.SetVariable( 'media_collect', self._media_collect )
-            
-            page_key = self._management_controller.GetKey( 'page' )
-            
-            HG.client_controller.pub( 'collect_media', page_key, self._media_collect )
-            
-        
-    
 class CheckboxManager( object ):
     
     def GetCurrentValue( self ):
@@ -706,355 +629,6 @@ class CheckboxManagerOptions( CheckboxManager ):
         new_options.InvertBoolean( self._boolean_name )
         
         HG.client_controller.pub( 'checkbox_manager_inverted' )
-        
-    
-class ChoiceSort( QW.QWidget ):
-    
-    sortChanged = QC.Signal( ClientMedia.MediaSort )
-    
-    def __init__( self, parent, management_controller = None ):
-        
-        QW.QWidget.__init__( self, parent )
-        
-        self._management_controller = management_controller
-        
-        self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
-        
-        self._sort_type_button = BetterButton( self, 'sort', self._SortTypeButtonClick )
-        self._sort_asc_choice = BetterChoice( self )
-        
-        asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
-        
-        self._sort_asc_choice.setMinimumWidth( asc_width )
-        
-        type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 10 )
-        
-        self._sort_type_button.setMinimumWidth( type_width )
-        
-        self._sort_asc_choice.addItem( '', CC.SORT_ASC )
-        
-        self._UpdateSortTypeLabel()
-        self._UpdateAscLabels()
-        
-        #
-        
-        hbox = QP.HBoxLayout( margin = 0 )
-        
-        QP.AddToLayout( hbox, self._sort_type_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._sort_asc_choice, CC.FLAGS_VCENTER )
-        
-        self.setLayout( hbox )
-        
-        HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
-        HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
-        
-        if self._management_controller is not None and self._management_controller.HasVariable( 'media_sort' ):
-            
-            media_sort = self._management_controller.GetVariable( 'media_sort' )
-            
-            try:
-                
-                self.SetSort( media_sort )
-                
-            except:
-                
-                default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-                
-                self.SetSort( default_sort )
-                
-            
-        
-        self._sort_asc_choice.currentIndexChanged.connect( self.EventSortAscChoice )
-        
-    
-    def _BroadcastSort( self ):
-        
-        media_sort = self._GetCurrentSort()
-        
-        self.sortChanged.emit( media_sort )
-        
-        if self._management_controller is not None:
-            
-            self._management_controller.SetVariable( 'media_sort', media_sort )
-            
-            page_key = self._management_controller.GetKey( 'page' )
-            
-            HG.client_controller.pub( 'sort_media', page_key, media_sort )
-            
-        
-    
-    def _GetCurrentSort( self ):
-        
-        sort_asc = self._sort_asc_choice.GetValue()
-        
-        media_sort = ClientMedia.MediaSort( self._sort_type, sort_asc )
-        
-        return media_sort
-        
-    
-    def _PopulateSortMenuOrList( self, menu = None ):
-        
-        sort_types = []
-        
-        menu_items_and_sort_types = []
-        
-        submetatypes_to_menus = {}
-        
-        for system_sort_type in CC.SYSTEM_SORT_TYPES:
-            
-            sort_type = ( 'system', system_sort_type )
-            
-            sort_types.append( sort_type )
-            
-            if menu is not None:
-                
-                submetatype = CC.system_sort_type_submetatype_string_lookup[ system_sort_type ]
-                
-                if submetatype is None:
-                    
-                    menu_to_add_to = menu
-                    
-                else:
-                    
-                    if submetatype not in submetatypes_to_menus:
-                        
-                        submenu = QW.QMenu( menu )
-                        
-                        submetatypes_to_menus[ submetatype ] = submenu
-                        
-                        ClientGUIMenus.AppendMenu( menu, submenu, submetatype )
-                        
-                    
-                    menu_to_add_to = submetatypes_to_menus[ submetatype ]
-                    
-                
-                label = CC.sort_type_basic_string_lookup[ system_sort_type ]
-                
-                menu_item = ClientGUIMenus.AppendMenuItem( menu_to_add_to, label, 'Select this sort type.', self._SetSortType, sort_type )
-                
-                menu_items_and_sort_types.append( ( menu_item, sort_type ) )
-                
-            
-        
-        namespace_sort_types = HC.options[ 'sort_by' ]
-        
-        if len( namespace_sort_types ) > 0:
-            
-            if menu is not None:
-                
-                submenu = QW.QMenu( menu )
-                
-                ClientGUIMenus.AppendMenu( menu, submenu, 'namespaces' )
-                
-            
-            for ( namespaces_text, namespaces_list ) in namespace_sort_types:
-                
-                sort_type = ( namespaces_text, tuple( namespaces_list ) )
-                
-                sort_types.append( sort_type )
-                
-                if menu is not None:
-                    
-                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
-                    
-                    label = example_sort.GetSortTypeString()
-                    
-                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
-                    
-                    menu_items_and_sort_types.append( ( menu_item, sort_type ) )
-                    
-                
-            
-        
-        rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-        
-        if len( rating_service_keys ) > 0:
-            
-            if menu is not None:
-                
-                submenu = QW.QMenu( menu )
-                
-                ClientGUIMenus.AppendMenu( menu, submenu, 'ratings' )
-                
-            
-            for service_key in rating_service_keys:
-                
-                sort_type = ( 'rating', service_key )
-                
-                sort_types.append( sort_type )
-                
-                if menu is not None:
-                    
-                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
-                    
-                    label = example_sort.GetSortTypeString()
-                    
-                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
-                    
-                    menu_items_and_sort_types.append( ( menu_item, sort_type ) )
-                    
-                
-            
-        
-        if menu is not None:
-            
-            for ( menu_item, sort_choice ) in menu_items_and_sort_types:
-                
-                if sort_choice == self._sort_type:
-                    
-                    menu_item.setCheckable( True )
-                    menu_item.setChecked( True )
-                    
-                
-            
-        
-        return sort_types
-        
-    
-    def _SortTypeButtonClick( self ):
-        
-        menu = QW.QMenu()
-        
-        self._PopulateSortMenuOrList( menu = menu )
-        
-        CGC.core().PopupMenu( self, menu )
-        
-    
-    def _SetSortType( self, sort_type ):
-        
-        self._sort_type = sort_type
-        
-        self._UpdateSortTypeLabel()
-        self._UpdateAscLabels( set_default_asc = True )
-        
-        self._UserChoseASort()
-        
-        self._BroadcastSort()
-        
-    
-    def _UpdateAscLabels( self, set_default_asc = False ):
-        
-        media_sort = self._GetCurrentSort()
-        
-        self._sort_asc_choice.clear()
-        
-        if media_sort.CanAsc():
-            
-            ( asc_str, desc_str, default_asc ) = media_sort.GetSortAscStrings()
-            
-            self._sort_asc_choice.addItem( asc_str, CC.SORT_ASC )
-            self._sort_asc_choice.addItem( desc_str, CC.SORT_DESC )
-            
-            if set_default_asc:
-                
-                asc_to_set = default_asc
-                
-            else:
-                
-                asc_to_set = media_sort.sort_asc
-                
-            
-            self._sort_asc_choice.SetValue( asc_to_set )
-            
-            self._sort_asc_choice.setEnabled( True )
-            
-        else:
-            
-            self._sort_asc_choice.addItem( '', CC.SORT_ASC )
-            self._sort_asc_choice.addItem( '', CC.SORT_DESC )
-            
-            self._sort_asc_choice.SetValue( CC.SORT_ASC )
-            
-            self._sort_asc_choice.setEnabled( False )
-            
-        
-    
-    def _UpdateSortTypeLabel( self ):
-        
-        example_sort = ClientMedia.MediaSort( self._sort_type, CC.SORT_ASC )
-        
-        self._sort_type_button.setText( example_sort.GetSortTypeString() )
-        
-    
-    def _UserChoseASort( self ):
-        
-        if HG.client_controller.new_options.GetBoolean( 'save_page_sort_on_change' ):
-            
-            media_sort = self._GetCurrentSort()
-            
-            HG.client_controller.new_options.SetDefaultSort( media_sort )
-            
-        
-    
-    def ACollectHappened( self, page_key, media_collect ):
-        
-        if self._management_controller is not None:
-            
-            my_page_key = self._management_controller.GetKey( 'page' )
-            
-            if page_key == my_page_key:
-                
-                self._BroadcastSort()
-                
-            
-        
-    
-    def BroadcastSort( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._management_controller.GetKey( 'page' ):
-            
-            return
-            
-        
-        self._BroadcastSort()
-        
-    
-    def EventSortAscChoice( self, index ):
-        
-        self._UserChoseASort()
-        
-        self._BroadcastSort()
-        
-    
-    def GetSort( self ):
-        
-        return self._GetCurrentSort()
-        
-    
-    def wheelEvent( self, event ):
-        
-        if event.angleDelta().y() > 0:
-            
-            index_delta = -1
-            
-        else:
-            
-            index_delta = 1
-            
-        
-        sort_types = self._PopulateSortMenuOrList()
-        
-        if self._sort_type in sort_types:
-            
-            index = sort_types.index( self._sort_type )
-            
-            new_index = ( index + index_delta ) % len( sort_types )
-            
-            new_sort_type = sort_types[ new_index ]
-            
-            self._SetSortType( new_sort_type )
-            
-        
-        event.accept()
-        
-    
-    def SetSort( self, media_sort ):
-        
-        self._sort_type = media_sort.sort_type
-        self._sort_asc_choice.SetValue( media_sort.sort_asc )
-        
-        self._UpdateSortTypeLabel()
-        self._UpdateAscLabels()
         
     
 class AlphaColourControl( QW.QWidget ):
@@ -1992,13 +1566,11 @@ class OnOffButton( QW.QPushButton ):
         HG.client_controller.sub( self, 'HitButton', 'hit_on_off_button' )
         
     
-    def EventButton( self ):
+    def _SetValue( self, value ):
         
-        self.setProperty( 'hydrus_on', not self.property( 'hydrus_on' ) )
+        self.setProperty( 'hydrus_on', value )
         
-        new_value = self.property( 'hydrus_on' )
-        
-        if new_value:
+        if value:
             
             self.setText( self._on_label )
             
@@ -2007,12 +1579,27 @@ class OnOffButton( QW.QPushButton ):
             self.setText( self._off_label )
             
         
-        HG.client_controller.pub( self._topic, self._page_key, new_value )
+        HG.client_controller.pub( self._topic, self._page_key, value )
         
         self.style().polish( self )
         
     
-    def IsOn( self ): return self.property( 'hydrus_on' )
+    def EventButton( self ):
+        
+        new_value = not self.property( 'hydrus_on' )
+        
+        self._SetValue( new_value )
+        
+    
+    def IsOn( self ):
+        
+        return self.property( 'hydrus_on' )
+        
+    
+    def SetOnOff( self, value ):
+        
+        self._SetValue( value )
+        
     
 class RatingLike( QW.QWidget ):
     

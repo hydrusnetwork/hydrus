@@ -101,6 +101,9 @@ class mpvWidget( QW.QWidget ):
         # this makes black screen for audio (rather than transparent)
         self._player.force_window = True
         
+        # this actually propagates up to the OS-level sound mixer lmao, otherwise defaults to ugly hydrus filename
+        self._player.title = 'hydrus mpv player'
+        
         # this is telling ffmpeg to do audio normalization. play with it more and put it in default mpv.conf
         # it doesn't seem to apply at all for some files--maybe a vp9 issue or something?
         #self._player.af = 'lavfi=[dynaudnorm=p=0.9]'
@@ -464,11 +467,20 @@ class mpvWidget( QW.QWidget ):
         #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
         if hasattr( mpv, '_mpv_load_config_file' ):
             
-            mpv._mpv_load_config_file( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
+            try:
+                
+                mpv._mpv_load_config_file( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( 'MPV could not load its configuration file! This was probably due to an invalid parameter value. The error follows:' )
+                
+                HydrusData.ShowException( e )
+                
             
         else:
             
-            HydrusData.Print( 'Failed to load mpv.conf--has the API changed?' )
+            HydrusData.Print( 'Was unable to load mpv.conf--has the API changed?' )
             
         
     

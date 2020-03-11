@@ -1028,7 +1028,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         # initial number pair combinations is (n(n-1))/2
         self._expected_num_potentials = int( n * ( n - 1 ) / 2 )
         
-        size_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusData.ConvertUnitToInt( 'B' ) ) )
+        size_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusData.ConvertUnitToInt( 'B' ) ) )
         
         self._file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ size_pred ] )
         

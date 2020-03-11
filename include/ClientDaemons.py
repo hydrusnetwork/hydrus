@@ -130,7 +130,7 @@ def DAEMONSynchroniseRepositories( controller ):
     
     if not controller.options[ 'pause_repo_sync' ]:
         
-        services = controller.services_manager.GetServices( HC.REPOSITORIES )
+        services = controller.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
         
         for service in services:
             

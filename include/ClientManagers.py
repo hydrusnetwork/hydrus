@@ -1,15 +1,15 @@
+from . import ClientConstants as CC
+from . import ClientData
 from . import ClientSearch
 from . import ClientServices
 from . import HydrusConstants as HC
+from . import HydrusData
 from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusTags
 import random
 import threading
-from . import HydrusData
-from . import ClientData
-from . import ClientConstants as CC
-from . import HydrusGlobals as HG
 import collections
-from . import HydrusTags
 import traceback
 from qtpy import QtGui as QG
 
@@ -581,11 +581,16 @@ class ServicesManager( object ):
             
         
     
-    def GetServices( self, desired_types = HC.ALL_SERVICES, randomised = True ):
+    def GetServices( self, desired_types = HC.ALL_SERVICES, randomised = False ):
         
         with self._lock:
             
-            services = [ service for service in self._services_sorted if service.GetServiceType() in desired_types ]
+            services = []
+            
+            for desired_type in desired_types:
+                
+                services.extend( [ service for service in self._services_sorted if service.GetServiceType() == desired_type ] )
+                
             
             if randomised:
                 
@@ -701,7 +706,7 @@ class TagParentsManager( object ):
                 
                 results.append( predicate )
                 
-                if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
+                if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
                     
                     tag = predicate.GetValue()
                     
@@ -709,7 +714,7 @@ class TagParentsManager( object ):
                     
                     for parent in parents:
                         
-                        parent_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
+                        parent_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, parent )
                         
                         results.append( parent_predicate )
                         
@@ -872,11 +877,11 @@ class TagSiblingsManager( object ):
             
             siblings = self._service_keys_to_siblings[ service_key ]
             
-            results = [ predicate for predicate in predicates if predicate.GetType() != HC.PREDICATE_TYPE_TAG ]
+            results = [ predicate for predicate in predicates if predicate.GetType() != ClientSearch.PREDICATE_TYPE_TAG ]
             
-            tag_predicates = [ predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG ]
+            tag_predicates = [ predicate for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG ]
             
-            tags_to_predicates = {predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG}
+            tags_to_predicates = {predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG}
             
             tags = list( tags_to_predicates.keys() )
             

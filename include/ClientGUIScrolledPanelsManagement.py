@@ -9,7 +9,7 @@ from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUIPanels
-from . import ClientGUIPredicates
+from . import ClientGUISearch
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIShortcuts
@@ -464,7 +464,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._panels.append( self._ServiceRestrictedPanel( self, self._service_key, remote_panel, self._service_type, self._dictionary ) )
                 
             
-            if self._service_type in HC.TAG_SERVICES:
+            if self._service_type in HC.REAL_TAG_SERVICES:
                 
                 self._panels.append( self._ServiceTagPanel( self, self._dictionary ) )
                 
@@ -1394,7 +1394,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
-                help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+                help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
                 
                 help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this path remapping control -->', QG.QColor( 0, 0, 255 ) )
                 
@@ -2177,18 +2177,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._filter_inbox_and_archive_predicates.setChecked( self._new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) )
             
-            self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAgeDelta( self )
-            self._file_system_predicate_duration = ClientGUIPredicates.PanelPredicateSystemDuration( self )
-            self._file_system_predicate_height = ClientGUIPredicates.PanelPredicateSystemHeight( self )
-            self._file_system_predicate_limit = ClientGUIPredicates.PanelPredicateSystemLimit( self )
-            self._file_system_predicate_mime = ClientGUIPredicates.PanelPredicateSystemMime( self )
-            self._file_system_predicate_num_pixels = ClientGUIPredicates.PanelPredicateSystemNumPixels( self )
-            self._file_system_predicate_num_tags = ClientGUIPredicates.PanelPredicateSystemNumTags( self )
-            self._file_system_predicate_num_words = ClientGUIPredicates.PanelPredicateSystemNumWords( self )
-            self._file_system_predicate_ratio = ClientGUIPredicates.PanelPredicateSystemRatio( self )
-            self._file_system_predicate_similar_to = ClientGUIPredicates.PanelPredicateSystemSimilarTo( self )
-            self._file_system_predicate_size = ClientGUIPredicates.PanelPredicateSystemSize( self )
-            self._file_system_predicate_width = ClientGUIPredicates.PanelPredicateSystemWidth( self )
+            self._file_system_predicate_age = ClientGUISearch.PanelPredicateSystemAgeDelta( self )
+            self._file_system_predicate_duration = ClientGUISearch.PanelPredicateSystemDuration( self )
+            self._file_system_predicate_height = ClientGUISearch.PanelPredicateSystemHeight( self )
+            self._file_system_predicate_limit = ClientGUISearch.PanelPredicateSystemLimit( self )
+            self._file_system_predicate_mime = ClientGUISearch.PanelPredicateSystemMime( self )
+            self._file_system_predicate_num_pixels = ClientGUISearch.PanelPredicateSystemNumPixels( self )
+            self._file_system_predicate_num_tags = ClientGUISearch.PanelPredicateSystemNumTags( self )
+            self._file_system_predicate_num_words = ClientGUISearch.PanelPredicateSystemNumWords( self )
+            self._file_system_predicate_ratio = ClientGUISearch.PanelPredicateSystemRatio( self )
+            self._file_system_predicate_similar_to = ClientGUISearch.PanelPredicateSystemSimilarTo( self )
+            self._file_system_predicate_size = ClientGUISearch.PanelPredicateSystemSize( self )
+            self._file_system_predicate_width = ClientGUISearch.PanelPredicateSystemWidth( self )
             
             #
             
@@ -3639,13 +3639,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._default_media_sort = ClientGUICommon.ChoiceSort( self )
+            self._default_media_sort = ClientGUISearch.MediaSortControl( self )
             
-            self._fallback_media_sort = ClientGUICommon.ChoiceSort( self )
+            self._fallback_media_sort = ClientGUISearch.MediaSortControl( self )
             
             self._save_page_sort_on_change = QW.QCheckBox( self )
             
-            self._default_media_collect = ClientGUICommon.CheckboxCollect( self, silent = True )
+            self._default_media_collect = ClientGUISearch.MediaCollectControl( self, silent = True )
             
             namespace_sorting_box = ClientGUICommon.StaticBox( self, 'namespace sorting' )
             
@@ -3780,7 +3780,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             disk_panel = ClientGUICommon.StaticBox( self, 'disk cache' )
             
-            disk_cache_help_button = ClientGUICommon.BetterBitmapButton( disk_panel, CC.GlobalPixmaps.help, self._ShowDiskCacheHelp )
+            disk_cache_help_button = ClientGUICommon.BetterBitmapButton( disk_panel, CC.global_pixmaps().help, self._ShowDiskCacheHelp )
             disk_cache_help_button.setToolTip( 'Show help regarding the disk cache.' )
             
             help_hbox = ClientGUICommon.WrapInText( disk_cache_help_button, disk_panel, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
@@ -4234,7 +4234,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page.addItem( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
             
-            services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES )
+            services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
             
             for service in services:
                 
@@ -4473,9 +4473,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_services = ClientGUICommon.BetterChoice( suggested_tags_favourites_panel )
             
-            tag_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
-            
-            tag_services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
+            tag_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
             
             for tag_service in tag_services:
                 
@@ -5104,7 +5102,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
         
-        QP.CallAfter( self._SetSearchFocus )
+        HG.client_controller.CallAfterQtSafe( self, self._SetSearchFocus )
         
     
     def _Copy( self ):

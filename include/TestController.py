@@ -316,7 +316,7 @@ class Controller( object ):
         
         self.locale = QC.QLocale() # Very important to init this here and keep it non garbage collected
         
-        CC.GlobalPixmaps.STATICInitialise()
+        CC.GlobalPixmaps()
         
         self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
         
@@ -416,6 +416,11 @@ class Controller( object ):
         
     
     CallToThreadLongRunning = CallToThread
+    
+    def CallAfterQtSafe( self, window, func, *args, **kwargs ):
+        
+        self.CallLaterQtSafe( window, 0, func, *args, **kwargs )
+        
     
     def CallLater( self, initial_delay, func, *args, **kwargs ):
         

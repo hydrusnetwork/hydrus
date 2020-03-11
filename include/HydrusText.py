@@ -36,11 +36,20 @@ def DeserialiseNewlinedTexts( text ):
     
     return texts
     
-def ElideText( text, max_length ):
+def ElideText( text, max_length, elide_center = False ):
     
     if len( text ) > max_length:
         
-        text = '{}\u2026'.format( text[:max_length - 1] )
+        if elide_center:
+            
+            CENTER_END_CHARS = max( 2, max_length // 8 )
+            
+            text = '{}\u2026{}'.format( text[ : max_length - ( 1 + CENTER_END_CHARS ) ], text[ - CENTER_END_CHARS : ] )
+            
+        else:
+            
+            text = '{}\u2026'.format( text[ : max_length - 1 ] )
+            
         
     
     return text

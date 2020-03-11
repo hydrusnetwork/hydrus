@@ -154,25 +154,25 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_num_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 8 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 8 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 2 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 3 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 2 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 3 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 10 )
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 11 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 10 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 11 )
         
     
     def test_get_pending( self ):
@@ -408,26 +408,26 @@ class TestTagObjects( unittest.TestCase ):
     
     def test_predicate_strings_and_namespaces( self ):
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag' )
         
         self.assertEqual( p.ToString(), 'tag' )
         self.assertEqual( p.GetNamespace(), '' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 2 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 2 )
         
         self.assertEqual( p.ToString( with_count = False ), 'tag' )
         self.assertEqual( p.ToString( with_count = True ), 'tag (1) (+2)' )
         self.assertEqual( p.GetNamespace(), '' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', False )
         
         self.assertEqual( p.ToString(), '-tag' )
         self.assertEqual( p.GetNamespace(), '' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False, 1, 2 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', False, 1, 2 )
         
         self.assertEqual( p.ToString( with_count = False ), '-tag' )
         self.assertEqual( p.ToString( with_count = True ), '-tag (1) (+2)' )
@@ -436,151 +436,151 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:time imported: since 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:time imported: around 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:time imported: before 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
         
         self.assertEqual( p.ToString(), 'system:archive (1,000)' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 200 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 200 ) )
         
         self.assertEqual( p.ToString(), 'system:duration < 200 milliseconds' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 2000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 2000 )
         
         self.assertEqual( p.ToString(), 'system:everything (2,000)' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:is currently in my files' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:is not pending to my files' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True )
         
         self.assertEqual( p.ToString(), 'system:has audio' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( 'abcd' ), ), 'sha256' ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( 'abcd' ), ), 'sha256' ) )
         
         self.assertEqual( p.ToString(), 'system:sha256 hash is abcd' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
         
         self.assertEqual( p.ToString(), 'system:height < 2,000' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1000 )
         
         self.assertEqual( p.ToString(), 'system:inbox (1,000)' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
         
         self.assertEqual( p.ToString(), 'system:limit is 2,000' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = 100 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = 100 )
         
         self.assertEqual( p.ToString(), 'system:local (100)' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
         
         self.assertEqual( p.ToString(), 'system:filetype is image' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
         
         self.assertEqual( p.ToString(), 'system:filetype is webm' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
         self.assertEqual( p.ToString(), 'system:filetype is webm, gif' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = 100 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = 100 )
         
         self.assertEqual( p.ToString(), 'system:not local (100)' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
         
         self.assertEqual( p.ToString(), 'system:number of tags < 2' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
         
         self.assertEqual( p.ToString(), 'system:number of words < 5,000' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:rating for my files > 0.2' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
         
         self.assertEqual( p.ToString(), 'system:ratio = 16:9' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( bytes.fromhex( 'abcd' ), ), 5 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( bytes.fromhex( 'abcd' ), ), 5 ) )
         
         self.assertEqual( p.ToString(), 'system:similar to 1 files using max hamming of 5' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
         
         self.assertEqual( p.ToString(), 'system:filesize > 5MB' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
         
         self.assertEqual( p.ToString(), 'system:width = 1,920' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -588,13 +588,13 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'series' )
         
         self.assertEqual( p.ToString(), 'series:*anything*' )
         self.assertEqual( p.GetNamespace(), 'series' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series', False )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series', False )
         
         self.assertEqual( p.ToString(), '-series' )
         self.assertEqual( p.GetNamespace(), '' )
@@ -602,13 +602,13 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
         self.assertEqual( p.ToString(), 'a*i:o* (wildcard search)' )
         self.assertEqual( p.GetNamespace(), 'a*i' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', False )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'a*i:o*', False )
         
         self.assertEqual( p.ToString(), '-a*i:o*' )
         self.assertEqual( p.GetNamespace(), 'a*i' )
@@ -616,7 +616,7 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
         
         self.assertEqual( p.ToString(), '    series:game of thrones' )
         self.assertEqual( p.GetNamespace(), 'series' )
@@ -624,7 +624,7 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
         
         self.assertEqual( p.ToString(), 'system:height < 2,000 OR blue eyes OR character:samus aran' )
         self.assertEqual( p.GetNamespace(), '' )
@@ -682,45 +682,45 @@ class TestTagParents( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', min_current_count = 10 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', min_current_count = 15 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', min_current_count = 20 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'grandmother', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'grandfather', min_current_count = 15 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'not_exist', min_current_count = 20 ) )
         
         self.assertEqual( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
         
         results = []
         
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', min_current_count = 5 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'cousin', min_current_count = 5 ) )
         
         results = []
         
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', min_current_count = 5 ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'cousin', min_current_count = 5 ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'aunt' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'uncle' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
@@ -820,19 +820,19 @@ class TestTagSiblings( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
         
-        results = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20, max_current_count = 35 ) ]
+        results = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20, max_current_count = 35 ) ]
         
         self.assertEqual( self._tag_siblings_manager.CollapsePredicates( self._first_key, predicates ), results )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
         
         ( result, ) = self._tag_siblings_manager.CollapsePredicates( self._first_key, predicates )
         

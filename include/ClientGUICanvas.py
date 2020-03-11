@@ -1730,8 +1730,8 @@ class Canvas( QW.QWidget ):
                 
                 dlg.SetPanel( panel )
                 
-                QP.CallAfter( control.setFocus, QC.Qt.OtherFocusReason )
-                QP.CallAfter( control.moveCursor, QG.QTextCursor.End )
+                HG.client_controller.CallAfterQtSafe( control, control.setFocus, QC.Qt.OtherFocusReason )
+                HG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.End )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
@@ -2926,7 +2926,7 @@ class CanvasWithDetails( Canvas ):
             
             services_manager = HG.client_controller.services_manager
             
-            like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+            like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
             
             like_services.reverse()
             
@@ -2948,7 +2948,7 @@ class CanvasWithDetails( Canvas ):
                 current_y += 20
                 
             
-            numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+            numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
             
             for numerical_service in numerical_services:
                 
@@ -2969,12 +2969,12 @@ class CanvasWithDetails( Canvas ):
             
             if CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent():
                 
-                icons_to_show.append( CC.GlobalPixmaps.trash )
+                icons_to_show.append( CC.global_pixmaps().trash )
                 
             
             if self._current_media.HasInbox():
                 
-                icons_to_show.append( CC.GlobalPixmaps.inbox )
+                icons_to_show.append( CC.global_pixmaps().inbox )
                 
             
             if len( icons_to_show ) > 0:

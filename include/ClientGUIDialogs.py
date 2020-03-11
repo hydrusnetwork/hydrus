@@ -112,7 +112,7 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         self._should_register = False
         
-        QP.CallAfter( self._register.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( self._register, self._register.setFocus, QC.Qt.OtherFocusReason )
         
     
     def EventRegister( self ):
@@ -198,7 +198,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason )
         
     
     def EventOK( self ):
@@ -356,7 +356,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason)
         
     
     def EventCopyExternalShareURL( self ):
@@ -467,7 +467,7 @@ class DialogInputNamespaceRegex( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason)
         
     
     def EventOK( self ):
@@ -520,7 +520,7 @@ class DialogInputTags( Dialog ):
         
         expand_parents = True
         
-        self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )
@@ -548,7 +548,7 @@ class DialogInputTags( Dialog ):
             
         
         QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._tag_box )
+        QP.AddToLayout( vbox, self._tag_autocomplete )
         QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.setLayout( vbox )
@@ -559,7 +559,7 @@ class DialogInputTags( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( self._tag_box.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._tag_autocomplete, self._tag_autocomplete.setFocus, QC.Qt.OtherFocusReason)
         
 
     def EnterTags( self, tags ):
@@ -653,7 +653,7 @@ class DialogInputUPnPMapping( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason)
         
     
     def GetInfo( self ):
@@ -810,7 +810,7 @@ class DialogModifyAccounts( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( self._exit.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._exit, self._exit.setFocus, QC.Qt.OtherFocusReason)
         
     
     def _DoModification( self ):
@@ -1255,7 +1255,7 @@ class DialogYesYesNo( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        QP.CallAfter( yes_buttons[0].setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( yes_buttons[0], yes_buttons[0].setFocus, QC.Qt.OtherFocusReason )
         
     
     def _DoYes( self, value ):

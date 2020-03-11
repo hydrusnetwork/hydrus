@@ -1519,8 +1519,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_predicates = []
         
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'green' ) )
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'kino', inclusive = False ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'kino', inclusive = False ) )
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
         
@@ -1535,8 +1535,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_predicates = []
         
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'green' ) )
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
         
@@ -1551,8 +1551,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_predicates = []
         
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'green' ) )
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
         

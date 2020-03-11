@@ -1312,8 +1312,8 @@ class NetworkJobControl( QW.QFrame ):
         
         self._gauge = ClientGUICommon.Gauge( self )
         
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.cog, self._ShowCogMenu )
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, self.Cancel )
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.Cancel )
         
         #
         
@@ -2138,7 +2138,7 @@ class TextAndPasteCtrl( QW.QWidget ):
         self._text_input = QW.QLineEdit( self )
         self._text_input.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text_input, self.EnterText ) )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.paste, self._Paste )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
         
         #

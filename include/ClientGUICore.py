@@ -18,7 +18,7 @@ class GUICore( QC.QObject ):
     @staticmethod
     def instance() -> 'GUICore':
         
-        if GUICore.instance is None:
+        if GUICore.my_instance is None:
             
             raise Exception( 'GUICore is not yet initialised!' )
             

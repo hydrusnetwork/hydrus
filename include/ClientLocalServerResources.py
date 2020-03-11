@@ -201,21 +201,21 @@ def ParseClientAPISearchPredicates( request ):
     
     for tag in negated_tags:
         
-        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = tag, inclusive = False ) )
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = False ) )
         
     
     for tag in tags:
         
-        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = tag ) )
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = tag ) )
         
     
     if system_inbox:
         
-        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
         
     elif system_archive:
         
-        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
     
     return predicates
@@ -854,7 +854,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 try:
                     
-                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_TAG_SERVICES, service_name )
                     
                 except:
                     
@@ -904,7 +904,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 try:
                     
-                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_TAG_SERVICES, service_name )
                     
                 except:
                     
@@ -1231,7 +1231,7 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
                 
                 try:
                     
-                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_TAG_SERVICES, service_name )
                     
                 except:
                     
@@ -1301,9 +1301,10 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
     
     def _threadDoGETJob( self, request ):
         
+        tag_search_context = ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
         predicates = ParseClientAPISearchPredicates( request )
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, predicates = predicates )
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
         
         # newest first
         sort_by = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), sort_asc = CC.SORT_DESC )

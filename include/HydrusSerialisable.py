@@ -1,3 +1,4 @@
+from . import HydrusData
 import json
 import zlib
 
@@ -94,6 +95,8 @@ SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS = 76
 SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS = 77
 SERIALISABLE_TYPE_MEDIA_COLLECT = 78
 SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER = 79
+SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT = 80
+SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER = 81
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -144,24 +147,9 @@ def CreateFromSerialisableTuple( obj_tuple ):
     
     return obj
     
-def GetNonDupeName( original_name, disallowed_names ):
-    
-    i = 1
-    
-    non_dupe_name = original_name
-    
-    while non_dupe_name in disallowed_names:
-        
-        non_dupe_name = original_name + ' (' + str( i ) + ')'
-        
-        i += 1
-        
-    
-    return non_dupe_name
-    
 def SetNonDupeName( obj, disallowed_names ):
     
-    non_dupe_name = GetNonDupeName( obj.GetName(), disallowed_names )
+    non_dupe_name = HydrusData.GetNonDupeName( obj.GetName(), disallowed_names )
     
     obj.SetName( non_dupe_name )
 
@@ -257,7 +245,7 @@ class SerialisableBaseNamed( SerialisableBase ):
     
     def SetNonDupeName( self, disallowed_names ):
         
-        self._name = GetNonDupeName( self._name, disallowed_names )
+        self._name = HydrusData.GetNonDupeName( self._name, disallowed_names )
         
     
 class SerialisableDictionary( SerialisableBase, dict ):

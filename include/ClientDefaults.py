@@ -641,6 +641,40 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     domain_manager.TryToLinkURLClassesAndParsers()
     
+def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
+    
+    from . import ClientMedia
+    from . import ClientSearch
+    
+    foldername = 'example search'
+    name = 'inbox filter'
+    
+    tag_search_context = ClientSearch.TagSearchContext()
+    
+    predicates = []
+    
+    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
+    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, value = 256 ) )
+    
+    filetypes = []
+    filetypes.extend( HC.general_mimetypes_to_mime_groups[ HC.GENERAL_IMAGE ] )
+    filetypes.extend( HC.general_mimetypes_to_mime_groups[ HC.GENERAL_ANIMATION ] )
+    filetypes.extend( HC.general_mimetypes_to_mime_groups[ HC.GENERAL_VIDEO ] )
+    
+    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
+    
+    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
+    
+    synchronised = True
+    media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_asc = CC.SORT_DESC )
+    media_collect = None
+    
+    rows = [ ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) ]
+    
+    favourite_search_manager.SetFavouriteSearchRows( rows )
+    
+    #inbox, system:limit=256, image, animation, video, sort by largest 
+    
 def SetDefaultLoginManagerScripts( login_manager ):
     
     default_login_scripts = GetDefaultLoginScripts()

@@ -1,7 +1,7 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import ClientData
-from . import ClientDragDrop
+from . import ClientGUIDragDrop
 from . import ClientFiles
 from . import ClientGUICanvas
 from . import ClientGUICore as CGC
@@ -660,7 +660,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if len( hashes ) > 0:
             
-            initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( tuple( hashes ), max_hamming ) ) ]
+            initial_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( tuple( hashes ), max_hamming ) ) ]
             
             HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = initial_predicates )
             
@@ -849,8 +849,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 dlg.SetPanel( panel )
                 
-                QP.CallAfter( control.setFocus, QC.Qt.OtherFocusReason )
-                QP.CallAfter( control.moveCursor, QG.QTextCursor.End )
+                HG.client_controller.CallAfterQtSafe( control, control.setFocus, QC.Qt.OtherFocusReason )
+                HG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.End )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
@@ -2934,7 +2934,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         alt_down = event.modifiers() & QC.Qt.AltModifier
                         
-                        result = ClientDragDrop.DoFileExportDragDrop( self, self._page_key, media, alt_down )
+                        result = ClientGUIDragDrop.DoFileExportDragDrop( self, self._page_key, media, alt_down )
                         
                         if result not in ( QC.Qt.IgnoreAction, ):
                             
@@ -4786,17 +4786,17 @@ class Thumbnail( Selectable ):
         
         if locations_manager.IsDownloading():
             
-            icons_to_draw.append( CC.GlobalPixmaps.downloading )
+            icons_to_draw.append( CC.global_pixmaps().downloading )
             
         
         if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() or CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted():
             
-            icons_to_draw.append( CC.GlobalPixmaps.trash )
+            icons_to_draw.append( CC.global_pixmaps().trash )
             
         
         if inbox:
             
-            icons_to_draw.append( CC.GlobalPixmaps.inbox )
+            icons_to_draw.append( CC.global_pixmaps().inbox )
             
         
         if len( icons_to_draw ) > 0:
@@ -4813,7 +4813,7 @@ class Thumbnail( Selectable ):
         
         if self.IsCollection():
             
-            painter.drawPixmap( 1, height-17, CC.GlobalPixmaps.collection )
+            painter.drawPixmap( 1, height-17, CC.global_pixmaps().collection )
             
             num_files_str = HydrusData.ToHumanInt( self.GetNumFiles() )
             
@@ -4841,11 +4841,11 @@ class Thumbnail( Selectable ):
         
         if self.HasAudio():
             
-            icons_to_draw.append( CC.GlobalPixmaps.sound )
+            icons_to_draw.append( CC.global_pixmaps().sound )
             
         elif self.HasDuration():
             
-            icons_to_draw.append( CC.GlobalPixmaps.play )
+            icons_to_draw.append( CC.global_pixmaps().play )
             
         
         services_manager = HG.client_controller.services_manager
@@ -4862,12 +4862,12 @@ class Thumbnail( Selectable ):
         
         if HC.FILE_REPOSITORY in service_types:
             
-            icons_to_draw.append( CC.GlobalPixmaps.file_repository )
+            icons_to_draw.append( CC.global_pixmaps().file_repository )
             
         
         if HC.IPFS in service_types:
             
-            icons_to_draw.append( CC.GlobalPixmaps.ipfs )
+            icons_to_draw.append( CC.global_pixmaps().ipfs )
             
         
         #
@@ -4876,12 +4876,12 @@ class Thumbnail( Selectable ):
         
         if HC.FILE_REPOSITORY in service_types:
             
-            icons_to_draw.append( CC.GlobalPixmaps.file_repository_pending )
+            icons_to_draw.append( CC.global_pixmaps().file_repository_pending )
             
         
         if HC.IPFS in service_types:
             
-            icons_to_draw.append( CC.GlobalPixmaps.ipfs_pending )
+            icons_to_draw.append( CC.global_pixmaps().ipfs_pending )
             
         
         #
@@ -4890,12 +4890,12 @@ class Thumbnail( Selectable ):
         
         if HC.FILE_REPOSITORY in service_types:
             
-            icons_to_draw.append( CC.GlobalPixmaps.file_repository_petitioned )
+            icons_to_draw.append( CC.global_pixmaps().file_repository_petitioned )
             
         
         if HC.IPFS in service_types:
             
-            icons_to_draw.append( CC.GlobalPixmaps.ipfs_petitioned )
+            icons_to_draw.append( CC.global_pixmaps().ipfs_petitioned )
             
         
         ICON_MARGIN = 1

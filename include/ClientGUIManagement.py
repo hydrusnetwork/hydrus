@@ -22,6 +22,7 @@ from . import ClientGUIScrolledPanels
 from . import ClientGUIFileSeedCache
 from . import ClientGUIGallerySeedLog
 from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUISearch
 from . import ClientGUITopLevelWindows
 from . import ClientImportGallery
 from . import ClientImportLocal
@@ -82,9 +83,9 @@ def CreateManagementController( page_name, management_type, file_service_key = N
     
 def CreateManagementControllerDuplicateFilter():
     
-    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER )
+    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
-    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
     
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'both_files_match', False )
@@ -95,7 +96,7 @@ def CreateManagementControllerImportGallery():
     
     page_name = 'gallery'
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
     gug_key_and_name = HG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
     
@@ -107,7 +108,7 @@ def CreateManagementControllerImportGallery():
     
 def CreateManagementControllerImportSimpleDownloader():
     
-    management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER )
+    management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
     simple_downloader_import = ClientImportSimpleURLs.SimpleDownloaderImport()
     
@@ -121,7 +122,7 @@ def CreateManagementControllerImportSimpleDownloader():
     
 def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success ):
     
-    management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD )
+    management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
     hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_service_keys_to_tags = paths_to_service_keys_to_tags, delete_after_success = delete_after_success )
     
@@ -136,7 +137,7 @@ def CreateManagementControllerImportMultipleWatcher( page_name = None, url = Non
         page_name = 'watcher'
         
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
     multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport( url = url )
     
@@ -151,7 +152,7 @@ def CreateManagementControllerImportURLs( page_name = None ):
         page_name = 'url import'
         
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
     urls_import = ClientImportSimpleURLs.URLsImport()
     
@@ -423,7 +424,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                     del serialisable_keys[ 'duplicate_filter_file_domain' ]
                     
                 
-                file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+                file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
                 
                 serialisable_serialisables[ 'file_search_context' ] = file_search_context.GetSerialisableTuple()
                 
@@ -693,11 +694,11 @@ class ManagementPanel( QW.QScrollArea ):
         self._page = page
         self._page_key = self._management_controller.GetKey( 'page' )
         
-        self._media_sort = ClientGUICommon.ChoiceSort( self, management_controller = self._management_controller )
+        self._media_sort = ClientGUISearch.MediaSortControl( self, management_controller = self._management_controller )
         
         silent_collect = not self.SHOW_COLLECT
         
-        self._media_collect = ClientGUICommon.CheckboxCollect( self, management_controller = self._management_controller, silent = silent_collect )
+        self._media_collect = ClientGUISearch.MediaCollectControl( self, management_controller = self._management_controller, silent = silent_collect )
         
         if not self.SHOW_COLLECT:
             
@@ -832,7 +833,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         #
         
         self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel )
-        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.GlobalPixmaps.refresh, self.RefreshMaintenanceNumbers )
+        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.global_pixmaps().refresh, self.RefreshMaintenanceNumbers )
         
         menu_items = []
         
@@ -843,7 +844,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items.append( ( 'check', 'search for duplicate pairs at the current distance during normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
         
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.GlobalPixmaps.cog, menu_items )
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().cog, menu_items )
         
         menu_items = []
         
@@ -851,7 +852,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
-        self._help_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.GlobalPixmaps.help, menu_items )
+        self._help_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().help, menu_items )
         
         #
         
@@ -873,7 +874,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )
         
-        self._search_button = ClientGUICommon.BetterBitmapButton( self._searching_panel, CC.GlobalPixmaps.play, self._SearchForDuplicates )
+        self._search_button = ClientGUICommon.BetterBitmapButton( self._searching_panel, CC.global_pixmaps().play, self._SearchForDuplicates )
         
         #
         
@@ -895,16 +896,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         file_search_context = management_controller.GetVariable( 'file_search_context' )
         
-        predicates = file_search_context.GetPredicates()
+        self._active_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._filtering_panel, self._page_key )
         
-        self._active_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._filtering_panel, self._page_key, predicates )
-        
-        self._ac_read = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
+        self._ac_read = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._active_predicates_box, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, allow_all_known_files = False, force_system_everything = True )
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
         
         self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.GlobalPixmaps.refresh, self.RefreshDuplicateNumbers )
+        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.global_pixmaps().refresh, self.RefreshDuplicateNumbers )
         
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
@@ -1042,10 +1041,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     def _GetFileSearchContextAndBothFilesMatch( self ):
         
         file_search_context = self._ac_read.GetFileSearchContext()
-        
-        predicates = self._active_predicates_box.GetPredicates()
-        
-        file_search_context.SetPredicates( predicates )
         
         both_files_match = self._both_files_match.isChecked()
         
@@ -1452,7 +1447,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.file_pause, self.Pause )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play imports' )
         
         self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
@@ -1494,11 +1489,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_pause )
             
         
         if paused:
@@ -1568,11 +1563,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.highlight, self._HighlightSelectedGalleryImport, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().highlight, self._HighlightSelectedGalleryImport, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
@@ -1589,7 +1584,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._query_input = ClientGUIControls.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
         
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self._gallery_downloader_panel, CC.GlobalPixmaps.cog, self._ShowCogMenu )
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self._gallery_downloader_panel, CC.global_pixmaps().cog, self._ShowCogMenu )
         
         self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
         
@@ -2229,7 +2224,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        QP.CallAfter( self._query_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._query_input, self._query_input.setFocus, QC.Qt.OtherFocusReason)
         
     
     def Start( self ):
@@ -2269,11 +2264,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
-        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.highlight, self._HighlightSelectedWatcher, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.GlobalPixmaps.trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().highlight, self._HighlightSelectedWatcher, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
@@ -2955,7 +2950,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        QP.CallAfter( self._watcher_url_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._watcher_url_input, self._watcher_url_input.setFocus, QC.Qt.OtherFocusReason)
         
     
     def Start( self ):
@@ -2981,7 +2976,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'imports' )
         
-        self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.file_pause, self.PauseFiles )
+        self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
         self._pause_files_button.setToolTip( 'pause/play files' )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
@@ -2994,7 +2989,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'simple parsing urls' )
         
-        self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.GlobalPixmaps.gallery_pause, self.PauseQueue )
+        self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().gallery_pause, self.PauseQueue )
         self._pause_queue_button.setToolTip( 'pause/play queue' )
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel, ellipsize_end = True )
@@ -3024,7 +3019,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         menu_items.append( ( 'normal', 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
         
-        self._formula_cog = ClientGUICommon.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.GlobalPixmaps.cog, menu_items )
+        self._formula_cog = ClientGUICommon.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().cog, menu_items )
         
         self._RefreshFormulae()
         
@@ -3299,20 +3294,20 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         if files_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalPixmaps.file_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.global_pixmaps().file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalPixmaps.file_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.global_pixmaps().file_pause )
             
         
         if queue_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalPixmaps.gallery_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.global_pixmaps().gallery_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalPixmaps.gallery_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.global_pixmaps().gallery_pause )
             
         
         ( file_network_job, page_network_job ) = self._simple_downloader_import.GetNetworkJobs()
@@ -3398,7 +3393,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        QP.CallAfter( self._page_url_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._page_url_input, self._page_url_input.setFocus, QC.Qt.OtherFocusReason )
         
     
     def Start( self ):
@@ -3418,7 +3413,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_panel = ClientGUICommon.StaticBox( self, 'url downloader' )
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalPixmaps.file_pause, self.Pause )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play files' )
         
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
@@ -3498,11 +3493,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.file_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_pause )
             
         
         ( file_network_job, gallery_network_job ) = self._urls_import.GetNetworkJobs()
@@ -3539,7 +3534,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        QP.CallAfter( self._url_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._url_input, self._url_input.setFocus, QC.Qt.OtherFocusReason)
         
     
     def Start( self ):
@@ -4337,19 +4332,17 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_job_key.Finish()
         
-        initial_predicates = file_search_context.GetPredicates()
-        
         if self._search_enabled:
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
-            self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, self._page_key, initial_predicates )
+            self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, self._page_key )
             
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
-            self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_callable = self._page.GetMedia, synchronised = synchronised )
+            self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._current_predicates_box, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, media_callable = self._page.GetMedia, synchronised = synchronised )
             
-            self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.GlobalPixmaps.stop, self._CancelSearch )
+            self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelSearch )
             
             self._cancel_search_button.hide()
             
@@ -4398,7 +4391,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
-            tag_service_key = file_search_context.GetTagServiceKey()
+            tag_service_key = file_search_context.GetTagSearchContext().service_key
             
             t.ChangeTagService( tag_service_key )
             
@@ -4424,15 +4417,11 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 file_search_context = self._searchbox.GetFileSearchContext()
                 
-                current_predicates = self._current_predicates_box.GetPredicates()
-                
-                file_search_context.SetPredicates( current_predicates )
-                
                 self._management_controller.SetVariable( 'file_search_context', file_search_context )
                 
                 file_service_key = file_search_context.GetFileServiceKey()
                 
-                if len( current_predicates ) > 0:
+                if len( file_search_context.GetPredicates() ) > 0:
                     
                     self._query_job_key = ClientThreading.JobKey()
                     
@@ -4560,7 +4549,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            QP.CallAfter( self._searchbox.setFocus, QC.Qt.OtherFocusReason)
+            HG.client_controller.CallAfterQtSafe( self._searchbox, self._searchbox.setFocus, QC.Qt.OtherFocusReason)
             
         
     

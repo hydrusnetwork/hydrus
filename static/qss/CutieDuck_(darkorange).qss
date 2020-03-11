@@ -302,3 +302,97 @@ QTabBar::tab:hover:!selected
 	color: black;
 	background-color: #d7801a;
 }
+
+/*
+DUCK
+*/
+/*
+Default QSS for hydrus. This is prepended to any stylesheet loaded in hydrus.
+Copying these entries in your own stylesheets should override these settings.
+This will get more work in future.
+*/
+
+/*
+
+Here are some text and background colours
+
+*/
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+	color: #2ed42e;
+}
+
+QLineEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+	color: #ff7171;
+}
+
+QLineEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+/* Example: Your files are going to be deleted! */
+
+QLabel#HydrusWarning
+{
+	color: #ff7171;
+}
+
+QCheckBox#HydrusWarning
+{
+	color: #ff7171;
+}
+
+/*
+
+Buttons on dialogs
+
+*/
+
+QPushButton#HydrusAccept
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusCancel
+{
+	color: #ff7171;
+}
+
+/*
+
+This is the green/red button that switches 'include current tags' and similar states on/off
+
+*/
+
+QPushButton#HydrusOnOffButton[hydrus_on=true]
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false]
+{
+	color: #ff7171;
+}
+

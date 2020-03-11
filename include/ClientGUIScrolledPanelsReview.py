@@ -1,7 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientDefaults
-from . import ClientDragDrop
+from . import ClientGUIDragDrop
 from . import ClientFiles
 from . import ClientGUIACDropdown
 from . import ClientGUIAsync
@@ -79,7 +79,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1687,7 +1687,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source.clear()
         self._migration_destination.clear()
         
-        for service in HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ):
+        for service in HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
             
             self._migration_source.addItem( service.GetName(), service.GetServiceKey() )
             self._migration_destination.addItem( service.GetName(), service.GetServiceKey() )
@@ -1758,7 +1758,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._reset_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
         
-        default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowDefaultRulesHelp )
+        default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowDefaultRulesHelp )
         default_rules_help_button.setToolTip( 'Show help regarding default bandwidth rules.' )
         
         self._delete_record_button = ClientGUICommon.BetterButton( self, 'delete selected history', self._DeleteNetworkContexts )
@@ -2031,7 +2031,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -2061,7 +2061,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        win.installEventFilter( ClientDragDrop.FileDropTarget( win, filenames_callable = self.ImportFromDragDrop ) )
+        win.installEventFilter( ClientGUIDragDrop.FileDropTarget( win, filenames_callable = self.ImportFromDragDrop ) )
         
         self._lain_event_filter = QP.WidgetEventFilter( win )
         self._lain_event_filter.EVT_LEFT_DOWN( self.EventLainClick )
@@ -2505,11 +2505,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, page_key, [] )
+        self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, page_key )
         
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         
-        self._tag_ac_input = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
+        self._tag_ac_input = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._current_predicates_box, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         self._run_search_st = ClientGUICommon.BetterStaticText( self._search_panel, label = 'no results yet' )
         
@@ -2764,10 +2764,6 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_search_context = self._tag_ac_input.GetFileSearchContext()
         
-        current_predicates = self._current_predicates_box.GetPredicates()
-        
-        file_search_context.SetPredicates( current_predicates )
-        
         HG.client_controller.CallToThread( do_it, file_search_context )
         
     
@@ -2954,7 +2950,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self.widget().installEventFilter( ClientDragDrop.FileDropTarget( self.widget(), filenames_callable = self._AddPathsToList ) )
+        self.widget().installEventFilter( ClientGUIDragDrop.FileDropTarget( self.widget(), filenames_callable = self._AddPathsToList ) )
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -2970,10 +2966,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._progress = ClientGUICommon.TextAndGauge( self )
         
-        self._progress_pause = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.pause, self.PauseProgress )
+        self._progress_pause = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self.PauseProgress )
         self._progress_pause.setEnabled( False )
         
-        self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, self.StopProgress )
+        self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.StopProgress )
         self._progress_cancel.setEnabled( False )
         
         file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
@@ -2987,7 +2983,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'check', 'sort paths as they are added', 'If checked, paths will be sorted in a numerically human-friendly (e.g. "page 9.jpg" comes before "page 10.jpg") way.', check_manager ) )
         
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.cog, menu_items )
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
         
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self )
         self._delete_after_success_st.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
@@ -3499,11 +3495,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalPixmaps.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.global_pixmaps().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalPixmaps.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.global_pixmaps().pause )
             
         
     
@@ -3853,7 +3849,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
         
-        listctrl_panel.installEventFilter( ClientDragDrop.FileDropTarget( listctrl_panel, filenames_callable = self._ImportCookiesTXTPaths ) )
+        listctrl_panel.installEventFilter( ClientGUIDragDrop.FileDropTarget( listctrl_panel, filenames_callable = self._ImportCookiesTXTPaths ) )
         
         self._show_empty = QW.QCheckBox( 'show empty', self )
         
@@ -4082,7 +4078,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
         
-        listctrl_panel.installEventFilter( ClientDragDrop.FileDropTarget( listctrl_panel, filenames_callable = self._ImportCookiesTXTPaths ) )
+        listctrl_panel.installEventFilter( ClientGUIDragDrop.FileDropTarget( listctrl_panel, filenames_callable = self._ImportCookiesTXTPaths ) )
         
         #
         
@@ -4339,7 +4335,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         notebook_dict = {}
         
-        services = self._controller.services_manager.GetServices( randomised = False )
+        services = self._controller.services_manager.GetServices()
         
         local_remote_notebook_to_select = None
         service_type_lb = None

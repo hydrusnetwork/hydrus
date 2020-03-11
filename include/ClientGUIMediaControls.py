@@ -66,11 +66,11 @@ class AudioMuteButton( ClientGUICommon.BetterBitmapButton ):
         
         if HG.client_controller.new_options.GetBoolean( mute_option_name ):
             
-            pixmap = CC.GlobalPixmaps.mute
+            pixmap = CC.global_pixmaps().mute
             
         else:
             
-            pixmap = CC.GlobalPixmaps.sound
+            pixmap = CC.global_pixmaps().sound
             
         
         return pixmap

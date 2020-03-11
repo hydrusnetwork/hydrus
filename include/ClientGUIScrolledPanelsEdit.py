@@ -1251,7 +1251,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         choice_tuples = []
         
-        for service in services_manager.GetServices( [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] ):
+        for service in services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ):
             
             service_key = service.GetServiceKey()
             
@@ -1321,7 +1321,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         choice_tuples = []
         
-        for service in services_manager.GetServices( [ HC.LOCAL_TAG, HC.TAG_REPOSITORY ] ):
+        for service in services_manager.GetServices( HC.REAL_TAG_SERVICES ):
             
             service_key = service.GetServiceKey()
             
@@ -1566,7 +1566,7 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -2169,7 +2169,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -3562,7 +3562,7 @@ If you are not experienced with subscriptions, I strongly suggest you set these 
 
 If you want to get all of an artist's files from a site, use the manual gallery download page first. A good routine is to check that you have the right search text and it all works correctly and that you know what tags you want, and then once that big queue is fully downloaded synced, start a new sub with the same settings to continue checking for anything posted in future.'''
         
-        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalPixmaps.help, QW.QMessageBox.information, None, 'Information', message )
+        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.global_pixmaps().help, QW.QMessageBox.information, None, 'Information', message )
         
         help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about file limits -->', QG.QColor( 0, 0, 255 ) )
         
@@ -3578,7 +3578,7 @@ If 1 is true, you might want to increase its periodic limit a little, or speed u
 
 But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--the maintainer for the site's download parser (hydrus dev or whoever), would be interested in knowing what has happened so they can roll out a fix.'.'''
         
-        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalPixmaps.help, QW.QMessageBox.information, None, 'Information', message )
+        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.global_pixmaps().help, QW.QMessageBox.information, None, 'Information', message )
         
         help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about hitting the normal file limit -->', QG.QColor( 0, 0, 255 ) )
         
@@ -4348,7 +4348,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._query_text.selectAll()
         
-        QP.CallAfter( self._query_text.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( self._query_text, self._query_text.setFocus, QC.Qt.OtherFocusReason )
         
     
     def _GetValue( self ):
@@ -4396,7 +4396,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -5300,7 +5300,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( 'Show help regarding these tag options.' )
         
         #
@@ -5410,7 +5410,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _InitialiseServices( self, tag_import_options ):
         
-        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
+        services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
         for service in services:
             
@@ -5652,7 +5652,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not first_focused:
                 
-                QP.CallAfter( button.setFocus, QC.Qt.OtherFocusReason)
+                HG.client_controller.CallAfterQtSafe( button, button.setFocus, QC.Qt.OtherFocusReason)
                 
                 first_focused = True
                 
@@ -5693,7 +5693,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = self._GetCogIconMenuItems()
         
-        cog_button = ClientGUICommon.MenuBitmapButton( main_box, CC.GlobalPixmaps.cog, menu_items )
+        cog_button = ClientGUICommon.MenuBitmapButton( main_box, CC.global_pixmaps().cog, menu_items )
         
         #
         
@@ -6301,11 +6301,11 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'url type: ', self._url_type ) )
         rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
         rows.append( ( 'network location: ', self._netloc ) )
-        rows.append( ( 'alphabetise GET parameters?: ', self._alphabetise_get_parameters ) )
-        rows.append( ( 'match subdomains?: ', self._match_subdomains ) )
-        rows.append( ( 'keep matched subdomains?: ', self._keep_matched_subdomains ) )
-        rows.append( ( 'can produce multiple files: ', self._can_produce_multiple_files ) )
-        rows.append( ( 'should associate a \'known url\' with resulting files: ', self._should_be_associated_with_files ) )
+        rows.append( ( 'should alphabetise GET parameters when normalising?: ', self._alphabetise_get_parameters ) )
+        rows.append( ( 'should subdomains also match this class?: ', self._match_subdomains ) )
+        rows.append( ( 'keep those subdomains when normalising?: ', self._keep_matched_subdomains ) )
+        rows.append( ( 'post page can produce multiple files?: ', self._can_produce_multiple_files ) )
+        rows.append( ( 'associate a \'known url\' with resulting files?: ', self._should_be_associated_with_files ) )
         
         gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -6926,7 +6926,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         

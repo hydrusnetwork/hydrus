@@ -1,11 +1,14 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIControls
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
+from . import ClientGUIMenus
 from . import ClientGUIOptionsPanels
 from . import ClientGUIScrolledPanels
 from . import ClientGUIShortcuts
 from . import ClientGUITime
+from . import ClientMedia
 from . import ClientRatings
 from . import ClientSearch
 from . import HydrusConstants as HC
@@ -31,7 +34,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearc
         
         ( predicate_type, value, inclusive ) = predicate.GetInfo()
         
-        if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+        if value is None and predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
             
             from . import ClientGUITopLevelWindows
             
@@ -47,11 +50,11 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearc
                     
                 
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_UNTAGGED:
             
-            good_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
+            good_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
             
-        elif predicate_type == HC.PREDICATE_TYPE_LABEL:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_LABEL:
             
             continue
             
@@ -62,6 +65,486 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearc
         
     
     return good_predicates
+    
+class MediaCollectControl( QW.QWidget ):
+    
+    def __init__( self, parent, management_controller = None, silent = False ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        # this is trash, rewrite it to deal with the media_collect object, not the management controller
+        
+        self._management_controller = management_controller
+        
+        if self._management_controller is not None and self._management_controller.HasVariable( 'media_collect' ):
+            
+            self._media_collect = self._management_controller.GetVariable( 'media_collect' )
+            
+        else:
+            
+            self._media_collect = HG.client_controller.new_options.GetDefaultCollect()
+            
+        
+        self._silent = silent
+        
+        self._collect_comboctrl = QP.CollectComboCtrl( self, self._media_collect )
+        
+        self._collect_unmatched = ClientGUICommon.BetterChoice( self )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._collect_unmatched, 19 )
+        
+        self._collect_unmatched.setMinimumWidth( width )
+        
+        self._collect_unmatched.addItem( 'collect unmatched', True )
+        self._collect_unmatched.addItem( 'leave unmatched', False )
+        
+        #
+        
+        self._collect_unmatched.SetValue( self._media_collect.collect_unmatched )
+        
+        #
+        
+        hbox = QP.HBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( hbox, self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_VCENTER )
+        
+        self.setLayout( hbox )
+        
+        #
+        
+        self._UpdateLabel()
+        
+        self._collect_unmatched.currentIndexChanged.connect( self.CollectValuesChanged )
+        self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
+        
+        HG.client_controller.sub( self, 'SetCollectFromPage', 'set_page_collect' )
+        
+    
+    def _BroadcastCollect( self ):
+        
+        if not self._silent and self._management_controller is not None:
+            
+            self._management_controller.SetVariable( 'media_collect', self._media_collect )
+            
+            page_key = self._management_controller.GetKey( 'page' )
+            
+            HG.client_controller.pub( 'collect_media', page_key, self._media_collect )
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
+        
+        self._collect_comboctrl.SetValue( description )
+        
+    
+    def GetValue( self ):
+        
+        return self._media_collect
+        
+    
+    def CollectValuesChanged( self ):
+        
+        ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
+        
+        self._UpdateLabel()
+        
+        collect_unmatched = self._collect_unmatched.GetValue()
+        
+        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = collect_unmatched )
+        
+        self._BroadcastCollect()
+        
+    
+    def SetCollect( self, media_collect ):
+        
+        self._media_collect = media_collect
+        
+        self._collect_comboctrl.blockSignals( True )
+        self._collect_unmatched.blockSignals( True )
+        
+        self._collect_comboctrl.SetCollectByValue( self._media_collect )
+        self._collect_unmatched.SetValue( self._media_collect.collect_unmatched )
+        
+        self._UpdateLabel()
+        
+        self._collect_comboctrl.blockSignals( False )
+        self._collect_unmatched.blockSignals( False )
+        
+        self._BroadcastCollect()
+        
+    
+    def SetCollectFromPage( self, page_key, media_collect ):
+        
+        if page_key == self._management_controller.GetKey( 'page' ):
+            
+            self.SetCollect( media_collect )
+            
+            self._BroadcastCollect()
+            
+        
+    
+class MediaSortControl( QW.QWidget ):
+    
+    sortChanged = QC.Signal( ClientMedia.MediaSort )
+    
+    def __init__( self, parent, management_controller = None ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._management_controller = management_controller
+        
+        self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
+        
+        self._sort_type_button = ClientGUICommon.BetterButton( self, 'sort', self._SortTypeButtonClick )
+        self._sort_asc_choice = ClientGUICommon.BetterChoice( self )
+        
+        asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
+        
+        self._sort_asc_choice.setMinimumWidth( asc_width )
+        
+        type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 10 )
+        
+        self._sort_type_button.setMinimumWidth( type_width )
+        
+        self._sort_asc_choice.addItem( '', CC.SORT_ASC )
+        
+        self._UpdateSortTypeLabel()
+        self._UpdateAscLabels()
+        
+        #
+        
+        hbox = QP.HBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( hbox, self._sort_type_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._sort_asc_choice, CC.FLAGS_VCENTER )
+        
+        self.setLayout( hbox )
+        
+        HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
+        HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
+        HG.client_controller.sub( self, 'SetSortFromPage', 'set_page_sort' )
+        
+        if self._management_controller is not None and self._management_controller.HasVariable( 'media_sort' ):
+            
+            media_sort = self._management_controller.GetVariable( 'media_sort' )
+            
+            try:
+                
+                self.SetSort( media_sort )
+                
+            except:
+                
+                default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+                
+                self.SetSort( default_sort )
+                
+            
+        
+        self._sort_asc_choice.currentIndexChanged.connect( self.EventSortAscChoice )
+        
+    
+    def _BroadcastSort( self ):
+        
+        media_sort = self._GetCurrentSort()
+        
+        self.sortChanged.emit( media_sort )
+        
+        if self._management_controller is not None:
+            
+            self._management_controller.SetVariable( 'media_sort', media_sort )
+            
+            page_key = self._management_controller.GetKey( 'page' )
+            
+            HG.client_controller.pub( 'sort_media', page_key, media_sort )
+            
+        
+    
+    def _GetCurrentSort( self ):
+        
+        sort_asc = self._sort_asc_choice.GetValue()
+        
+        media_sort = ClientMedia.MediaSort( self._sort_type, sort_asc )
+        
+        return media_sort
+        
+    
+    def _PopulateSortMenuOrList( self, menu = None ):
+        
+        sort_types = []
+        
+        menu_items_and_sort_types = []
+        
+        submetatypes_to_menus = {}
+        
+        for system_sort_type in CC.SYSTEM_SORT_TYPES:
+            
+            sort_type = ( 'system', system_sort_type )
+            
+            sort_types.append( sort_type )
+            
+            if menu is not None:
+                
+                submetatype = CC.system_sort_type_submetatype_string_lookup[ system_sort_type ]
+                
+                if submetatype is None:
+                    
+                    menu_to_add_to = menu
+                    
+                else:
+                    
+                    if submetatype not in submetatypes_to_menus:
+                        
+                        submenu = QW.QMenu( menu )
+                        
+                        submetatypes_to_menus[ submetatype ] = submenu
+                        
+                        ClientGUIMenus.AppendMenu( menu, submenu, submetatype )
+                        
+                    
+                    menu_to_add_to = submetatypes_to_menus[ submetatype ]
+                    
+                
+                label = CC.sort_type_basic_string_lookup[ system_sort_type ]
+                
+                menu_item = ClientGUIMenus.AppendMenuItem( menu_to_add_to, label, 'Select this sort type.', self._SetSortType, sort_type )
+                
+                menu_items_and_sort_types.append( ( menu_item, sort_type ) )
+                
+            
+        
+        namespace_sort_types = HC.options[ 'sort_by' ]
+        
+        if len( namespace_sort_types ) > 0:
+            
+            if menu is not None:
+                
+                submenu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'namespaces' )
+                
+            
+            for ( namespaces_text, namespaces_list ) in namespace_sort_types:
+                
+                sort_type = ( namespaces_text, tuple( namespaces_list ) )
+                
+                sort_types.append( sort_type )
+                
+                if menu is not None:
+                    
+                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
+                    
+                    label = example_sort.GetSortTypeString()
+                    
+                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
+                    
+                    menu_items_and_sort_types.append( ( menu_item, sort_type ) )
+                    
+                
+            
+        
+        rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        
+        if len( rating_service_keys ) > 0:
+            
+            if menu is not None:
+                
+                submenu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'ratings' )
+                
+            
+            for service_key in rating_service_keys:
+                
+                sort_type = ( 'rating', service_key )
+                
+                sort_types.append( sort_type )
+                
+                if menu is not None:
+                    
+                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
+                    
+                    label = example_sort.GetSortTypeString()
+                    
+                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
+                    
+                    menu_items_and_sort_types.append( ( menu_item, sort_type ) )
+                    
+                
+            
+        
+        if menu is not None:
+            
+            for ( menu_item, sort_choice ) in menu_items_and_sort_types:
+                
+                if sort_choice == self._sort_type:
+                    
+                    menu_item.setCheckable( True )
+                    menu_item.setChecked( True )
+                    
+                
+            
+        
+        return sort_types
+        
+    
+    def _SortTypeButtonClick( self ):
+        
+        menu = QW.QMenu()
+        
+        self._PopulateSortMenuOrList( menu = menu )
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def _SetSortType( self, sort_type ):
+        
+        self._sort_type = sort_type
+        
+        self._UpdateSortTypeLabel()
+        self._UpdateAscLabels( set_default_asc = True )
+        
+        self._UserChoseASort()
+        
+        self._BroadcastSort()
+        
+    
+    def _UpdateAscLabels( self, set_default_asc = False ):
+        
+        media_sort = self._GetCurrentSort()
+        
+        self._sort_asc_choice.clear()
+        
+        if media_sort.CanAsc():
+            
+            ( asc_str, desc_str, default_asc ) = media_sort.GetSortAscStrings()
+            
+            self._sort_asc_choice.addItem( asc_str, CC.SORT_ASC )
+            self._sort_asc_choice.addItem( desc_str, CC.SORT_DESC )
+            
+            if set_default_asc:
+                
+                asc_to_set = default_asc
+                
+            else:
+                
+                asc_to_set = media_sort.sort_asc
+                
+            
+            self._sort_asc_choice.SetValue( asc_to_set )
+            
+            self._sort_asc_choice.setEnabled( True )
+            
+        else:
+            
+            self._sort_asc_choice.addItem( '', CC.SORT_ASC )
+            self._sort_asc_choice.addItem( '', CC.SORT_DESC )
+            
+            self._sort_asc_choice.SetValue( CC.SORT_ASC )
+            
+            self._sort_asc_choice.setEnabled( False )
+            
+        
+    
+    def _UpdateSortTypeLabel( self ):
+        
+        example_sort = ClientMedia.MediaSort( self._sort_type, CC.SORT_ASC )
+        
+        self._sort_type_button.setText( example_sort.GetSortTypeString() )
+        
+    
+    def _UserChoseASort( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'save_page_sort_on_change' ):
+            
+            media_sort = self._GetCurrentSort()
+            
+            HG.client_controller.new_options.SetDefaultSort( media_sort )
+            
+        
+    
+    def ACollectHappened( self, page_key, media_collect ):
+        
+        if self._management_controller is not None:
+            
+            my_page_key = self._management_controller.GetKey( 'page' )
+            
+            if page_key == my_page_key:
+                
+                self._BroadcastSort()
+                
+            
+        
+    
+    def BroadcastSort( self, page_key = None ):
+        
+        if page_key is not None and page_key != self._management_controller.GetKey( 'page' ):
+            
+            return
+            
+        
+        self._BroadcastSort()
+        
+    
+    def EventSortAscChoice( self, index ):
+        
+        self._UserChoseASort()
+        
+        self._BroadcastSort()
+        
+    
+    def GetSort( self ):
+        
+        return self._GetCurrentSort()
+        
+    
+    def wheelEvent( self, event ):
+        
+        if event.angleDelta().y() > 0:
+            
+            index_delta = -1
+            
+        else:
+            
+            index_delta = 1
+            
+        
+        sort_types = self._PopulateSortMenuOrList()
+        
+        if self._sort_type in sort_types:
+            
+            index = sort_types.index( self._sort_type )
+            
+            new_index = ( index + index_delta ) % len( sort_types )
+            
+            new_sort_type = sort_types[ new_index ]
+            
+            self._SetSortType( new_sort_type )
+            
+        
+        event.accept()
+        
+    
+    def SetSort( self, media_sort ):
+        
+        self._sort_type = media_sort.sort_type
+        self._sort_asc_choice.SetValue( media_sort.sort_asc )
+        
+        self._UpdateSortTypeLabel()
+        self._UpdateAscLabels()
+        
+    
+    def SetSortFromPage( self, page_key, media_sort ):
+        
+        if page_key == self._management_controller.GetKey( 'page' ):
+            
+            self.SetSort( media_sort )
+            
+            self._BroadcastSort()
+            
+        
     
 class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
     
@@ -75,78 +558,78 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         editable_pred_panel_classes = []
         static_pred_buttons = []
         
-        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+        if predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
             
             editable_pred_panel_classes.append( PanelPredicateSystemAgeDelta )
             editable_pred_panel_classes.append( PanelPredicateSystemAgeDate )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
             
             editable_pred_panel_classes.append( PanelPredicateSystemModifiedDelta )
             editable_pred_panel_classes.append( PanelPredicateSystemModifiedDate )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
             editable_pred_panel_classes.append( PanelPredicateSystemHeight )
             editable_pred_panel_classes.append( PanelPredicateSystemWidth )
             editable_pred_panel_classes.append( PanelPredicateSystemRatio )
             editable_pred_panel_classes.append( PanelPredicateSystemNumPixels )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION:
             
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ), ) ) )
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0 ) ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemDuration )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
             
             editable_pred_panel_classes.append( PanelPredicateSystemFileService )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
             editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsExactURL )
             editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsDomain )
             editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsRegex )
             editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsURLClass )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
             
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ) ) )
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ) ) )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
             
             editable_pred_panel_classes.append( PanelPredicateSystemHash )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT:
             
             label = 'system:limit clips a large search result down to the given number of files. It is very useful for processing in smaller batches.'
             label += os.linesep * 2
             label += 'For all the simpler sorts (filesize, duration, etc...), it will select the n largest/smallest in the result set appropriate for that sort. For complicated sorts like tags, it will sample randomly.'
             
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ) ) )
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 1024 ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 1024 ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemLimit )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MIME:
             
             editable_pred_panel_classes.append( PanelPredicateSystemMime )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
             
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ) ), ) ) )
-            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemNumTags )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
             
             editable_pred_panel_classes.append( PanelPredicateSystemNumWords )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_RATING:
             
             services_manager = HG.client_controller.services_manager
             
@@ -157,24 +640,24 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
                 editable_pred_panel_classes.append( PanelPredicateSystemRating )
                 
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
             
             editable_pred_panel_classes.append( PanelPredicateSystemSimilarTo )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE:
             
             editable_pred_panel_classes.append( PanelPredicateSystemSize )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
             
             editable_pred_panel_classes.append( PanelPredicateSystemTagAsNumber )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS:
             
             editable_pred_panel_classes.append( PanelPredicateSystemDuplicateRelationships )
             editable_pred_panel_classes.append( PanelPredicateSystemDuplicateKing )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
             
             editable_pred_panel_classes.append( PanelPredicateSystemFileViewingStatsViews )
             editable_pred_panel_classes.append( PanelPredicateSystemFileViewingStatsViewtime )
@@ -205,7 +688,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         
         if len( static_pred_buttons ) > 0 and len( editable_pred_panel_classes ) == 0:
             
-            QP.CallAfter( static_pred_buttons[0].setFocus, QC.Qt.OtherFocusReason )
+            HG.client_controller.CallAfterQtSafe( static_pred_buttons[0], static_pred_buttons[0].setFocus, QC.Qt.OtherFocusReason )
             
         
         self.widget().setLayout( vbox )
@@ -243,7 +726,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             self.setLayout( hbox )
             
-            QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason )
+            HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason )
             
         
         def _DoOK( self ):
@@ -327,7 +810,7 @@ class PanelPredicateSystem( QW.QWidget ):
 
 class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_AGE
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_AGE
     
     def __init__( self, parent ):
         
@@ -371,7 +854,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
     
 class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_AGE
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_AGE
     
     def __init__( self, parent ):
         
@@ -435,7 +918,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
     
 class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
     
     def __init__( self, parent ):
         
@@ -479,7 +962,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
     
 class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
     
     def __init__( self, parent ):
         
@@ -534,7 +1017,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
     
 class PanelPredicateSystemDuplicateKing( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING
     
     def __init__( self, parent ):
         
@@ -569,7 +1052,7 @@ class PanelPredicateSystemDuplicateKing( PanelPredicateSystem ):
     
 class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT
     
     def __init__( self, parent ):
         
@@ -613,7 +1096,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
 class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DURATION
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION
     
     def __init__( self, parent ):
         
@@ -662,7 +1145,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
 class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE
     
     def __init__( self, parent ):
         
@@ -699,7 +1182,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
 class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
     
     def __init__( self, parent ):
         
@@ -754,7 +1237,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
     
 class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
     
     def __init__( self, parent ):
         
@@ -809,7 +1292,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
     
 class PanelPredicateSystemHash( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HASH
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_HASH
     
     def __init__( self, parent ):
         
@@ -857,7 +1340,7 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
     
 class PanelPredicateSystemHeight( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HEIGHT
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT
     
     def __init__( self, parent ):
         
@@ -895,7 +1378,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
     
     def __init__( self, parent ):
         
@@ -947,7 +1430,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
     
     def __init__( self, parent ):
         
@@ -1001,7 +1484,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
     
     def __init__( self, parent ):
         
@@ -1067,7 +1550,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
     
     def __init__( self, parent ):
         
@@ -1126,7 +1609,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
     
 class PanelPredicateSystemLimit( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_LIMIT
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT
     
     def __init__( self, parent ):
         
@@ -1159,7 +1642,7 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
     
 class PanelPredicateSystemMime( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_MIME
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME
     
     def __init__( self, parent ):
         
@@ -1197,7 +1680,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS
     
     def __init__( self, parent ):
         
@@ -1240,7 +1723,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS
     
     def __init__( self, parent ):
         
@@ -1278,7 +1761,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumWords( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS
     
     def __init__( self, parent ):
         
@@ -1316,7 +1799,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
     
 class PanelPredicateSystemRating( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATING
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING
     
     def __init__( self, parent ):
         
@@ -1324,7 +1807,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        local_like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         self._like_checkboxes_to_info = {}
         
@@ -1356,7 +1839,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+        local_numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
         self._numerical_checkboxes_to_info = {}
         
@@ -1489,7 +1972,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
     
 class PanelPredicateSystemRatio( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATIO
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO
     
     def __init__( self, parent ):
         
@@ -1533,7 +2016,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
     
 class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
     
     def __init__( self, parent ):
         
@@ -1586,7 +2069,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
 class PanelPredicateSystemSize( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_SIZE
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE
     
     def __init__( self, parent ):
         
@@ -1626,7 +2109,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
     
 class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER
     
     def __init__( self, parent ):
         
@@ -1669,7 +2152,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
     
 class PanelPredicateSystemWidth( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_WIDTH
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH
     
     def __init__( self, parent ):
         

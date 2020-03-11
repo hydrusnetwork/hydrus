@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIScrolledPanels
+from . import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from . import QtPorting as QP
@@ -25,7 +26,7 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         self.widget().setLayout( vbox )
         
-        QP.CallAfter( self._commit.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( self._commit, self._commit.setFocus, QC.Qt.OtherFocusReason )
         
     
 class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
@@ -62,7 +63,7 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         self.widget().setLayout( vbox )
         
-        QP.CallAfter( self._commit.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( self._commit, self._commit.setFocus, QC.Qt.OtherFocusReason )
         
     
 class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
@@ -96,7 +97,7 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         self.widget().setLayout( vbox )
         
-        QP.CallAfter( self._yes.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( self._yes, self._yes.setFocus, QC.Qt.OtherFocusReason )
         
     
 

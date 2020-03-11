@@ -1,7 +1,7 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import ClientData
-from . import ClientDragDrop
+from . import ClientGUIDragDrop
 from . import ClientExporting
 from . import ClientGUIAsync
 from . import ClientGUICommon
@@ -408,8 +408,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._clipboard_watcher_destination_page_watcher = None
         self._clipboard_watcher_destination_page_urls = None
         
-        drop_target = ClientDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped )
-        self.installEventFilter( ClientDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped ) )
+        drop_target = ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped )
+        self.installEventFilter( ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped ) )
         self._notebook.AddSupplementaryTabBarDropTarget( drop_target ) # ugly hack to make the case of files/media dropped onto a tab work
         
         self._message_manager = ClientGUIPopupMessages.PopupMessageManager( self )
@@ -634,7 +634,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             all_names = [ s.GetName() for s in all_services ]
             
-            name = HydrusSerialisable.GetNonDupeName( 'public tag repository', all_names )
+            name = HydrusData.GetNonDupeName( 'public tag repository', all_names )
             
             service_key = HydrusData.GenerateKey()
             service_type = HC.TAG_REPOSITORY
@@ -3371,7 +3371,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _StartIPFSDownload( self ):
         
-        ipfs_services = self._controller.services_manager.GetServices( ( HC.IPFS, ) )
+        ipfs_services = self._controller.services_manager.GetServices( ( HC.IPFS, ), randomised = True )
         
         if len( ipfs_services ) > 0:
             
@@ -4101,7 +4101,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
             
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options['pause_subs_sync'], self._PauseSync, 'subs' )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self._PauseSync, 'subs' )
             ClientGUIMenus.AppendSeparator( submenu )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
@@ -4344,13 +4344,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             links = QW.QMenu( menu )
             
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalPixmaps.file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8kun board', 'Open hydrus dev\'s 8kun board, where he makes release posts and other status updates.', CC.GlobalPixmaps.eight_kun, ClientPaths.LaunchURLInWebBrowser, 'https://8kun.top/hydrus/index.html' )
-            site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalPixmaps.twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalPixmaps.tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalPixmaps.discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalPixmaps.patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8kun board', 'Open hydrus dev\'s 8kun board, where he makes release posts and other status updates.', CC.global_pixmaps().eight_kun, ClientPaths.LaunchURLInWebBrowser, 'https://8kun.top/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.global_pixmaps().twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_pixmaps().tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_pixmaps().discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_pixmaps().patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
             
             ClientGUIMenus.AppendMenu( menu, links, 'links' )
             
@@ -5456,6 +5456,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if current_usage > 0:
             
             bandwidth_status += ' (' + HydrusData.ToHumanBytes( current_usage ) + '/s)'
+            
+        
+        if HC.options[ 'pause_subs_sync' ]:
+            
+            bandwidth_status += ', subs paused'
+            
+        
+        if self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
+            
+            bandwidth_status += ', network paused'
             
         
         self._statusbar.SetStatusText( bandwidth_status, 1 )

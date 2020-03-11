@@ -144,12 +144,12 @@ class PopupMessage( PopupWindow ):
         self._copy_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._copy_tb_button.hide()
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.pause, self.PausePlay )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self.PausePlay )
         self._pause_button_ev = QP.WidgetEventFilter( self._pause_button )
         self._pause_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._pause_button.hide()
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, self.Cancel )
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.Cancel )
         self._cancel_button_ev = QP.WidgetEventFilter( self._cancel_button )
         self._cancel_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._cancel_button.hide()
@@ -251,11 +251,11 @@ class PopupMessage( PopupWindow ):
         
         if self._job_key.IsPaused():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().pause )
             
         
     

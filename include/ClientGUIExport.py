@@ -215,11 +215,9 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._page_key = 'export folders placeholder'
         
-        predicates = file_search_context.GetPredicates()
+        self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._query_box, self._page_key )
         
-        self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._query_box, self._page_key, predicates )
-        
-        self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._predicates_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         #
         
@@ -295,7 +293,7 @@ If you select synchronise, be careful!'''
         self._type_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._query_box.Add( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._query_box.Add( self._searchbox )
+        self._query_box.Add( self._tag_autocomplete )
         
         self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -384,11 +382,7 @@ If you select synchronise, be careful!'''
         
         delete_from_client_after_export = self._delete_from_client_after_export.isChecked()
         
-        file_search_context = self._searchbox.GetFileSearchContext()
-        
-        predicates = self._predicates_box.GetPredicates()
-        
-        file_search_context.SetPredicates( predicates )
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
         run_regularly = self._run_regularly.isChecked()
         
@@ -552,7 +546,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._UpdateTxtButton()
         
-        QP.CallAfter( self._export.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._export, self._export.setFocus, QC.Qt.OtherFocusReason)
         
         self._paths.itemSelectionChanged.connect( self._RefreshTags )
         
@@ -874,7 +868,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         services_manager = HG.client_controller.services_manager
         
-        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+        tag_services = services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
         choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
         

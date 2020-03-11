@@ -35,7 +35,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
         hashes.add( m.GetHash() )
         
     
-    if service_type in HC.TAG_SERVICES:
+    if service_type in HC.REAL_TAG_SERVICES:
         
         tag = value
         

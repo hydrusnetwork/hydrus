@@ -267,7 +267,7 @@ class ReviewServicePanel( QW.QWidget ):
             subpanels.append( self._ServiceTrashPanel( self, service ) )
             
         
-        if service_type in HC.TAG_SERVICES:
+        if service_type in HC.REAL_TAG_SERVICES:
             
             subpanels.append( self._ServiceTagPanel( self, service ) )
             

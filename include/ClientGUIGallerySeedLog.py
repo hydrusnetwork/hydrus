@@ -283,7 +283,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
     def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalPixmaps.listctrl, self._ShowGallerySeedLogFrame )
+        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.global_pixmaps().listctrl, self._ShowGallerySeedLogFrame )
         
         self._controller = controller
         self._read_only = read_only

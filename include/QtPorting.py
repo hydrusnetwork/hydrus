@@ -1206,7 +1206,6 @@ def CallAfter( fn, *args, **kwargs ):
     
     QW.QApplication.instance().eventDispatcher().wakeUp()
     
-
 def ClearLayout( layout, delete_widgets = False ):
     
     while layout.count() > 0:
@@ -1490,13 +1489,16 @@ class StatusBar( QW.QStatusBar ):
                 label.setFixedWidth( w )
                 
                 self.addWidget( label )
-    
+                
+            
+        
     
     def SetStatusText( self, text, index ):
         
         self._labels[index].setText( text )
-
-
+        self._labels[index].setToolTip( text )
+        
+    
 class AboutDialogInfo:
     
     def __init__( self ):
@@ -2505,11 +2507,12 @@ class CollectComboCtrl( QW.QComboBox ):
         
         text_and_data_tuples.sort()
 
-        ratings_services = HG.client_controller.services_manager.GetServices( (HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL) )
+        ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
 
         for ratings_service in ratings_services:
             
             text_and_data_tuples.append( ( ratings_service.GetName(), ('rating', ratings_service.GetServiceKey() ) ) )
+            
 
         for (text, data) in text_and_data_tuples:
 
@@ -2589,7 +2592,7 @@ class CollectComboCtrl( QW.QComboBox ):
 
         try:
 
-            indices_to_check = [ ]
+            indices_to_check = []
 
             for index in range( self.count() ):
 
@@ -2602,10 +2605,8 @@ class CollectComboCtrl( QW.QComboBox ):
                     
                     indices_to_check.append( index )
 
-            if len( indices_to_check ) > 0:
-                
-                self.SetCheckedItems( indices_to_check )
-
+            self.SetCheckedItems( indices_to_check )
+            
             self.itemChanged.emit()
 
         except Exception as e:
@@ -2622,13 +2623,15 @@ class CollectComboCtrl( QW.QComboBox ):
             item = self.model().item( idx )
             
             if idx in indices_to_check:
-
+                
                 item.setCheckState( QC.Qt.Checked )
-            
+                
             else:
-
+                
                 item.setCheckState( QC.Qt.Unchecked )
-    
+                
+            
+        
     
     def GetCheckedItems( self ):
         

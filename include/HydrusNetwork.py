@@ -297,7 +297,7 @@ def ParseHydrusNetworkGETArgs( requests_args ):
     
     if 'subject_account_key' in args:
         
-        args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( account_key = args[ 'subject_account_key' ] )
+        args[ 'subject_identifier' ] = AccountIdentifier( account_key = args[ 'subject_account_key' ] )
         
     elif 'subject_hash' in args:
         
@@ -314,7 +314,7 @@ def ParseHydrusNetworkGETArgs( requests_args ):
             content = Content( HC.CONTENT_TYPE_FILES, [ hash ] )
             
         
-        args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( content = content )
+        args[ 'subject_identifier' ] = AccountIdentifier( content = content )
         
     
     return args
@@ -704,6 +704,81 @@ class Account( object ):
         return unknown_account
         
     
+class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER
+    SERIALISABLE_NAME = 'Account Identifier'
+    SERIALISABLE_VERSION = 1
+    
+    TYPE_ACCOUNT_KEY = 1
+    TYPE_CONTENT = 2
+    
+    def __init__( self, account_key = None, content = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if account_key is not None:
+            
+            self._type = self.TYPE_ACCOUNT_KEY
+            self._data = account_key
+            
+        elif content is not None:
+            
+            self._type = self.TYPE_CONTENT
+            self._data = content
+            
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, AccountIdentifier ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ): return ( self._type, self._data ).__hash__()
+    
+    def __repr__( self ): return 'Account Identifier: ' + str( ( self._type, self._data ) )
+    
+    def _GetSerialisableInfo( self ):
+        
+        if self._type == self.TYPE_ACCOUNT_KEY:
+            
+            serialisable_data = self._data.hex()
+            
+        elif self._type == self.TYPE_CONTENT:
+            
+            serialisable_data = self._data.GetSerialisableTuple()
+            
+        
+        return ( self._type, serialisable_data )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._type, serialisable_data ) = serialisable_info
+        
+        if self._type == self.TYPE_ACCOUNT_KEY:
+            
+            self._data = bytes.fromhex( serialisable_data )
+            
+        elif self._type == self.TYPE_CONTENT:
+            
+            self._data = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+            
+        
+    
+    def GetData( self ): return self._data
+    
+    def HasAccountKey( self ): return self._type == self.TYPE_ACCOUNT_KEY
+    
+    def HasContent( self ): return self._type == self.TYPE_CONTENT
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER ] = AccountIdentifier
+
 class AccountType( object ):
     
     def __init__( self, account_type_key, title, dictionary ):

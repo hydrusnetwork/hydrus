@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 388</h3></li>
+				<ul>
+					<li>favourite searches:</li>
+					<li>hydrus can now save, load, and edit favourite searches. this first system stores searches with a name and an optional folder name, and contains search predicates, file and tag domain, whether the search is live or not, and optionally sort-by and collect-by</li>
+					<li>this is program-wide and all accessed through the new 'star' icon menu button beside any 'read' tag autocomplete input on search pages, duplicate pages, export folder ui, and file maintenance selection</li>
+					<li>wrote a favourite searches manager</li>
+					<li>wrote a dialog to manage favourite searches</li>
+					<li>wrote a dialog to edit a single favourite search</li>
+					<li>wrote load and save search functionality</li>
+					<li>autocomplete dropdowns that have buttons beside them now stretch their floating dropdown windows across the button width also</li>
+					<li>cleaned a variety of search code, simplifying objects and responsibility</li>
+					<li>cleaned up some collect-by ui code</li>
+					<li>refactored sort and collect controls to better location</li>
+					<li>refactored search constants</li>
+					<li>numerous small search code fixes and cleanup</li>
+					<li>renamed clientguipredicates to clientguisearch</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>a note from the users managing Hydrus Companion: The Chrome Web Store release of Hydrus Companion is no longer available due to publishing issues. If you have been using it in the past, please install the extension manually as outlined here instead: https://gitgud.io/prkc/hydrus-companion</li>
+					<li>the default e621 downloader is updated to their new system, thanks to a user's submission. if you log in to e621 with hydrus or the hydrus companion and discover some tags are now blacklisted, please check your blacklist settings on your account on the site</li>
+					<li>an old test e-hentai login script from 2018 that is no longer in the client defaults will be deleted from clients that still have it today. if the user has no other login script for e-hentai, the domain entry will be deleted as well. this removes potential technical barriers for users that wish to use hydrus companion to access e-hentai, which is now the recommended method</li>
+					<li>hydrus mpv now has an appropriate stream title, which propagates up to the os-level sound mixer. it was previously the ugly hydrus filename</li>
+					<li>improved error handling when mpv is passed an invalid conf</li>
+					<li>the default mpv conf now has audio normalisation that seems to work ok</li>
+					<li>fixed an issue with the 'delete/move out missing/corrupt file' file maintenance job where record deletes were not processing correctly. it now deletes the file record correctly and also clears that deletion record, to make re-import of the correct file, if found, easier</li>
+					<li>all hydrus menu labels are now "middle...elided" when they are greater than 64 characters</li>
+					<li>all new hdd, url, and simple download pages should now obey the 'remove files when trashed' rule. pages in existing sessions will not</li>
+					<li>updated the user-created CutieDuck darkmode qss file to the latest version, which alters the recent hydrus qss styling colours like green/red button labels</li>
+					<li>did a full pass of all service fetching--all file and tag services should now present in lists and tabs in service_type, alphabetical order, e.g. for manage tag siblings, the tabs will always be local_tags, tag_repositories, both in alphabetical order</li>
+					<li>fixed an issue where a 'get darker or lighter comparison colour' calculation was not working well for black or very dark colours</li>
+					<li>if subscriptions or general network traffic is paused, the bandwidth section of the main gui statusbar now says it</li>
+					<li>the status bar now tooltips each section</li>
+					<li>clarified some labels on the edit url class panel</li>
+					<li>moved all delayed focus-shifting code to a more stable system</li>
+					<li>cleaned up how the global icon cache is initialised and referenced</li>
+					<li>updated the hydrus project gitignore to hide all db, log, server, recovery, and media files that could be under the db directory</li>
+					<li>updated the endchan links in the help to have a .org secondary link</li>
+					<li>more general code refactoring</li>
+				</ul>
 				<li><h3>version 387</h3></li>
 				<ul>
 					<li>the sort-files-by dropdown is now a button that launches a nested menu. it still supports mouse wheel events. it should now be quicker to find what you want!</li>
