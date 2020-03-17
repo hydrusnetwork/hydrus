@@ -441,6 +441,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
+        self._controller.sub( self, 'PasteImageData', 'paste_image_data' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
         
@@ -3256,7 +3257,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             page.SetMediaFocus()
             
+    def _PasteImageData( self ):
         
+        from PIL import ImageGrab
+
+        im = ImageGrab.grabclipboard()
+
+        if im is None: return
+
+        import tempfile, os
+        
+        tmpfilename = os.path.join(tempfile.gettempdir(), os.urandom(24).hex() + '.png')
+
+        im.save(tmpfilename, 'PNG')
+
+        self.ImportFiles( [ tmpfilename ] )
     
     def _SetSearchFocus( self ):
         
@@ -5254,6 +5269,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == 'set_media_focus':
                 
                 self._SetMediaFocus()
+
+            elif action == 'paste_image_data':
+
+                self._PasteImageData()
                 
             elif action == 'set_search_focus':
                 
