@@ -68,7 +68,13 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
         
         if include_unusual_predicate_types:
             
-            if explicit_wildcard:
+            ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+            
+            if namespace != '' and subtag in ( '', '*' ):
+                
+                predicates.insert( 0, ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) )
+                
+            elif explicit_wildcard:
                 
                 if wildcard_text != search_text:
                     
@@ -76,15 +82,6 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
                     
                 
                 predicates.insert( 0, ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, wildcard_text, inclusive ) )
-                
-            else:
-                
-                ( namespace, subtag ) = HydrusTags.SplitTag( entry_text )
-                
-                if namespace != '' and subtag in ( '', '*' ):
-                    
-                    predicates.insert( 0, ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) )
-                    
                 
             
         
@@ -498,9 +495,6 @@ class AutoCompleteDropdown( QW.QWidget ):
         self._last_attempted_dropdown_width = 0
         self._last_attempted_dropdown_position = ( None, None )
         
-        self._last_move_event_started = 0.0
-        self._last_move_event_occurred = 0.0
-        
         self._text_ctrl_widget_event_filter = QP.WidgetEventFilter( self._text_ctrl )
         
         self._text_ctrl.textChanged.connect( self.EventText )
@@ -509,7 +503,9 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._text_ctrl.installEventFilter( self )
         
-        vbox = QP.VBoxLayout( margin = 0 )
+        self._main_vbox = QP.VBoxLayout( margin = 0 )
+        
+        self._SetupTopListBox()
         
         self._text_input_hbox = QP.HBoxLayout()
         
@@ -517,7 +513,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._text_input_panel.setLayout( self._text_input_hbox )
         
-        QP.AddToLayout( vbox, self._text_input_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( self._main_vbox, self._text_input_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         if self._float_mode:
             
@@ -561,10 +557,10 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         if not self._float_mode:
             
-            QP.AddToLayout( vbox, self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( self._main_vbox, self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
-        self.setLayout( vbox )
+        self.setLayout( self._main_vbox )
         
         self._current_list_raw_entry = ''
         self._next_search_is_probably_fast = False
@@ -585,7 +581,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._widget_event_filter.EVT_MOVE( self.EventMove )
             self._widget_event_filter.EVT_SIZE( self.EventMove )
             
-            HG.client_controller.sub( self, '_ParentMovedOrResized', 'top_level_window_move_event' )
+            HG.client_controller.sub( self, '_DropdownHideShow', 'top_level_window_move_event' )
             
             parent = self
             
@@ -698,7 +694,13 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def _HandleEscape( self ):
         
-        if self._float_mode:
+        if self._text_ctrl.text() != '':
+            
+            self._ClearInput()
+            
+            return True
+            
+        elif self._float_mode:
             
             self.parentWidget().setFocus( QC.Qt.OtherFocusReason )
             
@@ -725,44 +727,6 @@ class AutoCompleteDropdown( QW.QWidget ):
         raise NotImplementedError()
         
     
-    def _ParentMovedOrResized( self ):
-        
-        if self._float_mode:
-            
-            if HydrusData.TimeHasPassedFloat( self._last_move_event_occurred + 1.0 ):
-                
-                self._last_move_event_started = HydrusData.GetNowFloat()
-                
-            
-            self._last_move_event_occurred = HydrusData.GetNowFloat()
-            
-            # we'll do smoother move updates for a little bit to stop flickeryness, but after that we'll just hide
-            
-            NICE_ANIMATION_GRACE_PERIOD = 0.25
-            
-            time_to_delay_these_calls = HydrusData.TimeHasPassedFloat( self._last_move_event_started + NICE_ANIMATION_GRACE_PERIOD )
-            
-            if time_to_delay_these_calls:
-                
-                self._HideDropdown()
-                
-                if self._ShouldShow():
-                    
-                    if self._move_hide_job is None:
-                        
-                        self._move_hide_job = HG.client_controller.CallRepeatingQtSafe( self._dropdown_window, 0.0, 0.25, self._DropdownHideShow )
-                        
-                    
-                    self._move_hide_job.Delay( 0.25 )
-                    
-                
-            else:
-                
-                self._DropdownHideShow()
-                
-            
-        
-    
     def _ScheduleListRefresh( self, delay ):
         
         if self._refresh_list_job is not None and delay == 0.0:
@@ -775,6 +739,11 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._refresh_list_job = HG.client_controller.CallLaterQtSafe(self, delay, self._UpdateSearchResultsList)
             
+        
+    
+    def _SetupTopListBox( self ):
+        
+        pass
         
     
     def _SetListDirty( self ):
@@ -938,6 +907,15 @@ class AutoCompleteDropdown( QW.QWidget ):
                 
                 self._TakeResponsibilityForEnter( shift_down )
                 
+            elif key == QC.Qt.Key_Escape:
+                
+                escape_caught = self._HandleEscape()
+                
+                if not escape_caught:
+                    
+                    send_input_to_current_list = True
+                    
+                
             elif input_is_empty: # maybe we should be sending a 'move' event to a different place
                 
                 if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down ) and current_list_is_empty:
@@ -974,15 +952,6 @@ class AutoCompleteDropdown( QW.QWidget ):
                         
                     
                     self.MoveNotebookPageFocus( direction = direction )
-                    
-                elif key == QC.Qt.Key_Escape:
-                    
-                    escape_caught = self._HandleEscape()
-                    
-                    if not escape_caught:
-                        
-                        send_input_to_current_list = True
-                        
                     
                 else:
                     
@@ -1082,7 +1051,7 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def EventMove( self, event ):
         
-        self._ParentMovedOrResized()
+        self._DropdownHideShow()
         
         return True # was: event.ignore()
         
@@ -1349,12 +1318,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent: QW.QWidget, predicates_listbox: ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUISearch.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUISearch.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUISearch.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUISearch.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
         
-        self._predicates_listbox = predicates_listbox
+        self._page_key = page_key
         
         file_service_key = file_search_context.GetFileServiceKey()
         tag_search_context = file_search_context.GetTagSearchContext()
+        
+        self._include_unusual_predicate_types = include_unusual_predicate_types
+        self._force_system_everything = force_system_everything
+        self._hide_favourites_edit_actions = hide_favourites_edit_actions
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_search_context.service_key )
         
@@ -1364,9 +1337,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._allow_all_known_files = allow_all_known_files
         
         self._media_callable = media_callable
-        self._page_key = page_key
-        
-        self._hide_favourites_edit_actions = hide_favourites_edit_actions
         
         self._under_construction_or_predicate = None
         
@@ -1404,9 +1374,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._or_rewind = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.global_pixmaps().previous, self._RewindORConstruction )
         self._or_rewind.setToolTip( 'Rewind OR Predicate construction.' )
         self._or_rewind.hide()
-        
-        self._include_unusual_predicate_types = include_unusual_predicate_types
-        self._force_system_everything = force_system_everything
         
         button_hbox_1 = QP.HBoxLayout()
         
@@ -1823,6 +1790,13 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._ManageFavouriteSearches( favourite_search_row_to_save = search_row )
         
     
+    def _SetupTopListBox( self ):
+        
+        self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key )
+        
+        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+    
     def _StartResultsFetchJob( self, job_key ):
         
         parsed_search_text = self._ParseSearchText()
@@ -1908,6 +1882,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return fsc
         
     
+    def GetPredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
+        
+        return self._predicates_listbox.GetPredicates()
+        
+    
     def IncludeCurrent( self, page_key, value ):
         
         if page_key == self._page_key:
@@ -1976,6 +1955,157 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._synchronised.EventButton()
             
+        
+    
+class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicates ):
+    
+    has_counts = False
+    
+    def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, initial_predicates = None ):
+        
+        if initial_predicates is None:
+            
+            initial_predicates = []
+            
+        
+        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 6 )
+        
+        self._my_ac_parent = parent
+        
+        self._page_key = page_key
+        
+        if len( initial_predicates ) > 0:
+            
+            for predicate in initial_predicates:
+                
+                self._AppendTerm( predicate )
+                
+            
+            self._DataHasChanged()
+            
+        
+        HG.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
+        
+    
+    def _Activate( self ):
+        
+        if len( self._selected_terms ) > 0:
+            
+            self._EnterPredicates( set( self._selected_terms ) )
+            
+        
+    
+    def _DeleteActivate( self ):
+        
+        self._Activate()
+        
+    
+    def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True ):
+        
+        if len( predicates ) == 0:
+            
+            return
+            
+        
+        predicates_to_be_added = set()
+        predicates_to_be_removed = set()
+        
+        for predicate in predicates:
+            
+            predicate = predicate.GetCountlessCopy()
+            
+            if self._HasPredicate( predicate ):
+                
+                if permit_remove:
+                    
+                    predicates_to_be_removed.add( predicate )
+                    
+                
+            else:
+                
+                if permit_add:
+                    
+                    predicates_to_be_added.add( predicate )
+                    
+                    predicates_to_be_removed.update( self._GetMutuallyExclusivePredicates( predicate ) )
+                    
+                
+            
+        
+        for predicate in predicates_to_be_added:
+            
+            self._AppendTerm( predicate )
+            
+        
+        for predicate in predicates_to_be_removed:
+            
+            self._RemoveTerm( predicate )
+            
+        
+        self._SortByText()
+        
+        self._DataHasChanged()
+        
+        HG.client_controller.pub( 'refresh_query', self._page_key )
+        
+    
+    def _GetCurrentFileServiceKey( self ):
+        
+        return self._my_ac_parent.GetFileSearchContext().GetFileServiceKey()
+        
+    
+    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
+        
+        return self.GetPredicates()
+        
+    
+    def _GetTextFromTerm( self, term ):
+        
+        predicate = term
+        
+        return predicate.ToString( render_for_user = True )
+        
+    
+    def _ProcessMenuPredicateEvent( self, command ):
+        
+        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+        
+        if command == 'add_include_predicates':
+            
+            self._EnterPredicates( include_predicates, permit_remove = False )
+            
+        elif command == 'remove_include_predicates':
+            
+            self._EnterPredicates( include_predicates, permit_add = False )
+            
+        elif command == 'add_exclude_predicates':
+            
+            self._EnterPredicates( exclude_predicates, permit_remove = False )
+            
+        elif command == 'remove_exclude_predicates':
+            
+            self._EnterPredicates( exclude_predicates, permit_add = False )
+            
+        
+    
+    def EnterPredicates( self, page_key, predicates, permit_add = True, permit_remove = True ):
+        
+        if page_key == self._page_key:
+            
+            self._EnterPredicates( predicates, permit_add = permit_add, permit_remove = permit_remove )
+            
+        
+    
+    def SetPredicates( self, predicates ):
+        
+        self._Clear()
+        
+        for predicate in predicates:
+            
+            self._AppendTerm( predicate )
+            
+        
+        self._DataHasChanged()
         
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):

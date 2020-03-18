@@ -161,6 +161,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._prefer_blacklist = prefer_blacklist
         self._namespaces = namespaces
         
+        self._wildcard_replacements = {}
+        
+        self._wildcard_replacements[ '*' ] = ''
+        self._wildcard_replacements[ '*:' ] = ':'
+        self._wildcard_replacements[ '*:*' ] = ':'
+        
         #
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
@@ -261,7 +267,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AdvancedAddBlacklist( self, tag_slice ):
         
-        if tag_slice in self._advanced_blacklist.GetClientData():
+        tag_slice = self._CleanTagSliceInput( tag_slice )
+        
+        if tag_slice in self._advanced_blacklist.GetTags():
             
             self._advanced_blacklist.RemoveTags( ( tag_slice, ) )
             
@@ -299,7 +307,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AdvancedAddWhitelist( self, tag_slice ):
         
-        if tag_slice in self._advanced_whitelist.GetClientData():
+        tag_slice = self._CleanTagSliceInput( tag_slice )
+        
+        if tag_slice in self._advanced_whitelist.GetTags():
             
             self._advanced_whitelist.RemoveTags( ( tag_slice, ) )
             
@@ -382,6 +392,31 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
+    def _CleanTagSliceInput( self, tag_slice ):
+        
+        while '**' in tag_slice:
+            
+            tag_slice = tag_slice.replace( '**', '*' )
+            
+        
+        if tag_slice in self._wildcard_replacements:
+            
+            tag_slice = self._wildcard_replacements[ tag_slice ]
+            
+        
+        if ':' in tag_slice:
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag_slice )
+            
+            if subtag == '*':
+                
+                tag_slice = '{}:'.format( namespace )
+                
+            
+        
+        return tag_slice
+        
+    
     def _CurrentlyBlocked( self, tag_slice ):
         
         if tag_slice in ( '', ':' ):
@@ -403,7 +438,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             test_slices = { '', tag_slice }
             
         
-        blacklist = set( self._advanced_blacklist.GetClientData() )
+        blacklist = set( self._advanced_blacklist.GetTags() )
         
         return not blacklist.isdisjoint( test_slices )
         
@@ -473,8 +508,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetWhiteBlacklistsPossible( self ):
         
-        blacklist_tag_slices = self._advanced_blacklist.GetClientData()
-        whitelist_tag_slices = self._advanced_whitelist.GetClientData()
+        blacklist_tag_slices = self._advanced_blacklist.GetTags()
+        whitelist_tag_slices = self._advanced_whitelist.GetTags()
         
         blacklist_is_only_simples = set( blacklist_tag_slices ).issubset( { '', ':' } )
         
@@ -813,7 +848,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for tag_slice in tag_slices:
             
-            if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetClientData():
+            if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetTags():
                 
                 self._AdvancedAddBlacklist( tag_slice )
                 
@@ -866,8 +901,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( whitelist_possible, blacklist_possible ) = self._GetWhiteBlacklistsPossible()
         
-        whitelist_tag_slices = self._advanced_whitelist.GetClientData()
-        blacklist_tag_slices = self._advanced_blacklist.GetClientData()
+        whitelist_tag_slices = self._advanced_whitelist.GetTags()
+        blacklist_tag_slices = self._advanced_blacklist.GetTags()
         
         if whitelist_possible:
             
@@ -935,8 +970,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        whitelist_tag_slices = self._advanced_whitelist.GetClientData()
-        blacklist_tag_slices = self._advanced_blacklist.GetClientData()
+        whitelist_tag_slices = self._advanced_whitelist.GetTags()
+        blacklist_tag_slices = self._advanced_blacklist.GetTags()
         
         if blacklist_possible:
             
@@ -995,8 +1030,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        whitelist_tag_slices = self._advanced_whitelist.GetClientData()
-        blacklist_tag_slices = self._advanced_blacklist.GetClientData()
+        whitelist_tag_slices = self._advanced_whitelist.GetTags()
+        blacklist_tag_slices = self._advanced_blacklist.GetTags()
         
         if len( blacklist_tag_slices ) == 0:
             
@@ -1096,7 +1131,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_slice = QP.GetClientData( self._simple_whitelist_global_checkboxes, index )
             
-            if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetClientData():
+            if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetTags():
                 
                 self._AdvancedAddBlacklist( tag_slice )
                 
@@ -1111,12 +1146,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_filter = ClientTags.TagFilter()
         
-        for tag_slice in self._advanced_blacklist.GetClientData():
+        for tag_slice in self._advanced_blacklist.GetTags():
             
             tag_filter.SetRule( tag_slice, CC.FILTER_BLACKLIST )
             
         
-        for tag_slice in self._advanced_whitelist.GetClientData():
+        for tag_slice in self._advanced_whitelist.GetTags():
             
             tag_filter.SetRule( tag_slice, CC.FILTER_WHITELIST )
             
@@ -1124,7 +1159,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         return tag_filter
         
     
-    def SetValue( self, tag_filter ):
+    def SetValue( self, tag_filter: ClientTags.TagFilter ):
         
         blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_BLACKLIST ]
         whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_WHITELIST ]

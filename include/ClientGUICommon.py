@@ -241,11 +241,11 @@ class BetterChoice( QW.QComboBox ):
         
         if selection != -1:
             
-            return QP.GetClientData( self, selection )
+            return self.itemData( selection, QC.Qt.UserRole )
             
         elif self.count() > 0:
             
-            return QP.GetClientData( self, 0 )
+            return self.itemData( 0, QC.Qt.UserRole )
             
         else:
             
@@ -257,7 +257,7 @@ class BetterChoice( QW.QComboBox ):
         
         for i in range( self.count() ):
             
-            if data == QP.GetClientData( self, i ):
+            if data == self.itemData( i, QC.Qt.UserRole ):
                 
                 self.setCurrentIndex( i )
                 
@@ -859,7 +859,7 @@ class ListBook( QW.QWidget ):
         
         for i in range( self._list_box.count() ):
             
-            i_key = QP.GetClientData( self._list_box, i )
+            i_key = self._list_box.item( i ).data( QC.Qt.UserRole )
             
             if i_key == key:
                 
@@ -878,7 +878,7 @@ class ListBook( QW.QWidget ):
             
         else:
             
-            self._current_key = QP.GetClientData( self._list_box, selection )
+            self._current_key = self._list_box.item( selection ).data( QC.Qt.UserRole )
             
         
         self._current_panel.setVisible( False )
@@ -2287,7 +2287,7 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         if selection != -1:
             
-            sort = QP.GetClientData( self._sorter, selection )
+            sort = self._sorter.GetValue()
             
             self._tags_box.SetSort( sort )
             

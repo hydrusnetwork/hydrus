@@ -1,29 +1,29 @@
 import os
 import sys
 
-# dirs
+# old method of getting frozen dir, doesn't work for symlinks looks like:
+# BASE_DIR = getattr( sys, '_MEIPASS', None )
 
-if getattr( sys, 'frozen', False ):
+RUNNING_FROM_FROZEN_BUILD = getattr( sys, 'frozen', False )
+
+if RUNNING_FROM_FROZEN_BUILD:
     
-    RUNNING_FROM_FROZEN_BUILD = True
+    real_exe_path = os.path.realpath( sys.executable )
     
-    # we are in a pyinstaller frozen app
-    
-    BASE_DIR = getattr( sys, '_MEIPASS', None )
-    
-    if BASE_DIR is None:
-        
-        raise Exception( 'It seems this hydrus is running from a frozen bundle, but there was no _MEIPASS variable under sys to define the bundle directory.' )
-        
+    BASE_DIR = os.path.dirname( real_exe_path )
     
 else:
     
-    # maybe this is better?
-    # os.path.dirname( __file__ )
-    
-    RUNNING_FROM_FROZEN_BUILD = False
-    
-    BASE_DIR = sys.path[0]
+    try:
+        
+        hc_realpath_dir = os.path.dirname( os.path.realpath( __file__ ) )
+        
+        BASE_DIR = os.path.split( hc_realpath_dir )[0]
+        
+    except NameError: # if __file__ is not defined due to some weird OS
+        
+        BASE_DIR = os.path.realpath( sys.path[0] )
+        
     
     if BASE_DIR == '':
         
@@ -70,7 +70,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 388
+SOFTWARE_VERSION = 389
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

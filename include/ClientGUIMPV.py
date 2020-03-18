@@ -12,6 +12,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from . import QtPorting as QP
 import locale
+import os
 import traceback
 
 mpv_failed_reason = 'MPV seems ok!'
@@ -462,7 +463,23 @@ class mpvWidget( QW.QWidget ):
     
     def UpdateConf( self ):
         
-        mpv_config_path = HydrusPaths.ConvertPortablePathToAbsPath( HG.client_controller.new_options.GetString( 'mpv_conf_path_portable' ) )
+        mpv_config_path = HG.client_controller.GetMPVConfPath()
+        
+        if not os.path.exists( mpv_config_path ):
+            
+            default_mpv_config_path = HG.client_controller.GetDefaultMPVConfPath()
+            
+            if not os.path.exists( default_mpv_config_path ):
+                
+                HydrusData.ShowText( 'There is no default mpv configuration file to load! Perhaps there is a problem with your install?' )
+                
+                return
+                
+            else:
+                
+                HydrusPaths.MirrorFile( default_mpv_config_path, mpv_config_path )
+                
+            
         
         #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
         if hasattr( mpv, '_mpv_load_config_file' ):
@@ -480,7 +497,7 @@ class mpvWidget( QW.QWidget ):
             
         else:
             
-            HydrusData.Print( 'Was unable to load mpv.conf--has the API changed?' )
+            HydrusData.Print( 'Was unable to load mpv.conf--has the MPV API changed?' )
             
         
     

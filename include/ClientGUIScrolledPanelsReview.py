@@ -2505,11 +2505,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, page_key )
-        
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         
-        self._tag_ac_input = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._current_predicates_box, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         self._run_search_st = ClientGUICommon.BetterStaticText( self._search_panel, label = 'no results yet' )
         
@@ -2520,8 +2518,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( hbox, self._run_search_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._run_search, CC.FLAGS_VCENTER )
         
-        self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._search_panel.Add( self._tag_ac_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -2762,7 +2759,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._run_search.setEnabled( False )
         
-        file_search_context = self._tag_ac_input.GetFileSearchContext()
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
         HG.client_controller.CallToThread( do_it, file_search_context )
         

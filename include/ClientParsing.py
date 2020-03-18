@@ -2407,7 +2407,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             if job_key.IsCancelled():
                 
-                raise HydrusExceptions.CancelledException()
+                raise HydrusExceptions.CancelledException( 'Job was cancelled.' )
                 
             
         
@@ -2696,7 +2696,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         
         if job_key.IsCancelled():
             
-            raise HydrusExceptions.CancelledException()
+            raise HydrusExceptions.CancelledException( 'Job was cancelled.' )
             
         
         parsing_text = network_job.GetContentText()
@@ -2918,40 +2918,54 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
                     
                 elif transformation_type == STRING_TRANSFORMATION_ENCODE:
                     
-                    # due to py3, this is now a bit of a pain
-                    # _for now_, let's convert to bytes and then spit out a str
-                    
                     encode_type = data
                     
-                    if isinstance( s, str ):
+                    if encode_type == 'url percent encoding':
                         
-                        s = bytes( s, 'utf-8' )
+                        s = urllib.parse.quote( s, safe = '' )
                         
-                    
-                    if encode_type == 'hex':
+                    else:
                         
-                        s = s.hex()
+                        # due to py3, this is now a bit of a pain
+                        # _for now_, let's convert to bytes and then spit out a str
                         
-                    elif encode_type == 'base64':
+                        if isinstance( s, str ):
+                            
+                            s = bytes( s, 'utf-8' )
+                            
                         
-                        s = str( base64.b64encode( s ), 'utf-8' )
+                        if encode_type == 'hex':
+                            
+                            s = s.hex()
+                            
+                        elif encode_type == 'base64':
+                            
+                            s = str( base64.b64encode( s ), 'utf-8' )
+                            
                         
                     
                 elif transformation_type == STRING_TRANSFORMATION_DECODE:
                     
-                    # due to py3, this is now a bit of a pain
-                    # as this is mostly used for hash stuff, _for now_, let's spit out a **bytes**
-                    # the higher up object will have responsibility for coercing to str if needed
-                    
                     encode_type = data
                     
-                    if encode_type == 'hex':
+                    if encode_type == 'url percent encoding':
                         
-                        s = bytes.fromhex( s )
+                        s = urllib.parse.unquote( s )
                         
-                    elif encode_type == 'base64':
+                    else:
                         
-                        s = base64.b64decode( s )
+                        # due to py3, this is now a bit of a pain
+                        # as this is mostly used for hash stuff, _for now_, let's spit out a **bytes**
+                        # the higher up object will have responsibility for coercing to str if needed
+                        
+                        if encode_type == 'hex':
+                            
+                            s = bytes.fromhex( s )
+                            
+                        elif encode_type == 'base64':
+                            
+                            s = base64.b64decode( s )
+                            
                         
                     
                 elif transformation_type == STRING_TRANSFORMATION_REVERSE:

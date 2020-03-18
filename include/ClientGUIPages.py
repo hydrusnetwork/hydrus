@@ -1111,6 +1111,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         session.AddPageTuple( page )
         
+        session = session.Duplicate() # this ensures we are using fresh new objects
+        
         self.InsertSessionPageTuples( index + 1, session.GetPageTuples() )
         
     
@@ -2619,6 +2621,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if not self._controller.services_manager.ServiceExists( tag_service_key ):
             
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
             
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )

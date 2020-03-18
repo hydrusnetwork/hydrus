@@ -215,9 +215,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._page_key = 'export folders placeholder'
         
-        self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._query_box, self._page_key )
-        
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._predicates_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
         #
         
@@ -292,7 +290,6 @@ If you select synchronise, be careful!'''
         
         self._type_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._query_box.Add( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._query_box.Add( self._tag_autocomplete )
         
         self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )

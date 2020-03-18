@@ -352,11 +352,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     
                 except Exception as e:
                     
-                    message = 'Service has had a recent error or is otherwise not functional! Specific error was:'
-                    message += os.linesep * 2
-                    message += str( e )
-                    message += os.linesep * 2
-                    message += 'You might like to try refreshing its account in \'review services\'.'
+                    message = 'Service has had a recent error or is otherwise not functional! You might like to try refreshing its account in \'review services\'. Specific error was: {}'.format( e )
                     
                     raise HydrusExceptions.ValidationException( message )
                     
@@ -1014,9 +1010,9 @@ class LoginScriptHydrus( object ):
                 
                 HydrusData.Print( 'Successfully logged into ' + service.GetName() + '.' )
                 
-            else:
+            elif service.IsFunctional():
                 
-                service.DelayFutureRequests( 'Could not log in for unknown reason.' )
+                service.DelayFutureRequests( 'Could not log in for unknown reason. Current service status: {}'.format( service.GetStatusString() ) )
                 
             
         except Exception as e:

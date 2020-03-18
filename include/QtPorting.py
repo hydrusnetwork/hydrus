@@ -242,7 +242,7 @@ class FilePickerCtrl( QW.QWidget ):
     
     filePickerChanged = QC.Signal()
 
-    def __init__( self, parent = None, wildcard = None ):
+    def __init__( self, parent = None, wildcard = None, starting_directory = None ):
         
         QW.QWidget.__init__( self, parent )
 
@@ -265,6 +265,8 @@ class FilePickerCtrl( QW.QWidget ):
         
         self._wildcard = wildcard
         
+        self._starting_directory = starting_directory
+        
 
     def SetPath( self, path ):
         
@@ -284,6 +286,11 @@ class FilePickerCtrl( QW.QWidget ):
     def _Browse( self ):
         
         existing_path = self._path_edit.text()
+        
+        if existing_path == '' and self._starting_directory is not None:
+            
+            existing_path = self._starting_directory
+            
         
         if self._save_mode:
             
@@ -1714,7 +1721,7 @@ class CheckListBox( QW.QListWidget ):
 
     def GetChecked( self ):
 
-        result = [ GetClientData( self, index ) for index in self.GetCheckedItems() ]
+        result = [ self.item( index ).data( QC.Qt.UserRole ) for index in self.GetCheckedItems() ]
 
         return result
 
@@ -1723,7 +1730,7 @@ class CheckListBox( QW.QListWidget ):
 
         for index in range( self.count() ):
 
-                data = GetClientData( self, index )
+                data = self.item( index ).data( QC.Qt.UserRole )
 
                 check_it = data in datas
 
@@ -2487,10 +2494,8 @@ class CollectComboCtrl( QW.QComboBox ):
         
         self.view().pressed.connect( self._HandleItemPressed )
         
-        if QW.QApplication.style().metaObject().className() == "QFusionStyle":
-            
-            self.setItemDelegate( CheckBoxDelegate() )
-            
+        # this was previously 'if Fusion style only', but as it works for normal styles too, it is more helpful to have it always on
+        self.setItemDelegate( CheckBoxDelegate() )
         
         self.setModel( QG.QStandardItemModel( self ) )
 
@@ -2550,7 +2555,7 @@ class CollectComboCtrl( QW.QComboBox ):
 
         for index in self.GetCheckedItems():
 
-            (collect_type, collect_data) = GetClientData( self, index )
+            (collect_type, collect_data) = self.itemData( index, QC.Qt.UserRole )
 
             if collect_type == 'namespace':
 
@@ -2596,7 +2601,7 @@ class CollectComboCtrl( QW.QComboBox ):
 
             for index in range( self.count() ):
 
-                ( collect_type, collect_data ) = GetClientData( self, index )
+                ( collect_type, collect_data ) = self.itemData( index, QC.Qt.UserRole )
 
                 p1 = collect_type == 'namespace' and collect_data in media_collect.namespaces
                 p2 = collect_type == 'rating' and collect_data in media_collect.rating_service_keys

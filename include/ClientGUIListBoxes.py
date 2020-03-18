@@ -19,6 +19,7 @@ from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 from . import HydrusTags
 import os
+import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -1488,18 +1489,6 @@ class ListBox( QW.QScrollArea ):
         self.widget().update()
         
     
-    def GetClientData( self, index = None ):
-        
-        if index is None:
-            
-            return set( self._terms )
-            
-        else:
-            
-            return self._GetTerm( index )
-            
-        
-    
     def GetIdealHeight( self ):
         
         text_height = self.fontMetrics().height()
@@ -1578,8 +1567,6 @@ class ListBoxTags( ListBox ):
         
         ListBox.__init__( self, *args, **kwargs )
         
-        self._get_current_predicates_callable = None
-        
         self._tag_display_type = ClientTags.TAG_DISPLAY_STORAGE
         
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
@@ -1602,6 +1589,16 @@ class ListBoxTags( ListBox ):
         texts = [ self._terms_to_texts[ term ] for term in self._ordered_terms ]
         
         return texts
+        
+    
+    def _GetCurrentFileServiceKey( self ):
+        
+        return CC.LOCAL_FILE_SERVICE_KEY
+        
+    
+    def _GetCurrentPagePredicates( self ) -> typing.Optional[ typing.Set[ ClientSearch.Predicate ] ]:
+        
+        return None
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -1692,7 +1689,9 @@ class ListBoxTags( ListBox ):
             
             activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+            file_service_key = self._GetCurrentFileServiceKey()
+            
+            HG.client_controller.pub( 'new_page_query', file_service_key, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
             
         
     
@@ -2060,35 +2059,32 @@ class ListBoxTags( ListBox ):
                         
                     
                 
-                if self._get_current_predicates_callable is not None:
+                current_predicates = self._GetCurrentPagePredicates()
+                
+                if current_predicates is not None:
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
-                    current_predicates = self._get_current_predicates_callable()
+                    ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
                     
-                    if current_predicates is not None:
+                    if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
                         
-                        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+                        ClientGUIMenus.AppendMenuItem( menu, 'discard ' + selection_string + ' from current search', 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_include_predicates' )
                         
-                        if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( menu, 'discard ' + selection_string + ' from current search', 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_include_predicates' )
-                            
+                    
+                    if True in ( include_predicate not in current_predicates for include_predicate in include_predicates ):
                         
-                        if True in ( include_predicate not in current_predicates for include_predicate in include_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( menu, 'require ' + selection_string + ' for current search', 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_include_predicates' )
-                            
+                        ClientGUIMenus.AppendMenuItem( menu, 'require ' + selection_string + ' for current search', 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_include_predicates' )
                         
-                        if True in ( exclude_predicate in current_predicates for exclude_predicate in exclude_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( menu, 'permit ' + selection_string + ' for current search', 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_exclude_predicates' )
-                            
+                    
+                    if True in ( exclude_predicate in current_predicates for exclude_predicate in exclude_predicates ):
                         
-                        if True in ( exclude_predicate not in current_predicates for exclude_predicate in exclude_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( menu, 'exclude ' + selection_string + ' from current search', 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_exclude_predicates' )
-                            
+                        ClientGUIMenus.AppendMenuItem( menu, 'permit ' + selection_string + ' for current search', 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_exclude_predicates' )
+                        
+                    
+                    if True in ( exclude_predicate not in current_predicates for exclude_predicate in exclude_predicates ):
+                        
+                        ClientGUIMenus.AppendMenuItem( menu, 'exclude ' + selection_string + ' from current search', 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_exclude_predicates' )
                         
                     
                 
@@ -2309,149 +2305,9 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
         
     
-    def GetPredicates( self ):
+    def GetPredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
         
         return set( self._terms )
-        
-    
-class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
-    
-    has_counts = False
-    
-    def __init__( self, parent, page_key, initial_predicates = None ):
-        
-        if initial_predicates is None:
-            
-            initial_predicates = []
-            
-        
-        ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 6 )
-        
-        self._page_key = page_key
-        self._get_current_predicates_callable = self.GetPredicates
-        
-        if len( initial_predicates ) > 0:
-            
-            for predicate in initial_predicates:
-                
-                self._AppendTerm( predicate )
-                
-            
-            self._DataHasChanged()
-            
-        
-        HG.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
-        
-    
-    def _Activate( self ):
-        
-        if len( self._selected_terms ) > 0:
-            
-            self._EnterPredicates( set( self._selected_terms ) )
-            
-        
-    
-    def _DeleteActivate( self ):
-        
-        self._Activate()
-        
-    
-    def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True ):
-        
-        if len( predicates ) == 0:
-            
-            return
-            
-        
-        predicates_to_be_added = set()
-        predicates_to_be_removed = set()
-        
-        for predicate in predicates:
-            
-            predicate = predicate.GetCountlessCopy()
-            
-            if self._HasPredicate( predicate ):
-                
-                if permit_remove:
-                    
-                    predicates_to_be_removed.add( predicate )
-                    
-                
-            else:
-                
-                if permit_add:
-                    
-                    predicates_to_be_added.add( predicate )
-                    
-                    predicates_to_be_removed.update( self._GetMutuallyExclusivePredicates( predicate ) )
-                    
-                
-            
-        
-        for predicate in predicates_to_be_added:
-            
-            self._AppendTerm( predicate )
-            
-        
-        for predicate in predicates_to_be_removed:
-            
-            self._RemoveTerm( predicate )
-            
-        
-        self._SortByText()
-        
-        self._DataHasChanged()
-        
-        HG.client_controller.pub( 'refresh_query', self._page_key )
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        predicate = term
-        
-        return predicate.ToString( render_for_user = True )
-        
-    
-    def _ProcessMenuPredicateEvent( self, command ):
-        
-        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
-        
-        if command == 'add_include_predicates':
-            
-            self._EnterPredicates( include_predicates, permit_remove = False )
-            
-        elif command == 'remove_include_predicates':
-            
-            self._EnterPredicates( include_predicates, permit_add = False )
-            
-        elif command == 'add_exclude_predicates':
-            
-            self._EnterPredicates( exclude_predicates, permit_remove = False )
-            
-        elif command == 'remove_exclude_predicates':
-            
-            self._EnterPredicates( exclude_predicates, permit_add = False )
-            
-        
-    
-    def EnterPredicates( self, page_key, predicates, permit_add = True, permit_remove = True ):
-        
-        if page_key == self._page_key:
-            
-            self._EnterPredicates( predicates, permit_add = permit_add, permit_remove = permit_remove )
-            
-        
-    
-    def SetPredicates( self, predicates ):
-        
-        self._Clear()
-        
-        for predicate in predicates:
-            
-            self._AppendTerm( predicate )
-            
-        
-        self._DataHasChanged()
         
     
 class ListBoxTagsAC( ListBoxTagsPredicates ):
@@ -3329,78 +3185,6 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     def _Activate( self ):
         
         HG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
-        
-    
-class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
-    
-    def __init__( self, parent, page_key, tag_display_type, predicates_callable = None ):
-        
-        ListBoxTagsSelection.__init__( self, parent, tag_display_type, include_counts = True )
-        
-        self._minimum_height_num_chars = 15
-        
-        self._page_key = page_key
-        self._get_current_predicates_callable = predicates_callable
-        
-        HG.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
-        HG.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HG.client_controller.sub( self, 'ChangeTagServicePubsub', 'change_tag_service' )
-        
-    
-    def _Activate( self ):
-        
-        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
-        
-        if len( predicates ) > 0:
-            
-            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
-            
-        
-    
-    def _ProcessMenuPredicateEvent( self, command ):
-        
-        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
-        
-        if command == 'add_include_predicates':
-            
-            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_remove = False )
-            
-        elif command == 'remove_include_predicates':
-            
-            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_add = False )
-            
-        elif command == 'add_exclude_predicates':
-            
-            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_remove = False )
-            
-        elif command == 'remove_exclude_predicates':
-            
-            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
-            
-        
-    
-    def ChangeTagServicePubsub( self, page_key, service_key ):
-        
-        if page_key == self._page_key:
-            
-            self.ChangeTagService( service_key )
-            
-        
-    
-    def IncrementTagsByMediaPubsub( self, page_key, media ):
-        
-        if page_key == self._page_key:
-            
-            self.IncrementTagsByMedia( media )
-            
-        
-    
-    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
-        
-        if page_key == self._page_key:
-            
-            self.SetTagsByMedia( media, force_reload = force_reload )
-            
         
     
 class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):

@@ -37,9 +37,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         from . import ClientGUIACDropdown
         from . import ClientGUIListBoxes
         
-        self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self, page_key )
-        
-        self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, self._predicates_box, page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, synchronised = synchronised, hide_favourites_edit_actions = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, synchronised = synchronised, hide_favourites_edit_actions = True )
         
         self._include_media_sort = QW.QCheckBox( self )
         self._include_media_collect = QW.QCheckBox( self )
@@ -95,8 +93,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, top_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, bottom_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
@@ -150,8 +147,8 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = self._name.text()
         
-        file_search_context = self._searchbox.GetFileSearchContext()
-        synchronised = self._searchbox.IsSynchronised()
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        synchronised = self._tag_autocomplete.IsSynchronised()
         
         if self._include_media_sort.isChecked():
             

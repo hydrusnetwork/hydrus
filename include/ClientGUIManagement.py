@@ -43,6 +43,7 @@ import os
 import random
 import time
 import traceback
+import typing
 from . import QtPorting as QP
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -665,6 +666,96 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER ] = ManagementController
 
+class ListBoxTagsSelectionManagementPanel( ClientGUIListBoxes.ListBoxTagsSelection ):
+    
+    def __init__( self, parent, management_controller: ManagementController, page_key, tag_display_type, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
+        
+        ClientGUIListBoxes.ListBoxTagsSelection.__init__( self, parent, tag_display_type, include_counts = True )
+        
+        self._management_controller = management_controller
+        self._minimum_height_num_chars = 15
+        
+        self._page_key = page_key
+        self._tag_autocomplete = tag_autocomplete
+        
+        HG.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
+        HG.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HG.client_controller.sub( self, 'ChangeTagServicePubsub', 'change_tag_service' )
+        
+    
+    def _Activate( self ):
+        
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
+        
+        if len( predicates ) > 0:
+            
+            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            
+        
+    
+    def _GetCurrentFileServiceKey( self ):
+        
+        return self._management_controller.GetKey( 'file_service' )
+        
+    
+    def _GetCurrentPagePredicates( self ) -> typing.Optional[ typing.Set[ ClientSearch.Predicate ] ]:
+        
+        if self._tag_autocomplete is None:
+            
+            return None
+            
+        else:
+            
+            return self._tag_autocomplete.GetPredicates()
+            
+        
+    
+    def _ProcessMenuPredicateEvent( self, command ):
+        
+        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+        
+        if command == 'add_include_predicates':
+            
+            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_remove = False )
+            
+        elif command == 'remove_include_predicates':
+            
+            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_add = False )
+            
+        elif command == 'add_exclude_predicates':
+            
+            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_remove = False )
+            
+        elif command == 'remove_exclude_predicates':
+            
+            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
+            
+        
+    
+    def ChangeTagServicePubsub( self, page_key, service_key ):
+        
+        if page_key == self._page_key:
+            
+            self.ChangeTagService( service_key )
+            
+        
+    
+    def IncrementTagsByMediaPubsub( self, page_key, media ):
+        
+        if page_key == self._page_key:
+            
+            self.IncrementTagsByMedia( media )
+            
+        
+    
+    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
+        
+        if page_key == self._page_key:
+            
+            self.SetTagsByMedia( media, force_reload = force_reload )
+            
+        
+    
 def managementScrollbarValueChanged( value ):
     
     HG.client_controller.pub( 'top_level_window_move_event' )
@@ -727,7 +818,7 @@ class ManagementPanel( QW.QScrollArea ):
         
         tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, self.TAG_DISPLAY_TYPE )
+        t = ListBoxTagsSelectionManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
         
         tags_box.SetTagsBox( t )
         
@@ -896,9 +987,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         file_search_context = management_controller.GetVariable( 'file_search_context' )
         
-        self._active_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._filtering_panel, self._page_key )
-        
-        self._ac_read = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._active_predicates_box, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, allow_all_known_files = False, force_system_everything = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, allow_all_known_files = False, force_system_everything = True )
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
         
@@ -984,8 +1073,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._filtering_panel, rows )
         
-        self._filtering_panel.Add( self._active_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._ac_read, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._filtering_panel.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1040,7 +1128,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _GetFileSearchContextAndBothFilesMatch( self ):
         
-        file_search_context = self._ac_read.GetFileSearchContext()
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
         both_files_match = self._both_files_match.isChecked()
         
@@ -1163,7 +1251,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._UpdateBothFilesMatchButton()
         
-        if self._ac_read.IsSynchronised():
+        if self._tag_autocomplete.IsSynchronised():
             
             self._dupe_count_numbers_dirty = True
             
@@ -3636,6 +3724,10 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._contents.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
         self._contents.itemDoubleClicked.connect( self.EventContentDoubleClick )
         
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents, ( 16, 20 ) )
+        
+        self._contents.setMinimumHeight( min_height )
+        
         self._process = QW.QPushButton( 'process', self._petition_panel )
         self._process.clicked.connect( self.EventProcess )
         self._process.setObjectName( 'HydrusAccept' )
@@ -4232,6 +4324,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         QW.QMessageBox.warning( self, 'Warning', 'modify users does not work yet!' )
         
+        return
+        
         with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerAccount(), ) ) as dlg:
             
             dlg.exec()
@@ -4336,11 +4430,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
-            self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, self._page_key )
-            
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
-            self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._current_predicates_box, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, media_callable = self._page.GetMedia, synchronised = synchronised )
+            self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, media_callable = self._page.GetMedia, synchronised = synchronised )
             
             self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelSearch )
             
@@ -4348,10 +4440,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, self._searchbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( hbox, self._cancel_search_button, CC.FLAGS_VCENTER )
             
-            self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
@@ -4387,7 +4478,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, self.TAG_DISPLAY_TYPE, predicates_callable = self._current_predicates_box.GetPredicates )
+            t = ListBoxTagsSelectionManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE, tag_autocomplete = self._tag_autocomplete )
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
@@ -4397,7 +4488,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         else:
             
-            t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, self.TAG_DISPLAY_TYPE )
+            t = ListBoxTagsSelectionManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
             
         
         tags_box.SetTagsBox( t )
@@ -4415,7 +4506,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             if self._management_controller.GetVariable( 'synchronised' ):
                 
-                file_search_context = self._searchbox.GetFileSearchContext()
+                file_search_context = self._tag_autocomplete.GetFileSearchContext()
                 
                 self._management_controller.SetVariable( 'file_search_context', file_search_context )
                 
@@ -4478,7 +4569,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             if do_layout:
                 
-                self._searchbox.ForceSizeCalcNow()
+                self._tag_autocomplete.ForceSizeCalcNow()
                 
             
         
@@ -4497,7 +4588,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            self._searchbox.CancelCurrentResultsFetchJob()
+            self._tag_autocomplete.CancelCurrentResultsFetchJob()
             
         
         self._query_job_key.Cancel()
@@ -4509,7 +4600,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            self._searchbox.CancelCurrentResultsFetchJob()
+            self._tag_autocomplete.CancelCurrentResultsFetchJob()
             
         
         self._query_job_key.Cancel()
@@ -4519,7 +4610,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            return self._current_predicates_box.GetPredicates()
+            return self._tag_autocomplete.GetPredicates()
             
         else:
             
@@ -4549,7 +4640,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            HG.client_controller.CallAfterQtSafe( self._searchbox, self._searchbox.setFocus, QC.Qt.OtherFocusReason)
+            HG.client_controller.CallAfterQtSafe( self._tag_autocomplete, self._tag_autocomplete.setFocus, QC.Qt.OtherFocusReason)
             
         
     

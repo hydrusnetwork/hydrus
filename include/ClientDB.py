@@ -636,6 +636,19 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusPaths.MirrorFile( source, dest )
                 
             
+            conf_files = [ 'mpv.conf' ]
+            
+            for conf_file in conf_files:
+                
+                source = os.path.join( self._db_dir, conf_file )
+                dest = os.path.join( path, conf_file )
+                
+                if os.path.exists( source ):
+                    
+                    HydrusPaths.MirrorFile( source, dest )
+                    
+                
+            
             def is_cancelled_hook():
                 
                 return job_key.IsCancelled()
@@ -3971,7 +3984,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_tags = { self._GetTagId( tag ) : tag for tag in tags }
         
-        counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( service_id, list(tag_ids_to_tags.keys()) )
+        counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( service_id, list( tag_ids_to_tags.keys() ) )
         
         existing_tag_ids = [ tag_id for ( tag_id, current_count, pending_count ) in counts if current_count > 0 ]
         
@@ -13856,6 +13869,137 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 388:
+            
+            try:
+                
+                favourite_search_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
+                
+                folders_to_names = favourite_search_manager.GetFoldersToNames()
+                
+                do_it = True
+                
+                if None in folders_to_names:
+                    
+                    if 'empty page' in folders_to_names[ None ]:
+                        
+                        do_it = False
+                        
+                    
+                
+                if do_it:
+                    
+                    foldername = None
+                    name = 'empty page'
+                    
+                    tag_search_context = ClientSearch.TagSearchContext()
+                    
+                    predicates = []
+                    
+                    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
+                    
+                    synchronised = True
+                    media_sort = None
+                    media_collect = None
+                    
+                    new_rows = [ ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) ]
+                    
+                    #
+                    
+                    rows = list( favourite_search_manager.GetFavouriteSearchRows() )
+                    
+                    rows.extend( new_rows )
+                    
+                    favourite_search_manager.SetFavouriteSearchRows( rows )
+                    
+                    self._SetJSONDump( favourite_search_manager )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to add an empty favourite search failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                script_rows = ClientDefaults.GetDefaultScriptRows()
+                
+                for script_row in script_rows:
+                    
+                    dump_type = script_row[0]
+                    dump_name = script_row[1]
+                    
+                    self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+                    
+                
+                self._c.executemany( 'REPLACE INTO json_dumps_named VALUES ( ?, ?, ?, ?, ? );', script_rows )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to add new file lookup scripts search failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'deviant art file page', 'deviant art file page api', 'e621 file page (old format)' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'e621 file page parser', 'deviant art file page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.DeleteLoginScripts( [ 'nijie.info login script' ] )
+                
+                #
+                
+                if not login_manager.DomainHasALoginScript( 'nijie.info' ):
+                    
+                    login_manager.DeleteLoginDomain( 'nijie.info' )
+                    
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
@@ -14489,6 +14633,19 @@ class DB( HydrusDB.HydrusDB ):
                 # don't want to delete just in case, but we will move it out the way
                 
                 HydrusPaths.MergeFile( dest, dest + '.old' )
+                
+            
+            conf_files = [ 'mpv.conf' ]
+            
+            for conf_file in conf_files:
+                
+                source = os.path.join( path, conf_file )
+                dest = os.path.join( self._db_dir, conf_file )
+                
+                if os.path.exists( source ):
+                    
+                    HydrusPaths.MirrorFile( source, dest )
+                    
                 
             
         

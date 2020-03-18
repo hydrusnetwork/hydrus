@@ -86,6 +86,11 @@ def ConvertEntryTextToSearchText( entry_text ):
     
     wildcard_text = entry_text
     
+    while '**' in wildcard_text:
+        
+        wildcard_text = wildcard_text.replace( '**', '*' )
+        
+    
     entry_text = ConvertTagToSearchable( entry_text )
     
     ( namespace, subtag ) = HydrusTags.SplitTag( entry_text )

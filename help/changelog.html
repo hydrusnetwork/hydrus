@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 389</h3></li>
+				<ul>
+					<li>downloaders:</li>
+					<li>the e621 file page parser is updated again, thanks to a user's contribution. this one gets md5 and file url more reliably, and also gets rating tag</li>
+					<li>added a 'e621 file page (old format)' url class to help match and search for files downloaded with the old format. please be aware there is no good solution to auto-convert old urls to a new format yet, so this connection does not (yet) solve the old/new comparison test</li>
+					<li>updated deviant art file post parser to use their json api. this should be more resilient to their current layout changes</li>
+					<li>the nijie.info login script appears no longer to function. as with exhentai last week, it has been removed to make it easier to log in with hydrus companion. please use hydrus companion if you would like to log into nijie.info</li>
+					<li>updated file lookup scripts for 'iqdb danbooru' and 'danbooru md5' thanks to a user's contribution</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the way the mpv.conf works changes this week. it is now correctly fully portable, stored in the db directory beside the .db files. if this file does not exist, the 'default' as stored under the install_dir/static/mpv-conf folder will auto-populate it. if you have been using a non-default mpv conf, please re-set it one time after update, and you should be good</li>
+					<li>the code that loads mpv.conf is now more graceful on 'missing file' errors, which now means when both the db conf and the default conf are missing</li>
+					<li>hitting escape on a tag autocomplete input that has text will now clear that text! note that hitting escape on an _empty_ a/c input will still do 'lose focus' and then 'close dialog'</li>
+					<li>updated the slideshow logic so that if a media with duration has a shorter duration than the slideshow duration (e.g. a gif that lasts 0.5s on a 10s slideshow), the media will keep looping until the duration is up. media that has duration longer than the slideshow time will continue to play through once completely, delaying slideshow progression and then stopping promptly when it has finished</li>
+					<li>the string transformation system now allows 'url percent encoding' under the encode/decode type!</li>
+					<li>fixed the 'only add existing tags' filter in the tag import options, which was denying all the tested tags. it seems to have been hit by a typo in the last three months</li>
+					<li>the 'favourite searches' defaults now include an 'empty page' entry, which is a convenient way to simply clear a page. all users will also get this on update, feel free to delete if you don't like/need it</li>
+					<li>opening a new search page from a tag or an active search predicate ('open a new search page for...' or middle-click) now copies the file service (e.g. looking at trash) from the original page</li>
+					<li>opening a new search page in the 'all known files' file domain when the tag domain should be 'all known tags' (a currently unsupported combination) now coerces the tag domain to 'all local tags'</li>
+					<li>checkboxes should now appear again on the collect-by dropdown in Fusion (and hopefully any other) style</li>
+					<li>fixed an issue where entering 'namespace:*' explicitly would show the much less efficient wildcard search rather than the efficient 'anything' namespace search</li>
+					<li>fixed an issue where wildcard search could include multiple asterisks in a row</li>
+					<li>fixed an issue with page duplication where the main management object was not being duplicated properly until a session reload, meaning the two pages would sometimes share signals and changes</li>
+					<li>an old wx delayed hide/show performance hack is removed, making the floating autocomplete dropdown now update more smoothly to resize or move requests, such as when the main gui window is dragged</li>
+					<li>the program base installation directory is now calculated more accurately, both when running from source and the frozen build, and when launched using a symlink</li>
+					<li>install dir and db dir are now specified in the help->about window</li>
+					<li>the petition page content checkbox list now has a taller minimum height</li>
+					<li>improved error text reporting in hydrus service login failure, hydrus service delay reason-setting, and all 'cancelled' errors across the program</li>
+					<li>the review services panel now has elided... text. when unusually long errors propagate up to its status texts, it now won't suddenly jump to 2,000 pixels wide. full text appears in tooltips</li>
+					<li>code refactoring: the tag autocomplete input now now takes responsibility for the active predicate list above it</li>
+					<li>refactored some tag lists and added typing hints to improve how current page predicates are determined</li>
+					<li>did some prep work for tag filters supporting wildcards, but it isn't ready yet</li>
+					<li>cleaned up some wx->Qt data fetching code</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 388</h3></li>
 				<ul>
 					<li>favourite searches:</li>

@@ -5051,8 +5051,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
             
         
-        self._media_container.SetSlideshowMode( True )
-        
     
     def _StopSlideshow( self ):
         
@@ -5062,7 +5060,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._timer_slideshow_job = None
             
-            self._media_container.SetSlideshowMode( False )
+            self._media_container.StopForSlideshow( False )
             
         
     
@@ -5070,9 +5068,16 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         try:
             
+            # we are due for a slideshow change, so tell movie to stop for it once it has played once through
+            # if short movie, it has prob played through a lot and will shift immediately
+            # if longer movie, it has prob not played through but will now stop when it has and wait for us to change it then
+            self._media_container.StopForSlideshow( True )
+            
             if self._current_media is not None and self._RunningSlideshow():
                 
                 if self._media_container.ReadyToSlideshow() and not CGC.core().MenuIsOpen():
+                    
+                    self._media_container.StopForSlideshow( False )
                     
                     self._ShowNext()
                     
@@ -5181,13 +5186,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
         return command_processed
-        
-    
-    def SetMedia( self, media ):
-        
-        CanvasMediaListNavigable.SetMedia( self, media )
-        
-        self._media_container.SetSlideshowMode( self._RunningSlideshow() )
         
     
     def ShowMenu( self ):
@@ -5437,8 +5435,6 @@ class MediaContainer( QW.QWidget ):
         self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
         self._start_paused = False
         self._start_with_embed = False
-        
-        self._slideshow_mode = False
         
         self._media_window = None
         
@@ -5912,13 +5908,11 @@ class MediaContainer( QW.QWidget ):
         self.hide()
         
     
-    def SetSlideshowMode( self, value ):
-        
-        self._slideshow_mode = value
+    def StopForSlideshow( self, value ):
         
         if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
             
-            self._media_window.StopForSlideshow( self._slideshow_mode )
+            self._media_window.StopForSlideshow( value )
             
         
     

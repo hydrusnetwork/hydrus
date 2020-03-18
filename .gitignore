@@ -45,6 +45,7 @@ db/*.db-wal
 db/*.crt
 db/*.key
 db/*.log
+db/*.conf
 db/client_files/
 db/server_files/
 db/missing_and_invalid_files/

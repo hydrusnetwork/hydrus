@@ -3284,7 +3284,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_zooms = QW.QLineEdit( self )
             self._media_zooms.textChanged.connect( self.EventZoomsChanged )
             
-            self._mpv_conf_path = QP.FilePickerCtrl( self )
+            self._mpv_conf_path = QP.FilePickerCtrl( self, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
             
             self._animated_scanbar_height = QP.MakeQSpinBox( self, min=1, max=255 )
             self._animated_scanbar_nub_width = QP.MakeQSpinBox( self, min=1, max=63 )
@@ -3311,7 +3311,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
             self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
-            self._mpv_conf_path.SetPath( HydrusPaths.ConvertPortablePathToAbsPath( self._new_options.GetString( 'mpv_conf_path_portable' ) ) )
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
             
@@ -3340,7 +3339,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
             rows.append( ( 'Always Loop GIFs:', self._always_loop_gifs ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
-            rows.append( ( 'MPV conf path:', self._mpv_conf_path ) )
+            rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
             rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
             rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
@@ -3570,7 +3569,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )
             
-            self._new_options.SetString( 'mpv_conf_path_portable', HydrusPaths.ConvertAbsPathToPortablePath( self._mpv_conf_path.GetPath() ) )
+            mpv_conf_path = self._mpv_conf_path.GetPath()
+            
+            if mpv_conf_path is not None and mpv_conf_path != '' and os.path.exists( mpv_conf_path ) and os.path.isfile( mpv_conf_path ):
+                
+                dest_mpv_conf_path = HG.client_controller.GetMPVConfPath()
+                
+                try:
+                    
+                    HydrusPaths.MirrorFile( mpv_conf_path, dest_mpv_conf_path )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowText( 'Could not set the mpv conf path "{}" to "{}"! Error follows!'.format( mpv_conf_path, dest_mpv_conf_path ) )
+                    HydrusData.ShowException( e )
+                    
+                
             
             self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
             self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )

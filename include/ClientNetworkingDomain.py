@@ -429,6 +429,12 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             return self._file_post_default_tag_import_options
             
         
+        # some lad decided to api convert one url type to another
+        if url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+            
+            return self._file_post_default_tag_import_options
+            
+        
         url_class_key = url_class.GetMatchKey()
         
         if url_class_key in self._url_class_keys_to_default_tag_import_options:

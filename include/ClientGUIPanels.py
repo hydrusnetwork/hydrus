@@ -827,9 +827,9 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
-            self._address = ClientGUICommon.BetterStaticText( self )
-            self._functional = ClientGUICommon.BetterStaticText( self )
-            self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
+            self._address = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            self._functional = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            self._bandwidth_summary = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
             
             self._bandwidth_panel = QW.QWidget( self )
             
@@ -920,10 +920,10 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
-            self._title_and_expires_st = ClientGUICommon.BetterStaticText( self )
-            self._status_st = ClientGUICommon.BetterStaticText( self )
-            self._next_sync_st = ClientGUICommon.BetterStaticText( self )
-            self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
+            self._title_and_expires_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            self._status_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            self._next_sync_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            self._bandwidth_summary = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
             
             self._bandwidth_panel = QW.QWidget( self )
             

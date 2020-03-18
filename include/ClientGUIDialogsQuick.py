@@ -31,7 +31,7 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             
         else:
             
-            raise HydrusExceptions.CancelledException()
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
             
         
     
@@ -111,7 +111,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
             
         else:
             
-            raise HydrusExceptions.CancelledException()
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
             
         
     
@@ -131,7 +131,7 @@ def SelectFromListButtons( win, title, choice_tuples ):
             
         else:
             
-            raise HydrusExceptions.CancelledException()
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
             
         
     

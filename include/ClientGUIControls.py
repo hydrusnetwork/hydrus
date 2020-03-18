@@ -697,7 +697,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_encode = ClientGUICommon.BetterChoice( self )
             self._data_timezone_offset = QP.MakeQSpinBox( self, min=-86400, max=86400 )
             
-            for e in ( 'hex', 'base64' ):
+            for e in ( 'hex', 'base64', 'url percent encoding' ):
                 
                 self._data_encoding.addItem( e, e )
                 

@@ -718,6 +718,11 @@ class Controller( HydrusController.HydrusController ):
         return clipboard_text
         
     
+    def GetDefaultMPVConfPath( self ):
+        
+        return os.path.join( HC.STATIC_DIR, 'mpv-conf', 'default_mpv.conf' )
+        
+    
     def GetIdleShutdownWorkDue( self, time_to_stop ):
         
         work_to_do = []
@@ -735,6 +740,11 @@ class Controller( HydrusController.HydrusController ):
             
         
         return work_to_do
+        
+    
+    def GetMPVConfPath( self ):
+        
+        return os.path.join( self.db_dir, 'mpv.conf' )
         
     
     def GetNewOptions( self ):
