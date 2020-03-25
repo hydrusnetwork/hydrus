@@ -46,7 +46,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     selectedMediaTagPresentationChanged = QC.Signal( object, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
     
-    focusMediaChanged = QC.Signal( ClientMedia.Media )
+    focusMediaChanged = QC.Signal( object )
     refreshQuery = QC.Signal()
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
