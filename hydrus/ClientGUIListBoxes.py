@@ -994,23 +994,6 @@ class ListBox( QW.QScrollArea ):
         return ( include_predicates, exclude_predicates )
         
     
-    def _GetTerm( self, index ):
-        
-        if index < 0 or index > len( self._ordered_terms ) - 1:
-            
-            raise HydrusExceptions.DataMissing( 'No term for index ' + str( index ) )
-            
-        
-        return self._ordered_terms[ index ]
-        
-    
-    def _GetTextsAndColours( self, term ):
-        
-        text = self._terms_to_texts[ term ]
-        
-        return [ ( text, ( 0, 111, 250 ) ) ]
-        
-    
     def _GetSafeHitIndex( self, hit_index, direction = None ):
         
         if direction is None:
@@ -1067,6 +1050,23 @@ class ListBox( QW.QScrollArea ):
     def _GetSimplifiedTextFromTerm( self, term ):
         
         return self._GetTextFromTerm( term )
+        
+    
+    def _GetTerm( self, index ):
+        
+        if index < 0 or index > len( self._ordered_terms ) - 1:
+            
+            raise HydrusExceptions.DataMissing( 'No term for index ' + str( index ) )
+            
+        
+        return self._ordered_terms[ index ]
+        
+    
+    def _GetTextsAndColours( self, term ):
+        
+        text = self._terms_to_texts[ term ]
+        
+        return [ ( text, ( 0, 111, 250 ) ) ]
         
     
     def _GetTextFromTerm( self, term ):
@@ -1596,9 +1596,9 @@ class ListBoxTags( ListBox ):
         return CC.LOCAL_FILE_SERVICE_KEY
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Optional[ typing.Set[ ClientSearch.Predicate ] ]:
+    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
         
-        return None
+        return set()
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -1608,21 +1608,7 @@ class ListBoxTags( ListBox ):
     
     def _GetTagFromTerm( self, term ):
         
-        if isinstance( term, ClientSearch.Predicate ):
-            
-            if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
-                
-                return term.GetValue()
-                
-            else:
-                
-                return None
-                
-            
-        else:
-            
-            return term
-            
+        raise NotImplementedError()
         
     
     def _GetTextsAndColours( self, term ):
@@ -1659,6 +1645,11 @@ class ListBoxTags( ListBox ):
             
         
         return texts_and_colours
+        
+    
+    def _HasCurrentPagePredicates( self ):
+        
+        return False
         
     
     def _NewSearchPage( self ):
@@ -2059,9 +2050,9 @@ class ListBoxTags( ListBox ):
                         
                     
                 
-                current_predicates = self._GetCurrentPagePredicates()
-                
-                if current_predicates is not None:
+                if self._HasCurrentPagePredicates():
+                    
+                    current_predicates = self._GetCurrentPagePredicates()
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
@@ -2242,6 +2233,20 @@ class ListBoxTagsPredicates( ListBoxTags ):
         namespace = predicate.GetNamespace()
         
         return namespace
+        
+    
+    def _GetTagFromTerm( self, term ):
+        
+        predicate = term
+        
+        if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
+            
+            return term.GetValue()
+            
+        else:
+            
+            return None
+            
         
     
     def _GetSimplifiedTextFromTerm( self, term ):
@@ -2479,17 +2484,31 @@ class ListBoxTagsCensorship( ListBoxTags ):
     
     def _GetNamespaceFromTerm( self, term ):
         
-        tag = term
+        tag_slice = term
         
-        if tag == ':':
+        if tag_slice == ':':
             
             return None
             
         else:
             
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag_slice )
             
             return namespace
+            
+        
+    
+    def _GetTagFromTerm( self, term ):
+        
+        tag_slice = term
+        
+        if tag_slice in ( ':', '' ):
+            
+            return None
+            
+        else:
+            
+            return tag_slice
             
         
     
@@ -2598,6 +2617,23 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._Activate()
         
     
+    def _GetNamespaceColours( self ):
+        
+        return dict( self._terms )
+        
+    
+    def _GetNamespaceFromTerm( self, term ):
+        
+        ( namespace, colour ) = term
+        
+        return namespace
+        
+    
+    def _GetTagFromTerm( self, term ):
+        
+        return None
+        
+    
     def _GetTextFromTerm( self, term ):
         
         ( namespace, colour ) = term
@@ -2616,18 +2652,6 @@ class ListBoxTagsColourOptions( ListBoxTags ):
             
         
         return namespace_string
-        
-    
-    def _GetNamespaceColours( self ):
-        
-        return dict( self._terms )
-        
-    
-    def _GetNamespaceFromTerm( self, term ):
-        
-        ( namespace, colour ) = term
-        
-        return namespace
         
     
     def _RemoveNamespaces( self, namespaces ):
@@ -2707,6 +2731,13 @@ class ListBoxTagsStrings( ListBoxTags ):
         tag = term
         
         return str( tag )
+        
+    
+    def _GetTagFromTerm( self, term ):
+        
+        tag = term
+        
+        return tag
         
     
     def _GetTextFromTerm( self, term ):
@@ -2872,7 +2903,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         self._RemoveTags( tags )
         
     
-class ListBoxTagsSelection( ListBoxTags ):
+class ListBoxTagsMedia( ListBoxTags ):
     
     render_for_user = True
     has_counts = True
@@ -2928,6 +2959,13 @@ class ListBoxTagsSelection( ListBoxTags ):
         tag = term
         
         return str( tag )
+        
+    
+    def _GetTagFromTerm( self, term ):
+        
+        tag = term
+        
+        return tag
         
     
     def _GetTextFromTerm( self, term ):
@@ -3039,7 +3077,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         self._tag_service_key = service_key
         
-        self.SetTagsByMedia( self._last_media, force_reload = True )
+        self.SetTagsByMedia( self._last_media )
         
     
     def SetSort( self, sort ):
@@ -3086,76 +3124,86 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._last_media.update( media )
         
     
-    def SetTagsByMedia( self, media, force_reload = False ):
+    def SetTagsByMedia( self, media ):
         
         media = set( media )
         
-        if len( media ) < len( self._last_media ) // 10: # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._tag_service_key, self._tag_display_type )
+        
+        self._current_tags_to_count = current_tags_to_count
+        self._deleted_tags_to_count = deleted_tags_to_count
+        self._pending_tags_to_count = pending_tags_to_count
+        self._petitioned_tags_to_count = petitioned_tags_to_count
+        
+        self._RecalcStrings()
+        
+        self._last_media = media
+        
+        self._DataHasChanged()
+        
+    
+    def SetTagsByMediaFromMediaPanel( self, media, tags_changed ):
+        
+        # this uses the last-set media and count cache to generate new numbers and is faster than re-counting from scratch when the tags have not changed
+        
+        selection_shrank = len( media ) < len( self._last_media ) // 10 # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
+        
+        if tags_changed or selection_shrank:
             
-            force_reload = True
+            self.SetTagsByMedia( media )
+            
+            return
             
         
-        if force_reload:
+        media = set( media )
+        
+        removees = self._last_media.difference( media )
+        adds = media.difference( self._last_media )
+        
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._tag_service_key, self._tag_display_type )
+        
+        self._current_tags_to_count.subtract( current_tags_to_count )
+        self._deleted_tags_to_count.subtract( deleted_tags_to_count )
+        self._pending_tags_to_count.subtract( pending_tags_to_count )
+        self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
+        
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( adds, self._tag_service_key, self._tag_display_type )
+        
+        self._current_tags_to_count.update( current_tags_to_count )
+        self._deleted_tags_to_count.update( deleted_tags_to_count )
+        self._pending_tags_to_count.update( pending_tags_to_count )
+        self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+        
+        for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._tag_service_key, self._tag_display_type )
+            tags = list( counter.keys() )
             
-            self._current_tags_to_count = current_tags_to_count
-            self._deleted_tags_to_count = deleted_tags_to_count
-            self._pending_tags_to_count = pending_tags_to_count
-            self._petitioned_tags_to_count = petitioned_tags_to_count
+            for tag in tags:
+                
+                if counter[ tag ] == 0:
+                    
+                    del counter[ tag ]
+                    
+                
             
-            self._RecalcStrings()
+        
+        if len( removees ) == 0:
+            
+            tags_changed = set()
+            
+            if self._show_current: tags_changed.update( list(current_tags_to_count.keys()) )
+            if self._show_deleted: tags_changed.update( list(deleted_tags_to_count.keys()) )
+            if self._show_pending: tags_changed.update( list(pending_tags_to_count.keys()) )
+            if self._show_petitioned: tags_changed.update( list(petitioned_tags_to_count.keys()) )
+            
+            if len( tags_changed ) > 0:
+                
+                self._RecalcStrings( tags_changed )
+                
             
         else:
             
-            removees = self._last_media.difference( media )
-            adds = media.difference( self._last_media )
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._tag_service_key, self._tag_display_type )
-            
-            self._current_tags_to_count.subtract( current_tags_to_count )
-            self._deleted_tags_to_count.subtract( deleted_tags_to_count )
-            self._pending_tags_to_count.subtract( pending_tags_to_count )
-            self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( adds, self._tag_service_key, self._tag_display_type )
-            
-            self._current_tags_to_count.update( current_tags_to_count )
-            self._deleted_tags_to_count.update( deleted_tags_to_count )
-            self._pending_tags_to_count.update( pending_tags_to_count )
-            self._petitioned_tags_to_count.update( petitioned_tags_to_count )
-            
-            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
-                
-                tags = list(counter.keys())
-                
-                for tag in tags:
-                    
-                    if counter[ tag ] == 0:
-                        
-                        del counter[ tag ]
-                        
-                    
-                
-            
-            if len( removees ) == 0:
-                
-                tags_changed = set()
-                
-                if self._show_current: tags_changed.update( list(current_tags_to_count.keys()) )
-                if self._show_deleted: tags_changed.update( list(deleted_tags_to_count.keys()) )
-                if self._show_pending: tags_changed.update( list(pending_tags_to_count.keys()) )
-                if self._show_petitioned: tags_changed.update( list(petitioned_tags_to_count.keys()) )
-                
-                if len( tags_changed ) > 0:
-                    
-                    self._RecalcStrings( tags_changed )
-                    
-                
-            else:
-                
-                self._RecalcStrings()
-                
+            self._RecalcStrings()
             
         
         self._last_media = media
@@ -3170,14 +3218,69 @@ class ListBoxTagsSelection( ListBoxTags ):
             return
             
         
-        self.SetTagsByMedia( self._last_media, force_reload = True )
+        self.SetTagsByMedia( self._last_media )
         
     
-class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
+class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
+    
+    def __init__( self, parent, title ):
+        
+        ClientGUICommon.StaticBox.__init__( self, parent, title )
+        
+        self._sorter = ClientGUICommon.BetterChoice( self )
+        
+        self._sorter.addItem( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
+        self._sorter.addItem( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+        self._sorter.addItem( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
+        self._sorter.addItem( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
+        self._sorter.addItem( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
+        self._sorter.addItem( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
+        self._sorter.addItem( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
+        self._sorter.addItem( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+        self._sorter.addItem( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
+        self._sorter.addItem( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
+        
+        self._sorter.SetValue( HC.options[ 'default_tag_sort' ] )
+        
+        self._sorter.currentIndexChanged.connect( self.EventSort )
+        
+        self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+    
+    def ChangeTagService( self, service_key ):
+        
+        self._tags_box.ChangeTagService( service_key )
+        
+    
+    def EventSort( self, index ):
+        
+        selection = self._sorter.currentIndex()
+        
+        if selection != -1:
+            
+            sort = self._sorter.GetValue()
+            
+            self._tags_box.SetSort( sort )
+            
+        
+    
+    def SetTagsBox( self, tags_box: ListBoxTagsMedia ):
+        
+        self._tags_box = tags_box
+        
+        self.Add( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+    
+    def SetTagsByMedia( self, media ):
+        
+        self._tags_box.SetTagsByMedia( media )
+        
+    
+class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
     def __init__( self, parent, canvas_key ):
         
-        ListBoxTagsSelection.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, include_counts = False )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, include_counts = False )
         
         self._canvas_key = canvas_key
         
@@ -3187,13 +3290,13 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
         HG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
         
     
-class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
+class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
     render_for_user = False
     
     def __init__( self, parent, enter_func, delete_func ):
         
-        ListBoxTagsSelection.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, include_counts = True, show_sibling_description = True )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, include_counts = True, show_sibling_description = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func

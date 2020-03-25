@@ -18,7 +18,7 @@ from . import ClientThreading
 import collections
 import gc
 import hashlib
-import itertools
+import itertools    
 import json
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -2152,7 +2152,7 @@ class DB( HydrusDB.HydrusDB ):
         smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
         larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
         
-        result = self._c.execute( 'SELECT 1 FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( alternates_group_id_a, larger_alternates_group_id ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( smaller_alternates_group_id, larger_alternates_group_id ) ).fetchone()
         
         false_positive_pair_found = result is not None
         
@@ -4925,20 +4925,11 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromNamespace( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace, include_siblings = False, hash_ids_table_name = None ):
-        
-        if not self._NamespaceExists( namespace ):
-            
-            return set()
-            
+    def _GetHashIdsFromNamespace( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace: str, include_siblings = False, hash_ids_table_name = None ):
         
         file_service_id = self._GetServiceId( file_service_key )
         
         tag_service_key = tag_search_context.service_key
-        
-        namespace_id = self._GetNamespaceId( namespace )
-        
-        predicate_string = 'namespace_id = {}'.format( namespace_id )
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -4951,39 +4942,46 @@ class DB( HydrusDB.HydrusDB ):
             search_tag_service_ids = [ tag_service_id ]
             
         
-        include_current_tags = tag_search_context.include_current_tags
-        include_pending_tags = tag_search_context.include_pending_tags
-        
-        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
-        
-        tables = [ table + ' NATURAL JOIN tags' for table in tables ]
-        
-        if hash_ids_table_name is not None:
-            
-            tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
-            
-        
-        #
+        namespace_ids = self._GetNamespaceIdsFromWildcard( namespace )
         
         hash_ids = set()
         
-        for table in tables:
+        for namespace_id in namespace_ids:
             
-            select = 'SELECT hash_id FROM {} WHERE {};'.format( table, predicate_string )
+            predicate_string = 'namespace_id = {}'.format( namespace_id )
             
-            hash_ids.update( self._STI( self._c.execute( select ) ) )
+            include_current_tags = tag_search_context.include_current_tags
+            include_pending_tags = tag_search_context.include_pending_tags
             
-        
-        if include_siblings:
+            tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
             
-            # fetch all tag_ids where this namespace is a terminator
-            # i.e. fetch all where it is 'better', recursively, and discount any chains where it is the 'worse'
+            tables = [ table + ' NATURAL JOIN tags' for table in tables ]
             
-            # for each of them, union the results of gethashidsfromtagids
+            if hash_ids_table_name is not None:
+                
+                tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
+                
             
-            # OR maybe just wait for the better db sibling cache or a/c sibling-collapsed layer
+            #
             
-            pass
+            for table in tables:
+                
+                select = 'SELECT hash_id FROM {} WHERE {};'.format( table, predicate_string )
+                
+                hash_ids.update( self._STI( self._c.execute( select ) ) )
+                
+            
+            if include_siblings:
+                
+                # fetch all tag_ids where this namespace is a terminator
+                # i.e. fetch all where it is 'better', recursively, and discount any chains where it is the 'worse'
+                
+                # for each of them, union the results of gethashidsfromtagids
+                
+                # OR maybe just wait for the better db sibling cache or a/c sibling-collapsed layer
+                
+                pass
+                
             
         
         return hash_ids
@@ -6285,59 +6283,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
         
-        def GetNamespaceIdsFromWildcard( w ):
-            
-            if '*' in w:
-                
-                like_param = ConvertWildcardToSQLiteLikeParameter( w )
-                
-                return self._STL( self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( like_param, ) ) )
-                
-            else:
-                
-                if self._NamespaceExists( w ):
-                    
-                    namespace_id = self._GetNamespaceId( w )
-                    
-                    return [ namespace_id ]
-                    
-                else:
-                    
-                    return []
-                    
-                
-            
-        
-        def GetSubtagIdsFromWildcard( w ):
-            
-            if '*' in w:
-                
-                like_param = ConvertWildcardToSQLiteLikeParameter( w )
-                
-                return self._STL( self._c.execute( 'SELECT subtag_id FROM subtags WHERE subtag LIKE ?;', ( like_param, ) ) )
-                
-            else:
-                
-                if self._SubtagExists( w ):
-                    
-                    subtag_id = self._GetSubtagId( w )
-                    
-                    return [ subtag_id ]
-                    
-                else:
-                    
-                    return []
-                    
-                
-            
-        
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
         
-        possible_subtag_ids = GetSubtagIdsFromWildcard( subtag_wildcard )
+        possible_subtag_ids = self._GetSubtagIdsFromWildcard( subtag_wildcard )
         
         if namespace_wildcard != '':
             
-            possible_namespace_ids = GetNamespaceIdsFromWildcard( namespace_wildcard )
+            possible_namespace_ids = self._GetNamespaceIdsFromWildcard( namespace_wildcard )
             
             return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
             
@@ -7088,6 +7040,29 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return namespace_id
+        
+    
+    def _GetNamespaceIdsFromWildcard( self, namespace_wildcard ):
+        
+        if '*' in namespace_wildcard:
+            
+            like_param = ConvertWildcardToSQLiteLikeParameter( namespace_wildcard )
+            
+            return self._STL( self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( like_param, ) ) )
+            
+        else:
+            
+            if self._NamespaceExists( namespace_wildcard ):
+                
+                namespace_id = self._GetNamespaceId( namespace_wildcard )
+                
+                return [ namespace_id ]
+                
+            else:
+                
+                return []
+                
+            
         
     
     def _GetNumsPending( self ):
@@ -7901,6 +7876,29 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return subtag_id
+        
+    
+    def _GetSubtagIdsFromWildcard( self, subtag_wildcard ):
+        
+        if '*' in subtag_wildcard:
+            
+            like_param = ConvertWildcardToSQLiteLikeParameter( subtag_wildcard )
+            
+            return self._STL( self._c.execute( 'SELECT subtag_id FROM subtags WHERE subtag LIKE ?;', ( like_param, ) ) )
+            
+        else:
+            
+            if self._SubtagExists( subtag_wildcard ):
+                
+                subtag_id = self._GetSubtagId( subtag_wildcard )
+                
+                return [ subtag_id ]
+                
+            else:
+                
+                return []
+                
+            
         
     
     def _GetTag( self, tag_id ):
@@ -12024,180 +12022,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
         
-        if version == 330:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ '4channel thread' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-                #
-                
-                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.DeleteLoginScripts( [ 'e-hentai login 2018.11.08' ] )
-                
-                #
-                
-                login_manager.OverwriteDefaultLoginScripts( [ 'e-hentai login 2018.11.12' ] )
-                
-                #
-                
-                login_manager.TryToLinkMissingLoginScripts( [ 'e-hentai.org' ] ) # remapping new login script
-                
-                #
-                
-                self._SetJSONDump( login_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 331:
-            
-            self._controller.pub( 'splash_set_status_subtext', 'updating some storage' )
-            
-            self._c.execute( 'ALTER TABLE json_dumps_named RENAME TO json_dumps_named_old;' )
-            
-            self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );' )
-            
-            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) SELECT dump_type, dump_name, version, ?, dump FROM json_dumps_named_old;', ( HydrusData.GetNow(), ) )
-            
-            self._c.execute( 'DROP TABLE json_dumps_named_old;' )
-            
-        
-        if version == 332:
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS file_viewing_stats ( hash_id INTEGER PRIMARY KEY, preview_views INTEGER, preview_viewtime INTEGER, media_views INTEGER, media_viewtime INTEGER );' )
-            self._CreateIndex( 'file_viewing_stats', [ 'preview_views' ] )
-            self._CreateIndex( 'file_viewing_stats', [ 'preview_viewtime' ] )
-            self._CreateIndex( 'file_viewing_stats', [ 'media_views' ] )
-            self._CreateIndex( 'file_viewing_stats', [ 'media_viewtime' ] )
-            
-        
-        if version == 337:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'gelbooru gallery favorites page', 'gelbooru gallery pool page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'gelbooru pools (folders) by id', 'gelbooru favorites by user id' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'gelbooru 0.2.5 file page parser', 'gelbooru 0.2.x gallery page parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.CLIENT_API_SERVICE )
-            
-            self._AddService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api', dictionary )
-            
-            client_api_manager = ClientAPI.APIManager()
-            
-            self._SetJSONDump( client_api_manager )
-            
-        
-        if version == 339:
-            
-            try:
-                
-                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.OverwriteDefaultLoginScripts( [ 'nijie.info login script' ] )
-                
-                #
-                
-                self._SetJSONDump( login_manager )
-                
-                #
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'nijie artist lookup' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'nijie artist page', 'nijie view', 'nijie view popup' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'gelbooru 0.1.11 file page parser', 'nijie artist gallery parser', 'nijie view parser', 'nijie view popup parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 341:
             
             try:
@@ -14000,6 +13824,35 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 389:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'derpibooru.org file page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         

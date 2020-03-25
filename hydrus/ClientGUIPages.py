@@ -464,6 +464,16 @@ class Page( QW.QSplitter ):
         self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
         self._controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
         
+        self._ConnectMediaPanelSignals()
+        
+    
+    def _ConnectMediaPanelSignals( self ):
+        
+        self._media_panel.refreshQuery.connect( self.RefreshQuery )
+        self._media_panel.focusMediaChanged.connect( self._preview_canvas.SetMedia )
+        
+        self._management_panel.ConnectMediaPanelSignals( self._media_panel )
+        
     
     def _SetPrettyStatus( self, status ):
         
@@ -479,7 +489,7 @@ class Page( QW.QSplitter ):
         
         previous_sizes = self.sizes()
         
-        self._preview_canvas.SetMedia( None )
+        self._preview_canvas.ClearMedia()
         
         self._media_panel.ClearPageKey()
         
@@ -505,6 +515,8 @@ class Page( QW.QSplitter ):
         self.setStretchFactor( 1, 1 )
         
         self._media_panel = new_panel
+        
+        self._ConnectMediaPanelSignals()
         
         self._controller.pub( 'refresh_page_name', self._page_key )
         
@@ -532,7 +544,7 @@ class Page( QW.QSplitter ):
         
         self._management_panel.CleanBeforeClose()
         
-        self._controller.pub( 'set_focus', self._page_key, None )
+        self._media_panel.SetFocusedMedia( None )
         
     
     def CleanBeforeDestroy( self ):
@@ -548,14 +560,14 @@ class Page( QW.QSplitter ):
         
         QP.Unsplit( self._search_preview_split, self._preview_panel )
         
-        self._controller.pub( 'set_focus', self._page_key, None )
+        self._media_panel.SetFocusedMedia( None )
         
     
     def EventUnsplit( self, event ):
         
         QP.Unsplit( self, self._search_preview_split )
         
-        self._controller.pub( 'set_focus', self._page_key, None )
+        self._media_panel.SetFocusedMedia( None )
         
     
     def GetAPIInfoDict( self, simple ):
@@ -713,19 +725,21 @@ class Page( QW.QSplitter ):
         
         self._management_panel.PageHidden()
         self._media_panel.PageHidden()
+        self._preview_canvas.PageHidden()
         
     
     def PageShown( self ):
         
         self._management_panel.PageShown()
         self._media_panel.PageShown()
+        self._preview_canvas.PageShown()
         
     
     def RefreshQuery( self ):
         
         if self._initialised:
             
-            self._controller.pub( 'refresh_query', self._page_key )
+            self._management_panel.RefreshQuery()
             
         
     
@@ -735,14 +749,14 @@ class Page( QW.QSplitter ):
         
         QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
-        
+    
     def ShowHideSplit( self ):
         
         if QP.SplitterVisibleCount( self ) > 1:
             
             QP.Unsplit( self, self._search_preview_split )
             
-            self._controller.pub( 'set_focus', self._page_key, None )
+            self._media_panel.SetFocusedMedia( None )
             
         else:
             
@@ -809,9 +823,9 @@ class Page( QW.QSplitter ):
             
         
     
-    def SetSynchronisedWait( self ):
+    def SynchronisedWaitSwitch( self ):
         
-        self._controller.pub( 'synchronised_wait_switch', self._page_key )
+        self._management_panel.SynchronisedWaitSwitch()
         
     
     def Start( self ):
@@ -2097,8 +2111,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for page in self._GetPages():
             
-            page_is_focused = is_selected and page == current_page
-            
             page_info_dict = page.GetSessionAPIInfoDict( is_selected = is_selected )
             
             my_pages_list.append( page_info_dict )
@@ -2153,8 +2165,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         if len( count ) > 0:
-            
-            total_problems = sum( count.values() )
             
             message = ''
             

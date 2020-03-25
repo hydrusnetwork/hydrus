@@ -8,6 +8,50 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 390</h3></li>
+				<ul>
+					<li>fixed a bug that was causing potential duplicates to be sometimes re-added between media groups that were previously set as false positive/not related. I apologise for the inconvenience this bug has caused. if you were hit by this, please reset your potential duplicate pairs (hit the cog button on the dupes page) and re-search, and the bad pairs should not be re-added again</li>
+					<li>fixed an issue where tag autocomplete entry in the form 'namespace-blah:' was replacing the hyphen or other 'collapsable' character to space, which then was not searching correctly for the _anything_ namespace search</li>
+					<li>'namespace:anything' searches now work when the namespace itself has a wildcard</li>
+					<li>fixed 'write' autocompletes not matching inputs with UPPERCASE letters</li>
+					<li>fixed adding tags that start with a colon (e.g. ":D") in 'write' autocompletes</li>
+					<li>it should now impossible to enter some 'kill my cpu' queries into tag autocomplete, such as '[asterisk]:anything', even if accidentally entered through the fast-add system</li>
+					<li>the 'cancel search' stop button that appears after a search takes three seconds is back to being neatly embedded beside the tag autocomplete input box</li>
+					<li>hitting the cancel search button now clears the non-interactable 'Loading' thumbnail media page (with its misleading 'Loading...' statusbar) and returns you to an empty thumbnail page</li>
+					<li>loading a favourite search with non-immediate search no longer loads the 'loading...' page. it also saves that new non-immediate status to the page session more reliably</li>
+					<li>reworked my linux build environment (pyinstaller=3.5, virtualenv=16.1) so that you can launch the built exe using a symlink</li>
+					<li>rolling out a first version of a requirements.txt, any feedback would be appreciated</li>
+					<li>rolling out another version of the derpibooru file page parser that no longer duplicates namespaced tags as unnamespaced, thank you to the user who submitted this</li>
+					<li>.</li>
+					<li>boring stuff:</li>
+					<li>.</li>
+					<li>moving old pubsub system to Qt signals:</li>
+					<li>all the 'refresh query' calls that do changes to the current file search across the program</li>
+					<li>the current file and tag domain update calls for search pages</li>
+					<li>the clear/set file focus calls when launching and exiting the media viewer browser or archive/delete filter</li>
+					<li>the way thumbnails send the current focused media to the preview media window</li>
+					<li>the way widgets with shortcuts-based tooltips are notified to update those tooltips when shortcuts change</li>
+					<li>the way a thumbgrid sends the current tags to be displayed in the 'selection tags' list</li>
+					<li>the way a thumbgrid adds newly imported files' tags to the 'selection tags' list as they fade in</li>
+					<li>the way the 'searching/waiting' search button is flipped on and off by shortcut. btw what should be the correct name + label for this button? should it really be an icon?</li>
+					<li>.</li>
+					<li>cleanup:</li>
+					<li>NOTE: the 'include' folder is renamed this week to 'hydrus'. if you have source patches, please update. as I further disentagle code in future, hydrus will ultimately move to typical nested folder/module structure</li>
+					<li>decoupled the shortcuts edit ui code from the controller and db, unified how shortcuts are edited, and eliminated db wait when booting shortcuts editing</li>
+					<li>decoupled the shortcuts manager from the controller, cleaned all the code, and moved to a nicer reference with proper typing hints</li>
+					<li>refactored the frame and media controls of clientguicanvas into separate files</li>
+					<li>renamed the hoverframes file to canvashoverframes and updated its classnames to 'canvas' rather than the old 'fullscreen'</li>
+					<li>fixed two wx->Qt typo artifacts in the login script edit ui</li>
+					<li>reduced some occasional idle memory bloat of clients that have large subscriptions</li>
+					<li>cleaned up how media-based taglists are appended with new media</li>
+					<li>removed some old booru object update code</li>
+					<li>some misc setmedia/clearmedia cleanup</li>
+					<li>misc search code cleanup</li>
+					<li>misc typing hints to clear up pylint confusion</li>
+					<li>misc tag autocomplete code cleanup</li>
+					<li>misc 'global' variable cleanup</li>
+					<li>misc gui code refactoring, cleanup and typing</li>
+				</ul>
 				<li><h3>version 389</h3></li>
 				<ul>
 					<li>downloaders:</li>

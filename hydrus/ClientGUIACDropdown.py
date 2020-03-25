@@ -60,7 +60,7 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
     
     ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
     
-    if search_text in ( '', ':', '*' ):
+    if ClientSearch.IsUnacceptableTagSearch( search_text ):
         
         pass
         
@@ -72,7 +72,9 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
             
             if namespace != '' and subtag in ( '', '*' ):
                 
-                predicates.insert( 0, ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) )
+                ( unprocessed_namespace, unprocessed_subtag ) = HydrusTags.SplitTag( entry_text )
+                
+                predicates.insert( 0, ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, unprocessed_namespace, inclusive ) )
                 
             elif explicit_wildcard:
                 
@@ -114,7 +116,7 @@ def InsertStaticPredicatesForWrite( predicates, parsed_search_text, tag_service_
     
     ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
     
-    if search_text in ( '', ':', '*' ) or subtag == '':
+    if ClientSearch.IsUnacceptableTagSearch( search_text ) or subtag == '':
         
         pass
         
@@ -149,7 +151,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_call
     
     ( raw_entry, inclusive, entry_text, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
     
-    if search_text in ( '', ':', '*' ):
+    if ClientSearch.IsUnacceptableTagSearch( search_text ):
         
         # if the user inputs '-' or similar, let's go to an empty list
         if raw_entry == '':
@@ -409,7 +411,7 @@ def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service
     
     ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = parsed_search_text
     
-    if search_text in ( '', ':', '*' ):
+    if ClientSearch.IsUnacceptableTagSearch( search_text ):
         
         search_text_for_current_cache = None
         
@@ -535,10 +537,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             
         else:
             
-            self._dropdown_window = QW.QFrame( self )
-            
-            self._dropdown_window.setFrameShape( QW.QFrame.NoFrame )
-            #self._dropdown_window.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
+            self._dropdown_window = QW.QWidget( self )
             
         
         self._dropdown_window.installEventFilter( self )
@@ -572,7 +571,6 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._initial_matches_fetched = False
         
-        self._move_hide_job = None
         self._refresh_list_job = None
         
         if self._float_mode:
@@ -667,26 +665,12 @@ class AutoCompleteDropdown( QW.QWidget ):
                 
                 self._ShowDropdown()
                 
-                if self._move_hide_job is not None:
-                    
-                    self._move_hide_job.Cancel()
-                    
-                    self._move_hide_job = None
-                    
-                
             else:
                 
                 self._HideDropdown()
                 
             
         except:
-            
-            if self._move_hide_job is not None:
-                
-                self._move_hide_job.Cancel()
-                
-                self._move_hide_job = None
-                
             
             raise
             
@@ -1143,6 +1127,9 @@ class AutoCompleteDropdown( QW.QWidget ):
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
+    fileServiceChanged = QC.Signal( bytes )
+    tagServiceChanged = QC.Signal( bytes )
+    
     def __init__( self, parent, file_service_key, tag_service_key ):
         
         self._file_service_key = file_service_key
@@ -1186,6 +1173,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._UpdateFileServiceLabel()
         
+        self.fileServiceChanged.emit( self._file_service_key )
+        
         self._SetListDirty()
         
     
@@ -1201,6 +1190,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._search_results_list.SetTagService( self._tag_service_key )
         
         self._UpdateTagServiceLabel()
+        
+        self.tagServiceChanged.emit( self._tag_service_key )
         
         self._SetListDirty()
         
@@ -1318,6 +1309,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
+    searchChanged = QC.Signal( ClientSearch.FileSearchContext )
+    searchCancelled = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUISearch.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUISearch.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
         
         self._page_key = page_key
@@ -1349,7 +1343,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._favourite_searches_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().star, self._FavouriteSearchesMenu )
         self._favourite_searches_button.setToolTip( 'Load or save a favourite search.' )
         
+        self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().stop, self.searchCancelled.emit )
+        
+        self._cancel_search_button.hide()
+        
         QP.AddToLayout( self._text_input_hbox, self._favourite_searches_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._text_input_hbox, self._cancel_search_button, CC.FLAGS_VCENTER )
+        
+        #
         
         self._include_current_tags = ClientGUICommon.OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags', start_on = tag_search_context.include_current_tags )
         self._include_current_tags.setToolTip( 'select whether to include current tags in the search' )
@@ -1401,10 +1402,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._dropdown_window.setLayout( vbox )
         
-        HG.client_controller.sub( self, 'SetSynchronisedWait', 'synchronised_wait_switch' )
-        
         HG.client_controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
         HG.client_controller.sub( self, 'IncludePending', 'notify_include_pending' )
+        
+        self._predicates_listbox.listBoxChanged.connect( self._SignalNewSearchState )
         
     
     def _AdvancedORInput( self ):
@@ -1479,7 +1480,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._under_construction_or_predicate = None
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            self._predicates_listbox.EnterPredicates( self._page_key, predicates )
             
         
         self._UpdateORButtons()
@@ -1493,9 +1494,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
         
-        if namespace != '' and subtag in ( '', '*' ):
+        if not ClientSearch.IsUnacceptableTagSearch( search_text ) and namespace != '' and subtag in ( '', '*' ):
             
-            entry_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
+            ( unprocessed_namespace, unprocessed_subtag ) = HydrusTags.SplitTag( entry_text )
+            
+            entry_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, unprocessed_namespace, inclusive )
             
         else:
             
@@ -1510,6 +1513,13 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
         self._BroadcastChoices( { entry_predicate }, shift_down )
+        
+    
+    def _SignalNewSearchState( self ):
+        
+        file_search_context = self.GetFileSearchContext()
+        
+        self.searchChanged.emit( file_search_context )
         
     
     def _CancelORConstruction( self ):
@@ -1527,12 +1537,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context.SetFileServiceKey( file_service_key )
         
-        HG.client_controller.pub( 'change_file_service', self._page_key, file_service_key )
-        
-        if self._synchronised.IsOn():
-            
-            HG.client_controller.pub( 'refresh_query', self._page_key )
-            
+        self._SignalNewSearchState()
         
     
     def _ChangeTagService( self, tag_service_key ):
@@ -1541,12 +1546,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context.SetTagServiceKey( tag_service_key )
         
-        HG.client_controller.pub( 'change_tag_service', self._page_key, tag_service_key )
-        
-        if self._synchronised.IsOn():
-            
-            HG.client_controller.pub( 'refresh_query', self._page_key )
-            
+        self._SignalNewSearchState()
         
     
     def _FavouriteSearchesMenu( self ):
@@ -1895,7 +1895,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._SetListDirty()
             
-            HG.client_controller.pub( 'refresh_query', self._page_key )
+            self._SignalNewSearchState()
             
         
     
@@ -1907,7 +1907,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._SetListDirty()
             
-            HG.client_controller.pub( 'refresh_query', self._page_key )
+            self._SignalNewSearchState()
             
         
     
@@ -1949,11 +1949,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
     
-    def SetSynchronisedWait( self, page_key ):
+    def SynchronisedWaitSwitch( self ):
         
-        if page_key == self._page_key:
+        self._synchronised.Flip()
+        
+    
+    def ShowCancelSearchButton( self, show ):
+        
+        if self._cancel_search_button.isVisible() != show:
             
-            self._synchronised.EventButton()
+            self._cancel_search_button.setVisible( show )
             
         
     
@@ -2046,8 +2051,6 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         
         self._DataHasChanged()
         
-        HG.client_controller.pub( 'refresh_query', self._page_key )
-        
     
     def _GetCurrentFileServiceKey( self ):
         
@@ -2064,6 +2067,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         predicate = term
         
         return predicate.ToString( render_for_user = True )
+        
+    
+    def _HasCurrentPagePredicates( self ):
+        
+        return True
         
     
     def _ProcessMenuPredicateEvent( self, command ):
@@ -2211,9 +2219,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         tag = HydrusTags.CleanTag( raw_entry )
         
-        explicit_wildcard = '*' in raw_entry
+        explicit_wildcard = '*' in tag
         
-        ( wildcard_text, search_text ) = ClientSearch.ConvertEntryTextToSearchText( raw_entry )
+        ( wildcard_text, search_text ) = ClientSearch.ConvertEntryTextToSearchText( tag )
         
         if explicit_wildcard:
             

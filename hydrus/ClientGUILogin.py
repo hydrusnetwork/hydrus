@@ -1167,7 +1167,9 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         ( name, url, body, self._downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
         
         self._name = ClientGUICommon.BetterStaticText( self, label = name )
+        
         self._url = QW.QLineEdit( self )
+        self._url.setReadOnly( True )
         
         self._body = QW.QPlainTextEdit( self )
         self._body.setReadOnly( True )
@@ -1194,7 +1196,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.SetMinClientSize( self._temp_variables, min_size )
         
         self._cookies = QW.QPlainTextEdit( self )
-        self._cookies.SetEditable( False )
+        self._cookies.setReadOnly( True )
         
         min_size = ClientGUIFunctions.ConvertTextToPixels( self._cookies, ( 64, 6 ) )
         

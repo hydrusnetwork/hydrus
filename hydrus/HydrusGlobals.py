@@ -7,8 +7,6 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
-qt_app_running = False
-
 no_daemons = False
 no_wal = False
 no_db_temp_files = False

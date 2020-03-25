@@ -469,7 +469,9 @@ def LaunchDirectory( path ):
             
             sbp_kwargs = HydrusData.GetSubprocessKWArgs()
             
-            process = subprocess.Popen( cmd, preexec_fn = os.setsid, **sbp_kwargs )
+            preexec_fn = getattr( os, 'setsid', None )
+            
+            process = subprocess.Popen( cmd, preexec_fn = preexec_fn, **sbp_kwargs )
             
             process.communicate()
             
@@ -510,8 +512,7 @@ def LaunchFile( path, launch_path = None ):
                 
                 cmd = shlex.split( complete_launch_path )
                 
-                # un-childs this new process
-                preexec_fn = os.setsid
+                preexec_fn = getattr( os, 'setsid', None )
                 
             
             if HG.subprocess_report_mode:

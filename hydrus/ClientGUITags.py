@@ -1421,13 +1421,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 tlws = ClientGUIFunctions.GetTLWParents( self )
                 
-                from . import ClientGUICanvas
+                from . import ClientGUICanvasFrame
                 
                 command_processed = False
                 
                 for tlw in tlws:
                     
-                    if isinstance( tlw, ClientGUICanvas.CanvasFrame ):
+                    if isinstance( tlw, ClientGUICanvasFrame.CanvasFrame ):
                         
                         tlw.TakeFocusForUser()
                         
@@ -1473,9 +1473,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
-            self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
+            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'tags' )
             
-            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.EnterTags, self.RemoveTags )
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self.EnterTags, self.RemoveTags )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
@@ -1893,7 +1893,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+            self._tags_box.SetTagsByMedia( self._media )
             
         
         def _MigrateTags( self ):
@@ -2076,7 +2076,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                 
             
-            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+            self._tags_box.SetTagsByMedia( self._media )
             
         
         def _FlipShowDeleted( self ):
@@ -2192,6 +2192,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._add_tag_box.CancelCurrentResultsFetchJob()
             
         
+        def ClearMedia( self ):
+            
+            self.SetMedia( set() )
+            
+        
         def EnterTags( self, tags, only_add = False ):
             
             if len( tags ) > 0:
@@ -2263,7 +2268,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+            self._tags_box.SetTagsByMedia( self._media )
             
         
         def RemoveTags( self, tags ):
@@ -2299,7 +2304,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if media is None:
                 
-                media = []
+                media = set()
                 
             
             self._media = media

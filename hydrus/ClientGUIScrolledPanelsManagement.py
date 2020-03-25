@@ -4121,9 +4121,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            text = 'This is experimental! Some custom colours in hydrus do not play well with QSS theming yet! All feedback on errors and any preferred systems is appreciated.'
-            text += os.linesep * 2
-            text += 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
+            text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
             
             st = ClientGUICommon.BetterStaticText( self, label = text )
             

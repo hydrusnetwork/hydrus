@@ -423,13 +423,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._last_phrase_used = ''
         self._last_dir_used = ''
         
-        self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
+        self._tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
         services_manager = HG.client_controller.services_manager
         
         self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
         
-        t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, include_counts = True )
+        t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, include_counts = True )
         
         self._tags_box.SetTagsBox( t )
         

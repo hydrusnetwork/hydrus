@@ -4,6 +4,7 @@ from . import ClientData
 from . import ClientGUIDragDrop
 from . import ClientFiles
 from . import ClientGUICanvas
+from . import ClientGUICanvasFrame
 from . import ClientGUICore as CGC
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
@@ -38,8 +39,15 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
+import typing
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
+    
+    selectedMediaTagPresentationChanged = QC.Signal( list, bool )
+    selectedMediaTagPresentationIncremented = QC.Signal( list )
+    
+    focusMediaChanged = QC.Signal( ClientMedia.Media )
+    refreshQuery = QC.Signal()
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
@@ -65,7 +73,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         self._shift_focused_media = None
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        HG.client_controller.sub( self, 'SetFocusedMedia', 'set_focus' )
         HG.client_controller.sub( self, 'Collect', 'collect_media' )
         HG.client_controller.sub( self, 'Sort', 'sort_media' )
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
@@ -74,9 +81,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         HG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
         HG.client_controller.sub( self, 'LaunchMediaViewerOnFocus', 'launch_media_viewer' )
         
-        self._due_a_forced_selection_pub = False
-        
-        self._PublishSelectionChange( force_reload = True )
+        self._had_changes_to_tag_presentation_while_hidden = False
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         
@@ -84,8 +89,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     def __bool__( self ):
         
         return QP.isValid( self )
-    
         
+    
     def _Archive( self ):
         
         hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_INBOX )
@@ -124,11 +129,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if len( media_results ) > 0:
             
-            canvas_frame = ClientGUICanvas.CanvasFrame( self.window() )
+            self.SetFocusedMedia( None )
+            
+            canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
             canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, media_results )
             
             canvas_frame.SetCanvas( canvas_window )
+            
+            canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
         
     
@@ -430,7 +439,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _FullScreen( self, first_media = None ):
+    def _LaunchMediaViewer( self, first_media = None ):
         
         if self._focused_media is not None:
             
@@ -472,11 +481,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             if first_media is not None and first_media.GetLocationsManager().IsLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
             
-            canvas_frame = ClientGUICanvas.CanvasFrame( self.window() )
+            self.SetFocusedMedia( None )
+            
+            canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
             canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, media_results, first_hash )
             
             canvas_frame.SetCanvas( canvas_window )
+            
+            canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
         
     
@@ -980,6 +993,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             if open_externally_media.GetLocationsManager().IsLocal():
                 
+                self.SetFocusedMedia( None )
+                
                 hash = open_externally_media.GetHash()
                 mime = open_externally_media.GetMime()
                 
@@ -992,8 +1007,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 launch_path = new_options.GetMimeLaunch( mime )
                 
                 HydrusPaths.LaunchFile( path, launch_path )
-                
-                HG.client_controller.pub( 'media_focus_went_to_external_program', self._page_key )
                 
             
         
@@ -1094,7 +1107,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _PublishSelectionChange( self, force_reload = False ):
+    def _PublishSelectionChange( self, tags_changed = False ):
         
         if HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
@@ -1107,22 +1120,20 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 tags_media = self._selected_media
                 
             
-            force_reload = force_reload or self._due_a_forced_selection_pub
+            tags_changed = tags_changed or self._had_changes_to_tag_presentation_while_hidden
             
-            HG.client_controller.pub( 'new_tags_selection', self._page_key, tags_media, force_reload = force_reload )
+            self.selectedMediaTagPresentationChanged.emit( tags_media, tags_changed )
+            
             HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
             
-            if force_reload:
+            if tags_changed:
                 
-                self._due_a_forced_selection_pub = False
+                self._had_changes_to_tag_presentation_while_hidden = False
                 
             
-        else:
+        elif tags_changed:
             
-            if force_reload:
-                
-                self._due_a_forced_selection_pub = True
-                
+            self._had_changes_to_tag_presentation_while_hidden = True
             
         
     
@@ -1130,12 +1141,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
-            HG.client_controller.pub( 'increment_tags_selection', self._page_key, medias )
+            self.selectedMediaTagPresentationIncremented.emit( medias )
+            
             HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
             
         else:
             
-            self._due_a_forced_selection_pub = True
+            self._had_changes_to_tag_presentation_while_hidden = True
             
         
     
@@ -1597,7 +1609,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             publish_media = self._focused_media.GetDisplayMedia()
             
         
-        HG.client_controller.pub( 'preview_changed', self._page_key, publish_media )
+        self.focusMediaChanged.emit( publish_media )
         
     
     def _ScrollToMedia( self, media ):
@@ -1777,27 +1789,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if page_key == self._page_key:
             
-            self._FullScreen()
+            self._LaunchMediaViewer()
             
         
     
     def PageHidden( self ):
         
-        HG.client_controller.pub( 'preview_changed', self._page_key, None )
+        pass
         
     
     def PageShown( self ):
-        
-        if self._focused_media is None:
-            
-            publish_media = None
-            
-        else:
-            
-            publish_media = self._focused_media.GetDisplayMedia()
-            
-        
-        HG.client_controller.pub( 'preview_changed', self._page_key, publish_media )
         
         self._PublishSelectionChange()
         
@@ -2082,7 +2083,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if we_were_file_or_tag_affected:
             
-            self._PublishSelectionChange( force_reload = True )
+            self._PublishSelectionChange( tags_changed = True )
             
         
     
@@ -2101,9 +2102,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     self._RecalculateVirtualSize()
                     
                 
-                self._PublishSelectionChange( force_reload = True )
+                self._PublishSelectionChange( tags_changed = True )
                 
             
+        
+    
+    def PublishSelectionChange( self ):
+        
+        self._PublishSelectionChange()
         
     
     def RemoveMedia( self, page_key, hashes ):
@@ -2129,7 +2135,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         return self._SetDuplicates( duplicate_type, media_group = media_group )
         
     
-    def SetFocusedMedia( self, page_key, media ):
+    def SetFocusedMedia( self, media ):
         
         pass
         
@@ -2938,7 +2944,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         if result not in ( QC.Qt.IgnoreAction, ):
                             
-                            HG.client_controller.pub( 'media_focus_went_to_external_program', self._page_key )
+                            self.SetFocusedMedia( None )
                             
                         
                     
@@ -2992,7 +2998,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if locations_manager.IsLocal():
                 
-                self._FullScreen( t )
+                self._LaunchMediaViewer( t )
                 
             elif len( locations_manager.GetCurrentRemote() ) > 0:
                 
@@ -3489,7 +3495,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'Refresh the current search.', HG.client_controller.pub, 'refresh_query', self._page_key )
+        ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'Refresh the current search.', self.refreshQuery.emit )
         
         if len( self._sorted_media ) > 0:
             
@@ -4095,8 +4101,8 @@ class MediaPanelThumbnails( MediaPanel ):
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, False )
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Delete, self._Delete )
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Delete, self._Delete )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Return, self._FullScreen )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Enter, self._FullScreen )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Return, self._LaunchMediaViewer )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Enter, self._LaunchMediaViewer )
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
@@ -4130,30 +4136,27 @@ class MediaPanelThumbnails( MediaPanel ):
         
         
     
-    def SetFocusedMedia( self, page_key, media ):
+    def SetFocusedMedia( self, media ):
         
-        MediaPanel.SetFocusedMedia( self, page_key, media )
+        MediaPanel.SetFocusedMedia( self, media )
         
-        if page_key == self._page_key:
+        if media is None:
             
-            if media is None:
+            self._SetFocusedMedia( None )
+            
+        else:
+            
+            try:
                 
-                self._SetFocusedMedia( None )
+                my_media = self._GetMedia( media.GetHashes() )[0]
                 
-            else:
+                self._HitMedia( my_media, False, False )
                 
-                try:
-                    
-                    my_media = self._GetMedia( media.GetHashes() )[0]
-                    
-                    self._HitMedia( my_media, False, False )
-                    
-                    self._ScrollToMedia( self._focused_media )
-                    
-                except:
-                    
-                    pass
-                    
+                self._ScrollToMedia( self._focused_media )
+                
+            except:
+                
+                pass
                 
             
         
