@@ -43,7 +43,7 @@ import typing
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
-    selectedMediaTagPresentationChanged = QC.Signal( list, bool )
+    selectedMediaTagPresentationChanged = QC.Signal( object, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
     
     focusMediaChanged = QC.Signal( ClientMedia.Media )
@@ -1141,7 +1141,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
-            self.selectedMediaTagPresentationIncremented.emit( medias )
+            self.selectedMediaTagPresentationIncremented.emit( list( medias ) )
             
             HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
             
