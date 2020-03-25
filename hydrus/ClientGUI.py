@@ -440,7 +440,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
-        self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
         
@@ -2497,18 +2496,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _ManageShortcuts( self ):
-        
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage shortcuts' ) as dlg:
-            
-            panel = ClientGUIShortcutControls.ManageShortcutsPanel( dlg )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
-            
-        
-    
     def _ManageSubscriptions( self ):
         
         def qt_do_it( subscriptions, original_pause_status ):
@@ -3270,13 +3257,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _SetSynchronisedWait( self ):
+    def _SynchronisedWaitSwitch( self ):
         
         page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
-            page.SetSynchronisedWait()
+            page.SynchronisedWaitSwitch()
             
         
     
@@ -4563,7 +4550,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self._ManageOptions )
-        ClientGUIMenus.AppendMenuItem( menu, 'shortcuts', 'Edit the shortcuts your client responds to.', self._ManageShortcuts )
+        ClientGUIMenus.AppendMenuItem( menu, 'shortcuts', 'Edit the shortcuts your client responds to.', ClientGUIShortcutControls.ManageShortcuts, self )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -5251,7 +5238,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif action == 'synchronised_wait_switch':
                 
-                self._SetSynchronisedWait()
+                self._SynchronisedWaitSwitch()
                 
             elif action == 'set_media_focus':
                 

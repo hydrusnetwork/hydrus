@@ -1,7 +1,6 @@
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUIDragDrop
-from . import ClientGUICanvas
 from . import ClientGUICommon
 from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
@@ -14,6 +13,7 @@ from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIShortcuts
 from . import ClientGUIShortcutControls
 from . import ClientMedia
+from . import ClientRatings
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -24,7 +24,230 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 from . import QtPorting as QP
 
-class FullscreenHoverFrame( QW.QFrame ):
+class RatingLikeCanvas( ClientGUICommon.RatingLike ):
+    
+    def __init__( self, parent, service_key, canvas_key ):
+        
+        ClientGUICommon.RatingLike.__init__( self, parent, service_key )
+        
+        self._canvas_key = canvas_key
+        self._current_media = None
+        self._rating_state = None
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        name = service.GetName()
+        
+        self.setToolTip( name )
+        
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self._current_media is not None:
+            
+            self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
+            
+            ClientRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
+            
+        
+        self._dirty = False
+        
+    
+    def EventLeftDown( self, event ):
+        
+        if self._current_media is not None:
+            
+            if self._rating_state == ClientRatings.LIKE: rating = None
+            else: rating = 1
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def EventRightDown( self, event ):
+        
+        if self._current_media is not None:
+            
+            if self._rating_state == ClientRatings.DISLIKE: rating = None
+            else: rating = 0
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+                
+                for content_update in content_updates:
+                    
+                    ( data_type, action, row ) = content_update.ToTuple()
+                    
+                    if data_type == HC.CONTENT_TYPE_RATINGS:
+                        
+                        hashes = content_update.GetHashes()
+                        
+                        if len( self._hashes.intersection( hashes ) ) > 0:
+                            
+                            self._dirty = True
+                            
+                            self.update()
+                            
+                            return
+                            
+                        
+                    
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+            if self._current_media is None:
+                
+                self._hashes = set()
+                
+            else:
+                
+                self._hashes = self._current_media.GetHashes()
+                
+            
+            self._dirty = True
+            
+            self.update()
+            
+        
+    
+class RatingNumericalCanvas( ClientGUICommon.RatingNumerical ):
+
+    def __init__( self, parent, service_key, canvas_key ):
+        
+        ClientGUICommon.RatingNumerical.__init__( self, parent, service_key )
+        
+        self._canvas_key = canvas_key
+        self._current_media = None
+        self._rating_state = None
+        self._rating = None
+        
+        self._hashes = set()
+        
+        name = self._service.GetName()
+        
+        self.setToolTip( name )
+        
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _ClearRating( self ):
+        
+        ClientGUICommon.RatingNumerical._ClearRating( self )
+        
+        if self._current_media is not None:
+            
+            rating = None
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self._current_media is not None:
+            
+            ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
+            
+            ClientRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+            
+        
+        self._dirty = False
+        
+    
+    def _SetRating( self, rating ):
+        
+        ClientGUICommon.RatingNumerical._SetRating( self, rating )
+        
+        if self._current_media is not None and rating is not None:
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    ( data_type, action, row ) = content_update.ToTuple()
+                    
+                    if data_type == HC.CONTENT_TYPE_RATINGS:
+                        
+                        hashes = content_update.GetHashes()
+                        
+                        if len( self._hashes.intersection( hashes ) ) > 0:
+                            
+                            self._dirty = True
+                            
+                            self.update()
+                            
+                            return
+                            
+                        
+                    
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+            if self._current_media is None:
+                
+                self._hashes = set()
+                
+            else:
+                
+                self._hashes = self._current_media.GetHashes()
+                
+            
+            self._dirty = True
+            
+            self.update()
+            
+        
+    
+class CanvasHoverFrame( QW.QFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
@@ -106,7 +329,7 @@ class FullscreenHoverFrame( QW.QFrame ):
         current_focus_tlw = QW.QApplication.activeWindow()
         
         focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlw, self._my_canvas.window(), through_tlws = True )
-        focus_has_right_window_type = isinstance( current_focus_tlw, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
+        focus_has_right_window_type = isinstance( current_focus_tlw, ( ClientGUITopLevelWindows.FrameThatResizesWithHovers, CanvasHoverFrame ) )
         
         focus_is_good = focus_is_on_descendant and focus_has_right_window_type
         
@@ -124,8 +347,6 @@ class FullscreenHoverFrame( QW.QFrame ):
                     
                 
             
-        
-        new_options = HG.client_controller.new_options
         
         if self._always_on_top:
             
@@ -212,8 +433,6 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             dialog_is_open = ClientGUIFunctions.DialogIsOpen()
             
-            mime = self._current_media.GetMime()
-            
             mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
             
             # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
@@ -275,11 +494,11 @@ class FullscreenHoverFrame( QW.QFrame ):
             
         
     
-class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
+class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         self._always_on_top = True
         
@@ -557,11 +776,11 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
             
         
     
-class FullscreenHoverFrameTop( FullscreenHoverFrame ):
+class CanvasHoverFrameTop( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         self._current_zoom = 1.0
         self._current_index_string = ''
@@ -633,18 +852,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width * 0.2 ), 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
-        
-    
-    def _ManageShortcuts( self ):
-        
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage shortcuts' ) as dlg:
-            
-            panel = ClientGUIShortcutControls.ManageShortcutsPanel( dlg )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
-            
         
     
     def _PopulateCenterButtons( self ):
@@ -823,7 +1030,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         menu = QW.QMenu()
 
-        ClientGUIMenus.AppendMenuItem( menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts )
+        ClientGUIMenus.AppendMenuItem( menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', ClientGUIShortcutControls.ManageShortcuts, self )
         
         if len( custom_shortcuts_names ) > 0:
             
@@ -894,7 +1101,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+            for ( service_key, content_updates ) in list( service_keys_to_content_updates.items() ):
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -927,7 +1134,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         if canvas_key == self._canvas_key:
             
-            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
             self._ResetText()
             
@@ -950,7 +1157,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
         
     
-class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
+class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
     
     def _Archive( self ):
         
@@ -964,7 +1171,7 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
         
         QP.AddToLayout( self._top_hbox, self._back_button, CC.FLAGS_VCENTER )
         
-        FullscreenHoverFrameTop._PopulateLeftButtons( self )
+        CanvasHoverFrameTop._PopulateLeftButtons( self )
         
         self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ), self._canvas_key )
         self._skip_button.SetToolTipWithShortcuts( 'skip', 'archive_delete_filter_skip' )
@@ -978,7 +1185,7 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
         self._archive_button.setToolTip( 'archive' )
         
     
-class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
+class CanvasHoverFrameTopNavigable( CanvasHoverFrameTop ):
     
     def _PopulateLeftButtons( self ):
         
@@ -995,7 +1202,7 @@ class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
         QP.AddToLayout( self._top_hbox, self._next_button, CC.FLAGS_VCENTER )
         
     
-class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable ):
+class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
     
     def _PopulateLeftButtons( self ):
         
@@ -1004,7 +1211,7 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
         
         QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_VCENTER )
         
-        FullscreenHoverFrameTopNavigable._PopulateLeftButtons( self )
+        CanvasHoverFrameTopNavigable._PopulateLeftButtons( self )
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'show a different pair', 'duplicate_filter_skip' )
@@ -1012,7 +1219,7 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
         QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_VCENTER )
         
     
-class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):
+class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
     
     def _PopulateLeftButtons( self ):
         
@@ -1021,7 +1228,7 @@ class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):
         
         QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_VCENTER )
         
-        FullscreenHoverFrameTopNavigable._PopulateLeftButtons( self )
+        CanvasHoverFrameTopNavigable._PopulateLeftButtons( self )
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'last', 'view_last' )
@@ -1029,11 +1236,11 @@ class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):
         QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_VCENTER )
         
     
-class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
+class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         vbox = QP.VBoxLayout()
         
@@ -1074,7 +1281,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             service_key = service.GetServiceKey()
             
-            control = ClientGUICommon.RatingLikeCanvas( self, service_key, canvas_key )
+            control = RatingLikeCanvas( self, service_key, canvas_key )
             
             QP.AddToLayout( like_hbox, control, CC.FLAGS_NONE )
             
@@ -1089,7 +1296,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             service_key = service.GetServiceKey()
             
-            control = ClientGUICommon.RatingNumericalCanvas( self, service_key, canvas_key )
+            control = RatingNumericalCanvas( self, service_key, canvas_key )
             
             hbox = QP.HBoxLayout( spacing = 0 )
             
@@ -1247,7 +1454,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         if canvas_key == self._canvas_key:
             
-            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
             self._ResetData()
             
@@ -1258,15 +1465,15 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
         
     
-class FullscreenHoverFrameTags( FullscreenHoverFrame ):
+class CanvasHoverFrameTags( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         vbox = QP.VBoxLayout()
         
-        self._tags = ClientGUIListBoxes.ListBoxTagsSelectionHoverFrame( self, self._canvas_key )
+        self._tags = ClientGUIListBoxes.ListBoxTagsMediaHoverFrame( self, self._canvas_key )
         
         QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
@@ -1305,7 +1512,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         if self._current_media is not None:
             
-            self._tags.SetTagsByMedia( [ self._current_media ], force_reload = True )
+            self._tags.SetTagsByMedia( [ self._current_media ] )
             
         
     
@@ -1338,7 +1545,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         if canvas_key == self._canvas_key:
             
-            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
             self._ResetTags()
             

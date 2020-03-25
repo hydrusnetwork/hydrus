@@ -5,6 +5,7 @@ from . import ClientConstants as CC
 from . import ClientDefaults
 from . import ClientGUIACDropdown
 from . import ClientGUICanvas
+from . import ClientGUICanvasFrame
 from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUICore as CGC
@@ -193,16 +194,6 @@ def CreateManagementControllerQuery( page_name, file_service_key, file_search_co
     management_controller.SetVariable( 'synchronised', True )
     
     return management_controller
-    
-def CreateManagementPanel( parent, page, controller, management_controller ):
-    
-    management_type = management_controller.GetType()
-    
-    management_class = management_panel_types_to_classes[ management_type ]
-    
-    management_panel = management_class( parent, page, controller, management_controller )
-    
-    return management_panel
     
 class ManagementController( HydrusSerialisable.SerialisableBase ):
     
@@ -666,21 +657,17 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER ] = ManagementController
 
-class ListBoxTagsSelectionManagementPanel( ClientGUIListBoxes.ListBoxTagsSelection ):
+class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
     def __init__( self, parent, management_controller: ManagementController, page_key, tag_display_type, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
         
-        ClientGUIListBoxes.ListBoxTagsSelection.__init__( self, parent, tag_display_type, include_counts = True )
+        ClientGUIListBoxes.ListBoxTagsMedia.__init__( self, parent, tag_display_type, include_counts = True )
         
         self._management_controller = management_controller
         self._minimum_height_num_chars = 15
         
         self._page_key = page_key
         self._tag_autocomplete = tag_autocomplete
-        
-        HG.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
-        HG.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HG.client_controller.sub( self, 'ChangeTagServicePubsub', 'change_tag_service' )
         
     
     def _Activate( self ):
@@ -698,16 +685,21 @@ class ListBoxTagsSelectionManagementPanel( ClientGUIListBoxes.ListBoxTagsSelecti
         return self._management_controller.GetKey( 'file_service' )
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Optional[ typing.Set[ ClientSearch.Predicate ] ]:
+    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
         
         if self._tag_autocomplete is None:
             
-            return None
+            return set()
             
         else:
             
             return self._tag_autocomplete.GetPredicates()
             
+        
+    
+    def _HasCurrentPagePredicates( self ):
+        
+        return self._tag_autocomplete is not None
         
     
     def _ProcessMenuPredicateEvent( self, command ):
@@ -729,30 +721,6 @@ class ListBoxTagsSelectionManagementPanel( ClientGUIListBoxes.ListBoxTagsSelecti
         elif command == 'remove_exclude_predicates':
             
             HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
-            
-        
-    
-    def ChangeTagServicePubsub( self, page_key, service_key ):
-        
-        if page_key == self._page_key:
-            
-            self.ChangeTagService( service_key )
-            
-        
-    
-    def IncrementTagsByMediaPubsub( self, page_key, media ):
-        
-        if page_key == self._page_key:
-            
-            self.IncrementTagsByMedia( media )
-            
-        
-    
-    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
-        
-        if page_key == self._page_key:
-            
-            self.SetTagsByMedia( media, force_reload = force_reload )
             
         
     
@@ -785,6 +753,8 @@ class ManagementPanel( QW.QScrollArea ):
         self._page = page
         self._page_key = self._management_controller.GetKey( 'page' )
         
+        self._current_selection_tags_list = None
+        
         self._media_sort = ClientGUISearch.MediaSortControl( self, management_controller = self._management_controller )
         
         silent_collect = not self.SHOW_COLLECT
@@ -794,6 +764,17 @@ class ManagementPanel( QW.QScrollArea ):
         if not self.SHOW_COLLECT:
             
             self._media_collect.hide()
+            
+        
+    
+    def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
+        
+        if self._current_selection_tags_list is not None:
+            
+            media_panel.selectedMediaTagPresentationChanged.connect( self._current_selection_tags_list.SetTagsByMediaFromMediaPanel )
+            media_panel.selectedMediaTagPresentationIncremented.connect( self._current_selection_tags_list.IncrementTagsByMedia )
+            
+            media_panel.PublishSelectionChange()
             
         
     
@@ -816,11 +797,11 @@ class ManagementPanel( QW.QScrollArea ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        t = ListBoxTagsSelectionManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
+        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
         
-        tags_box.SetTagsBox( t )
+        tags_box.SetTagsBox( self._current_selection_tags_list )
         
         QP.AddToLayout( sizer, tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -853,6 +834,11 @@ class ManagementPanel( QW.QScrollArea ):
             
         
     
+    def RefreshQuery( self ):
+        
+        pass
+        
+    
     def SetSearchFocus( self ):
         
         pass
@@ -871,10 +857,25 @@ class ManagementPanel( QW.QScrollArea ):
         pass
         
     
+    def SynchronisedWaitSwitch( self ):
+        
+        pass
+        
+    
     def REPEATINGPageUpdate( self ):
         
         pass
         
+    
+def CreateManagementPanel( parent, page, controller, management_controller ) -> ManagementPanel:
+    
+    management_type = management_controller.GetType()
+    
+    management_class = management_panel_types_to_classes[ management_type ]
+    
+    management_panel = management_class( parent, page, controller, management_controller )
+    
+    return management_panel
     
 def WaitOnDupeFilterJob( job_key ):
     
@@ -1088,7 +1089,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         QP.AddToLayout( vbox, self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, QW.QWidget( self._main_right_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._MakeCurrentSelectionTagsBox( vbox )
         
         self._main_right_panel.setLayout( vbox )
         
@@ -1101,8 +1102,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self.widget().setLayout( vbox )
         
         self._controller.sub( self, 'RefreshAllNumbers', 'refresh_dupe_page_numbers' )
-        self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
+        
+        self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
         
     
     def _EditMergeOptions( self, duplicate_type ):
@@ -1139,7 +1141,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
         
-        canvas_frame = ClientGUICanvas.CanvasFrame( self.window() )
+        canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         
         canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context, both_files_match )
         
@@ -1452,12 +1454,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._maintenance_numbers_dirty = True
         
     
-    def RefreshQuery( self, page_key ):
+    def RefreshQuery( self ):
         
-        if page_key == self._page_key:
-            
-            self._SearchDomainUpdated()
-            
+        self._SearchDomainUpdated()
         
     
     def REPEATINGPageUpdate( self ):
@@ -1471,6 +1470,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._RefreshDuplicateCounts()
             
+        
+    
+    def SearchChanged( self, file_search_context: ClientSearch.FileSearchContext ):
+        
+        self._SearchDomainUpdated()
         
     
     def SearchImmediately( self, page_key, value ):
@@ -1491,8 +1495,6 @@ class ManagementPanelImporter( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        self._controller.sub( self, 'RefreshSort', 'refresh_query' )
-        
     
     def _UpdateImportStatus( self ):
         
@@ -1511,12 +1513,9 @@ class ManagementPanelImporter( ManagementPanel ):
         self._UpdateImportStatus()
         
     
-    def RefreshSort( self, page_key ):
+    def RefreshQuery( self ):
         
-        if page_key == self._page_key:
-            
-            self._media_sort.BroadcastSort()
-            
+        self._media_sort.BroadcastSort()
         
     
     def REPEATINGPageUpdate( self ):
@@ -3782,8 +3781,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._contents.rightClicked.connect( self.EventRowRightClick )
         
-        self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
-        
     
     def _CheckAll( self ):
         
@@ -4397,12 +4394,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
     
-    def RefreshQuery( self, page_key ):
+    def RefreshQuery( self ):
         
-        if page_key == self._page_key:
-            
-            self._DrawCurrentPetition()
-            
+        self._DrawCurrentPetition()
         
     
     def Start( self ):
@@ -4434,16 +4428,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, media_callable = self._page.GetMedia, synchronised = synchronised )
             
-            self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelSearch )
+            self._tag_autocomplete.searchCancelled.connect( self._CancelSearch )
             
-            self._cancel_search_button.hide()
-            
-            hbox = QP.HBoxLayout()
-            
-            QP.AddToLayout( hbox, self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( hbox, self._cancel_search_button, CC.FLAGS_VCENTER )
-            
-            self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._search_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
         vbox = QP.VBoxLayout()
@@ -4461,37 +4448,55 @@ class ManagementPanelQuery( ManagementPanel ):
         self.widget().setLayout( vbox )
         
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
-        self._controller.sub( self, 'ChangeFileServicePubsub', 'change_file_service' )
+        
+        if self._search_enabled:
+            
+            self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
+            
+            self._tag_autocomplete.tagServiceChanged.connect( self.SetFileServiceKey )
+            
         
     
     def _CancelSearch( self ):
         
-        self._query_job_key.Cancel()
-        
-        self._UpdateCancelButton()
+        if self._search_enabled:
+            
+            self._query_job_key.Cancel()
+            
+            file_search_context = self._tag_autocomplete.GetFileSearchContext()
+            
+            file_service_key = file_search_context.GetFileServiceKey()
+            
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+            
+            self._page.SwapMediaPanel( panel )
+            
+            self._UpdateCancelButton()
+            
         
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
         if self._search_enabled:
             
-            t = ListBoxTagsSelectionManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE, tag_autocomplete = self._tag_autocomplete )
+            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE, tag_autocomplete = self._tag_autocomplete )
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
             tag_service_key = file_search_context.GetTagSearchContext().service_key
             
-            t.ChangeTagService( tag_service_key )
+            self._current_selection_tags_list.ChangeTagService( tag_service_key )
+            
+            self._tag_autocomplete.tagServiceChanged.connect( self._current_selection_tags_list.ChangeTagService )
             
         else:
             
-            t = ListBoxTagsSelectionManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
+            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
             
         
-        tags_box.SetTagsBox( t )
+        tags_box.SetTagsBox( self._current_selection_tags_list )
         
         QP.AddToLayout( sizer, tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -4504,11 +4509,15 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            if self._management_controller.GetVariable( 'synchronised' ):
-                
-                file_search_context = self._tag_autocomplete.GetFileSearchContext()
-                
-                self._management_controller.SetVariable( 'file_search_context', file_search_context )
+            file_search_context = self._tag_autocomplete.GetFileSearchContext()
+            
+            self._management_controller.SetVariable( 'file_search_context', file_search_context )
+            
+            synchronised = self._tag_autocomplete.IsSynchronised()
+            
+            self._management_controller.SetVariable( 'synchronised', synchronised )
+            
+            if synchronised:
                 
                 file_service_key = file_search_context.GetFileServiceKey()
                 
@@ -4540,16 +4549,9 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            do_layout = False
-            
             if self._query_job_key.IsDone():
                 
-                if self._cancel_search_button.isVisible():
-                    
-                    self._cancel_search_button.hide()
-                    
-                    do_layout = True
-                    
+                self._tag_autocomplete.ShowCancelSearchButton( False )
                 
             else:
                 
@@ -4557,29 +4559,16 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 WAIT_PERIOD = 3.0
                 
-                can_show = HydrusData.TimeHasPassedFloat( self._query_job_key.GetCreationTime() + WAIT_PERIOD )
+                search_is_lagging = HydrusData.TimeHasPassedFloat( self._query_job_key.GetCreationTime() + WAIT_PERIOD )
                 
-                if can_show and not self._cancel_search_button.isVisible():
-                    
-                    self._cancel_search_button.show()
-                    
-                    do_layout = True
-                    
-                
-            
-            if do_layout:
-                
-                self._tag_autocomplete.ForceSizeCalcNow()
+                self._tag_autocomplete.ShowCancelSearchButton( search_is_lagging )
                 
             
         
     
-    def ChangeFileServicePubsub( self, page_key, service_key ):
+    def SetFileServiceKey( self, service_key: bytes ):
         
-        if page_key == self._page_key:
-            
-            self._management_controller.SetKey( 'file_service', service_key )
-            
+        self._management_controller.SetKey( 'file_service', service_key )
         
     
     def CleanBeforeClose( self ):
@@ -4618,12 +4607,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def RefreshQuery( self, page_key ):
+    def RefreshQuery( self ):
         
-        if page_key == self._page_key:
-            
-            self._RefreshQuery()
-            
+        self._RefreshQuery()
         
     
     def SearchImmediately( self, page_key, value ):
@@ -4634,6 +4620,11 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._RefreshQuery()
             
+        
+    
+    def SearchChanged( self, file_search_context: ClientSearch.FileSearchContext ):
+        
+        self._RefreshQuery()
         
     
     def SetSearchFocus( self ):
@@ -4668,7 +4659,15 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
             
-            QP.CallAfter( self._RefreshQuery )
+            QP.CallAfter( self.RefreshQuery )
+            
+        
+    
+    def SynchronisedWaitSwitch( self ):
+        
+        if self._search_enabled:
+            
+            self._tag_autocomplete.SynchronisedWaitSwitch()
             
         
     

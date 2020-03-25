@@ -2,6 +2,7 @@ from . import ClientConstants as CC
 from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import ClientGUIMenus
+from . import ClientGUIShortcuts
 from . import ClientPaths
 from . import ClientRatings
 from . import HydrusConstants as HC
@@ -106,7 +107,10 @@ class ShortcutAwareToolTipMixin( object ):
         self._tt = ''
         self._simple_shortcut_command = None
         
-        HG.client_controller.sub( self, 'NotifyNewShortcuts', 'notify_new_shortcuts_gui' )
+        if ClientGUIShortcuts.shortcuts_manager_initialised():
+            
+            ClientGUIShortcuts.shortcuts_manager().shortcutsChanged.connect( self.RefreshToolTip )
+            
         
     
     def _RefreshToolTip( self ):
@@ -118,7 +122,7 @@ class ShortcutAwareToolTipMixin( object ):
             tt += os.linesep * 2
             tt += '----------'
             
-            names_to_shortcuts = HG.client_controller.shortcuts_manager.GetNamesToShortcuts( self._simple_shortcut_command )
+            names_to_shortcuts = ClientGUIShortcuts.shortcuts_manager().GetNamesToShortcuts( self._simple_shortcut_command )
             
             if len( names_to_shortcuts ) > 0:
                 
@@ -154,9 +158,12 @@ class ShortcutAwareToolTipMixin( object ):
         self._tt_callable( tt )
         
     
-    def NotifyNewShortcuts( self ):
+    def RefreshToolTip( self ):
         
-        self._RefreshToolTip()
+        if ClientGUIShortcuts.shortcuts_manager_initialised():
+            
+            self._RefreshToolTip()
+            
         
     
     def SetToolTipWithShortcuts( self, tt, simple_shortcut_command ):
@@ -1561,9 +1568,7 @@ class OnOffButton( QW.QPushButton ):
         
         self.setProperty( 'hydrus_on', start_on )
         
-        self.clicked.connect( self.EventButton )
-        
-        HG.client_controller.sub( self, 'HitButton', 'hit_on_off_button' )
+        self.clicked.connect( self.Flip )
         
     
     def _SetValue( self, value ):
@@ -1584,7 +1589,7 @@ class OnOffButton( QW.QPushButton ):
         self.style().polish( self )
         
     
-    def EventButton( self ):
+    def Flip( self ):
         
         new_value = not self.property( 'hydrus_on' )
         
@@ -1702,117 +1707,6 @@ class RatingLikeDialog( RatingLike ):
         self._dirty = True
         
         self.update()
-        
-    
-class RatingLikeCanvas( RatingLike ):
-
-    def __init__( self, parent, service_key, canvas_key ):
-        
-        RatingLike.__init__( self, parent, service_key )
-        
-        self._canvas_key = canvas_key
-        self._current_media = None
-        self._rating_state = None
-        
-        service = HG.client_controller.services_manager.GetService( service_key )
-        
-        name = service.GetName()
-        
-        self.setToolTip( name )
-        
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
-        
-    
-    def _Draw( self, painter ):
-        
-        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        if self._current_media is not None:
-            
-            self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
-            
-            ClientRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
-            
-        
-        self._dirty = False
-        
-    
-    def EventLeftDown( self, event ):
-        
-        if self._current_media is not None:
-            
-            if self._rating_state == ClientRatings.LIKE: rating = None
-            else: rating = 1
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
-            
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
-            
-        
-    
-    def EventRightDown( self, event ):
-        
-        if self._current_media is not None:
-            
-            if self._rating_state == ClientRatings.DISLIKE: rating = None
-            else: rating = 0
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
-            
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
-            
-        
-    
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
-        
-        if self._current_media is not None:
-            
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
-                
-                for content_update in content_updates:
-                    
-                    ( data_type, action, row ) = content_update.ToTuple()
-                    
-                    if data_type == HC.CONTENT_TYPE_RATINGS:
-                        
-                        hashes = content_update.GetHashes()
-                        
-                        if len( self._hashes.intersection( hashes ) ) > 0:
-                            
-                            self._dirty = True
-                            
-                            self.update()
-                            
-                            return
-                            
-                        
-                    
-                
-            
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_media = media
-            
-            if self._current_media is None:
-                
-                self._hashes = set()
-                
-            else:
-                
-                self._hashes = self._current_media.GetHashes()
-                
-            
-            self._dirty = True
-            
-            self.update()
-            
         
     
 class RatingNumerical( QW.QWidget ):
@@ -2008,118 +1902,6 @@ class RatingNumericalDialog( RatingNumerical ):
         self.update()
         
     
-class RatingNumericalCanvas( RatingNumerical ):
-
-    def __init__( self, parent, service_key, canvas_key ):
-        
-        RatingNumerical.__init__( self, parent, service_key )
-        
-        self._canvas_key = canvas_key
-        self._current_media = None
-        self._rating_state = None
-        self._rating = None
-        
-        self._hashes = set()
-        
-        name = self._service.GetName()
-        
-        self.setToolTip( name )
-        
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
-        
-    
-    def _ClearRating( self ):
-        
-        RatingNumerical._ClearRating( self )
-        
-        if self._current_media is not None:
-            
-            rating = None
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
-            
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
-            
-        
-    
-    def _Draw( self, painter ):
-        
-        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        if self._current_media is not None:
-            
-            ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
-            
-            ClientRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
-            
-        
-        self._dirty = False
-        
-    
-    def _SetRating( self, rating ):
-        
-        RatingNumerical._SetRating( self, rating )
-        
-        if self._current_media is not None and rating is not None:
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
-            
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
-            
-        
-    
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
-        
-        if self._current_media is not None:
-            
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-                
-                for content_update in content_updates:
-                    
-                    ( data_type, action, row ) = content_update.ToTuple()
-                    
-                    if data_type == HC.CONTENT_TYPE_RATINGS:
-                        
-                        hashes = content_update.GetHashes()
-                        
-                        if len( self._hashes.intersection( hashes ) ) > 0:
-                            
-                            self._dirty = True
-                            
-                            self.update()
-                            
-                            return
-                            
-                        
-                    
-                
-            
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_media = media
-            
-            if self._current_media is None:
-                
-                self._hashes = set()
-                
-            else:
-                
-                self._hashes = self._current_media.GetHashes()
-                
-            
-            self._dirty = True
-            
-            self.update()
-            
-        
-    
 class RegexButton( BetterButton ):
     
     def __init__( self, parent ):
@@ -2248,61 +2030,6 @@ class StaticBox( QW.QFrame ):
         QP.AddToLayout( self._sizer, widget, flags )
 
         self.layout().addSpacerItem( self._spacer )
-        
-    
-class StaticBoxSorterForListBoxTags( StaticBox ):
-    
-    def __init__( self, parent, title ):
-        
-        StaticBox.__init__( self, parent, title )
-        
-        self._sorter = BetterChoice( self )
-        
-        self._sorter.addItem( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-        self._sorter.addItem( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-        self._sorter.addItem( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
-        self._sorter.addItem( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
-        self._sorter.addItem( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
-        self._sorter.addItem( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
-        self._sorter.addItem( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-        self._sorter.addItem( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-        self._sorter.addItem( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
-        self._sorter.addItem( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
-        
-        self._sorter.SetValue( HC.options[ 'default_tag_sort' ] )
-        
-        self._sorter.currentIndexChanged.connect( self.EventSort )
-        
-        self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-    
-    def ChangeTagService( self, service_key ):
-        
-        self._tags_box.ChangeTagService( service_key )
-        
-    
-    def EventSort( self, index ):
-        
-        selection = self._sorter.currentIndex()
-        
-        if selection != -1:
-            
-            sort = self._sorter.GetValue()
-            
-            self._tags_box.SetSort( sort )
-            
-        
-    
-    def SetTagsBox( self, tags_box ):
-        
-        self._tags_box = tags_box
-        
-        self.Add( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-    
-    def SetTagsByMedia( self, media, force_reload = False ):
-        
-        self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
         
     
 class RadioBox( StaticBox ):

@@ -1,5 +1,6 @@
 from . import ClientConstants as CC
 from . import ClientData
+from . import ClientGUICore as CGC
 from . import ClientGUIFunctions
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -8,6 +9,7 @@ from . import HydrusSerialisable
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
+import typing
 
 SHORTCUT_TYPE_KEYBOARD_CHARACTER = 0
 SHORTCUT_TYPE_MOUSE = 1
@@ -933,7 +935,7 @@ class ShortcutsHandler( QC.QObject ):
         
         shortcut_processed = False
         
-        command = HG.client_controller.shortcuts_manager.GetCommand( self._shortcuts_names, shortcut )
+        command = shortcuts_manager().GetCommand( self._shortcuts_names, shortcut )
         
         if command is None and shortcut.IsDoubleClick():
             
@@ -945,7 +947,7 @@ class ShortcutsHandler( QC.QObject ):
             
             all_ancestor_shortcut_names = HydrusData.MassUnion( [ ancestor_shortcuts_handler.GetShortcutNames() for ancestor_shortcuts_handler in ancestor_shortcuts_handlers ] )
             
-            ancestor_command = HG.client_controller.shortcuts_manager.GetCommand( all_ancestor_shortcut_names, shortcut )
+            ancestor_command = shortcuts_manager().GetCommand( all_ancestor_shortcut_names, shortcut )
             
             if ancestor_command is None:
                 
@@ -958,7 +960,7 @@ class ShortcutsHandler( QC.QObject ):
                 
                 shortcut = shortcut.ConvertToSingleClick()
                 
-                command = HG.client_controller.shortcuts_manager.GetCommand( self._shortcuts_names, shortcut )
+                command = shortcuts_manager().GetCommand( self._shortcuts_names, shortcut )
                 
             else:
                 
@@ -1188,32 +1190,42 @@ class ShortcutsDeactivationCatcher( QC.QObject ):
         return False
         
     
-class ShortcutsManager( object ):
+class ShortcutsManager( QC.QObject ):
     
-    def __init__( self, controller ):
-        
-        self._controller = controller
-        
-        self._shortcuts = {}
-        
-        self._RefreshShortcuts()
-        
-        self._controller.sub( self, 'RefreshShortcuts', 'notify_new_shortcuts_data' )
-        
+    shortcutsChanged = QC.Signal()
     
-    def _RefreshShortcuts( self ):
+    my_instance = None
+    
+    def __init__( self, shortcut_sets = None ):
         
-        self._shortcuts = {}
+        parent = CGC.core()
         
-        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+        QC.QObject.__init__( self, parent )
         
-        for shortcuts in all_shortcuts:
+        self._names_to_shortcut_sets = {}
+        
+        if shortcut_sets is not None:
             
-            self._shortcuts[ shortcuts.GetName() ] = shortcuts
+            self.SetShortcutSets( shortcut_sets )
             
         
+        ShortcutsManager.my_instance = self
+        
     
-    def GetCommand( self, shortcuts_names, shortcut ):
+    @staticmethod
+    def instance() -> 'ShortcutsManager':
+        
+        if ShortcutsManager.my_instance is None:
+            
+            raise Exception( 'ShortcutsManager is not yet initialised!' )
+            
+        else:
+            
+            return ShortcutsManager.my_instance
+            
+        
+    
+    def GetCommand( self, shortcuts_names: typing.List[ str ], shortcut: Shortcut ):
         
         # process more specific shortcuts with higher priority
         shortcuts_names = list( shortcuts_names )
@@ -1221,9 +1233,9 @@ class ShortcutsManager( object ):
         
         for name in shortcuts_names:
             
-            if name in self._shortcuts:
+            if name in self._names_to_shortcut_sets:
                 
-                command = self._shortcuts[ name ].GetCommand( shortcut )
+                command = self._names_to_shortcut_sets[ name ].GetCommand( shortcut )
                 
                 if command is not None:
                     
@@ -1240,11 +1252,11 @@ class ShortcutsManager( object ):
         return None
         
     
-    def GetNamesToShortcuts( self, simple_command ):
+    def GetNamesToShortcuts( self, simple_command: ClientData.ApplicationCommand ):
         
         names_to_shortcuts = {}
         
-        for ( name, shortcut_set ) in self._shortcuts.items():
+        for ( name, shortcut_set ) in self._names_to_shortcut_sets.items():
             
             shortcuts = shortcut_set.GetShortcuts( simple_command )
             
@@ -1257,10 +1269,17 @@ class ShortcutsManager( object ):
         return names_to_shortcuts
         
     
-    def RefreshShortcuts( self ):
+    def GetShortcutSets( self ) -> typing.List[ ShortcutSet ]:
         
-        self._RefreshShortcuts()
-        
-        HG.client_controller.pub( 'notify_new_shortcuts_gui' )
+        return list( self._names_to_shortcut_sets.values() )
         
     
+    def SetShortcutSets( self, shortcut_sets: typing.List[ ShortcutSet ] ):
+        
+        self._names_to_shortcut_sets = { shortcut_set.GetName() : shortcut_set for shortcut_set in shortcut_sets }
+        
+        self.shortcutsChanged.emit()
+        
+    
+shortcuts_manager = ShortcutsManager.instance
+shortcuts_manager_initialised = lambda: ShortcutsManager.my_instance is not None

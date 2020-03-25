@@ -16,7 +16,32 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from . import QtPorting as QP
 import os
+import typing
 
+def ManageShortcuts( win: QW.QWidget ):
+    
+    shortcuts_manager = ClientGUIShortcuts.shortcuts_manager()
+    
+    all_shortcuts = shortcuts_manager.GetShortcutSets()
+    
+    with ClientGUITopLevelWindows.DialogEdit( win, 'manage shortcuts' ) as dlg:
+        
+        panel = EditShortcutsPanel( dlg, all_shortcuts )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            shortcut_sets = panel.GetValue()
+            
+            dupe_shortcut_sets = [ shortcut_set.Duplicate() for shortcut_set in shortcut_sets ]
+            
+            HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET ], dupe_shortcut_sets )
+            
+            shortcuts_manager.SetShortcutSets( shortcut_sets )
+            
+        
+    
 class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
     
     COMMAND_TYPE_PANEL_SIMPLE = 0
@@ -747,11 +772,11 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
+class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, all_shortcuts ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( 'Show help regarding editing shortcuts.' )
@@ -782,13 +807,10 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
-        
         reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
         self._reserved_shortcuts.AddDatas( reserved_shortcuts )
-            
         
         self._original_custom_names = set()
         
@@ -1000,30 +1022,14 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         QW.QMessageBox.information( self, 'Information', message )
         
     
-    def CommitChanges( self ):
+    def GetValue( self ) -> typing.List[ ClientGUIShortcuts.ShortcutSet ]:
         
-        for shortcuts in self._reserved_shortcuts.GetData():
-            
-            HG.client_controller.Write( 'serialisable', shortcuts )
-            
+        shortcut_sets = []
         
-        good_names = set()
+        shortcut_sets.extend( self._reserved_shortcuts.GetData() )
+        shortcut_sets.extend( self._custom_shortcuts.GetData() )
         
-        for shortcuts in self._custom_shortcuts.GetData():
-            
-            good_names.add( shortcuts.GetName() )
-            
-            HG.client_controller.Write( 'serialisable', shortcuts )
-            
-        
-        deletees = self._original_custom_names.difference( good_names )
-        
-        for name in deletees:
-            
-            HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, name )
-            
-        
-        HG.client_controller.pub( 'notify_new_shortcuts_data' )
+        return shortcut_sets
         
     
 class ShortcutWidget( QW.QWidget ):

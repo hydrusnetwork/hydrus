@@ -11,6 +11,7 @@ import random
 import threading
 import collections
 import traceback
+import typing
 from qtpy import QtGui as QG
 
 # now let's fill out grandparents
@@ -477,15 +478,15 @@ class ServicesManager( object ):
         self._controller = controller
         
         self._lock = threading.Lock()
-        self._keys_to_services = {}
-        self._services_sorted = []
+        self._keys_to_services: typing.Dict[ bytes, ClientServices.Service ] = {}
+        self._services_sorted: typing.List( ClientServices.Service ) = []
         
         self.RefreshServices()
         
         self._controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
         
     
-    def _GetService( self, service_key ):
+    def _GetService( self, service_key: bytes ):
         
         try:
             
@@ -497,7 +498,7 @@ class ServicesManager( object ):
             
         
     
-    def _SetServices( self, services ):
+    def _SetServices( self, services: typing.List[ ClientServices.Service ] ):
         
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
@@ -509,7 +510,7 @@ class ServicesManager( object ):
         self._services_sorted.sort( key = key )
         
     
-    def Filter( self, service_keys, desired_types ):
+    def Filter( self, service_keys: typing.List[ bytes ], desired_types: typing.List[ int ] ):
         
         with self._lock:
             
@@ -519,7 +520,7 @@ class ServicesManager( object ):
             
         
     
-    def FilterValidServiceKeys( self, service_keys ):
+    def FilterValidServiceKeys( self, service_keys: typing.List[ bytes ] ):
         
         with self._lock:
             
@@ -529,7 +530,7 @@ class ServicesManager( object ):
             
         
     
-    def GetName( self, service_key ):
+    def GetName( self, service_key: bytes ):
         
         with self._lock:
             
@@ -539,7 +540,7 @@ class ServicesManager( object ):
             
         
     
-    def GetService( self, service_key ):
+    def GetService( self, service_key: bytes ):
         
         with self._lock:
             
@@ -547,7 +548,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceType( self, service_key ):
+    def GetServiceType( self, service_key: bytes ):
         
         with self._lock:
             
@@ -555,7 +556,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceKeyFromName( self, allowed_types, service_name ):
+    def GetServiceKeyFromName( self, allowed_types: typing.List[ int ], service_name: str ):
         
         with self._lock:
             
@@ -571,7 +572,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceKeys( self, desired_types = HC.ALL_SERVICES ):
+    def GetServiceKeys( self, desired_types: typing.List[ int ] = HC.ALL_SERVICES ):
         
         with self._lock:
             
@@ -581,7 +582,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServices( self, desired_types = HC.ALL_SERVICES, randomised = False ):
+    def GetServices( self, desired_types: typing.List[ int ] = HC.ALL_SERVICES, randomised: bool = False ):
         
         with self._lock:
             
@@ -611,7 +612,7 @@ class ServicesManager( object ):
             
         
     
-    def ServiceExists( self, service_key ):
+    def ServiceExists( self, service_key: bytes ):
         
         with self._lock:
             

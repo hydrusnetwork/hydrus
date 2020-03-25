@@ -12,11 +12,11 @@ try:
     except: pass
     
     # initialise Qt here, important it is done early
-    from include import QtPorting as QP
+    from hydrus import QtPorting as QP
     
-    from include import HydrusConstants as HC
-    from include import HydrusPaths
-    from include import HydrusGlobals as HG
+    from hydrus import HydrusConstants as HC
+    from hydrus import HydrusPaths
+    from hydrus import HydrusGlobals as HG
     
     import os
     
@@ -99,13 +99,13 @@ try:
     
     HydrusPaths.AddBaseDirToEnvPath()
     
-    from include import HydrusPy2To3
+    from hydrus import HydrusPy2To3
     
     HydrusPy2To3.do_2to3_test()
     
-    from include import HydrusData
+    from hydrus import HydrusData
     
-    from include import HydrusLogger
+    from hydrus import HydrusLogger
     import traceback
     
     try:
@@ -124,7 +124,7 @@ except Exception as e:
     
     try:
         
-        from include import HydrusData
+        from hydrus import HydrusData
         
         HydrusData.DebugPrint( 'Critical boot error occurred! Details written to crash.log!' )
         HydrusData.PrintException( e )
@@ -182,7 +182,7 @@ with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
             threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
             
         
-        from include import ClientController
+        from hydrus import ClientController
         
         controller = ClientController.Controller( db_dir )
         

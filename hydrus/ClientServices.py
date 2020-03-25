@@ -201,7 +201,7 @@ class Service( object ):
         HG.client_controller.pub( 'service_updated', self )
         
     
-    def CheckFunctional( self ):
+    def CheckFunctional( self ) -> bool:
         
         with self._lock:
             
@@ -209,7 +209,7 @@ class Service( object ):
             
         
     
-    def Duplicate( self ):
+    def Duplicate( self ) -> 'Service':
         
         with self._lock:
             
@@ -221,7 +221,7 @@ class Service( object ):
             
         
     
-    def GetSerialisableDictionary( self ):
+    def GetSerialisableDictionary( self ) -> HydrusSerialisable.SerialisableDictionary:
         
         with self._lock:
             
@@ -231,7 +231,7 @@ class Service( object ):
             
         
     
-    def GetName( self ):
+    def GetName( self ) -> str:
         
         with self._lock:
             
@@ -239,7 +239,7 @@ class Service( object ):
             
         
     
-    def GetServiceKey( self ):
+    def GetServiceKey( self ) -> bytes:
         
         with self._lock:
             
@@ -247,7 +247,7 @@ class Service( object ):
             
         
     
-    def GetServiceType( self ):
+    def GetServiceType( self ) -> int:
         
         with self._lock:
             
@@ -255,7 +255,7 @@ class Service( object ):
             
         
     
-    def GetStatusString( self ):
+    def GetStatusString( self ) -> str:
         
         with self._lock:
             
@@ -272,7 +272,7 @@ class Service( object ):
             
         
     
-    def IsDirty( self ):
+    def IsDirty( self ) -> bool:
         
         with self._lock:
             
@@ -280,7 +280,7 @@ class Service( object ):
             
         
     
-    def IsFunctional( self ):
+    def IsFunctional( self ) -> bool:
         
         with self._lock:
             
@@ -313,7 +313,7 @@ class Service( object ):
             
         
     
-    def ToTuple( self ):
+    def ToTuple( self ) -> tuple:
         
         dictionary = self._GetSerialisableDictionary()
         

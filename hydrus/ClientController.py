@@ -17,7 +17,6 @@ from . import ClientGUI
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIScrolledPanelsManagement
-from . import ClientGUIShortcuts
 from . import ClientGUIStyle
 from . import ClientGUITopLevelWindows
 from . import ClientImportSubscriptions
@@ -137,6 +136,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._last_shutdown_was_bad = False
         
+        self._qt_app_running = False
         self._is_booted = False
         
         self._splash = None
@@ -331,7 +331,7 @@ class Controller( HydrusController.HydrusController ):
         
         while not job_key.IsDone():
             
-            if not HG.qt_app_running:
+            if not self._qt_app_running:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
@@ -905,8 +905,6 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.shortcuts_manager = ClientGUIShortcuts.ShortcutsManager( self )
-        
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         
         self.file_viewing_stats_manager = ClientManagers.FileViewingStatsManager( self )
@@ -1004,7 +1002,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToQt(self._splash, qt_code_password)
+            self.CallBlockingToQt( self._splash, qt_code_password )
             
         
         self.pub( 'splash_set_title_text', 'booting gui\u2026' )
@@ -1012,6 +1010,12 @@ class Controller( HydrusController.HydrusController ):
         self.subscriptions_manager = ClientImportSubscriptions.SubscriptionsManager( self )
         
         def qt_code_gui():
+            
+            shortcut_sets = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+            
+            from . import ClientGUIShortcuts
+            
+            ClientGUIShortcuts.ShortcutsManager( shortcut_sets = shortcut_sets )
             
             ClientGUIStyle.InitialiseDefaults()
             
@@ -1365,7 +1369,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.CallToThreadLongRunning( self.THREADBootEverything )
         
-        HG.qt_app_running = True
+        self._qt_app_running = True
         
         try:
             
@@ -1373,7 +1377,7 @@ class Controller( HydrusController.HydrusController ):
             
         finally:
             
-            HG.qt_app_running = False
+            self._qt_app_running = False
             
         
         HydrusData.DebugPrint( 'shutting down controller\u2026' )

@@ -446,7 +446,7 @@ class mpvWidget( QW.QWidget ):
             
         
     
-    def SetNoneMedia( self ):
+    def ClearMedia( self ):
         
         self.SetMedia( None )
         
@@ -482,15 +482,18 @@ class mpvWidget( QW.QWidget ):
             
         
         #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
-        if hasattr( mpv, '_mpv_load_config_file' ):
+        
+        load_f = getattr( mpv, '_mpv_load_config_file', None )
+        
+        if load_f is not None:
             
             try:
                 
-                mpv._mpv_load_config_file( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
+                load_f( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
                 
             except Exception as e:
                 
-                HydrusData.ShowText( 'MPV could not load its configuration file! This was probably due to an invalid parameter value. The error follows:' )
+                HydrusData.ShowText( 'MPV could not load its configuration file! This was probably due to an invalid parameter value inside the conf. The error follows:' )
                 
                 HydrusData.ShowException( e )
                 

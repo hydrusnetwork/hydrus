@@ -1943,7 +1943,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             temp_variable_name = additional_info
             
-            self._temp_variable_name.SetValue( temp_variable_name )
+            self._temp_variable_name.setText( temp_variable_name )
             
         
         self._sort_type.SetValue( sort_type )

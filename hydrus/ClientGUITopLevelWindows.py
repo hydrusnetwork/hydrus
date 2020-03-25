@@ -943,6 +943,7 @@ class FrameThatResizes( Frame ):
         return True # was: event.ignore()
         
     
+class FrameThatResizesWithHovers( FrameThatResizes ): pass
 class MainFrameThatResizes( MainFrame ):
 
     def __init__( self, parent, title, frame_key ):

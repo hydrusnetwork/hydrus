@@ -387,14 +387,7 @@ def ShowExceptionClient( e, do_wait = True ):
         
     else:
         
-        if hasattr( etype, '__name__' ):
-            
-            title = str( etype.__name__ )
-            
-        else:
-            
-            title = str( etype )
-            
+        title = str( getattr( etype, '__name__', etype ) )
         
         job_key.SetVariable( 'popup_title', title )
         

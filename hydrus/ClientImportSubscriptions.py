@@ -6,13 +6,11 @@ from . import ClientImportGallerySeeds
 from . import ClientImportOptions
 from . import ClientNetworkingContexts
 from . import ClientNetworkingJobs
-from . import ClientPaths
 from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusThreading
 import os
@@ -1637,6 +1635,34 @@ class SubscriptionsManager( object ):
         return self._mainloop_finished
         
     
+    def LoadAndBootSubscription( self, subscription_name ):
+        
+        # keep this in its own thing lmao, you don't want a local() 'subscription' variable hanging around eating 400MB in the mainloop, nor the trouble of 'del'-ing it all over the place
+        
+        try:
+            
+            subscription = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, subscription_name )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Subscription "{}" failed to load! Error information should follow. No more subscriptions will run this boot.'.format( subscription_name ) )
+            HydrusData.ShowException( e )
+            
+            return
+            
+        
+        job = SubscriptionJob( self._controller, subscription )
+        
+        thread = threading.Thread( target = job.Work, name = 'subscription thread' )
+        
+        thread.start()
+        
+        with self._lock:
+            
+            self._running_subscriptions[ subscription_name ] = ( thread, job, subscription )
+            
+        
+    
     def MainLoop( self ):
         
         try:
@@ -1659,28 +1685,7 @@ class SubscriptionsManager( object ):
                     
                     try:
                         
-                        try:
-                            
-                            subscription = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, subscription_name )
-                            
-                        except Exception as e:
-                            
-                            HydrusData.ShowText( 'Subscription "{}" failed to load! Error information should follow. No more subscriptions will run this boot.'.format( subscription_name ) )
-                            HydrusData.ShowException( e )
-                            
-                            return
-                            
-                        
-                        job = SubscriptionJob( self._controller, subscription )
-                        
-                        thread = threading.Thread( target = job.Work, name = 'subscription thread' )
-                        
-                        thread.start()
-                        
-                        with self._lock:
-                            
-                            self._running_subscriptions[ subscription_name ] = ( thread, job, subscription )
-                            
+                        self.LoadAndBootSubscription( subscription_name )
                         
                     finally:
                         

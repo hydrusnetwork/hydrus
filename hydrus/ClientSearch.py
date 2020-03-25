@@ -216,6 +216,22 @@ def IsComplexWildcard( search_text ):
     
     return False
     
+def IsUnacceptableTagSearch( search_text ):
+    
+    if search_text in ( '', ':', '*' ):
+        
+        return True
+        
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    if namespace == '*':
+        
+        return True
+        
+    
+    return False
+    
 def SortPredicates( predicates ):
     
     key = lambda p: p.GetCount()

@@ -6,7 +6,7 @@
 
 try:
     
-    from include import HydrusPy2To3
+    from hydrus import HydrusPy2To3
     
     HydrusPy2To3.do_2to3_test()
     
@@ -15,20 +15,20 @@ try:
     try: locale.setlocale( locale.LC_ALL, '' )
     except: pass
     
-    from include import HydrusExceptions
-    from include import HydrusConstants as HC
-    from include import HydrusData
-    from include import HydrusPaths
+    from hydrus import HydrusExceptions
+    from hydrus import HydrusConstants as HC
+    from hydrus import HydrusData
+    from hydrus import HydrusPaths
     
     import os
     import sys
     import time
     
-    from include import ServerController
+    from hydrus import ServerController
     import threading
     from twisted.internet import reactor
-    from include import HydrusGlobals as HG
-    from include import HydrusLogger
+    from hydrus import HydrusGlobals as HG
+    from hydrus import HydrusLogger
     import traceback
     
     #
