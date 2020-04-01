@@ -571,16 +571,19 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         self._media = media
         
-        for page in self._notebook.GetPages():
+        if self._recent_tags is not None:
             
-            if isinstance( page, ( FileLookupScriptTagsPanel, RelatedTagsPanel ) ):
-                
-                page.SetMedia( media )
-                
-            elif isinstance( page, RecentTagsPanel ):
-                
-                page.RefreshRecentTags()
-                
+            self._recent_tags.RefreshRecentTags()
+            
+        
+        if self._file_lookup_script_tags is not None:
+            
+            self._file_lookup_script_tags.SetMedia( media )
+            
+        
+        if self._related_tags is not None:
+            
+            self._related_tags.SetMedia( media )
             
         
     
