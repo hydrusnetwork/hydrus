@@ -69,6 +69,11 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
         self._canvas_window.ResetMediaWindowCenterPosition()
         
     
+    def PauseMedia( self ):
+        
+        self._canvas_window.PauseMedia()
+        
+    
     def ProcessApplicationCommand( self, command ):
         
         command_processed = True
@@ -91,6 +96,10 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
             elif action == 'restart_application':
                 
                 HG.client_controller.gui.TryToSaveAndClose( restart = True )
+                
+            elif action == 'hide_to_system_tray':
+                
+                HG.client_controller.gui.HideToSystemTray()
                 
             elif action == 'close_media_viewer':
                 

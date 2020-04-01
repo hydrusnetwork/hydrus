@@ -130,6 +130,7 @@ class MediaCollectControl( QW.QWidget ):
             page_key = self._management_controller.GetKey( 'page' )
             
             HG.client_controller.pub( 'collect_media', page_key, self._media_collect )
+            HG.client_controller.pub( 'a_collect_happened', page_key )
             
         
     
@@ -223,9 +224,8 @@ class MediaSortControl( QW.QWidget ):
         
         self.setLayout( hbox )
         
-        HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
+        HG.client_controller.sub( self, 'ACollectHappened', 'a_collect_happened' )
         HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
-        HG.client_controller.sub( self, 'SetSortFromPage', 'set_page_sort' )
         
         if self._management_controller is not None and self._management_controller.HasVariable( 'media_sort' ):
             
@@ -250,19 +250,15 @@ class MediaSortControl( QW.QWidget ):
         
         media_sort = self._GetCurrentSort()
         
-        self.sortChanged.emit( media_sort )
-        
         if self._management_controller is not None:
             
             self._management_controller.SetVariable( 'media_sort', media_sort )
             
-            page_key = self._management_controller.GetKey( 'page' )
-            
-            HG.client_controller.pub( 'sort_media', page_key, media_sort )
-            
+        
+        self.sortChanged.emit( media_sort )
         
     
-    def _GetCurrentSort( self ):
+    def _GetCurrentSort( self ) -> ClientMedia.MediaSort:
         
         sort_asc = self._sort_asc_choice.GetValue()
         
@@ -465,7 +461,7 @@ class MediaSortControl( QW.QWidget ):
             
         
     
-    def ACollectHappened( self, page_key, media_collect ):
+    def ACollectHappened( self, page_key ):
         
         if self._management_controller is not None:
             
@@ -495,7 +491,7 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def GetSort( self ):
+    def GetSort( self ) -> ClientMedia.MediaSort:
         
         return self._GetCurrentSort()
         
@@ -527,23 +523,13 @@ class MediaSortControl( QW.QWidget ):
         event.accept()
         
     
-    def SetSort( self, media_sort ):
+    def SetSort( self, media_sort: ClientMedia.MediaSort ):
         
         self._sort_type = media_sort.sort_type
         self._sort_asc_choice.SetValue( media_sort.sort_asc )
         
         self._UpdateSortTypeLabel()
         self._UpdateAscLabels()
-        
-    
-    def SetSortFromPage( self, page_key, media_sort ):
-        
-        if page_key == self._management_controller.GetKey( 'page' ):
-            
-            self.SetSort( media_sort )
-            
-            self._BroadcastSort()
-            
         
     
 class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
@@ -579,8 +565,12 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 30 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 60 ) ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemDuration )
+            editable_pred_panel_classes.append( PanelPredicateSystemFramerate )
+            editable_pred_panel_classes.append( PanelPredicateSystemNumFrames )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
             
@@ -1138,7 +1128,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = (self._sign.GetStringSelection(), self._duration_s.value() * 1000 + self._duration_ms.value())
+        info = ( self._sign.GetStringSelection(), self._duration_s.value() * 1000 + self._duration_ms.value() )
         
         return info
         
@@ -1286,6 +1276,47 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         time_delta = self._time_delta.GetValue()
         
         info = ( 'viewtime', tuple( viewing_locations ), sign, time_delta )
+        
+        return info
+        
+    
+class PanelPredicateSystemFramerate( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        choices = [ '<', '=', '>' ]
+        
+        self._sign = QP.RadioBox( self, choices = choices )
+        
+        self._framerate = QP.MakeQSpinBox( self, min = 1, max = 3600, width = 60 )
+        
+        self._sign.SetStringSelection( '=' )
+        self._framerate.setValue( 60 )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:framerate' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._framerate, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'fps' ), CC.FLAGS_VCENTER )
+        
+        hbox.addStretch( 1 )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( 'All framerate searches are +/- 5%. Exactly searching for 29.97 is not currently possible.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.setLayout( vbox )
+        
+    
+    def GetInfo( self ):
+        
+        info = ( self._sign.GetStringSelection(), self._framerate.value() )
         
         return info
         
@@ -1686,7 +1717,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=[ '<', '\u2248', '=', '>' ] )
         
         self._num_pixels = QP.MakeQSpinBox( self, max=1048576, width = 60 )
         
@@ -1717,6 +1748,41 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     def GetInfo( self ):
         
         info = (self._sign.GetStringSelection(), self._num_pixels.value(), HydrusData.ConvertPixelsToInt( self._unit.GetStringSelection() ))
+        
+        return info
+        
+    
+class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        choices = [ '<', '\u2248', '=', '>' ]
+        
+        self._sign = QP.RadioBox( self, choices = choices )
+        
+        self._num_frames = QP.MakeQSpinBox( self, min = 1, max = 1000000, width = 80 )
+        
+        self._sign.SetStringSelection( '>' )
+        self._num_frames.setValue( 600 )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:number of frames' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num_frames, CC.FLAGS_VCENTER )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        info = ( self._sign.GetStringSelection(), self._num_frames.value() )
         
         return info
         

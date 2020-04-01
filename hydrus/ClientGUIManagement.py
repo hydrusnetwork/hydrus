@@ -85,9 +85,11 @@ def CreateManagementController( page_name, management_type, file_service_key = N
     
 def CreateManagementControllerDuplicateFilter():
     
-    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+    file_service_key = CC.LOCAL_FILE_SERVICE_KEY
     
-    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, file_service_key = file_service_key )
+    
+    file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
     
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'both_files_match', False )
@@ -185,7 +187,9 @@ def CreateManagementControllerPetitions( petition_service_key ):
     
     return management_controller
     
-def CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled ):
+def CreateManagementControllerQuery( page_name, file_search_context: ClientSearch.FileSearchContext, search_enabled ):
+    
+    file_service_key = file_search_context.GetFileServiceKey()
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY, file_service_key = file_service_key )
     
@@ -773,6 +777,7 @@ class ManagementPanel( QW.QScrollArea ):
             
             media_panel.selectedMediaTagPresentationChanged.connect( self._current_selection_tags_list.SetTagsByMediaFromMediaPanel )
             media_panel.selectedMediaTagPresentationIncremented.connect( self._current_selection_tags_list.IncrementTagsByMedia )
+            self._media_sort.sortChanged.connect( media_panel.Sort )
             
             media_panel.PublishSelectionChange()
             
@@ -842,14 +847,6 @@ class ManagementPanel( QW.QScrollArea ):
     def SetSearchFocus( self ):
         
         pass
-        
-    
-    def SetSort( self, page_key, media_sort ):
-        
-        if page_key == self._page_key:
-            
-            self._management_controller.SetVariable( 'media_sort', media_sort )
-            
         
     
     def Start( self ):
@@ -1128,7 +1125,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _GetFileSearchContextAndBothFilesMatch( self ):
+    def _GetFileSearchContextAndBothFilesMatch( self ) -> typing.Tuple[ ClientSearch.FileSearchContext, bool ]:
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
@@ -1250,6 +1247,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._management_controller.SetVariable( 'file_search_context', file_search_context )
         self._management_controller.SetVariable( 'both_files_match', both_files_match )
+        self._management_controller.SetKey( 'file_service', file_search_context.GetFileServiceKey() )
         
         self._UpdateBothFilesMatchButton()
         
@@ -1437,6 +1435,20 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._UpdateMaintenanceStatus()
         
     
+    def PageHidden( self ):
+        
+        ManagementPanel.PageHidden( self )
+        
+        self._tag_autocomplete.SetForceDropdownHide( True )
+        
+    
+    def PageShown( self ):
+        
+        ManagementPanel.PageShown( self )
+        
+        self._tag_autocomplete.SetForceDropdownHide( False )
+        
+    
     def RefreshAllNumbers( self ):
         
         self.RefreshDuplicateNumbers()
@@ -1499,11 +1511,6 @@ class ManagementPanelImporter( ManagementPanel ):
     def _UpdateImportStatus( self ):
         
         raise NotImplementedError()
-        
-    
-    def PageHidden( self ):
-        
-        ManagementPanel.PageHidden( self )
         
     
     def PageShown( self ):
@@ -4129,7 +4136,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         panel.Collect( self._page_key, self._media_collect.GetValue() )
         
-        panel.Sort( self._page_key, self._media_sort.GetSort() )
+        panel.Sort( self._media_sort.GetSort() )
         
         self._page.SwapMediaPanel( panel )
         
@@ -4512,6 +4519,7 @@ class ManagementPanelQuery( ManagementPanel ):
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
             self._management_controller.SetVariable( 'file_search_context', file_search_context )
+            self._management_controller.SetKey( 'file_service', file_search_context.GetFileServiceKey() )
             
             synchronised = self._tag_autocomplete.IsSynchronised()
             
@@ -4607,6 +4615,26 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
+    def PageHidden( self ):
+        
+        ManagementPanel.PageHidden( self )
+        
+        if self._search_enabled:
+            
+            self._tag_autocomplete.SetForceDropdownHide( True )
+            
+        
+    
+    def PageShown( self ):
+        
+        ManagementPanel.PageShown( self )
+        
+        if self._search_enabled:
+            
+            self._tag_autocomplete.SetForceDropdownHide( False )
+            
+        
+    
     def RefreshQuery( self ):
         
         self._RefreshQuery()
@@ -4645,7 +4673,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel.Collect( self._page_key, self._media_collect.GetValue() )
             
-            panel.Sort( self._page_key, self._media_sort.GetSort() )
+            panel.Sort( self._media_sort.GetSort() )
             
             self._page.SwapMediaPanel( panel )
             

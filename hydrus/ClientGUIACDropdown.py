@@ -237,11 +237,11 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_call
                 # if they search for 'series:blah', then we don't!
                 add_namespaceless = ':' not in namespace
                 
-                small_exact_match_search = ShouldDoExactSearch( cache_text )
+                small_exact_match_search = ShouldDoExactSearch( entry_text )
                 
                 if small_exact_match_search:
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_search_context = tag_search_context, search_text = cache_text, exact_match = True, inclusive = inclusive, add_namespaceless = add_namespaceless, job_key = job_key, collapse_siblings = True )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_search_context = tag_search_context, search_text = entry_text, exact_match = True, inclusive = inclusive, add_namespaceless = add_namespaceless, job_key = job_key, collapse_siblings = True )
                     
                 else:
                     
@@ -249,7 +249,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_call
                     
                     if not cache_valid:
                         
-                        new_search_text_for_current_cache = cache_text
+                        search_text_for_current_cache = cache_text
                         
                         cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_search_context = tag_search_context, search_text = search_text, inclusive = inclusive, add_namespaceless = add_namespaceless, job_key = job_key, collapse_siblings = True )
                         
@@ -359,7 +359,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_call
         return
         
     
-    HG.client_controller.CallLaterQtSafe(win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast)
+    HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast )
     
 def PutAtTopOfMatches( matches, predicate ):
     
@@ -378,9 +378,9 @@ def PutAtTopOfMatches( matches, predicate ):
     
     matches.insert( 0, predicate )
     
-def ShouldDoExactSearch( cache_text ):
+def ShouldDoExactSearch( entry_text ):
     
-    if cache_text is None:
+    if entry_text is None:
         
         return False
         
@@ -392,13 +392,13 @@ def ShouldDoExactSearch( cache_text ):
         return False
         
     
-    if ':' in cache_text:
+    if ':' in entry_text:
         
-        ( namespace, test_text ) = HydrusTags.SplitTag( cache_text )
+        ( namespace, test_text ) = HydrusTags.SplitTag( entry_text )
         
     else:
         
-        test_text = cache_text
+        test_text = entry_text
         
     
     return len( test_text ) <= autocomplete_exact_match_threshold
@@ -535,6 +535,8 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._dropdown_hidden = True
             
+            self._force_dropdown_hide = False
+            
         else:
             
             self._dropdown_window = QW.QWidget( self )
@@ -571,7 +573,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._initial_matches_fetched = False
         
-        self._refresh_list_job = None
+        self._schedule_results_refresh_job = None
         
         if self._float_mode:
             
@@ -610,7 +612,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         HG.client_controller.sub( self, 'DoDropdownHideShow', 'notify_page_change' )
         
-        self._ScheduleListRefresh( 0.0 )
+        self._ScheduleResultsRefresh( 0.0 )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -623,7 +625,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         raise NotImplementedError()
         
     
-    def _CancelCurrentResultsFetchJob( self ):
+    def _CancelSearchResultsFetchJob( self ):
         
         if self._current_fetch_job_key is not None:
             
@@ -633,23 +635,19 @@ class AutoCompleteDropdown( QW.QWidget ):
             
         
     
-    def _CancelScheduledListRefresh( self ):
-        
-        if self._refresh_list_job is not None:
-            
-            self._refresh_list_job.Cancel()
-            
-        
-    
     def _ClearInput( self ):
         
-        self._CancelCurrentResultsFetchJob()
-        
-        self._text_ctrl.setText( '' )
+        self._CancelSearchResultsFetchJob()
         
         self._SetResultsToList( [] )
         
-        self._ScheduleListRefresh( 0.0 )
+        self._text_ctrl.blockSignals( True )
+        
+        self._text_ctrl.setText( '' )
+        
+        self._text_ctrl.blockSignals( False )
+        
+        self._ScheduleResultsRefresh( 0.0 )
         
     
     def _DropdownHideShow( self ):
@@ -711,18 +709,14 @@ class AutoCompleteDropdown( QW.QWidget ):
         raise NotImplementedError()
         
     
-    def _ScheduleListRefresh( self, delay ):
+    def _ScheduleResultsRefresh( self, delay ):
         
-        if self._refresh_list_job is not None and delay == 0.0:
+        if self._schedule_results_refresh_job is not None:
             
-            self._refresh_list_job.Wake()
+            self._schedule_results_refresh_job.Cancel()
             
-        else:
-            
-            self._CancelScheduledListRefresh()
-            
-            self._refresh_list_job = HG.client_controller.CallLaterQtSafe(self, delay, self._UpdateSearchResultsList)
-            
+        
+        self._schedule_results_refresh_job = HG.client_controller.CallLaterQtSafe( self, delay, self._UpdateSearchResults )
         
     
     def _SetupTopListBox( self ):
@@ -734,7 +728,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._search_text_for_current_cache = None
         
-        self._ScheduleListRefresh( 0.0 )
+        self._ScheduleResultsRefresh( 0.0 )
         
     
     def _SetResultsToList( self, results ):
@@ -743,6 +737,11 @@ class AutoCompleteDropdown( QW.QWidget ):
         
     
     def _ShouldShow( self ):
+        
+        if self._force_dropdown_hide:
+            
+            return False
+            
         
         current_active_window = QW.QApplication.activeWindow()
         
@@ -798,7 +797,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             
         
     
-    def _StartResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_key ):
         
         raise NotImplementedError()
         
@@ -822,15 +821,15 @@ class AutoCompleteDropdown( QW.QWidget ):
         self._text_ctrl.update()
         
     
-    def _UpdateSearchResultsList( self ):
+    def _UpdateSearchResults( self ):
         
-        self._refresh_list_job = None
+        self._schedule_results_refresh_job = None
         
-        self._CancelCurrentResultsFetchJob()
+        self._CancelSearchResultsFetchJob()
         
         self._current_fetch_job_key = ClientThreading.JobKey( cancellable = True )
         
-        self._StartResultsFetchJob( self._current_fetch_job_key )
+        self._StartSearchResultsFetchJob( self._current_fetch_job_key )
         
     
     def BroadcastChoices( self, predicates, shift_down = False ):
@@ -840,7 +839,7 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def CancelCurrentResultsFetchJob( self ):
         
-        self._CancelCurrentResultsFetchJob()
+        self._CancelSearchResultsFetchJob()
         
     
     def DoDropdownHideShow( self ):
@@ -869,7 +868,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             
         elif key == QC.Qt.Key_Space and event.modifiers() & raw_control_modifier:
             
-            self._ScheduleListRefresh( 0.0 )
+            self._ScheduleResultsRefresh( 0.0 )
             
         elif self._intercept_key_events:
             
@@ -1046,13 +1045,13 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         if num_chars == 0:
             
-            self._ScheduleListRefresh( 0.0 )
+            self._ScheduleResultsRefresh( 0.0 )
             
         else:
             
             if HG.client_controller.new_options.GetBoolean( 'autocomplete_results_fetch_automatically' ):
                 
-                self._ScheduleListRefresh( 0.0 )
+                self._ScheduleResultsRefresh( 0.0 )
                 
             
             if self._dropdown_notebook.currentWidget() != self._search_results_list:
@@ -1102,7 +1101,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
             
-            self._CancelCurrentResultsFetchJob()
+            self._CancelSearchResultsFetchJob()
             
             self._search_text_for_current_cache = search_text_for_cache
             self._cached_results = cached_results
@@ -1123,6 +1122,13 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._text_ctrl.setFocus( focus_reason )
             
+        
+    
+    def SetForceDropdownHide( self, value ):
+        
+        self._force_dropdown_hide = value
+        
+        self._DropdownHideShow()
         
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
@@ -1797,7 +1803,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def _StartResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_key ):
         
         parsed_search_text = self._ParseSearchText()
         
@@ -1807,9 +1813,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AppendLoadingPredicate( stub_predicates )
         
-        HG.client_controller.CallLaterQtSafe(self, 0.2, self.SetStubPredicates, job_key, stub_predicates)
+        HG.client_controller.CallLaterQtSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates )
         
-        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._media_callable, self._file_search_context, self._synchronised.IsOn(), self._include_unusual_predicate_types, self._initial_matches_fetched, self._search_text_for_current_cache, self._cached_results, self._under_construction_or_predicate, self._force_system_everything )
+        if self._under_construction_or_predicate is None:
+            
+            under_construction_or_predicate = None
+            
+        else:
+            
+            under_construction_or_predicate = self._under_construction_or_predicate.Duplicate()
+            
+        
+        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._media_callable, self._file_search_context.Duplicate(), self._synchronised.IsOn(), self._include_unusual_predicate_types, self._initial_matches_fetched, self._search_text_for_current_cache, list( self._cached_results ), under_construction_or_predicate, self._force_system_everything )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
@@ -1930,7 +1945,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 # refresh system preds after five mins
                 
-                self._ScheduleListRefresh( 300 )
+                self._ScheduleResultsRefresh( 300 )
                 
             
         
@@ -2309,7 +2324,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         return looking_at_search_results and ( p1 or p2 )
         
     
-    def _StartResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_key ):
         
         parsed_search_text = self._ParseSearchText()
         
@@ -2321,7 +2336,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         HG.client_controller.CallLaterQtSafe(self, 0.2, self.SetStubPredicates, job_key, stub_predicates)
         
-        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._search_text_for_current_cache, self._cached_results )
+        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._search_text_for_current_cache, list( self._cached_results ) )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):

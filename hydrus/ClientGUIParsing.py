@@ -480,7 +480,14 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for example_url in example_urls:
                 
-                url_class = self._network_engine.domain_manager.GetURLClass( example_url )
+                try:
+                    
+                    url_class = self._network_engine.domain_manager.GetURLClass( example_url )
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    continue
+                    
                 
                 if url_class is not None:
                     

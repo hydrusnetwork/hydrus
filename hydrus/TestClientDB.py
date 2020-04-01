@@ -711,7 +711,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [] )
                 
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, True )
                 
                 page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
                 
@@ -723,7 +723,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = [] )
                 
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, False )
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, False )
                 
                 page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
                 
@@ -733,7 +733,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
                 
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
                 
                 page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
                 
@@ -743,7 +743,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
                 
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', fsc, True )
                 
                 page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
                 
@@ -753,7 +753,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
                 
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
                 
                 page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
                 

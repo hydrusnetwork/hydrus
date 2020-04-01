@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 391</h3></li>
+				<ul>
+					<li>system tray icon:</li>
+					<li>hydrus now can now make a system tray icon for those OSes that support it. it can be buggy/crashy under non-Windows, where it gets some warning labels</li>
+					<li>under the new options->system tray page, you can set whether to show the system tray all the time, minimise the main gui to system tray, close-button the main gui to system tray, and start the program minimised to the system tray</li>
+					<li>right-clicking the icon brings up a menu to show/hide the ui, pause/unpause network traffic or subscriptions, and to exit hydrus</li>
+					<li>the main file menu now has an option to minimise to system tray</li>
+					<li>double-clicking or middle-clicking the icon will show/hide the whole hydrus ui as long as there are no dialogs open</li>
+					<li>clicking it will restore the main gui from minimise or raise it to the front</li>
+					<li>on an ui hide, the current preview window will be blanked and media viewers will be paused, so any ongoing noise/cpu from them should stop</li>
+					<li>a new 'global' shortcut 'hide_to_system_tray' is now available</li>
+					<li>starting the client minimised may have some layout issues on first show--I particularly had to fix splitter layouts--please report any more you discover</li>
+					<li>.</li>
+					<li>framerate and num frames:</li>
+					<li>system:framerate search added to system:duration panel. precise framerate is tricky with current hydrus info, so it searches +/- 5% of a given value</li>
+					<li>system:number of frames added to system:duration panel</li>
+					<li>sort by number of frames added</li>
+					<li>duration/framerate/num frames sort moved to their own 'duration' submenu</li>
+					<li>framerate added to generic media metadata summary string (which appears in status bar and media viewer, etc...). precise framerate is tricky with current hydrus info, so it is rounded to the nearest integer</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>rolling in new danbooru file page parsers that should fix file downloads, thank you to a user for the submission</li>
+					<li>rolling in a e621 login script, thank you to a user for the submission</li>
+					<li>gave tag autocomplete results fetch code a pass, cleaning up several instances of incorrect or inefficient timing and caching logic and I believe fixing the issue where system preds would sometimes not be loaded after entering a tag</li>
+					<li>improved reliability of autocomplete dropdown hiding on background pages (some edge cases where these could still hang around _should_ be fixed)</li>
+					<li>improved 'hide' tests in several parts of the program related to the new system tray icon, which should help some other cases--e.g. weird shutdowns now _shouldn't_ ever leave a bunch of floating popup messages</li>
+					<li>fixed a bug where pages set to open with all known files/tags domains, which is not supported, was incorrectly substituting tag domain with a file domain, which is even more not supported</li>
+					<li>cleaned up some sort code--I believe this has fixed the odd issue where a 'time imported' sort would not work on some pages (such as one loaded from a favourite search)</li>
+					<li>fixed the 'related' tag suggestion box not knowing about new pending tags added in a manage tags dialog open on a media viewer after next/previous media transitions while the dialog is open. also it and the file lookup's lists now clear when a new lookup starts</li>
+					<li>the tag suggestion boxes are now add-only and remove what you add as you add them! let me know if this feels nice or not!</li>
+					<li>the splash window now has a different 'booting/exiting' window title, if you would like to hook it with a window manager</li>
+					<li>went over all the 'prep url for display', 'filter urls', and 'normalise url' requests across the program to deal with invalid url (e.g. garbled text) better</li>
+					<li>you can now no longer add invalid urls via the client api associate_url call--you'll get 400 instead</li>
+					<li>cleaned some thumbnail selection and rendering code, particularly fixing some edge case 'where that media go?' issues where collect-by calls happen during thumbnail waterfalls and so on</li>
+					<li>cleaned up some page file domain setting code and misc page management code</li>
+					<li>improved accuracy of rendered image cache memory footprint calculations</li>
+				</ul>
 				<li><h3>version 390</h3></li>
 				<ul>
 					<li>fixed a bug that was causing potential duplicates to be sometimes re-added between media groups that were previously set as false positive/not related. I apologise for the inconvenience this bug has caused. if you were hit by this, please reset your potential duplicate pairs (hit the cog button on the dupes page) and re-search, and the bad pairs should not be re-added again</li>
@@ -15,7 +52,7 @@
 					<li>'namespace:anything' searches now work when the namespace itself has a wildcard</li>
 					<li>fixed 'write' autocompletes not matching inputs with UPPERCASE letters</li>
 					<li>fixed adding tags that start with a colon (e.g. ":D") in 'write' autocompletes</li>
-					<li>it should now impossible to enter some 'kill my cpu' queries into tag autocomplete, such as '[asterisk]:anything', even if accidentally entered through the fast-add system</li>
+					<li>it should now be impossible to enter some 'kill my cpu' queries into tag autocomplete, such as '[asterisk]:anything', even if accidentally entered through the fast-add system</li>
 					<li>the 'cancel search' stop button that appears after a search takes three seconds is back to being neatly embedded beside the tag autocomplete input box</li>
 					<li>hitting the cancel search button now clears the non-interactable 'Loading' thumbnail media page (with its misleading 'Loading...' statusbar) and returns you to an empty thumbnail page</li>
 					<li>loading a favourite search with non-immediate search no longer loads the 'loading...' page. it also saves that new non-immediate status to the page session more reliably</li>

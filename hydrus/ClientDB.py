@@ -5189,6 +5189,59 @@ class DB( HydrusDB.HydrusDB ):
             else: files_info_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
             
         
+        if 'min_framerate' in simple_preds or 'framerate' in simple_preds or 'max_framerate' in simple_preds:
+            
+            min_framerate_sql = None
+            max_framerate_sql = None
+            
+            if 'min_framerate' in simple_preds:
+                
+                min_framerate_sql = simple_preds[ 'min_framerate' ] * 1.05
+                
+            if 'framerate' in simple_preds:
+                
+                min_framerate_sql = simple_preds[ 'framerate' ] * 0.95
+                max_framerate_sql = simple_preds[ 'framerate' ] * 1.05
+                
+            if 'max_num_frames' in simple_preds:
+                
+                max_framerate_sql = simple_preds[ 'max_num_frames' ] * 0.95
+                
+            
+            pred = '( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {})'
+            
+            if min_framerate_sql is None:
+                
+                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) < {}'.format( max_framerate_sql ) )
+                
+            elif max_framerate_sql is None:
+                
+                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) > {}'.format( min_framerate_sql ) )
+                
+            else:
+                
+                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) BETWEEN {} AND {}'.format( min_framerate_sql, max_framerate_sql ) )
+                
+            
+            files_info_predicates.append( pred )
+            
+        
+        if 'min_num_frames' in simple_preds: files_info_predicates.append( 'num_frames > ' + str( simple_preds[ 'min_num_frames' ] ) )
+        if 'num_frames' in simple_preds:
+            
+            num_frames = simple_preds[ 'num_frames' ]
+            
+            if num_frames == 0: files_info_predicates.append( '( num_frames IS NULL OR num_frames = 0 )' )
+            else: files_info_predicates.append( 'num_frames = ' + str( num_frames ) )
+            
+        if 'max_num_frames' in simple_preds:
+            
+            max_num_frames = simple_preds[ 'max_num_frames' ]
+            
+            if max_num_frames == 0: files_info_predicates.append( 'num_frames < ' + str( max_num_frames ) )
+            else: files_info_predicates.append( '( num_frames < ' + str( max_num_frames ) + ' OR num_frames IS NULL )' )
+            
+        
         there_are_simple_files_info_preds_to_search_for = len( files_info_predicates ) > 0
         
         # start with some quick ways to populate query_hash_ids
@@ -11805,6 +11858,7 @@ class DB( HydrusDB.HydrusDB ):
             simple_sorts.append( CC.SORT_FILES_BY_FILESIZE )
             simple_sorts.append( CC.SORT_FILES_BY_DURATION )
             simple_sorts.append( CC.SORT_FILES_BY_FRAMERATE )
+            simple_sorts.append( CC.SORT_FILES_BY_NUM_FRAMES )
             simple_sorts.append( CC.SORT_FILES_BY_WIDTH )
             simple_sorts.append( CC.SORT_FILES_BY_HEIGHT )
             simple_sorts.append( CC.SORT_FILES_BY_RATIO )
@@ -11835,6 +11889,10 @@ class DB( HydrusDB.HydrusDB ):
                     elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
                         
                         query = 'SELECT hash_id, num_frames, duration FROM files_info WHERE hash_id = ?;'
+                        
+                    elif sort_data == CC.SORT_FILES_BY_NUM_FRAMES:
+                        
+                        query = 'SELECT hash_id, num_frames FROM files_info WHERE hash_id = ?;'
                         
                     elif sort_data == CC.SORT_FILES_BY_WIDTH:
                         
@@ -13843,6 +13901,54 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 390:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.OverwriteDefaultLoginScripts( ( 'e621.net login', ) )
+                
+                #
+                
+                login_manager.TryToLinkMissingLoginScripts( ( 'e621.net', ) )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
                 
             except Exception as e:
                 

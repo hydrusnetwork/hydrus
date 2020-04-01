@@ -420,7 +420,7 @@ class HydrusResourceRestrictedLockOn( HydrusResourceRestricted ):
         # check permission here since no db work
         request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
         
-        locked = HG.server_busy.acquire( False )
+        locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
         
         if not locked:
             

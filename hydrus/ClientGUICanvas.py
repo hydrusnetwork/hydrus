@@ -401,6 +401,11 @@ class Canvas( QW.QWidget ):
         
         media = media.GetDisplayMedia()
         
+        if media is None:
+            
+            return True
+            
+        
         locations_manager = media.GetLocationsManager()
         
         if not locations_manager.IsLocal():
@@ -1402,6 +1407,11 @@ class Canvas( QW.QWidget ):
             
             self._DrawCurrentMedia()
             
+        
+    
+    def PauseMedia( self ):
+        
+        self._PauseCurrentMedia()
         
     
     def ProcessApplicationCommand( self, command, canvas_key = None ):
@@ -3329,7 +3339,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
 class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
-    exitFocusMedia = QC.Signal( ClientMedia.MediaSingleton )
+    exitFocusMedia = QC.Signal( ClientMedia.Media )
     
     def __init__( self, parent, page_key, media_results ):
         

@@ -78,7 +78,14 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            try:
+                
+                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                pass
+                
             
         
         HydrusSerialisable.SerialisableBase.__init__( self )

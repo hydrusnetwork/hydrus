@@ -1439,7 +1439,14 @@ class FilesMaintenanceManager( object ):
                 
                 add_it = False
                 
-                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                try:
+                    
+                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    continue
+                    
                 
                 if url_class is None:
                     

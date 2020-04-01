@@ -300,15 +300,17 @@ SORT_FILES_BY_APPROX_BITRATE = 12
 SORT_FILES_BY_HAS_AUDIO = 13
 SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP = 14
 SORT_FILES_BY_FRAMERATE = 15
+SORT_FILES_BY_NUM_FRAMES = 16
 
 SYSTEM_SORT_TYPES = []
 
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_DURATION )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FRAMERATE )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_HEIGHT )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_WIDTH )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_RATIO )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_PIXELS )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_DURATION )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FRAMERATE )
+SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_FRAMES )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FILESIZE )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_IMPORT_TIME )
 SYSTEM_SORT_TYPES.append( SORT_FILES_BY_APPROX_BITRATE )
@@ -322,12 +324,13 @@ SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MEDIA_VIEWTIME )
 
 system_sort_type_submetatype_string_lookup = {}
 
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_DURATION ] = 'dimensions'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'dimensions'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_HEIGHT ] = 'dimensions'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_PIXELS ] = 'dimensions'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RATIO ] = 'dimensions'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_WIDTH ] = 'dimensions'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_DURATION ] = 'duration'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'duration'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_FRAMES ] = 'duration'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'file'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'file'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MIME ] = 'file'
@@ -343,6 +346,7 @@ sort_type_basic_string_lookup = {}
 
 sort_type_basic_string_lookup[ SORT_FILES_BY_DURATION ] = 'duration'
 sort_type_basic_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'framerate'
+sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_FRAMES ] = 'number of frames'
 sort_type_basic_string_lookup[ SORT_FILES_BY_HEIGHT ] = 'height'
 sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_PIXELS ] = 'number of pixels'
 sort_type_basic_string_lookup[ SORT_FILES_BY_RATIO ] = 'resolution ratio'

@@ -245,7 +245,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( names_to_analyze ) > 0:
             
-            locked = HG.server_busy.acquire( False )
+            locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
             
             if not locked:
                 
@@ -288,7 +288,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self ):
         
-        locked = HG.server_busy.acquire( False )
+        locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
         
         if not locked:
             
@@ -3305,7 +3305,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self ):
         
-        locked = HG.server_busy.acquire( False )
+        locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
         
         if not locked:
             

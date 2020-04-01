@@ -51,8 +51,43 @@ PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING = 32
 PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS = 33
 PREDICATE_TYPE_SYSTEM_HAS_AUDIO = 34
 PREDICATE_TYPE_SYSTEM_MODIFIED_TIME = 35
+PREDICATE_TYPE_SYSTEM_FRAMERATE = 36
+PREDICATE_TYPE_SYSTEM_NUM_FRAMES = 37
 
-SYSTEM_PREDICATE_TYPES = { PREDICATE_TYPE_SYSTEM_EVERYTHING, PREDICATE_TYPE_SYSTEM_INBOX, PREDICATE_TYPE_SYSTEM_ARCHIVE, PREDICATE_TYPE_SYSTEM_UNTAGGED, PREDICATE_TYPE_SYSTEM_NUM_TAGS, PREDICATE_TYPE_SYSTEM_LIMIT, PREDICATE_TYPE_SYSTEM_SIZE, PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_HASH, PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_RATIO, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_MIME, PREDICATE_TYPE_SYSTEM_RATING, PREDICATE_TYPE_SYSTEM_SIMILAR_TO, PREDICATE_TYPE_SYSTEM_LOCAL, PREDICATE_TYPE_SYSTEM_NOT_LOCAL, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_FILE_SERVICE, PREDICATE_TYPE_SYSTEM_NUM_PIXELS, PREDICATE_TYPE_SYSTEM_DIMENSIONS, PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, PREDICATE_TYPE_SYSTEM_KNOWN_URLS, PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS }
+SYSTEM_PREDICATE_TYPES = set()
+
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_EVERYTHING )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_INBOX )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_ARCHIVE )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_UNTAGGED )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_TAGS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_LIMIT )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_SIZE )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_AGE )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_MODIFIED_TIME )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_HASH )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_WIDTH )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_HEIGHT )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_RATIO )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_DURATION )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FRAMERATE )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_FRAMES )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_HAS_AUDIO )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_MIME )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_RATING )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_SIMILAR_TO )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_LOCAL )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NOT_LOCAL )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_WORDS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_SERVICE )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_PIXELS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_DIMENSIONS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_KNOWN_URLS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS )
 
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
 IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : ' ' for char in IGNORED_TAG_SEARCH_CHARACTERS }
@@ -806,6 +841,36 @@ class FileSystemPredicates( object ):
                     
                 
             
+            if predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
+                
+                ( operator, framerate ) = value
+                
+                if operator == '<': self._common_info[ 'max_framerate' ] = framerate
+                elif operator == '>': self._common_info[ 'min_framerate' ] = framerate
+                elif operator == '=': self._common_info[ 'framerate' ] = framerate
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
+                
+                ( operator, num_frames ) = value
+                
+                if operator == '<': self._common_info[ 'max_num_frames' ] = num_frames
+                elif operator == '>': self._common_info[ 'min_num_frames' ] = num_frames
+                elif operator == '=': self._common_info[ 'num_frames' ] = num_frames
+                elif operator == '\u2248':
+                    
+                    if num_frames == 0:
+                        
+                        self._common_info[ 'num_frames' ] = 0
+                        
+                    else:
+                        
+                        self._common_info[ 'min_num_frames' ] = int( num_frames * 0.85 )
+                        self._common_info[ 'max_num_frames' ] = int( num_frames * 1.15 )
+                        
+                    
+                
+            
             if predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
                 
                 ( operator, value, service_key ) = value
@@ -1495,17 +1560,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
                 
                 if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH: base = 'width'
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT: base = 'height'
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = 'number of words'
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES: base = 'number of frames'
                 
                 if self._value is not None:
                     
                     ( operator, value ) = self._value
                     
-                    base += ' ' + operator + ' ' + HydrusData.ToHumanInt( value )
+                    base += ' {} {}'.format( operator, HydrusData.ToHumanInt( value ) )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
@@ -1526,8 +1592,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        base += ' ' + operator + ' ' + HydrusData.ConvertMillisecondsToPrettyTime( value )
+                        base += ' {} {}'.format( operator, HydrusData.ConvertMillisecondsToPrettyTime( value ) )
                         
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
+                
+                base = 'framerate'
+                
+                if self._value is not None:
+                    
+                    ( operator, value ) = self._value
+                    
+                    base += ' {} {}fps'.format( operator, HydrusData.ToHumanInt( value ) )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:

@@ -2362,7 +2362,16 @@ class MediaCollection( MediaList, Media ):
     
     def GetHash( self ):
         
-        return self.GetDisplayMedia().GetHash()
+        display_media = self.GetDisplayMedia()
+        
+        if display_media is None:
+            
+            return None
+            
+        else:
+            
+            return display_media.GetHash()
+            
         
     
     def GetLocationsManager( self ): 
@@ -2531,7 +2540,7 @@ class MediaSingleton( Media ):
         return MediaSingleton( self._media_result.Duplicate() )
         
     
-    def GetDisplayMedia( self ):
+    def GetDisplayMedia( self ) -> 'MediaSingleton':
         
         return self
         
@@ -2619,9 +2628,24 @@ class MediaSingleton( Media ):
         
         if width is not None and height is not None: info_string += ' (' + HydrusData.ToHumanInt( width ) + 'x' + HydrusData.ToHumanInt( height ) + ')'
         
-        if duration is not None: info_string += ', ' + HydrusData.ConvertMillisecondsToPrettyTime( duration )
+        if duration is not None:
+            
+            info_string += ', ' + HydrusData.ConvertMillisecondsToPrettyTime( duration )
+            
         
-        if num_frames is not None: info_string += ' (' + HydrusData.ToHumanInt( num_frames ) + ' frames)'
+        if num_frames is not None:
+            
+            if duration is None or duration == 0 or num_frames == 0:
+                
+                framerate_insert = ''
+                
+            else:
+                
+                framerate_insert = ', {}fps'.format( round( num_frames / ( duration / 1000 ) ) )
+                
+            
+            info_string += ' ({} frames{})'.format( HydrusData.ToHumanInt( num_frames ), framerate_insert )
+            
         
         if has_audio:
             
@@ -3064,6 +3088,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return num_frames / duration
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_NUM_FRAMES:
+                
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetNumFrames() )
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_HAS_AUDIO:
                 
                 def sort_key( x ):
@@ -3256,6 +3287,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FRAMERATE ] = ( 'slowest first', 'fastest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_FRAMES ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )

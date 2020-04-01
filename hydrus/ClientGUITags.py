@@ -1558,9 +1558,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box.ChangeTagService( self._tag_service_key )
             
-            self.SetMedia( media )
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, media, self.AddTags, canvas_key = self._canvas_key )
             
-            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags, canvas_key = self._canvas_key )
+            self.SetMedia( media )
             
             button_hbox = QP.HBoxLayout()
             
@@ -2310,6 +2310,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media = media
             
             self._tags_box.SetTagsByMedia( self._media )
+            
+            self._suggested_tags.SetMedia( media )
             
         
         def SetTagBoxFocus( self ):

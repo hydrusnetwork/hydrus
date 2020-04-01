@@ -90,6 +90,14 @@ class PubSubEventCatcher( QC.QObject ):
         return False
         
     
+def MessageHandler( msg_type, context, text ):
+    
+    if msg_type not in ( QC.QtDebugMsg, QC.QtInfoMsg ):
+        
+        # Set a breakpoint here to be able to see where the warnings originate from.
+        HydrusData.Print( text )
+        
+
 class App( QW.QApplication ):
     
     def __init__( self, pubsub, *args, **kwargs ):
@@ -101,8 +109,7 @@ class App( QW.QApplication ):
         self.setApplicationName( 'Hydrus Client' )
         self.setApplicationVersion( str( HC.SOFTWARE_VERSION ) )
         
-        # Uncomment this to debug Qt warnings. Set a breakpoint on the print statement in QP.WarningHandler to be able to see where the warnings originate from.
-        QC.qInstallMessageHandler( QP.WarningHandler )
+        QC.qInstallMessageHandler( MessageHandler )
         
         self.setQuitOnLastWindowClosed( True )
         
@@ -486,11 +493,11 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CreateSplash( self ):
+    def CreateSplash( self, title ):
         
         try:
             
-            self._splash = ClientGUI.FrameSplash( self )
+            self._splash = ClientGUI.FrameSplash( self, title )
             
         except:
             
@@ -1362,7 +1369,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
         
-        self.CreateSplash()
+        self.CreateSplash( 'hydrus client booting' )
         
         signal.signal( signal.SIGINT, self.CatchSignal )
         signal.signal( signal.SIGTERM, self.CatchSignal )

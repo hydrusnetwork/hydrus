@@ -43,10 +43,11 @@ import typing
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
-    selectedMediaTagPresentationChanged = QC.Signal( object, bool )
+    selectedMediaTagPresentationChanged = QC.Signal( list, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
     
-    focusMediaChanged = QC.Signal( object )
+    focusMediaChanged = QC.Signal( ClientMedia.Media )
+    focusMediaCleared = QC.Signal()
     refreshQuery = QC.Signal()
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
@@ -74,7 +75,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         HG.client_controller.sub( self, 'Collect', 'collect_media' )
-        HG.client_controller.sub( self, 'Sort', 'sort_media' )
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
         HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
@@ -145,11 +145,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if self._focused_media is not None:
             
-            media = self._focused_media.GetDisplayMedia()
+            display_media = self._focused_media.GetDisplayMedia()
             
-            if media.GetMime() in HC.IMAGES:
+            if display_media is None:
                 
-                HG.client_controller.pub( 'clipboard', 'bmp', media )
+                return
+                
+            
+            if display_media.GetMime() in HC.IMAGES:
+                
+                HG.client_controller.pub( 'clipboard', 'bmp', display_media )
                 
             else:
                 
@@ -182,6 +187,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     def _CopyHashToClipboard( self, hash_type ):
         
         display_media = self._focused_media.GetDisplayMedia()
+        
+        if display_media is None:
+            
+            return
+            
         
         sha256_hash = display_media.GetHash()
         
@@ -239,6 +249,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         display_media = self._focused_media.GetDisplayMedia()
         
+        if display_media is None:
+            
+            return
+            
+        
         client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( display_media.GetHash(), display_media.GetMime() )
@@ -267,6 +282,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     def _CopyServiceFilenameToClipboard( self, service_key ):
         
         display_media = self._focused_media.GetDisplayMedia()
+        
+        if display_media is None:
+            
+            return
+            
         
         hash = display_media.GetHash()
         
@@ -445,6 +465,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             display_media = self._focused_media.GetDisplayMedia()
             
+            if display_media is None:
+                
+                return
+                
+            
             new_options = HG.client_controller.new_options
             
             ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( display_media.GetMime() )
@@ -476,10 +501,24 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if len( media_results ) > 0:
             
-            if first_media is None and self._focused_media is not None: first_media = self._focused_media
+            if first_media is None and self._focused_media is not None:
+                
+                first_media = self._focused_media
+                
             
-            if first_media is not None and first_media.GetLocationsManager().IsLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
-            else: first_hash = None
+            if first_media is not None:
+                
+                first_media = first_media.GetDisplayMedia()
+                
+            
+            if first_media is not None and first_media.GetLocationsManager().IsLocal():
+                
+                first_hash = first_media.GetHash()
+                
+            else:
+                
+                first_hash = None
+                
             
             self.SetFocusedMedia( None )
             
@@ -896,7 +935,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             return
             
         
-        HG.client_controller.CallToThread( thread_wait, self._focused_media.GetDisplayMedia() )
+        media = self._focused_media.GetDisplayMedia()
+        
+        if media is None:
+            
+            return
+            
+        
+        HG.client_controller.CallToThread( thread_wait, media )
         
     
     def _ManageRatings( self ):
@@ -990,6 +1036,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         if self._focused_media is not None:
             
             open_externally_media = self._focused_media.GetDisplayMedia()
+            
+            if open_externally_media is None:
+                
+                return
+                
             
             if open_externally_media.GetLocationsManager().IsLocal():
                 
@@ -1120,6 +1171,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 tags_media = self._selected_media
                 
             
+            tags_media = list( tags_media )
+            
             tags_changed = tags_changed or self._had_changes_to_tag_presentation_while_hidden
             
             self.selectedMediaTagPresentationChanged.emit( tags_media, tags_changed )
@@ -1141,7 +1194,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
-            self.selectedMediaTagPresentationIncremented.emit( list( medias ) )
+            medias = list( medias )
+            
+            self.selectedMediaTagPresentationIncremented.emit( medias )
             
             HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
             
@@ -1530,7 +1585,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         flat_media = self._GetSelectedFlatMedia()
         
-        if self._focused_media is None:
+        if self._focused_media is None or self._focused_media.GetDisplayMedia() is None:
             
             QW.QMessageBox.warning( self, 'Warning', 'No file is focused, so cannot set the focused file as better!' )
             
@@ -1550,7 +1605,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _SetDuplicatesFocusedKing( self ):
         
-        if self._focused_media is None:
+        if self._focused_media is None or self._focused_media.GetDisplayMedia() is None:
             
             QW.QMessageBox.warning( self, 'Warning', 'No file is focused, so cannot set the focused file as king!' )
             
@@ -1598,18 +1653,23 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             self._next_best_media_after_focused_media_removed = None
             
         
+        publish_media = None
+        
         self._focused_media = media
         
-        if self._focused_media is None:
-            
-            publish_media = None
-            
-        else:
+        if self._focused_media is not None:
             
             publish_media = self._focused_media.GetDisplayMedia()
             
         
-        self.focusMediaChanged.emit( publish_media )
+        if publish_media is None:
+            
+            self.focusMediaCleared.emit()
+            
+        else:
+            
+            self.focusMediaChanged.emit( publish_media )
+            
         
     
     def _ScrollToMedia( self, media ):
@@ -1834,9 +1894,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_clear_false_positives':
@@ -1852,9 +1917,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_dissolve_alternate_group':
@@ -1870,9 +1940,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_dissolve_duplicate_group':
@@ -1888,27 +1963,42 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_remove_focused_from_duplicate_group':
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_reset_focused_potential_search':
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_reset_potential_search':
@@ -1924,9 +2014,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if self._focused_media is not None:
                     
-                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    media =  self._focused_media.GetDisplayMedia()
                     
-                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    if media is not None:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                        
                     
                 
             elif action == 'duplicate_media_remove_potentials':
@@ -2140,14 +2235,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         pass
         
     
-    def Sort( self, page_key, media_sort = None ):
-        
-        if page_key == self._page_key:
-            
-            ClientMedia.ListeningMediaList.Sort( self, media_sort )
-            
-        
-    
 class MediaPanelLoading( MediaPanel ):
     
     def __init__( self, parent, page_key, file_service_key ):
@@ -2353,7 +2440,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
-            hash = thumbnail.GetDisplayMedia().GetHash()
+            display_media = thumbnail.GetDisplayMedia()
+            
+            hash = display_media.GetHash()
             
             if hash in self._hashes_faded and thumbnail_cache.HasThumbnailCached( thumbnail ):
                 
@@ -2388,8 +2477,6 @@ class MediaPanelThumbnails( MediaPanel ):
             return
             
         
-        self._hashes_faded.update( ( thumbnail.GetDisplayMedia().GetHash() for thumbnail in thumbnails ) )
-        
         if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
             self._DirtyAllPages()
@@ -2409,7 +2496,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 # probably means a collect happened during an ongoing waterfall or whatever
                 
-                return
+                continue
                 
             
             if self._GetPageIndexFromThumbnailIndex( thumbnail_index ) not in self._clean_canvas_pages:
@@ -2417,15 +2504,22 @@ class MediaPanelThumbnails( MediaPanel ):
                 continue
                 
             
-            hash = thumbnail.GetDisplayMedia().GetHash()
+            display_media = thumbnail.GetDisplayMedia()
             
-            self._StopFading( hash )
-            
-            bmp = thumbnail.GetQtImage()
-            
-            alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
-            
-            self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
+            if display_media is not None:
+                
+                hash = display_media.GetHash()
+                
+                self._hashes_faded.add( hash )
+                
+                self._StopFading( hash )
+                
+                bmp = thumbnail.GetQtImage()
+                
+                alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
+                
+                self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
+                
             
         
         HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
@@ -3187,7 +3281,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         menu = QW.QMenu( self.window() )
         
-        if self._focused_media is not None:
+        if self._focused_media is not None and self._focused_media.GetDisplayMedia() is not None:
             
             # variables
             
@@ -3521,7 +3615,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        if self._focused_media is not None:
+        if self._focused_media is not None and self._focused_media.GetDisplayMedia() is not None:
             
             if selection_has_inbox:
                 
@@ -3532,9 +3626,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendMenuItem( menu, inbox_phrase, 'Put the selected files back in the inbox.', self._Inbox )
                 
-            
-        
-        if self._focused_media is not None:
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -4161,9 +4252,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def Sort( self, page_key, media_sort = None ):
+    def Sort( self, media_sort = None ):
         
-        MediaPanel.Sort( self, page_key, media_sort )
+        MediaPanel.Sort( self, media_sort )
         
         self._DirtyAllPages()
         

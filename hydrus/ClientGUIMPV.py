@@ -485,11 +485,11 @@ class mpvWidget( QW.QWidget ):
         
         load_f = getattr( mpv, '_mpv_load_config_file', None )
         
-        if load_f is not None:
+        if load_f is not None and callable( load_f ):
             
             try:
                 
-                load_f( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
+                load_f( self._player.handle, mpv_config_path.encode( 'utf-8' ) ) # pylint: disable=E1102
                 
             except Exception as e:
                 

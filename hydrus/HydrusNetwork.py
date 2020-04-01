@@ -2412,7 +2412,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
         
         if update_due:
             
-            locked = HG.server_busy.acquire( False )
+            locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
             
             if not locked:
                 

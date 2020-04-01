@@ -201,7 +201,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_search_context = tag_search_context )
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled ) )
+                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
                 elif entry_type == 'page_duplicate_filter':
                     
@@ -471,6 +471,7 @@ class Page( QW.QSplitter ):
         
         self._media_panel.refreshQuery.connect( self.RefreshQuery )
         self._media_panel.focusMediaChanged.connect( self._preview_canvas.SetMedia )
+        self._media_panel.focusMediaCleared.connect( self._preview_canvas.ClearMedia )
         
         self._management_panel.ConnectMediaPanelSignals( self._media_panel )
         
@@ -499,9 +500,9 @@ class Page( QW.QSplitter ):
             
             new_panel.Collect( self._page_key, media_collect )
             
-            sort_by = self._management_panel.GetMediaSort()
+            media_sort = self._management_panel.GetMediaSort()
             
-            new_panel.Sort( self._page_key, sort_by )
+            new_panel.Sort( media_sort )
             
         
         self._media_panel.setParent( None )
@@ -744,7 +745,7 @@ class Page( QW.QSplitter ):
         
     
     def SetupSplits( self ):
-
+        
         QP.SplitVertically( self, self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
         
         QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
@@ -2635,14 +2636,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            tag_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
             
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
         
         file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_search_context = tag_search_context, predicates = initial_predicates )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         
         page = self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         

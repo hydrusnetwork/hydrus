@@ -27,6 +27,7 @@ from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
 from . import ClientGUIShortcutControls
 from . import ClientGUIStyle
+from . import ClientGUISystemTray
 from . import ClientGUITags
 from . import ClientGUITopLevelWindows
 from . import ClientMedia
@@ -452,8 +453,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
-        self.show()
-        
         self._InitialiseMenubar()
         
         self._RefreshStatusBar()
@@ -475,6 +474,29 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._animation_update_windows = set()
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'main_gui' ] )
+        
+        self._system_tray_hidden_tlws = []
+        self._have_system_tray_icon = False
+        self._system_tray_icon = None
+        
+        self._have_shown_once = False
+        
+        if self._controller.new_options.GetBoolean( 'start_client_in_system_tray' ):
+            
+            QW.QApplication.instance().setQuitOnLastWindowClosed( False )
+            
+            self.hide()
+            
+            self._system_tray_hidden_tlws.append( self )
+            
+        else:
+            
+            self.show()
+            
+            self._have_shown_once = True
+            
+        
+        self._UpdateSystemTrayIcon( currently_booting = True )
         
         self._controller.CallLaterQtSafe( self, 0.5, self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
@@ -527,8 +549,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         elif qtpy.PYQT5:
 
-            from PyQt5.Qt import PYQT_VERSION_STR
-            from sip import SIP_VERSION_STR
+            from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401
+            from sip import SIP_VERSION_STR # pylint: disable=E0401
 
             library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
             library_versions.append( ( 'sip', SIP_VERSION_STR ) )
@@ -1096,6 +1118,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _CurrentlyMinimisedOrHidden( self ):
+        
+        return self.isMinimized() or not self.isVisible()
+        
+    
     def _DebugFetchAURL( self ):
         
         def qt_code( network_job ):
@@ -1623,6 +1650,86 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _FlipShowHideWholeUI( self ):
+        
+        if self.isVisible():
+            
+            QW.QApplication.instance().setQuitOnLastWindowClosed( False )
+            
+            visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if tlw.isVisible() ]
+            
+            visible_dialogs = [ tlw for tlw in visible_tlws if isinstance( tlw, QW.QDialog ) ]
+            
+            if len( visible_dialogs ) > 0:
+                
+                dialog = visible_dialogs[ -1 ]
+                
+                dialog.activateWindow()
+                
+                return
+                
+            
+            page = self.GetCurrentPage()
+            
+            if page is not None:
+                
+                page.PageHidden()
+                
+            
+            from . import ClientGUICanvasFrame
+            
+            for tlw in visible_tlws:
+                
+                if isinstance( tlw, ClientGUICanvasFrame.CanvasFrame ):
+                    
+                    tlw.PauseMedia()
+                    
+                
+                tlw.hide()
+                
+                self._system_tray_hidden_tlws.append( tlw )
+                
+            
+        else:
+            
+            for tlw in self._system_tray_hidden_tlws:
+                
+                if QP.isValid( tlw ):
+                    
+                    tlw.show()
+                    
+                
+            
+            if not self._have_shown_once:
+                
+                self._have_shown_once = True
+                
+                for page in self._notebook.GetMediaPages():
+                    
+                    page.SetupSplits()
+                    
+                
+            
+            page = self.GetCurrentPage()
+            
+            if page is not None:
+                
+                page.PageShown()
+                
+            
+            self._system_tray_hidden_tlws = []
+            
+            if self.isMinimized():
+                
+                self.showNormal()
+                
+            
+            QW.QApplication.instance().setQuitOnLastWindowClosed( True )
+            
+        
+        self._UpdateSystemTrayIcon()
+        
+    
     def _GenerateNewAccounts( self, service_key ):
         
         with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.exec()
@@ -1803,11 +1910,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             url_caught = True
             
-            if not self._notebook.HasURLImportPage() and self.isMinimized():
+            if not self._notebook.HasURLImportPage() and self._CurrentlyMinimisedOrHidden():
                 
                 self._controller.CallLaterQtSafe(self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls)
                 
-                return ( url, '"{}" URL was accepted, but it needed a new page and the client is currently minimized. It is queued to be added once the client is restored.' )
+                return ( url, '"{}" URL was accepted, but it needed a new page and the client is currently minimized or hidden. It is queued to be added once the client is restored.' )
                 
             
             page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
@@ -1830,11 +1937,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             url_caught = True
             
-            if not self._notebook.HasMultipleWatcherPage() and self.isMinimized():
+            if not self._notebook.HasMultipleWatcherPage() and self._CurrentlyMinimisedOrHidden():
                 
                 self._controller.CallLaterQtSafe(self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls)
                 
-                return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized. It is queued to be added once the client is restored.' )
+                return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized or hidden. It is queued to be added once the client is restored.' )
                 
             
             page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
@@ -2417,6 +2524,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.pub( 'notify_new_colourset' )
         self._controller.pub( 'notify_new_favourite_tags' )
         
+        self._UpdateSystemTrayIcon()
+        
     
     def _ManageParsers( self ):
         
@@ -2783,19 +2892,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         HydrusPaths.LaunchDirectory( HC.BASE_DIR )
         
     
-    def _PauseSync( self, sync_type ):
+    def _PausePlaySync( self, sync_type ):
         
         if sync_type == 'repo':
             
             HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
             
             self._controller.pub( 'notify_restart_repo_sync_daemon' )
-            
-        elif sync_type == 'subs':
-            
-            HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
-            
-            self._controller.subscriptions_manager.Wake()
             
         elif sync_type == 'export_folders':
             
@@ -2825,7 +2928,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _RefreshStatusBar( self ):
         
-        if not QP.isValid( self ) or not self._notebook or not self._statusbar or self.isMinimized():
+        if not QP.isValid( self ) or not self._notebook or not self._statusbar or self._CurrentlyMinimisedOrHidden():
             
             return
             
@@ -3579,6 +3682,58 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.CallToThread( THREADUploadPending, service_key )
         
     
+    def _UpdateSystemTrayIcon( self, currently_booting = False ):
+        
+        if not ClientGUISystemTray.SystemTrayAvailable() or ( not HC.PLATFORM_WINDOWS and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+            
+            return
+            
+        
+        new_options = self._controller.new_options
+        
+        always_show_system_tray_icon = new_options.GetBoolean( 'always_show_system_tray_icon' )
+        
+        need_system_tray = always_show_system_tray_icon
+        
+        if not self.isVisible():
+            
+            need_system_tray = True
+            
+        
+        if need_system_tray:
+            
+            if not self._have_system_tray_icon:
+                
+                self._system_tray_icon = ClientGUISystemTray.ClientSystemTrayIcon( self )
+                
+                self._system_tray_icon.highlight.connect( self.RestoreOrActivateWindow )
+                self._system_tray_icon.flip_show_ui.connect( self._FlipShowHideWholeUI )
+                self._system_tray_icon.exit_client.connect( self.TryToSaveAndClose )
+                self._system_tray_icon.flip_pause_network_jobs.connect( self.FlipNetworkTrafficPaused )
+                self._system_tray_icon.flip_pause_subscription_jobs.connect( self.FlipSubscriptionsPaused )
+                
+                self._have_system_tray_icon = True
+                
+            
+            self._system_tray_icon.show()
+            
+        else:
+            
+            if self._have_system_tray_icon:
+                
+                self._system_tray_icon.hide()
+                
+            
+        
+        if self._have_system_tray_icon:
+            
+            self._system_tray_icon.SetShouldAlwaysShow( always_show_system_tray_icon )
+            self._system_tray_icon.SetUIIsCurrentlyShown( self.isVisible() )
+            self._system_tray_icon.SetNetworkTrafficPaused( self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
+            self._system_tray_icon.SetSubscriptionsPaused( HC.options[ 'pause_subs_sync' ] )
+            
+        
+    
     def _VacuumDatabase( self ):
         
         text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It also truncates the database files, recovering unused space back to your hard drive. It typically happens automatically every few months, but you can force it here.'
@@ -3665,7 +3820,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         dialog_is_open = ClientGUIFunctions.DialogIsOpen()
         
-        if self.isMinimized() or dialog_is_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
+        if self._CurrentlyMinimisedOrHidden() or dialog_is_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
             
             self._controller.CallLaterQtSafe( self, 0.5, self.AddModalMessage, job_key )
             
@@ -3721,6 +3876,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._controller.CallToThread( do_it, self._controller, session, self, next_call_delay, callable )
                 
             
+        
+    
+    def closeEvent( self, event ):
+        
+        if self._controller.new_options.GetBoolean( 'close_client_to_system_tray' ):
+            
+            self._FlipShowHideWholeUI()
+            
+            return
+            
+        
+        exit_allowed = self.TryToSaveAndClose()
+        
+        event.ignore()
         
     
     def DeleteAllClosedPages( self ):
@@ -3791,13 +3960,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def closeEvent( self, event ):
-        
-        exit_allowed = self.TryToSaveAndClose()
-        
-        event.ignore()
-        
-    
     def EventFrameNewPage( self, event ):
         
         screen_position = QG.QCursor.pos()
@@ -3821,7 +3983,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventIconize( self, event ):
         
-        if not self.isMinimized():
+        if self.isMinimized():
+            
+            if self.isVisible() and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
+                
+                self._FlipShowHideWholeUI()
+                
+            
+        else:
             
             QP.CallAfter( self.RefreshMenu )
             QP.CallAfter( self.RefreshStatusBar )
@@ -3864,7 +4033,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     continue
                     
                 
-                if tlw.isMinimized():
+                if self._CurrentlyMinimisedOrHidden():
                     
                     continue
                     
@@ -3925,6 +4094,32 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._new_options.SetString( 'current_colourset', new_colourset )
         
         HG.client_controller.pub( 'notify_new_colourset' )
+        
+    
+    def FlipNetworkTrafficPaused( self ):
+        
+        self._controller.network_engine.PausePlayNewJobs()
+        
+        self._UpdateSystemTrayIcon()
+        
+        self.DirtyMenu( 'network' )
+        
+        self._menu_updater.Update()
+        
+    
+    def FlipSubscriptionsPaused( self ):
+        
+        HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
+        
+        self._controller.subscriptions_manager.Wake()
+        
+        self._controller.Write( 'save_options', HC.options )
+        
+        self._UpdateSystemTrayIcon()
+        
+        self.DirtyMenu( 'network' )
+        
+        self._menu_updater.Update()
         
     
     def GenerateMenuInfo( self, name ):
@@ -4090,9 +4285,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
             
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self._PauseSync, 'subs' )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self.FlipSubscriptionsPaused )
             ClientGUIMenus.AppendSeparator( submenu )
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self.FlipNetworkTrafficPaused )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
@@ -4203,7 +4398,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PauseSync, 'repo' )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PausePlaySync, 'repo' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
@@ -4484,8 +4679,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         submenu = QW.QMenu( i_and_e_submenu )
         
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', HC.options['pause_import_folders_sync'], self._PauseSync, 'import_folders' )
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', HC.options['pause_export_folders_sync'], self._PauseSync, 'export_folders' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', HC.options['pause_import_folders_sync'], self._PausePlaySync, 'import_folders' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', HC.options['pause_export_folders_sync'], self._PausePlaySync, 'export_folders' )
         
         ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'pause' )
         
@@ -4522,6 +4717,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
             for name in export_folder_names:
+                
                 ClientGUIMenus.AppendMenuItem( submenu, name, 'Check this export folder now.', self._RunExportFolder, name )
                 
             
@@ -4551,6 +4747,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self._ManageOptions )
         ClientGUIMenus.AppendMenuItem( menu, 'shortcuts', 'Edit the shortcuts your client responds to.', ClientGUIShortcutControls.ManageShortcuts, self )
+        
+        if ClientGUISystemTray.SystemTrayAvailable() and not ( not HC.PLATFORM_WINDOWS and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            label = 'minimise to system tray'
+            
+            if not HC.PLATFORM_WINDOWS:
+                
+                label += ' (may be buggy/crashy!)'
+                
+            
+            ClientGUIMenus.AppendMenuItem( menu, label, 'Hide the client to an icon on your system tray.', self._FlipShowHideWholeUI )
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -4910,6 +5120,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight )
         
     
+    def HideToSystemTray( self ):
+        
+        if self.isVisible() and ClientGUISystemTray.SystemTrayAvailable() and not ( not HC.PLATFORM_WINDOWS and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+            
+            self._FlipShowHideWholeUI()
+            
+        
+    
     def IShouldRegularlyUpdate( self, window ):
         
         current_page = self.GetCurrentPage()
@@ -5122,9 +5340,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
-        tlw = self.window()
-        
-        if tlw.isMinimized() and not self._notebook.HasMediaPageName( page_name ):
+        if self._CurrentlyMinimisedOrHidden() and not self._notebook.HasMediaPageName( page_name ):
             
             self._controller.CallLaterQtSafe( self, 10.0, self.PresentImportedFilesToPage, hashes, page_name )
             
@@ -5156,6 +5372,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == 'restart_application':
                 
                 self.TryToSaveAndClose( restart = True )
+                
+            elif action == 'hide_to_system_tray':
+                
+                self.HideToSystemTray()
                 
             elif action == 'refresh':
                 
@@ -5349,7 +5569,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshMenu( self ):
         
-        if not QP.isValid( self ) or not self or self.isMinimized():
+        if not QP.isValid( self ) or not self or self._CurrentlyMinimisedOrHidden():
             
             return
             
@@ -5425,7 +5645,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGBandwidth( self ):
         
-        if not QP.isValid( self ) or self.isMinimized():
+        if not QP.isValid( self ) or self._CurrentlyMinimisedOrHidden():
             
             return
             
@@ -5524,7 +5744,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGPageUpdate( self ):
         
-        if not QP.isValid( self ) or self.isMinimized():
+        if not QP.isValid( self ) or self._CurrentlyMinimisedOrHidden():
             
             return
             
@@ -5566,7 +5786,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 continue
                 
             
-            if tlw.isMinimized():
+            if self._CurrentlyMinimisedOrHidden():
                 
                 continue
                 
@@ -5685,6 +5905,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def RestoreOrActivateWindow( self ):
+        
+        if self.isMinimized():
+            
+            self.showNormal()
+            
+        else:
+            
+            self.activateWindow()
+            
+        
+    
     def SaveAndClose( self ):
         
         if self._done_save_and_close:
@@ -5703,16 +5935,24 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             #
             
-            if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
+            if self.isVisible():
                 
-                self._SaveSplitterPositions()
+                if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
+                    
+                    self._SaveSplitterPositions()
+                    
                 
-            
-            ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
+                ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
+                
             
             for tlw in QW.QApplication.topLevelWidgets():
                 
                 tlw.hide()
+                
+            
+            if self._have_system_tray_icon:
+                
+                self._system_tray_icon.hide()
                 
             
             #
@@ -5752,7 +5992,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
-            self._controller.CreateSplash()
+            self._controller.CreateSplash( 'hydrus client exiting' )
             
             QP.CallAfter( self._controller.Exit )
             
@@ -6018,7 +6258,7 @@ class FrameSplashStatus( object ):
     
 class FrameSplash( QW.QWidget ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller, title ):
         
         self._controller = controller
         
@@ -6030,7 +6270,7 @@ class FrameSplash( QW.QWidget ):
         self.setWindowFlag( QC.Qt.WindowMaximizeButtonHint, on = False )
         self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
-        self.setWindowTitle( 'hydrus client' )
+        self.setWindowTitle( title )
         
         self.setWindowIcon( QG.QIcon( self._controller.frame_icon_pixmap ) )
         

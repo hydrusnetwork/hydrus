@@ -1082,6 +1082,17 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
                 
             
         
+        domain_manager = HG.client_controller.network_engine.domain_manager
+        
+        try:
+            
+            urls_to_add = [ domain_manager.NormaliseURL( url ) for url in urls_to_add ]
+            
+        except HydrusExceptions.URLClassException as e:
+            
+            raise HydrusExceptions.BadRequestException( e )
+            
+        
         if len( urls_to_add ) == 0 and len( urls_to_delete ) == 0:
             
             raise HydrusExceptions.BadRequestException( 'Did not find any URLs to add or delete!' )

@@ -71,7 +71,14 @@ def DoOpenKnownURLFromShortcut( win, media ):
         
         for url in urls:
             
-            url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+            try:
+                
+                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                continue
+                
             
             if url_class is None:
                 
@@ -288,7 +295,14 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         for url in focus_urls:
             
-            url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+            try:
+                
+                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                continue
+                
             
             if url_class is None:
                 
@@ -336,7 +350,14 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             for url in media_urls:
                 
-                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                try:
+                    
+                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    continue
+                    
                 
                 if url_class is None:
                     

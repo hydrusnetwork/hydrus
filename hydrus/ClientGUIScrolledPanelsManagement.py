@@ -1509,6 +1509,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
         self._listbook.AddPage( 'audio', 'audio', self._AudioPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'system tray', 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
@@ -4187,6 +4188,84 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _SystemTrayPanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            self._always_show_system_tray_icon = QW.QCheckBox( self )
+            self._minimise_client_to_system_tray = QW.QCheckBox( self )
+            self._close_client_to_system_tray = QW.QCheckBox( self )
+            self._start_client_in_system_tray = QW.QCheckBox( self )
+            
+            #
+            
+            self._always_show_system_tray_icon.setChecked( self._new_options.GetBoolean( 'always_show_system_tray_icon' ) )
+            self._minimise_client_to_system_tray.setChecked( self._new_options.GetBoolean( 'minimise_client_to_system_tray' ) )
+            self._close_client_to_system_tray.setChecked( self._new_options.GetBoolean( 'close_client_to_system_tray' ) )
+            self._start_client_in_system_tray.setChecked( self._new_options.GetBoolean( 'start_client_in_system_tray' ) )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            rows = []
+            
+            rows.append( ( 'Always show the hydrus system tray icon: ', self._always_show_system_tray_icon ) )
+            rows.append( ( 'Minimise the main window to system tray: ', self._minimise_client_to_system_tray ) )
+            rows.append( ( 'Close the main window to system tray: ', self._close_client_to_system_tray ) )
+            rows.append( ( 'Start the client minimised to system tray: ', self._start_client_in_system_tray ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            from . import ClientGUISystemTray
+            
+            if not ClientGUISystemTray.SystemTrayAvailable():
+                
+                QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, 'Unfortunately, your system does not seem to have a supported system tray.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                self._always_show_system_tray_icon.setEnabled( False )
+                self._minimise_client_to_system_tray.setEnabled( False )
+                self._close_client_to_system_tray.setEnabled( False )
+                self._start_client_in_system_tray.setEnabled( False )
+                
+            elif not HC.PLATFORM_WINDOWS:
+                
+                if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                    
+                    label = 'This is turned off for non-advanced non-Windows users for now.'
+                    
+                    self._always_show_system_tray_icon.setEnabled( False )
+                    self._minimise_client_to_system_tray.setEnabled( False )
+                    self._close_client_to_system_tray.setEnabled( False )
+                    self._start_client_in_system_tray.setEnabled( False )
+                    
+                else:
+                    
+                    label = 'This can be buggy/crashy on non-Windows, hydev will keep working on this.'
+                    
+                
+                QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, label ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'always_show_system_tray_icon', self._always_show_system_tray_icon.isChecked() )
+            self._new_options.SetBoolean( 'minimise_client_to_system_tray', self._minimise_client_to_system_tray.isChecked() )
+            self._new_options.SetBoolean( 'close_client_to_system_tray', self._close_client_to_system_tray.isChecked() )
+            self._new_options.SetBoolean( 'start_client_in_system_tray', self._start_client_in_system_tray.isChecked() )
+            
+        
+    
     class _TagsPanel( QW.QWidget ):
         
         def __init__( self, parent, new_options ):
@@ -5186,9 +5265,9 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.warning( self, 'Warning', 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.warning( self, 'Warning', 'I could not understand what was in the clipboard: {}'.format( e ) )
             
         
     
@@ -5262,6 +5341,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._urls_listbox.addItem( item )
             
         
+    
     def EventListDoubleClick( self, item ):
     
         urls = [ QP.GetClientData( self._urls_listbox, selection.row() ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
@@ -5307,18 +5387,16 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            parse_result = urllib.parse.urlparse( url )
-            
-            if parse_result.scheme == '':
+            try:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Could not parse that URL! Please make sure you include http:// or https://.' )
+                self._EnterURL( url )
                 
-                return
+                self._url_input.setText( '' )
                 
-            
-            self._EnterURL( url )
-            
-            self._url_input.setText( '' )
+            except Exception as e:
+                
+                QW.QMessageBox.warning( self, 'Warning', 'I could not add that URL: {}'.format( e ) )
+                
             
         
     

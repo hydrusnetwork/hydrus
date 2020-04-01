@@ -1988,15 +1988,22 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( example_url )
-            
-            if url_class is None:
+            try:
                 
-                url_class_text = 'Did not match a known url class.'
+                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( example_url )
                 
-            else:
+                if url_class is None:
+                    
+                    url_class_text = 'Did not match a known url class.'
+                    
+                else:
+                    
+                    url_class_text = 'Matched ' + url_class.GetName() + ' url class.'
+                    
                 
-                url_class_text = 'Matched ' + url_class.GetName() + ' url class.'
+            except HydrusExceptions.URLClassException:
+                
+                url_class_text = 'That did not look like a URL!'
                 
             
             self._matched_url_class.setText( url_class_text )

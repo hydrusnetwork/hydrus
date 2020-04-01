@@ -34,7 +34,7 @@ from collections import defaultdict
     
 if qtpy.PYQT5:
     
-    import sip
+    import sip # pylint: disable=E0401
 
     def isValid( obj ):
         
@@ -170,7 +170,7 @@ def SplitterVisibleCount( splitter ):
     
     for i in range( splitter.count() ):
         
-        if splitter.widget( i ).isVisible(): count += 1
+        if splitter.widget( i ).isVisibleTo( splitter ): count += 1
         
     return count
 
@@ -798,19 +798,19 @@ def DeleteAllNotebookPages( notebook ):
         tab.deleteLater()
         
     
-def SplitVertically( splitter, w1, w2, hpos ):
+def SplitVertically( splitter: QW.QSplitter, w1, w2, hpos ):
 
     splitter.setOrientation( QC.Qt.Horizontal )
 
     if w1.parentWidget() != splitter:
         
-        splitter.addWiget( w1 )
+        splitter.addWidget( w1 )
 
     w1.setVisible( True )
 
     if w2.parentWidget() != splitter:
         
-        splitter.addWiget( w2 )
+        splitter.addWidget( w2 )
 
     w2.setVisible( True )
 
@@ -825,19 +825,19 @@ def SplitVertically( splitter, w1, w2, hpos ):
         splitter.setSizes( [ hpos, total_sum - hpos ] )
 
 
-def SplitHorizontally( splitter, w1, w2, vpos ):
+def SplitHorizontally( splitter: QW.QSplitter, w1, w2, vpos ):
     
     splitter.setOrientation( QC.Qt.Vertical )
     
     if w1.parentWidget() != splitter:
         
-        splitter.addWiget( w1 )
+        splitter.addWidget( w1 )
         
     w1.setVisible( True )
         
     if w2.parentWidget() != splitter:
         
-        splitter.addWiget( w2 )
+        splitter.addWidget( w2 )
 
     w2.setVisible( True )
     
@@ -1286,12 +1286,6 @@ def CenterOnWindow( parent, window ):
     parent_window = parent.window()
     
     window.move( parent_window.frameGeometry().center() - window.rect().center() )
-
-def WarningHandler( msg_type, context, str ):
-    
-    if msg_type == QC.QtWarningMsg:
-        
-        print( str )
 
 def ListWidgetDelete( widget, idx ):
     

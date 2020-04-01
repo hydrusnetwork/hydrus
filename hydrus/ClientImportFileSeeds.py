@@ -864,7 +864,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                     
                                     if this_files_url != my_url:
                                         
-                                        this_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( this_files_url )
+                                        try:
+                                            
+                                            this_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( this_files_url )
+                                            
+                                        except HydrusExceptions.URLClassException:
+                                            
+                                            continue
+                                            
                                         
                                         if my_url_class == this_url_class:
                                             
@@ -1019,7 +1026,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            self.file_seed_data = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+            try:
+                
+                self.file_seed_data = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+                
+            except HydrusExceptions.URLClassException:
+                
+                pass
+                
             
         
     

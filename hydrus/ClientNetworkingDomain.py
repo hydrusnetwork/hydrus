@@ -556,7 +556,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetURLClass( self, url ):
         
-        domain = ConvertDomainIntoSecondLevelDomain( ConvertURLIntoDomain( url ) )
+        domain = ConvertURLIntoSecondLevelDomain( url )
         
         if domain in self._second_level_domains_to_url_classes:
             
@@ -1111,7 +1111,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             for url in urls:
                 
-                url_class = self._GetURLClass( url )
+                try:
+                    
+                    url_class = self._GetURLClass( url )
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    continue
+                    
                 
                 if url_class is None:
                     

@@ -1010,7 +1010,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             for url in urls:
                 
-                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                try:
+                    
+                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    continue
+                    
                 
                 if url_class is None or url_class.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
                     

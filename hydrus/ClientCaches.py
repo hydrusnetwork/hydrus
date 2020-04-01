@@ -15,6 +15,7 @@ from . import ClientConstants as CC
 from . import HydrusGlobals as HG
 import collections
 import traceback
+import typing
 import weakref
 
 class DataCache( object ):
@@ -1018,13 +1019,17 @@ class ThumbnailCache( object ):
         self._delayed_regeneration_queue.sort( key = sort_regen, reverse = True )
         
     
-    def CancelWaterfall( self, page_key, medias ):
+    def CancelWaterfall( self, page_key: bytes, medias: list ):
         
         with self._lock:
             
             self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
             
-            cancelled_media_results = { media.GetDisplayMedia().GetMediaResult() for media in medias }
+            cancelled_display_medias = { media.GetDisplayMedia() for media in medias }
+            
+            cancelled_display_medias.discard( None )
+            
+            cancelled_media_results = { media.GetMediaResult() for media in cancelled_display_medias }
             
             outstanding_delayed_hashes = { media_result.GetHash() for media_result in cancelled_media_results if media_result in self._delayed_regeneration_queue_quick }
             
@@ -1108,11 +1113,9 @@ class ThumbnailCache( object ):
     
     def GetThumbnail( self, media ):
         
-        try:
-            
-            display_media = media.GetDisplayMedia()
-            
-        except:
+        display_media = media.GetDisplayMedia()
+        
+        if display_media is None:
             
             # sometimes media can get switched around during a collect event, and if this happens during waterfall, we have a problem here
             # just return for now, we'll see how it goes
@@ -1168,6 +1171,11 @@ class ThumbnailCache( object ):
     def HasThumbnailCached( self, media ):
         
         display_media = media.GetDisplayMedia()
+        
+        if display_media is None:
+            
+            return True
+            
         
         mime = display_media.GetMime()
         

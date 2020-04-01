@@ -218,6 +218,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'always_loop_gifs' ] = True
         
+        self._dictionary[ 'booleans' ][ 'always_show_system_tray_icon' ] = False
+        self._dictionary[ 'booleans' ][ 'minimise_client_to_system_tray' ] = False
+        self._dictionary[ 'booleans' ][ 'close_client_to_system_tray' ] = False
+        self._dictionary[ 'booleans' ][ 'start_client_in_system_tray' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()

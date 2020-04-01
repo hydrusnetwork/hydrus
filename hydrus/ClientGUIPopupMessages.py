@@ -710,7 +710,9 @@ class PopupMessageManager( QW.QWidget ):
             
             possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( gui_frame )
             
-            going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
+            gui_is_hidden = not gui_frame.isVisible()
+            
+            going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop or gui_is_hidden
             
             current_focus_tlw = QW.QApplication.activeWindow()
             

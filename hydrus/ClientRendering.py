@@ -126,9 +126,7 @@ class ImageRenderer( object ):
             
         else:
             
-            ( height, width, depth ) = self._numpy_image.shape
-            
-            return height * width * depth
+            return self._numpy_image.nbytes
             
         
     

@@ -42,7 +42,11 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
             
             tags = set( self._selected_terms )
             
-            self._activate_callable( tags )
+            self._activate_callable( tags, only_add = True )
+            
+            self._RemoveSelectedTerms()
+            
+            self._DataHasChanged()
             
         
     
@@ -65,7 +69,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, activate_callable ):
         
-        ClientGUIListBoxes.ListBoxTags.__init__( self, parent )
+        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent )
         
         self._activate_callable = activate_callable
         
@@ -78,9 +82,13 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         if len( self._selected_terms ) > 0:
             
-            tags = {predicate.GetValue() for predicate in self._selected_terms}
+            tags = { predicate.GetValue() for predicate in self._selected_terms }
             
             self._activate_callable( tags )
+            
+            self._RemoveSelectedTerms()
+            
+            self._DataHasChanged()
             
         
     
@@ -138,11 +146,6 @@ class RecentTagsPanel( QW.QWidget ):
         
         self._RefreshRecentTags()
         
-        if self._canvas_key is not None:
-            
-            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
-            
-        
     
     def _RefreshRecentTags( self ):
         
@@ -166,17 +169,14 @@ class RecentTagsPanel( QW.QWidget ):
         HG.client_controller.CallToThread( do_it, self._service_key )
         
     
-    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._RefreshRecentTags()
-            
-        
-    
     def EventClear( self ):
         
         HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
+        
+        self._RefreshRecentTags()
+        
+    
+    def RefreshRecentTags( self ):
         
         self._RefreshRecentTags()
         
@@ -222,13 +222,6 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self.setLayout( vbox )
         
-        if self._canvas_key is not None:
-            
-            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
-            
-        
-        self._QuickSuggestedRelatedTags()
-        
     
     def _FetchRelatedTags( self, max_time_to_take ):
         
@@ -252,6 +245,8 @@ class RelatedTagsPanel( QW.QWidget ):
             
             QP.CallAfter( qt_code )
             
+        
+        self._related_tags.SetPredicates( [] )
         
         ( m, ) = self._media
         
@@ -278,19 +273,6 @@ class RelatedTagsPanel( QW.QWidget ):
         self._FetchRelatedTags( max_time_to_take )
         
     
-    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
-        
-        if canvas_key == self._canvas_key:
-            
-            if new_media_singleton is not None:
-                
-                self._media = ( new_media_singleton.Duplicate(), )
-                
-                self._QuickSuggestedRelatedTags()
-                
-            
-        
-    
     def EventSuggestedRelatedTags2( self ):
         
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) / 1000.0
@@ -303,6 +285,13 @@ class RelatedTagsPanel( QW.QWidget ):
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) / 1000.0
         
         self._FetchRelatedTags( max_time_to_take )
+        
+    
+    def SetMedia( self, media ):
+        
+        self._media = media
+        
+        self._QuickSuggestedRelatedTags()
         
     
     def TakeFocusForUser( self ):
@@ -347,11 +336,6 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         self._SetTags( [] )
         
         self.setLayout( vbox )
-        
-        if self._canvas_key is not None:
-            
-            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
-            
         
         self._FetchScripts()
         
@@ -413,19 +397,6 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
         
     
-    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
-        
-        if canvas_key == self._canvas_key:
-            
-            if new_media_singleton is not None:
-                
-                self._media = ( new_media_singleton.Duplicate(), )
-                
-                self._SetTags( [] )
-                
-            
-        
-    
     def FetchTags( self ):
         
         script = self._script_choice.GetValue()
@@ -457,7 +428,14 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         self._script_management.SetJobKey( job_key )
         
+        self._SetTags( set() )
+        
         HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier )
+        
+    
+    def SetMedia( self, media ):
+        
+        self._media = media
         
     
     def TakeFocusForUser( self ):
@@ -562,9 +540,9 @@ class SuggestedTagsPanel( QW.QWidget ):
             panels.append( ( 'recent', self._recent_tags ) )
             
         
+        hbox = QP.HBoxLayout()
+        
         if layout_mode == 'notebook':
-            
-            hbox = QP.HBoxLayout()
             
             for ( name, panel ) in panels:
                 
@@ -573,23 +551,36 @@ class SuggestedTagsPanel( QW.QWidget ):
             
             QP.AddToLayout( hbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self.setLayout( hbox )
-            
         elif layout_mode == 'columns':
-            
-            hbox = QP.HBoxLayout()
             
             for ( name, panel ) in panels:
                 
                 QP.AddToLayout( hbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            self.setLayout( hbox )
-            
+        
+        self.setLayout( hbox )
         
         if len( panels ) == 0:
             
             self.hide()
+            
+        
+    
+    def SetMedia( self, media ):
+        
+        self._media = media
+        
+        for page in self._notebook.GetPages():
+            
+            if isinstance( page, ( FileLookupScriptTagsPanel, RelatedTagsPanel ) ):
+                
+                page.SetMedia( media )
+                
+            elif isinstance( page, RecentTagsPanel ):
+                
+                page.RefreshRecentTags()
+                
             
         
     

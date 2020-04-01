@@ -1396,7 +1396,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if url != '':
             
-            url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            try:
+                
+                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                url = ''
+                
             
         
         with self._lock:
