@@ -407,7 +407,12 @@ def AncestorShortcutsHandlers( widget: QW.QWidget ):
         return shortcuts_handlers
         
     
-    widget = widget.parent()
+    widget = widget.parentWidget()
+    
+    if widget is None:
+        
+        return shortcuts_handlers
+        
     
     while True:
         
@@ -420,7 +425,7 @@ def AncestorShortcutsHandlers( widget: QW.QWidget ):
             break
             
         
-        widget = widget.parent()
+        widget = widget.parentWidget()
         
         if widget is None:
             

@@ -1147,6 +1147,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return best_next_work_time
         
     
+    def GetCheckerOptions( self ):
+        
+        return self._checker_options
+        
+    
     def GetGUGKeyAndName( self ):
         
         return self._gug_key_and_name
@@ -2116,7 +2121,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._paused = not self._paused
         
     
-    def RegisterSyncComplete( self, checker_options ):
+    def RegisterSyncComplete( self, checker_options: ClientImportOptions.CheckerOptions ):
         
         self._last_check_time = HydrusData.GetNow()
         
@@ -2124,7 +2129,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         death_period = checker_options.GetDeathFileVelocityPeriod()
         
-        compact_before_this_time = self._last_check_time - ( death_period * 2 )
+        compact_before_this_time = self._last_check_time - death_period
         
         if self._gallery_seed_log.CanCompact( compact_before_this_time ):
             
@@ -2184,7 +2189,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._tag_import_options = tag_import_options
         
     
-    def UpdateNextCheckTime( self, checker_options ):
+    def UpdateNextCheckTime( self, checker_options: ClientImportOptions.CheckerOptions ):
         
         if self._check_now:
             

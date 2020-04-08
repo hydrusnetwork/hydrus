@@ -1464,8 +1464,6 @@ class ListBox( QW.QScrollArea ):
         
         def paintEvent( self, event ):
             
-            self._parent._SetVirtualSize()
-            
             painter = QG.QPainter( self )
             
             self._parent._Redraw( painter )
@@ -2336,7 +2334,7 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
         
         if self._float_mode:
             
-            widget = self.window().parent()
+            widget = self.window().parentWidget()
             
         else:
             

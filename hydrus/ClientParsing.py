@@ -59,6 +59,10 @@ def ConvertParseResultToPrettyString( result ):
             
             return 'next page url (priority ' + str( priority ) + '): ' + parsed_text
             
+        elif url_type == HC.URL_TYPE_SUB_GALLERY:
+            
+            return 'sub-gallery url (priority ' + str( priority ) + '): ' + parsed_text
+            
         
     elif content_type == HC.CONTENT_TYPE_MAPPINGS:
         
@@ -141,6 +145,10 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 elif url_type == HC.URL_TYPE_NEXT:
                     
                     pretty_strings.append( 'gallery next page url' )
+                    
+                elif url_type == HC.URL_TYPE_SUB_GALLERY:
+                    
+                    pretty_strings.append( 'sub-gallery url' )
                     
                 
             

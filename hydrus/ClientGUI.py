@@ -373,6 +373,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         ClientGUITopLevelWindows.MainFrameThatResizes.__init__( self, None, title, 'main_gui' )
         
+        self._currently_minimised_to_system_tray = False
+        
         bandwidth_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 17 )
         idle_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 6 )
         hydrus_busy_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 11 )
@@ -453,6 +455,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
+        self._was_maximised = self.isMaximized()
+        
         self._InitialiseMenubar()
         
         self._RefreshStatusBar()
@@ -483,11 +487,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if self._controller.new_options.GetBoolean( 'start_client_in_system_tray' ):
             
+            self._currently_minimised_to_system_tray = True
+            
             QW.QApplication.instance().setQuitOnLastWindowClosed( False )
             
             self.hide()
             
-            self._system_tray_hidden_tlws.append( self )
+            self._system_tray_hidden_tlws.append( ( self.isMaximized(), self ) )
             
         else:
             
@@ -1120,7 +1126,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _CurrentlyMinimisedOrHidden( self ):
         
-        return self.isMinimized() or not self.isVisible()
+        return self.isMinimized() or self._currently_minimised_to_system_tray
         
     
     def _DebugFetchAURL( self ):
@@ -1652,11 +1658,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _FlipShowHideWholeUI( self ):
         
-        if self.isVisible():
+        if not self._currently_minimised_to_system_tray:
             
             QW.QApplication.instance().setQuitOnLastWindowClosed( False )
             
-            visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if tlw.isVisible() ]
+            visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if tlw.isVisible() or tlw.isMinimized() ]
             
             visible_dialogs = [ tlw for tlw in visible_tlws if isinstance( tlw, QW.QDialog ) ]
             
@@ -1687,12 +1693,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 tlw.hide()
                 
-                self._system_tray_hidden_tlws.append( tlw )
+                self._system_tray_hidden_tlws.append( ( tlw.isMaximized(), tlw ) )
                 
             
         else:
             
-            for tlw in self._system_tray_hidden_tlws:
+            for ( was_maximised, tlw ) in self._system_tray_hidden_tlws:
                 
                 if QP.isValid( tlw ):
                     
@@ -1719,13 +1725,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             self._system_tray_hidden_tlws = []
             
-            if self.isMinimized():
-                
-                self.showNormal()
-                
+            self.RestoreOrActivateWindow()
             
             QW.QApplication.instance().setQuitOnLastWindowClosed( True )
             
+        
+        self._currently_minimised_to_system_tray = not self._currently_minimised_to_system_tray
         
         self._UpdateSystemTrayIcon()
         
@@ -2975,9 +2980,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._statusbar.SetStatusText( db_status, 5 )
         
     
-    def _RegenerateACCache( self ):
+    def _RegenerateTagMappingsCache( self ):
         
-        message = 'This will delete and then recreate the entire autocomplete cache. This is useful if miscounting has somehow occurred.'
+        message = 'This will delete and then recreate the entire tag mappings cache, which is used for tag searching, loading, and autocomplete counts. This is useful if miscounting has somehow occurred.'
         message += os.linesep * 2
         message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang.'
         message += os.linesep * 2
@@ -2987,23 +2992,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if result == QW.QDialog.Accepted:
             
-            self._controller.Write( 'regenerate_ac_cache' )
-            
-        
-    
-    def _RegenerateSimilarFilesTree( self ):
-        
-        message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
-        message += os.linesep * 2
-        message += 'If you have a lot of files, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
-        message += 'If you do not have a specific reason to run this, it is pointless.'
-        
-        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it', check_for_cancelled = True )
-        
-        if result == QW.QDialog.Accepted:
-            
-            self._controller.Write( 'regenerate_similar_files' )
+            self._controller.Write( 'regenerate_tag_mappings_cache' )
             
         
     
@@ -3030,6 +3019,36 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             self._controller.Write( 'repopulate_fts_cache', status_hook = status_hook )
             
             job_key.Delete( 3 )
+            
+        
+    
+    def _RegenerateSimilarFilesTree( self ):
+        
+        message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
+        message += os.linesep * 2
+        message += 'If you have a lot of files, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it', check_for_cancelled = True )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'regenerate_similar_files' )
+            
+        
+    
+    def _RegenerateTagSiblingsCache( self ):
+        
+        message = 'This will delete and then recreate the tag siblings cache. This is useful if it has become damaged or otherwise desynchronised.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'regenerate_tag_siblings_cache' )
             
         
     
@@ -3517,6 +3536,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.db_profile_mode = not HG.db_profile_mode
             
+        elif name == 'db_ui_hang_relief_mode':
+            
+            HG.db_ui_hang_relief_mode = not HG.db_ui_hang_relief_mode
+            
         elif name == 'file_import_report_mode':
             
             HG.file_import_report_mode = not HG.file_import_report_mode
@@ -3695,7 +3718,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         need_system_tray = always_show_system_tray_icon
         
-        if not self.isVisible():
+        if self._currently_minimised_to_system_tray:
             
             need_system_tray = True
             
@@ -3728,7 +3751,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if self._have_system_tray_icon:
             
             self._system_tray_icon.SetShouldAlwaysShow( always_show_system_tray_icon )
-            self._system_tray_icon.SetUIIsCurrentlyShown( self.isVisible() )
+            self._system_tray_icon.SetUIIsCurrentlyShown( not self._currently_minimised_to_system_tray )
             self._system_tray_icon.SetNetworkTrafficPaused( self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
             self._system_tray_icon.SetSubscriptionsPaused( HC.options[ 'pause_subs_sync' ] )
             
@@ -3981,11 +4004,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.ShowMenuFromScreenPosition( screen_position )
         
     
-    def EventIconize( self, event ):
+    def EventIconize( self, event: QG.QWindowStateChangeEvent ):
         
         if self.isMinimized():
             
-            if self.isVisible() and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
+            self._was_maximised = event.oldState() & QC.Qt.WindowMaximized
+            
+            if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
                 
                 self._FlipShowHideWholeUI()
                 
@@ -4033,7 +4058,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     continue
                     
                 
-                if self._CurrentlyMinimisedOrHidden():
+                if self._currently_minimised_to_system_tray:
                     
                     continue
                     
@@ -4259,7 +4284,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'repopulate and correct tag text search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateFTSCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             
@@ -4609,6 +4635,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, 'last session' )
@@ -4618,22 +4645,28 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             data_actions = QW.QMenu( debug )
             
-            ClientGUIMenus.AppendMenuItem( data_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
+            ClientGUIMenus.AppendMenuCheckItem( data_actions, 'db ui-hang relief mode', 'Have UI-synchronised database jobs process pending Qt events while they wait.', HG.db_ui_hang_relief_mode, self._SwitchBoolean, 'db_ui_hang_relief_mode' )
             ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
             ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
             ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
             ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
             ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
             
             ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
+            
+            memory_actions = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
+            
+            ClientGUIMenus.AppendMenu( debug, memory_actions, 'memory actions' )
             
             network_actions = QW.QMenu( debug )
             
@@ -5086,7 +5119,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         mpv_widget = self._persistent_mpv_widgets.pop()
         
-        if mpv_widget.parent() is self:
+        if mpv_widget.parentWidget() is self:
             
             mpv_widget.setParent( parent )
             
@@ -5122,7 +5155,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def HideToSystemTray( self ):
         
-        if self.isVisible() and ClientGUISystemTray.SystemTrayAvailable() and not ( not HC.PLATFORM_WINDOWS and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+        shown = not self._currently_minimised_to_system_tray
+        
+        windows_or_advanced_mode = HC.PLATFORM_WINDOWS or HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        good_to_go = ClientGUISystemTray.SystemTrayAvailable() and windows_or_advanced_mode
+        
+        if shown and good_to_go:
             
             self._FlipShowHideWholeUI()
             
@@ -5391,7 +5430,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None:
                     
-                    parent = page.parentWidget()
+                    parent = page.GetParentNotebook()
                     
                     parent.RefreshAllPages()
                     
@@ -5786,7 +5825,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 continue
                 
             
-            if self._CurrentlyMinimisedOrHidden():
+            if tlw == self and self._CurrentlyMinimisedOrHidden():
                 
                 continue
                 
@@ -5909,7 +5948,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self.isMinimized():
             
-            self.showNormal()
+            if self._was_maximised:
+                
+                self.showMaximized()
+                
+            else:
+                
+                self.showNormal()
+                
             
         else:
             
@@ -5935,7 +5981,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             #
             
-            if self.isVisible():
+            if self._have_shown_once:
                 
                 if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
                     

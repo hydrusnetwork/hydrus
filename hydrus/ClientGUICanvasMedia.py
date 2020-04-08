@@ -51,6 +51,8 @@ def ShouldHaveAnimationBar( media, show_action ):
     
 class Animation( QW.QWidget ):
     
+    launchMediaViewer = QC.Signal()
+    
     def __init__( self, parent, canvas_type ):
         
         QW.QWidget.__init__( self, parent )
@@ -301,7 +303,7 @@ class Animation( QW.QWidget ):
                 
             elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
                 
-                self.parent().LaunchMediaViewer()
+                self.launchMediaViewer.emit()
                 
             else:
                 
@@ -862,6 +864,8 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
 
 class MediaContainer( QW.QWidget ):
     
+    launchMediaViewer = QC.Signal()
+    
     def __init__( self, parent, canvas_type ):
         
         QW.QWidget.__init__( self, parent )
@@ -888,7 +892,7 @@ class MediaContainer( QW.QWidget ):
         
         self.setMouseTracking( True )
         
-        self._drag_click_reporting_filter = MediaContainerDragClickReportingFilter( self.parent() )
+        self._drag_click_reporting_filter = MediaContainerDragClickReportingFilter( self.parentWidget() )
         
         self._animation_window = Animation( self, self._canvas_type )
         self._animation_bar = AnimationBar( self )
@@ -913,11 +917,15 @@ class MediaContainer( QW.QWidget ):
             
             if isinstance( media_window, ( Animation, StaticImage ) ):
                 
+                media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
+                
                 media_window.ClearMedia()
                 
                 media_window.hide()
                 
             elif isinstance( media_window, ClientGUIMPV.mpvWidget ):
+                
+                media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
                 
                 media_window.ClearMedia()
                 
@@ -1037,6 +1045,15 @@ class MediaContainer( QW.QWidget ):
                 
                 old_media_window.removeEventFilter( self._drag_click_reporting_filter )
                 
+            
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.mpvWidget, StaticImage )
+            
+            if isinstance( self._media_window, launch_media_viewer_classes ):
+                
+                self._media_window.launchMediaViewer.connect( self.launchMediaViewer )
+                
+            
+            self._media_window
             
         
         if old_media_window is not None and destroy_old_media_window:
@@ -1178,18 +1195,6 @@ class MediaContainer( QW.QWidget ):
                     self._media_window.GotoPreviousOrNextFrame( direction )
                     
                 
-            
-        
-    
-    def LaunchMediaViewer( self ):
-        
-        parent = self.parent()
-        
-        from . import ClientGUICanvas
-        
-        if isinstance( parent, ClientGUICanvas.CanvasPanel ):
-            
-            parent.LaunchMediaViewer()
             
         
     
@@ -1562,6 +1567,8 @@ class OpenExternallyPanel( QW.QWidget ):
     
 class StaticImage( QW.QWidget ):
     
+    launchMediaViewer = QC.Signal()
+    
     def __init__( self, parent, canvas_type ):
         
         QW.QWidget.__init__( self, parent )
@@ -1700,7 +1707,7 @@ class StaticImage( QW.QWidget ):
                 
             elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
                 
-                self.parent().LaunchMediaViewer()
+                self.launchMediaViewer.emit()
                 
             else:
                 

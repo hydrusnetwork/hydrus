@@ -387,7 +387,34 @@ class Controller( HydrusController.HydrusController ):
                         
                         context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
                         
-                        self._service_keys_to_connected_ports[ service_key ] = reactor.listenSSL( port, http_factory, context_factory )
+                        ipv6_port = None
+                        
+                        try:
+                            
+                            ipv6_port = reactor.listenSSL( port, http_factory, context_factory, interface = '::' )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.Print( 'Could not bind to IPv6:' )
+                            
+                            HydrusData.Print( str( e ) )
+                            
+                        
+                        ipv4_port = None
+                        
+                        try:
+                            
+                            ipv4_port = reactor.listenSSL( port, http_factory, context_factory )
+                            
+                        except:
+                            
+                            if ipv6_port is None:
+                                
+                                raise
+                                
+                            
+                        
+                        self._service_keys_to_connected_ports[ service_key ] = ( ipv4_port, ipv6_port )
                         
                         if not HydrusNetworking.LocalPortInUse( port ):
                             
@@ -409,11 +436,21 @@ class Controller( HydrusController.HydrusController ):
                 
                 deferreds = []
                 
-                for port in self._service_keys_to_connected_ports.values():
+                for ( ipv4_port, ipv6_port ) in self._service_keys_to_connected_ports.values():
                     
-                    deferred = defer.maybeDeferred( port.stopListening )
+                    if ipv4_port is not None:
+                        
+                        deferred = defer.maybeDeferred( ipv4_port.stopListening )
+                        
+                        deferreds.append( deferred )
+                        
                     
-                    deferreds.append( deferred )
+                    if ipv6_port is not None:
+                        
+                        deferred = defer.maybeDeferred( ipv6_port.stopListening )
+                        
+                        deferreds.append( deferred )
+                        
                     
                 
                 self._service_keys_to_connected_ports = {}

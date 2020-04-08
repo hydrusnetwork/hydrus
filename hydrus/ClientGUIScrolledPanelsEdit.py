@@ -3547,8 +3547,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             queries_panel.AddMenuButton( 'quality info', menu_items, enabled_only_on_selection = True )
             
         
-        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._query_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
-        
         #
         
         self._file_limits_panel = ClientGUICommon.StaticBox( self, 'file limits' )
@@ -3632,6 +3630,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         show_downloader_options = True
         
+        self._checker_options = ClientGUIImport.CheckerOptionsButton( self, checker_options, update_callable = self._CheckerOptionsUpdated )
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
         self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options, allow_default_selection = True )
         
@@ -3660,7 +3659,6 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         self._query_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.Add( queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._query_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -3709,6 +3707,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -5241,7 +5240,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        checker_options = ClientDefaults.GetDefaultCheckerOptions( 'artist subscription' )
+        checker_options = subscriptions[0].GetCheckerOptions()
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
             
@@ -5272,7 +5271,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForPosts()
+        tag_import_options = subscriptions[0].GetTagImportOptions()
         show_downloader_options = True
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
@@ -5363,6 +5362,15 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'rely on the appropriate default tag import options at the time of import: ', self._is_default ) )
         
         gridbox = ClientGUICommon.WrapInGrid( default_panel, rows )
+        
+        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            st = ClientGUICommon.BetterStaticText( default_panel, label = 'Most of the time, you want to rely on the default tag import options!' )
+            
+            st.setObjectName( 'HydrusWarning' )
+            
+            default_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
         
         default_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         default_panel.Add( self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )

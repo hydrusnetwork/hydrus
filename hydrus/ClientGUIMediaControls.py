@@ -193,7 +193,7 @@ class VolumeControl( QW.QWidget ):
         
         def DoShowHide( self ):
             
-            parent = self.parent()
+            parent = self.parentWidget()
             
             horizontal_offset = ( self.width() - parent.width() ) // 2 
             

@@ -16,6 +16,7 @@ db_synchronous_override = None
 import_folders_running = False
 export_folders_running = False
 
+db_ui_hang_relief_mode = False
 callto_report_mode = False
 db_report_mode = False
 db_profile_mode = False

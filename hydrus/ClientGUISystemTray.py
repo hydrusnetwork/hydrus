@@ -27,6 +27,12 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         self._network_traffic_paused = False
         self._subscriptions_paused = False
         
+        self._show_hide_menu_item = None
+        self._network_traffic_menu_item = None
+        self._subscriptions_paused_menu_item = None
+        
+        self._just_clicked_to_show = False
+        
         png_path = os.path.join( HC.STATIC_DIR, 'hydrus_non-transparent.png' )
         
         self.setIcon( QG.QIcon( png_path ) )
@@ -43,19 +49,19 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         new_menu = QW.QMenu( parent_widget )
         
-        label = 'hide' if self._ui_is_currently_shown else 'show'
+        self._show_hide_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'show/hide', 'Hide or show the hydrus client', self.flip_show_ui.emit )
         
-        ClientGUIMenus.AppendMenuItem( new_menu, label, 'Hide or show the hydrus client', self.flip_show_ui.emit )
+        self._UpdateShowHideMenuItemLabel()
         
         ClientGUIMenus.AppendSeparator( new_menu )
         
-        label = 'unpause network traffic' if self._network_traffic_paused else 'pause network traffic'
+        self._network_traffic_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'network traffic', 'Pause/resume network traffic', self.flip_pause_network_jobs.emit )
         
-        ClientGUIMenus.AppendMenuItem( new_menu, label, 'Pause/resume network traffic', self.flip_pause_network_jobs.emit )
+        self._UpdateNetworkTrafficMenuItemLabel()
         
-        label = 'unpause subscriptions' if self._subscriptions_paused else 'pause subscriptions'
+        self._subscriptions_paused_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'subscriptions', 'Pause/resume subscriptions', self.flip_pause_subscription_jobs.emit )
         
-        ClientGUIMenus.AppendMenuItem( new_menu, label, 'Pause/resume subscriptions', self.flip_pause_subscription_jobs.emit )
+        self._UpdateSubscriptionsMenuItemLabel()
         
         ClientGUIMenus.AppendSeparator( new_menu )
         
@@ -71,6 +77,20 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             ClientGUIMenus.DestroyMenu( parent_widget, old_menu )
             
+        
+    
+    def _UpdateNetworkTrafficMenuItemLabel( self ):
+        
+        label = 'unpause network traffic' if self._network_traffic_paused else 'pause network traffic'
+        
+        self._network_traffic_menu_item.setText( label )
+        
+    
+    def _UpdateShowHideMenuItemLabel( self ):
+        
+        label = 'hide' if self._ui_is_currently_shown else 'show'
+        
+        self._show_hide_menu_item.setText( label )
         
     
     def _UpdateShowSelf( self ) -> bool:
@@ -96,20 +116,39 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         return menu_regenerated
         
     
+    def _UpdateSubscriptionsMenuItemLabel( self ):
+        
+        if self._subscriptions_paused_menu_item is not None:
+            
+            label = 'unpause subscriptions' if self._subscriptions_paused else 'pause subscriptions'
+            
+            self._subscriptions_paused_menu_item.setText( label )
+            
+        
+    
     def _WasActivated( self, activation_reason ):
         
         if activation_reason in ( QW.QSystemTrayIcon.Unknown, QW.QSystemTrayIcon.Trigger ):
             
             if self._ui_is_currently_shown:
                 
+                self._just_clicked_to_show = False
+                
                 self.highlight.emit()
                 
             else:
+                
+                self._just_clicked_to_show = True
                 
                 self.flip_show_ui.emit()
                 
             
         elif activation_reason in ( QW.QSystemTrayIcon.DoubleClick, QW.QSystemTrayIcon.MiddleClick ):
+            
+            if activation_reason == QW.QSystemTrayIcon.DoubleClick and self._just_clicked_to_show:
+                
+                return
+                
             
             self.flip_show_ui.emit()
             
@@ -121,7 +160,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             self._network_traffic_paused = network_traffic_paused
             
-            self._RegenerateMenu()
+            self._UpdateNetworkTrafficMenuItemLabel()
             
         
     
@@ -131,7 +170,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             self._subscriptions_paused = subscriptions_paused
             
-            self._RegenerateMenu()
+            self._UpdateSubscriptionsMenuItemLabel()
             
         
     
@@ -145,7 +184,12 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             if not menu_regenerated:
                 
-                self._RegenerateMenu()
+                self._UpdateShowHideMenuItemLabel()
+                
+            
+            if not self._ui_is_currently_shown:
+                
+                self._just_clicked_to_show = False
                 
             
         

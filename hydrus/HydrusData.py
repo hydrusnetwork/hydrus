@@ -1630,6 +1630,16 @@ class JobDatabase( object ):
         self._result_ready = threading.Event()
         
     
+    def __str__( self ):
+        
+        return 'DB Job: {}'.format( self.ToString() )
+        
+    
+    def _DoDelayedResultRelief( self ):
+        
+        pass
+        
+    
     def GetCallableTuple( self ):
         
         return ( self._action, self._args, self._kwargs )
@@ -1649,6 +1659,8 @@ class JobDatabase( object ):
                 
                 raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
                 
+            
+            self._DoDelayedResultRelief()
             
         
         if isinstance( self._result, Exception ):
@@ -1682,7 +1694,7 @@ class JobDatabase( object ):
     
     def ToString( self ):
         
-        return self._type + ' ' + self._action
+        return '{} {}'.format( self._type, self._action )
         
     
 class ServiceUpdate( object ):

@@ -154,40 +154,6 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         self._flat_check_period_checkbox.clicked.connect( self.EventFlatPeriodCheck )
         
     
-    def _UpdateEnabledControls( self ):
-        
-        if self._flat_check_period_checkbox.isChecked():
-            
-            self._reactive_check_panel.hide()
-            self._static_check_panel.show()
-            
-        else:
-            
-            self._reactive_check_panel.show()
-            self._static_check_panel.hide()
-        
-        
-    def EventFlatPeriodCheck( self ):
-        
-        self._UpdateEnabledControls()
-        
-    
-    def SetValue( self, checker_options ):
-        
-        ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = checker_options.ToTuple()
-        
-        self._intended_files_per_check.setValue( intended_files_per_check )
-        self._never_faster_than.SetValue( never_faster_than )
-        self._never_slower_than.SetValue( never_slower_than )
-        self._death_file_velocity.SetValue( death_file_velocity )
-        
-        self._flat_check_period.SetValue( never_faster_than )
-        
-        self._flat_check_period_checkbox.setChecked( never_faster_than == never_slower_than )
-        
-        self._UpdateEnabledControls()
-        
-    
     def _ShowHelp( self ):
         
         help = 'The intention of this object is to govern how frequently the watcher or subscription checks for new files--and when it should stop completely.'
@@ -209,6 +175,24 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         QW.QMessageBox.information( self, 'Information', help )
         
     
+    def _UpdateEnabledControls( self ):
+        
+        if self._flat_check_period_checkbox.isChecked():
+            
+            self._reactive_check_panel.hide()
+            self._static_check_panel.show()
+            
+        else:
+            
+            self._reactive_check_panel.show()
+            self._static_check_panel.hide()
+        
+    
+    def EventFlatPeriodCheck( self ):
+        
+        self._UpdateEnabledControls()
+        
+    
     def GetValue( self ):
         
         death_file_velocity = self._death_file_velocity.GetValue()
@@ -227,6 +211,22 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
             
         
         return ClientImportOptions.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
+        
+    
+    def SetValue( self, checker_options ):
+        
+        ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = checker_options.ToTuple()
+        
+        self._intended_files_per_check.setValue( intended_files_per_check )
+        self._never_faster_than.SetValue( never_faster_than )
+        self._never_slower_than.SetValue( never_slower_than )
+        self._death_file_velocity.SetValue( death_file_velocity )
+        
+        self._flat_check_period.SetValue( never_faster_than )
+        
+        self._flat_check_period_checkbox.setChecked( never_faster_than == never_slower_than )
+        
+        self._UpdateEnabledControls()
         
     
 class TimeDeltaButton( QW.QPushButton ):

@@ -356,9 +356,35 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
                 
             
-            if self._can_generate_more_pages and can_add_more_gallery_urls:
+            flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
+            
+            sub_gallery_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_SUB_GALLERY, ), only_get_top_priority = True )
+            
+            sub_gallery_urls = HydrusData.DedupeList( sub_gallery_urls )
+            
+            new_sub_gallery_urls = [ sub_gallery_url for sub_gallery_url in sub_gallery_urls if sub_gallery_url not in gallery_urls_seen_before ]
+            
+            num_new_sub_gallery_urls = len( new_sub_gallery_urls )
+            
+            if num_new_sub_gallery_urls > 0:
                 
-                flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
+                sub_gallery_seeds = [ GallerySeed( sub_gallery_url ) for sub_gallery_url in new_sub_gallery_urls ]
+                
+                for sub_gallery_seed in sub_gallery_seeds:
+                    
+                    sub_gallery_seed.SetFixedServiceKeysToTags( self._fixed_service_keys_to_tags )
+                    
+                
+                gallery_seed_log.AddGallerySeeds( sub_gallery_seeds )
+                
+                added_new_gallery_pages = True
+                
+                gallery_urls_seen_before.update( sub_gallery_urls )
+                
+                note += ' - {} sub-gallery urls found'.format( HydrusData.ToHumanInt( num_new_sub_gallery_urls ) )
+                
+            
+            if self._can_generate_more_pages and can_add_more_gallery_urls:
                 
                 next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
                 

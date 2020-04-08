@@ -692,3 +692,90 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER ] = TagFilter
+
+class TagSiblingsStructure( object ):
+    
+    def __init__( self ):
+        
+        self._bad_tags_to_good_tags = {}
+        self._bad_tags_to_ideal_tags = {}
+        self._ideal_tags_to_all_worse_tags = collections.defaultdict( set )
+        
+        # some sort of structure for 'bad cycles' so we can later raise these to the user to fix
+        
+    
+    def AddPair( self, bad_tag: object, good_tag: object ):
+        
+        # disallowed siblings are:
+        # A -> A
+        # larger loops
+        # A -> C when A -> B already exists
+        
+        if bad_tag == good_tag:
+            
+            return
+            
+        
+        if bad_tag in self._bad_tags_to_good_tags:
+            
+            return
+            
+        
+        joining_existing_chain = good_tag in self._bad_tags_to_ideal_tags
+        extending_existing_chain = bad_tag in self._ideal_tags_to_all_worse_tags
+        
+        if extending_existing_chain and joining_existing_chain:
+            
+            joined_chain_ideal = self._bad_tags_to_ideal_tags
+            
+            if joined_chain_ideal == bad_tag:
+                
+                # we found a cycle, as the ideal of the chain we are joining is our bad tag
+                # basically the chain we are joining and the chain we are extending are the same one
+                
+                return
+                
+            
+        
+        # now compute our ideal
+        
+        ideal_tags_that_need_updating = set()
+        
+        if joining_existing_chain:
+            
+            # our ideal will be the end of that chain
+            
+            ideal_tag = self._bad_tags_to_ideal_tags[ good_tag ]
+            
+        else:
+            
+            ideal_tag = good_tag
+            
+        
+        self._bad_tags_to_good_tags[ bad_tag ] = good_tag
+        self._bad_tags_to_ideal_tags[ bad_tag ] = ideal_tag
+        self._ideal_tags_to_all_worse_tags[ ideal_tag ].add( bad_tag )
+        
+        if extending_existing_chain:
+            
+            # the existing chain needs its ideal updating
+            
+            old_ideal_tag = bad_tag
+            
+            bad_tags_that_need_updating = self._ideal_tags_to_all_worse_tags[ old_ideal_tag ]
+            
+            for bad_tag_that_needs_updating in bad_tags_that_need_updating:
+                
+                self._bad_tags_to_ideal_tags[ bad_tag_that_needs_updating ] = ideal_tag
+                
+            
+            self._ideal_tags_to_all_worse_tags[ ideal_tag ].update( bad_tags_that_need_updating )
+            
+            del self._ideal_tags_to_all_worse_tags[ old_ideal_tag ]
+            
+        
+    
+    def GetBadTagsToIdealTags( self ):
+        
+        return self._bad_tags_to_ideal_tags
+        

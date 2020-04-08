@@ -1846,8 +1846,9 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._url_type = ClientGUICommon.BetterChoice( self._urls_panel )
         
         self._url_type.addItem( 'url to download/pursue (file/post url)', HC.URL_TYPE_DESIRED )
-        self._url_type.addItem( 'url to associate (source url)', HC.URL_TYPE_SOURCE )
-        self._url_type.addItem( 'next gallery page', HC.URL_TYPE_NEXT )
+        self._url_type.addItem( 'POST parsers only: url to associate (source url)', HC.URL_TYPE_SOURCE )
+        self._url_type.addItem( 'GALLERY parsers only: next gallery page (not queued if no post/file urls found)', HC.URL_TYPE_NEXT )
+        self._url_type.addItem( 'EXPERIMENTAL: GALLERY parsers only: sub-gallery page (is queued even if no post/file urls found)', HC.URL_TYPE_SUB_GALLERY )
         
         self._file_priority = QP.MakeQSpinBox( self._urls_panel, min=0, max=100 )
         self._file_priority.setValue( 50 )
@@ -1961,7 +1962,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'url type: ', self._url_type ) )
-        rows.append( ( 'file url quality precedence (higher is better): ', self._file_priority ) )
+        rows.append( ( 'url quality precedence (higher is better): ', self._file_priority ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._urls_panel, rows )
         

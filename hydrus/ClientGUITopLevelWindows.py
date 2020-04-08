@@ -533,7 +533,11 @@ class NewDialog( QP.Dialog ):
         
         was_ended = self._TryEndModal( QW.QDialog.Rejected )
         
-        if not was_ended:
+        if was_ended:
+            
+            event.accept()
+            
+        else:
             
             event.ignore()
             
@@ -581,16 +585,6 @@ class NewDialog( QP.Dialog ):
             
 
         self._TryEndModal( QW.QDialog.Rejected )
-        
-    
-    def EventOK( self ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
-        self._TryEndModal( QW.QDialog.Accepted )
         
     
     def keyPressEvent( self, event ):
@@ -671,7 +665,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         self._panel = panel
         
-        if hasattr( self._panel, 'okSignal'): self._panel.okSignal.connect( self.EventOK )
+        if hasattr( self._panel, 'okSignal'): self._panel.okSignal.connect( self.DoOK )
         
         buttonbox = self._GetButtonBox()
         
@@ -703,13 +697,11 @@ class DialogNullipotent( DialogThatTakesScrollablePanel ):
     def _InitialiseButtons( self ):
         
         self._close = QW.QPushButton( 'close', self )
-        self._close.clicked.connect( self.EventOK )
+        self._close.clicked.connect( self.DoOK )
         
         if self._hide_buttons:
             
             self._close.setVisible( False )
-            
-            self._widget_event_filter.EVT_CLOSE( lambda ev: self.EventOK() ) # the close event no longer goes to the default button, since it is hidden, wew
             
         
     

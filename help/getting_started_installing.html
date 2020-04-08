@@ -17,6 +17,7 @@
 				<li>If you want the easy solution, download the .exe installer. Run it, hit ok several times.</li>
 				<li>If you know what you are doing and want a little more control, get the .zip. Don't extract it to Program Files unless you are willing to run it as administrator every time (it stores all its user data inside its own folder). You probably want something like D:\hydrus.</li>
 				<li><i>Note if you run &lt;Win10, you may need <a href="https://www.microsoft.com/en-us/download/details.aspx?id=48145">Visual C++ Redistributable for Visual Studio 2015</a>, if you don't already have it for vidya. If you run Win7, you will need some/all core OS updates released before 2017.</i></li>
+				<li>If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check <a href="https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions">here</a>.</li>
 			</ul>
 			<p>for macOS:</p>
 			<ul>
@@ -50,6 +51,18 @@
 			<p>Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.</p>
 			<p>Releases typically need to update your database to their version. New releases can retroactively perform older database updates, so if the new version is v255 but your database is on v250, you generally only need to get the v255 release, and it'll do all the intervening v250->v251, v251->v252, etc... update steps in order as soon as you boot it. If you need to update from a release more than, say, ten versions older than current, see below. You might also like to skim the release posts or <a href="changelog.html">changelog</a> to see what is new.</p>
 			<p>Clients and servers of different versions can usually connect to one another, but from time to time, I make a change to the network protocol, and you will get polite error messages if you try to connect to a newer server with an older client or <i>vice versa</i>. There is still no <i>need</i> to update the client--it'll still do local stuff like searching for files completely fine. Read my release posts and judge for yourself what you want to do.</p>
+			<h3 id="clean_installs">clean installs</h3>
+			<b>This is only relevant if you update and get an odd error about dlls when you try to boot.</b>
+			<p>Very rarely, hydrus needs a clean install. This can be due to a special update like when we moved from 32-bit to 64-bit or needing to otherwise 'reset' a custom install situation. The problem is usually that a library file has been renamed in a new version and hydrus has trouble figuring out whether to use the older one (from a previous version) or the newer.</p>
+			<p>In any case, if you cannot boot hydrus and instead get a crash log or system-level error popup complaining in a technical way about not being able to load a dll/pyd/so file, you may need a clean install, which essentially means clearing any old files out and reinstalling.</p>
+			<p>However, you need to be careful not to delete your database! It sounds silly, but at least one user has made a mistake here. The process is simple, do not deviate:</p>
+			<ul>
+				<li>Make a backup if you can!</li>
+				<li>Go to your install directory.</li>
+				<li>Delete all the files and folders except the 'db' dir (and all of its contents, obviously).</li>
+				<li>Reinstall/extract hydrus as you normally do.</li>
+			</ul>
+			<p>After that, you'll have a 'clean' version of hydrus that only has the latest version's dlls. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.</p>
 			<h3 id="big_updates">big updates</h3>
 			<p>If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v250->v290, is likely not going to work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to <a href="https://en.wikipedia.org/wiki/Software_rot">bitrot</a>, and so some underlying truth I assumed for the v255->v256 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.</p>
 			<p>As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v270 first, and then if that works, try v270->v290. If it doesn't, try v260, and so on.</p>

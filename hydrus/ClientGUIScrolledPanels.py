@@ -24,7 +24,7 @@ class ResizingEventFilter( QC.QObject ):
                 
                 if width_larger or height_larger:
                     
-                    QP.CallAfter( self.parent().WidgetJustSized, width_larger, height_larger )
+                    QP.CallAfter( parent.WidgetJustSized, width_larger, height_larger )
                     
                 
             

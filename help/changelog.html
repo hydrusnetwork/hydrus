@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 392</h3></li>
+				<ul>
+					<li>db-level tag sibling cache:</li>
+					<li>the hydrus client db now maintains a fast cache of current+pending tag-to-ideal-tag sibling relationships. it works for specific services and 'all known tags'. this is a nice tool and the first step in having a proper hard-baked siblings mappings cache</li>
+					<li>the new sibling cache can be regenerated under _database->regenerate_. the 'autocomplete cache' entry under that menu is also renamed to the now more appropriate 'tag mappings cache'</li>
+					<li>the db repair system can regenerate this new cache if any part is missing on boot</li>
+					<li>the lookup that finds tag sibling matches for autocomplete uses this and is now faster, specific to the searched service, more accurate about status, and now includes pending siblings</li>
+					<li>wrote a new unified object to manage a collection of tag siblings, it is now in use at the db level</li>
+					<li>as I continue to develop this new fast tech, the old 'apply all sibs to all services' option, which was always buggy, may sometimes not apply in it. I will ultimately replace it with a fuller per-service choice system that will work quickly and properly and in the same unified way</li>
+					<li>fixed a bug where only one local tag service's siblings would be matched at the ui level when looking at 'all known tags'</li>
+					<li>fixed a bug in the file search code where searching for a tag that had an unnamespaced sibling going to it would result in searching for all possible namespaces of that sibling (e.g. searching for 'character:samus aran' when 'samus aran'->'character:samus aran' sibling existed would result in effectively 'anything:samus aran')</li>
+					<li>when tag services are deleted, they are now better about cleaning up their siblings and parents quickly</li>
+					<li>optimised some tag and hash id->value database cache population routines to improve performance for large queries (e.g. when fetching all the tag parents/siblings on boot). also these caches are now larger, 100k instead of 25k</li>
+					<li>all cache regen code now forces an immediate analyze of the new tables to speed up imminent access</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>updated the default e621 file page parser to get rating tags again (looks like their markup just changed again)</li>
+					<li>updated the default sankaku file page parser to get their recently redefined 'genre' tags</li>
+					<li>in edit subscriptions, the 'overwrite tag import options/check options' actions now initialise their dialogs with the current value for the first subscription, rather than the global program default</li>
+					<li>in the edit subscription panel, the checker options button is moved down to the file/tag import options</li>
+					<li>when not in advanced mode, the edit tag import options panel now has some red-text at the top to reinforce to new users that they should generally use the defaults</li>
+					<li>the tag import options blacklist now secondarily checks against all known siblings of the parsed tags, rather than just the 'collapsed' ideal siblings</li>
+					<li>subscriptions are now more aggressive about clearing out old urls from their file import caches--instead of clearing the 251st url after it has aged twice the death period, now they use just one DP. also, checkers with static checker timings will use five times that check period as DP if that is smaller. static checkers, or those that never die, will use a flat value of six months as DP if that is smaller</li>
+					<li>moved a bunch of the debug 'data actions' to a new 'memory actions' menu</li>
+					<li>significantly reduced how often the system tray regenerates its menu, which seems to improve stability</li>
+					<li>fixed an issue where guis that were maximised before a minimise were restoring from a system tray icon click to normal view</li>
+					<li>double-clicking the system tray when the ui is hidden should no longer do a fast show/hide</li>
+					<li>fixed an issue where if the gui was minimised, the main animation timer would not run for other windows (e.g. a separate media viewer)</li>
+					<li>improved ui shown/hidden tracking logic for the new system tray icon for different OSes</li>
+					<li>fixed the 'refresh_page_of_pages_pages' shortcut action, which had faulty old wx code in it</li>
+					<li>fixed a wx->Qt bug where modal popups that cannot be cancelled, and thus pop up a 'sorry, you can't dismiss this' text when you try to close them, were nonetheless still closing afterwards</li>
+					<li>the hydrus client and server now attempt to listen their servers on both IPv4 and IPv6, failing gracefully if IPv6 is not available</li>
+					<li>the 'is this a localhost request?' check now understands IPv6 localhost (::1 or ::ffff:127.0.0.1)</li>
+					<li>may have solved a 100% cpu repaint issue with the a/c dropdown in some qt environments</li>
+					<li>added info to installing help about Windows N and clean installs</li>
+					<li>misc media viewer wx->Qt code cleanup</li>
+					<li>misc code cleanup</li>
+					<li>.</li>
+					<li>experimental hellzone, be wary ye scabs:</li>
+					<li>added an experimental 'sub-gallery url' url content type to the parsing and downloading system. this url is queued into the gallery log even if the primary gallery page found no file/post urls, and is meant for galleries that link to galleries. not yet ready for primetime, but feedback would be appreciated</li>
+					<li>added an experimental ui-hang relief mode, activated under _help->debug->data actions->db ui-hang relief mode_, which _should_ stop the ui hanging in unusual long-time ui-synchronous db jobs. it may cause other problems, so it is default off. it also prints begin/end statements to log for additional info. users who experience ui hang due to db job processing time are invited to play with this mode and report back results</li>
+				</ul>
 				<li><h3>version 391</h3></li>
 				<ul>
 					<li>system tray icon:</li>
@@ -44,6 +86,7 @@
 					<li>cleaned some thumbnail selection and rendering code, particularly fixing some edge case 'where that media go?' issues where collect-by calls happen during thumbnail waterfalls and so on</li>
 					<li>cleaned up some page file domain setting code and misc page management code</li>
 					<li>improved accuracy of rendered image cache memory footprint calculations</li>
+					<li>fixed some Qt signal object definitions that were causing errors for some users who run from source</li>
 				</ul>
 				<li><h3>version 390</h3></li>
 				<ul>

@@ -177,10 +177,6 @@ def CollapseTagSiblingPairs( groups_of_pairs ):
     
     return siblings
     
-def DeLoopTagSiblingPairs( groups_of_pairs ):
-    
-    pass
-    
 def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     potential_loop_paths = { parent }
@@ -832,7 +828,7 @@ class TagSiblingsManager( object ):
             
             if service.GetServiceType() == HC.LOCAL_TAG:
                 
-                local_tags_pairs = set( all_pairs )
+                local_tags_pairs.update( all_pairs )
                 
             else:
                 

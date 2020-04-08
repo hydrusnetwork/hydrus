@@ -3335,20 +3335,24 @@ class DB( HydrusDB.HydrusDB ):
                         
                         db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
                         
-                        if HydrusDB.CanVacuum( db_path ):
+                        try:
                             
-                            started = HydrusData.GetNowPrecise()
+                            HydrusDB.CheckCanVacuum( db_path )
                             
-                            HydrusDB.VacuumDB( db_path )
+                        except Exception as e:
                             
-                            time_took = HydrusData.GetNowPrecise() - started
+                            HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
                             
-                            HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                            continue
                             
-                        else:
-                            
-                            HydrusData.Print( 'Could not vacuum ' + db_path + ' (probably due to limited disk space on db or system drive).' )
-                            
+                        
+                        started = HydrusData.GetNowPrecise()
+                        
+                        HydrusDB.VacuumDB( db_path )
+                        
+                        time_took = HydrusData.GetNowPrecise() - started
+                        
+                        HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
                         
                         names_done.append( name )
                         

@@ -1669,6 +1669,8 @@ class CanvasPanel( Canvas ):
         
         self._hidden_page_current_media = None
         
+        self._media_container.launchMediaViewer.connect( self.LaunchMediaViewer )
+        
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     

@@ -70,7 +70,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 391
+SOFTWARE_VERSION = 392
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -794,6 +794,7 @@ URL_TYPE_UNKNOWN = 5
 URL_TYPE_NEXT = 6
 URL_TYPE_DESIRED = 7
 URL_TYPE_SOURCE = 8
+URL_TYPE_SUB_GALLERY = 9
 
 url_type_string_lookup = {}
 
@@ -805,7 +806,8 @@ url_type_string_lookup[ URL_TYPE_WATCHABLE ] = 'watchable url'
 url_type_string_lookup[ URL_TYPE_UNKNOWN ] = 'unknown url'
 url_type_string_lookup[ URL_TYPE_NEXT ] = 'next page url'
 url_type_string_lookup[ URL_TYPE_DESIRED ] = 'downloadable/pursuable url'
-url_type_string_lookup[ URL_TYPE_SOURCE ] = 'associable/source url'
+url_type_string_lookup[ URL_TYPE_SUB_GALLERY ] = 'sub-gallery url (is queued even if creator found no post/file urls)'
+
 
 # default options
 

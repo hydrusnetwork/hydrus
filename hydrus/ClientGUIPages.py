@@ -404,6 +404,8 @@ class Page( QW.QSplitter ):
         
         QW.QSplitter.__init__( self, parent )
         
+        self._parent_notebook = parent
+        
         self._controller = controller
         
         self._page_key = self._controller.AcquirePageKey()
@@ -657,6 +659,11 @@ class Page( QW.QSplitter ):
     def GetPageKeys( self ):
         
         return { self._page_key }
+        
+    
+    def GetParentNotebook( self ):
+        
+        return self._parent_notebook
         
     
     def GetSessionAPIInfoDict( self, is_selected = False ):
@@ -922,6 +929,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         QP.TabWidgetWithDnD.__init__( self, parent )
         
+        self._parent_notebook = parent
+        
         # this is disabled for now because it seems borked in Qt
         if controller.new_options.GetBoolean( 'notebook_tabs_on_left' ):
             
@@ -964,12 +973,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self._controller.pub( 'refresh_page_name', page_widget.GetPageKey() )
             
-
-        if hasattr( source_widget.parentWidget(), 'GetPageKey' ):
+        
+        source_notebook = source_widget.parentWidget()
+        
+        if hasattr( source_notebook, 'GetPageKey' ):
             
-            self._controller.pub( 'refresh_page_name', source_widget.parentWidget().GetPageKey() )
+            self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
             
         
+    
     def _UpdatePreviousPageIndex( self ):
         
         self._previous_page_index = self.currentIndex()
@@ -1255,25 +1267,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return None
         
     
-    def _GetTopNotebook( self ):
-        
-        top_notebook = self
-        
-        parent = top_notebook.parentWidget()
-        
-        while isinstance( parent, PagesNotebook ):
-            
-            top_notebook = parent
-            
-            parent = top_notebook.parentWidget()
-            
-        
-        return top_notebook
-        
-    
     def _MovePage( self, page, dest_notebook, insertion_tab_index, follow_dropped_page = False ):
         
-        source_notebook = page.parentWidget().parentWidget() # page.parentWidget() is a QStackedWidget
+        source_notebook = page.GetParentNotebook()
         
         for ( index, p ) in enumerate( source_notebook._GetPages() ):
             
@@ -1297,6 +1293,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         insertion_tab_index = min( insertion_tab_index, dest_notebook.count() )
         
         dest_notebook.insertTab( insertion_tab_index, page, page.GetName() )
+        
         if follow_dropped_page: dest_notebook.setCurrentIndex( insertion_tab_index )
         
         if follow_dropped_page:
@@ -1313,7 +1310,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for page in pages:
             
-            if page.parentWidget() != dest_notebook:
+            if page.GetParentNotebook() != dest_notebook:
                 
                 self._MovePage( page, dest_notebook, insertion_tab_index )
                 
@@ -1577,6 +1574,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
+            
             if click_over_page_of_pages and page.count() > 0:
                 
                 ClientGUIMenus.AppendSeparator( menu )
@@ -1697,6 +1695,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
+        HG.client_controller.app.processEvents()
+        
         if load_in_a_page_of_pages:
             
             destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False)
@@ -1707,6 +1707,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         page_tuples = session.GetPageTuples()
+        
+        HG.client_controller.app.processEvents()
         
         destination.AppendSessionPageTuples( page_tuples )
         
@@ -2102,6 +2104,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         return page_keys
+        
+    
+    def GetParentNotebook( self ):
+        
+        return self._parent_notebook
         
     
     def GetSessionAPIInfoDict( self, is_selected = True ):

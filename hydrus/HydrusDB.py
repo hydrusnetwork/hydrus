@@ -13,48 +13,35 @@ import time
 
 CONNECTION_REFRESH_TIME = 60 * 30
 
-def CanVacuum( db_path, stop_time = None ):
+def CheckCanVacuum( db_path, stop_time = None ):
     
-    try:
+    db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+    
+    c = db.cursor()
+    
+    ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
+    ( page_count, ) = c.execute( 'PRAGMA page_count;' ).fetchone()
+    ( freelist_count, ) = c.execute( 'PRAGMA freelist_count;' ).fetchone()
+    
+    db_size = ( page_count - freelist_count ) * page_size
+    
+    if stop_time is not None:
         
-        db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        approx_vacuum_speed_mb_per_s = 1048576 * 1
         
-        c = db.cursor()
+        approx_vacuum_duration = db_size // approx_vacuum_speed_mb_per_s
         
-        ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
-        ( page_count, ) = c.execute( 'PRAGMA page_count;' ).fetchone()
-        ( freelist_count, ) = c.execute( 'PRAGMA freelist_count;' ).fetchone()
+        time_i_will_have_to_start = stop_time - approx_vacuum_duration
         
-        db_size = ( page_count - freelist_count ) * page_size
-        
-        if stop_time is not None:
+        if HydrusData.TimeHasPassed( time_i_will_have_to_start ):
             
-            approx_vacuum_speed_mb_per_s = 1048576 * 1
-            
-            approx_vacuum_duration = db_size // approx_vacuum_speed_mb_per_s
-            
-            time_i_will_have_to_start = stop_time - approx_vacuum_duration
-            
-            if HydrusData.TimeHasPassed( time_i_will_have_to_start ):
-                
-                return False
-                
+            raise Exception( 'I believe you need about ' + HydrusData.TimeDeltaToPrettyTimeDelta( approx_vacuum_duration ) + ' to vacuum, but there is not enough time allotted.' )
             
         
-        ( db_dir, db_filename ) = os.path.split( db_path )
-        
-        ( has_space, reason ) = HydrusPaths.HasSpaceForDBTransaction( db_dir, db_size )
-        
-        return has_space
-        
-    except Exception as e:
-        
-        HydrusData.Print( 'Could not determine whether to vacuum or not:' )
-        
-        HydrusData.PrintException( e )
-        
-        return False
-        
+    
+    ( db_dir, db_filename ) = os.path.split( db_path )
+    
+    HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, db_size )
     
 def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
     
@@ -420,6 +407,11 @@ class HydrusDB( object ):
                 yield result
                 
             
+        
+    
+    def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
+        
+        return HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
         
     
     def _GetRowCount( self ):
@@ -979,7 +971,7 @@ class HydrusDB( object ):
         
         synchronous = True
         
-        job = HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
+        job = self._GenerateDBJob( job_type, synchronous, action, *args, **kwargs )
         
         if HG.model_shutdown:
             
@@ -1005,7 +997,7 @@ class HydrusDB( object ):
         
         job_type = 'write'
         
-        job = HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
+        job = self._GenerateDBJob( job_type, synchronous, action, *args, **kwargs )
         
         if HG.model_shutdown:
             
@@ -1030,16 +1022,16 @@ class TemporaryIntegerTable( object ):
     
     def __enter__( self ):
         
-        self._cursor.execute( 'CREATE TABLE ' + self._table_name + ' ( ' + self._column_name + ' INTEGER PRIMARY KEY );' )
+        self._cursor.execute( 'CREATE TABLE {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
         
-        self._cursor.executemany( 'INSERT INTO ' + self._table_name + ' ( ' + self._column_name + ' ) VALUES ( ? );', ( ( i, ) for i in self._integer_iterable ) )
+        self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), ( ( i, ) for i in self._integer_iterable ) )
         
         return self._table_name
         
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         
-        self._cursor.execute( 'DROP TABLE ' + self._table_name + ';' )
+        self._cursor.execute( 'DROP TABLE {};'.format( self._table_name ) )
         
         return False
         

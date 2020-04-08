@@ -68,6 +68,8 @@ def GetClientAPIVersionString():
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
 class mpvWidget( QW.QWidget ):
     
+    launchMediaViewer = QC.Signal()
+    
     def __init__( self, parent ):
         
         QW.QWidget.__init__( self, parent )
@@ -342,7 +344,7 @@ class mpvWidget( QW.QWidget ):
                 
             elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
                 
-                self.parent().LaunchMediaViewer()
+                self.launchMediaViewer.emit()
                 
             else:
                 

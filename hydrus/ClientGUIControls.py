@@ -1050,7 +1050,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'match type: ', self._match_type ) )
         rows.append( ( 'match text: ', self._match_value_text_input ) )
         rows.append( ( 'match value (character set): ', self._match_value_flexible_input ) )
-        rows.append( ( 'minumum allowed number of characters: ', self._min_chars ) )
+        rows.append( ( 'minimum allowed number of characters: ', self._min_chars ) )
         rows.append( ( 'maximum allowed number of characters: ', self._max_chars ) )
         rows.append( ( 'example string: ', self._example_string ) )
         

@@ -116,7 +116,24 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         
         ( death_files_found, death_time_delta ) = self._death_file_velocity
         
-        return death_time_delta
+        death_file_velocity_period = death_time_delta
+        
+        never_dies = death_files_found == 0
+        static_check_timing = self._never_faster_than == self._never_slower_than
+        
+        if static_check_timing:
+            
+            death_file_velocity_period = min( death_file_velocity_period, self._never_faster_than * 5 )
+            
+        
+        if never_dies or static_check_timing:
+            
+            six_months = 6 * 60 * 86400
+            
+            death_file_velocity_period = min( death_file_velocity_period, six_months )
+            
+        
+        return death_file_velocity_period
         
     
     def GetNextCheckTime( self, file_seed_cache, last_check_time, last_next_check_time ):
@@ -242,6 +259,18 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         
         return timing_statement + os.linesep * 2 + death_statement
+        
+    
+    def HasStaticCheckTime( self ):
+        
+        return self._never_faster_than == self._never_slower_than
+        
+    
+    def NeverDies( self ):
+        
+        ( death_files_found, death_time_delta ) = self._death_file_velocity
+        
+        return death_files_found == 0
         
     
     def IsDead( self, file_seed_cache, last_check_time ):
@@ -1075,7 +1104,12 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def CheckBlacklist( self, tags ):
         
-        sibling_tags = HG.client_controller.tag_siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
+        sibling_tags = set()
+        
+        for tag in tags:
+            
+            sibling_tags.update( HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, tag ) )
+            
         
         for test_tags in ( tags, sibling_tags ):
             
