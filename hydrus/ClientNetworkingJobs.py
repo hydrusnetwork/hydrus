@@ -562,13 +562,22 @@ class NetworkJob( object ):
                     
                     session = self.engine.session_manager.GetSession( snc )
                     
+                    cf_cookies = [ cookie for cookie in session.cookies if cookie.name.startswith( '__cf' ) ]
+                    
+                    for cookie in cf_cookies:
+                        
+                        session.cookies.clear( cookie.domain, cookie.path, cookie.name )
+                        
+                    
                     domain = '.{}'.format( ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( self._url ) )
                     path = '/'
-                    expires = 30 * 86400
+                    expires = HydrusData.GetNow() + 30 * 86400
+                    secure = True
+                    rest = { 'HttpOnly' : None, 'SameSite' : 'None' }
                     
                     for ( name, value ) in cf_tokens.items():
                         
-                        ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires )
+                        ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires, secure = secure, rest = rest )
                         
                     
                     self.engine.session_manager.SetDirty()

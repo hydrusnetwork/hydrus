@@ -16,7 +16,7 @@ import threading
 import time
 import urllib.parse
 
-def AddCookieToSession( session, name, value, domain, path, expires ):
+def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
     
     version = 0
     port = None
@@ -24,11 +24,14 @@ def AddCookieToSession( session, name, value, domain, path, expires ):
     domain_specified = True
     domain_initial_dot = domain.startswith( '.' )
     path_specified = True
-    secure = False
     discard = False
     comment = None
     comment_url = None
-    rest = {}
+    
+    if rest is None:
+        
+        rest = {}
+        
     
     cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
     
