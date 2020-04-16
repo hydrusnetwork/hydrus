@@ -2957,6 +2957,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddButton( 'add', self._Add )
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddDeleteButton()
+        self._list_ctrl_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
         self._list_ctrl.Sort( 0 )
         
@@ -3023,6 +3024,22 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         sort_tuple = ( pretty_network_context, ( key, value ), pretty_approved, reason )
         
         return ( display_tuple, sort_tuple )
+        
+    
+    def _Duplicate( self ):
+        
+        existing_keys = { key for ( network_context, ( key, value ), approved, reason ) in self._list_ctrl.GetData() }
+        
+        datas = self._list_ctrl.GetData( only_selected = True )
+        
+        for ( network_context, ( key, value ), approved, reason ) in datas:
+            
+            key = HydrusData.GetNonDupeName( key, existing_keys )
+            
+            existing_keys.add( key )
+            
+            self._list_ctrl.AddDatas( [ ( network_context, ( key, value ), approved, reason ) ] )
+            
         
     
     def _Edit( self ):
@@ -3830,17 +3847,25 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         file_velocity = checker_options.GetRawCurrentVelocity( query.GetFileSeedCache(), last_check_time )
         pretty_file_velocity = checker_options.GetPrettyCurrentVelocity( query.GetFileSeedCache(), last_check_time, no_prefix = True )
         
-        estimate = query.GetBandwidthWaitingEstimate( self._original_subscription.GetName() )
-        
-        if estimate == 0:
+        try:
             
-            pretty_delay = ''
+            estimate = query.GetBandwidthWaitingEstimate( self._original_subscription.GetName() )
+            
+            if estimate == 0:
+                
+                pretty_delay = ''
+                delay = 0
+                
+            else:
+                
+                pretty_delay = 'bandwidth: ' + HydrusData.TimeDeltaToPrettyTimeDelta( estimate )
+                delay = estimate
+                
+            
+        except:
+            
+            pretty_delay = 'could not determine bandwidth--there may be a problem with some of the urls in this query'
             delay = 0
-            
-        else:
-            
-            pretty_delay = 'bandwidth: ' + HydrusData.TimeDeltaToPrettyTimeDelta( estimate )
-            delay = estimate
             
         
         ( file_status, simple_status, ( num_done, num_total ) ) = file_seed_cache.GetStatus()
@@ -4641,30 +4666,38 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if HydrusData.TimeHasPassed( no_work_until ):
             
-            ( min_estimate, max_estimate ) = subscription.GetBandwidthWaitingEstimateMinMax()
-            
-            if max_estimate == 0: # don't seem to be any delays of any kind
+            try:
                 
-                pretty_delay = ''
-                delay = 0
+                ( min_estimate, max_estimate ) = subscription.GetBandwidthWaitingEstimateMinMax()
                 
-            elif min_estimate == 0: # some are good to go, but there are delays
-                
-                pretty_delay = 'bandwidth: some ok, some up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
-                delay = max_estimate
-                
-            else:
-                
-                if min_estimate == max_estimate: # probably just one query, and it is delayed
+                if max_estimate == 0: # don't seem to be any delays of any kind
                     
-                    pretty_delay = 'bandwidth: up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
+                    pretty_delay = ''
+                    delay = 0
+                    
+                elif min_estimate == 0: # some are good to go, but there are delays
+                    
+                    pretty_delay = 'bandwidth: some ok, some up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
                     delay = max_estimate
                     
                 else:
                     
-                    pretty_delay = 'bandwidth: from ' + HydrusData.TimeDeltaToPrettyTimeDelta( min_estimate ) + ' to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
-                    delay = max_estimate
+                    if min_estimate == max_estimate: # probably just one query, and it is delayed
+                        
+                        pretty_delay = 'bandwidth: up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
+                        delay = max_estimate
+                        
+                    else:
+                        
+                        pretty_delay = 'bandwidth: from ' + HydrusData.TimeDeltaToPrettyTimeDelta( min_estimate ) + ' to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
+                        delay = max_estimate
+                        
                     
+                
+            except:
+                
+                pretty_delay = 'could not determine bandwidth, there may be an error with the sub or its urls'
+                delay = 0
                 
             
         else:
@@ -5338,9 +5371,13 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_blacklist = tag_import_options.GetTagBlacklist()
         
-        message = 'Any tag that this filter _excludes_ will be considered a blacklisted tag and will stop the file importing.'
+        message = 'Any tag that this filter _excludes_ will be considered a blacklisted tag and will stop the file importing. So if you only want to stop \'scat\' or \'gore\', just add them to the simple blacklist and hit ok.'
         message += os.linesep * 2
-        message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the simple blacklist and hit ok. It is worth doing a small test, just to make sure it is all set up how you want.'
+        message += 'This system tests the tags that are parsed from the site, as hydrus would end up getting them. Siblings of all the tags will also be tested. If you do not have excellent siblings, it is worth adding multiple versions of your tag, just to catch different sites terms. Add \'gore\', \'guro\', \'violence\', etc...'
+        message += os.linesep * 2
+        message += 'Additionally, for blacklists, unnamespaced rules will apply to namespaced tags. \'metroid\' in the blacklist will catch \'series:metroid\' as parsed from a site.'
+        message += os.linesep * 2
+        message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
         
         self._tag_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, is_blacklist = True )
         
@@ -5413,6 +5450,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_button, CC.FLAGS_LONE_BUTTON )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -5528,7 +5566,12 @@ Please note that once you know what tags you like, you can (and should) set up t
         
         show_specific_options = not is_default
         
-        self._specific_options_panel.setEnabled( show_specific_options )
+        self._specific_options_panel.setVisible( show_specific_options )
+        
+        if not show_specific_options:
+            
+            self.window().adjustSize()
+            
         
     
     def GetValue( self ):
@@ -5544,7 +5587,7 @@ Please note that once you know what tags you like, you can (and should) set up t
             fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.isChecked()
             fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.isChecked()
             
-            service_keys_to_service_tag_import_options = {service_key : panel.GetValue() for (service_key, panel) in list( self._service_keys_to_service_tag_import_options_panels.items() )}
+            service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in list( self._service_keys_to_service_tag_import_options_panels.items() ) }
             
             tag_blacklist = self._tag_filter_button.GetValue()
             

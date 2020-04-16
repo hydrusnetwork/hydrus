@@ -153,6 +153,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
 class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     TEST_RESULT_DEFAULT = 'Enter a tag here to test if it passes the current filter:'
+    TEST_RESULT_BLACKLIST_DEFAULT = 'Enter a tag here to test if it passes the current filter in a tag import options blacklist (siblings tested, unnamespaced rules match namespaced tags):'
     
     def __init__( self, parent, tag_filter, prefer_blacklist = False, namespaces = None, message = None ):
         
@@ -216,6 +217,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT )
         self._test_result_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
         
+        self._test_result_st.setWordWrap( True )
+        
+        self._test_result_blacklist_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_BLACKLIST_DEFAULT )
+        self._test_result_blacklist_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
+        
+        self._test_result_blacklist_st.setWordWrap( True )
+        
         self._test_input = QW.QPlainTextEdit( self )
         
         #
@@ -242,9 +250,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        test_text_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( test_text_vbox, self._test_result_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( test_text_vbox, self._test_result_blacklist_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._test_result_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, test_text_vbox, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         QP.AddToLayout( hbox, self._test_input, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -281,10 +294,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._ShowRedundantError( ClientTags.ConvertTagSliceToString( tag_slice ) + ' is already blocked by a broader rule!' )
                 
-            else:
-                
-                self._advanced_blacklist.AddTags( ( tag_slice, ) )
-                
+            
+            self._advanced_blacklist.AddTags( ( tag_slice, ) )
             
         
         self._UpdateStatus()
@@ -319,14 +330,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             # if it is still blocked after that, it needs whitelisting explicitly
             
-            if self._CurrentlyBlocked( tag_slice ):
-                
-                self._advanced_whitelist.AddTags( ( tag_slice, ) )
-                
-            elif tag_slice not in ( '', ':' ):
+            if not self._CurrentlyBlocked( tag_slice ) and tag_slice not in ( '', ':' ):
                 
                 self._ShowRedundantError( ClientTags.ConvertTagSliceToString( tag_slice ) + ' is already permitted by a broader rule!' )
                 
+            
+            self._advanced_whitelist.AddTags( ( tag_slice, ) )
             
         
         self._UpdateStatus()
@@ -1061,9 +1070,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if test_input == '':
             
-            text = self.TEST_RESULT_DEFAULT
-            
-            colour = QP.GetSystemColour( QG.QPalette.WindowText )
+            normal_text = self.TEST_RESULT_DEFAULT
+            blacklist_text = self.TEST_RESULT_BLACKLIST_DEFAULT
             
         else:
             
@@ -1071,20 +1079,40 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if tag_filter.TagOK( test_input ):
                 
-                text = 'tag passes!'
+                normal_text = 'tag passes!'
                 
                 self._test_result_st.setObjectName( 'HydrusValid' )
                 
             else:
                 
-                text = 'tag blocked!'
+                normal_text = 'tag blocked!'
                 
                 self._test_result_st.setObjectName( 'HydrusInvalid' )
                 
             
+            sibling_tags = HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, test_input )
+            
+            passes = False not in ( tag_filter.TagOK( sibling_tag, apply_unnamespaced_rules_to_namespaced_tags = True ) for sibling_tag in sibling_tags )
+            
+            if passes:
+                
+                blacklist_text = 'in a tag import options blacklist, tag passes!'
+                
+                self._test_result_blacklist_st.setObjectName( 'HydrusValid' )
+                
+            else:
+                
+                blacklist_text = 'in a tag import options blacklist, tag blocked!'
+                
+                self._test_result_blacklist_st.setObjectName( 'HydrusInvalid' )
+                
+            
         
-        self._test_result_st.setText( text )
+        self._test_result_st.setText( normal_text )
         self._test_result_st.style().polish( self._test_result_st )
+        
+        self._test_result_blacklist_st.setText( blacklist_text )
+        self._test_result_blacklist_st.style().polish( self._test_result_blacklist_st )
         
     
     def EventSimpleBlacklistNamespaceCheck( self, index ):

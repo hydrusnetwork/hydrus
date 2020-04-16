@@ -2992,8 +2992,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._add_button = ClientGUICommon.BetterButton( self, 'import now', self._DoImport )
         self._add_button.setObjectName( 'HydrusAccept' )
         
-        self._tag_button = ClientGUICommon.BetterButton( self, 'import with tags', self._AddTags )
+        self._tag_button = ClientGUICommon.BetterButton( self, 'add tags before the import >>', self._AddTags )
         self._tag_button.setObjectName( 'HydrusAccept' )
+        
+        self._tag_button.setToolTip( 'You can add specific tags to these files, import from sidecar files, or generate them based on filename. Don\'t be afraid to experiment!' )
         
         gauge_sizer = QP.HBoxLayout()
         

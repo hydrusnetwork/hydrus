@@ -27,6 +27,7 @@
 				<li>. venv/bin/activate</li>
 			</ul>
 			<p>That '. venv/bin/activate' line turns your venv on, and will be needed every time you run the client.pyw/server.py files. You can easily tuck it into a launch script.</p>
+			<p>On Windows, the path is venv&#92;Scripts&#92;activate, and the whole deal is done much easier in cmd than Powershell. If you get Powershell by default, just type 'cmd' to get an old fashioned command line. In cmd, the launch command is just 'venv&#92;scripts&#92;activate', no leading period.</p>
 			<p>After that, you can go nuts with pip. I think this will do for most systems:</p>
 			<ul>
 				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyOpenSSL PyYAML requests Send2Trash service_identity twisted</li>
@@ -36,17 +37,26 @@
 			<ul>
 				<li>pip3 install qtpy PySide2</li>
 			</ul>
+			<p>I have had some stability trouble with the recent Qt 5.14, so you might like instead to do:</p>
+			<ul>
+				<li>pip3 install PySide2==5.13.2</li>
+			</ul>
 			<p>If your Linux package manager splits Qt into several pieces, you may not get QtCharts by default. This is optional but not required.</p>
 			<p>And optionally, you can add these packages:</p>
 			<ul>
 				<li>lz4 - for some memory compression in the client</li>
 				<li>pylzma - for importing rare ZWS swf files</li>
+				<li>cloudscraper - for attempting to solve CloudFlare check pages</li>
 				<li>pysocks - for socks4/socks5 proxy support (although you may want to try "requests[socks]" instead)</li>
 				<li>mock httmock pyinstaller - if you want to run test.py and make a build yourself</li>
 			</ul>
 			<p>Depending on your OS, you might need something else. Ultimately, the best way to figure out if you have enough for hydrus is to just keep running client.pyw and see what it complains about missing. If you are not familiar with pip and get an error about a library already existing, know that you update an existing library with the --upgrade switch, like so:</p>
 			<ul>
 				<li>pip3 install --upgrade libraryname</li>
+			</ul>
+			<p>Here is a masterline with everything for general use:</p>
+			<ul>
+				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyOpenSSL PyYAML requests Send2Trash service_identity twisted qtpy PySide2==5.13.2 lz4 pylzma cloudscraper pysocks</li>
 			</ul>
 			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python37\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>If you don't have ffmpeg in your PATH and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. On Windows, you can copy the exe from one of those releases, or just download the latest static build right from the FFMPEG site.</a>

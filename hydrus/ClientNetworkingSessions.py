@@ -19,7 +19,6 @@ except:
     
     SOCKS_PROXY_OK = False
     
-
 class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER

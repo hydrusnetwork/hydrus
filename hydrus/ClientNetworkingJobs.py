@@ -10,13 +10,22 @@ from . import HydrusNetworking
 from . import HydrusThreading
 from . import HydrusText
 import os
-import re
 import requests
 import threading
 import traceback
 import time
 import urllib
 
+try:
+    
+    import cloudscraper
+    
+    CLOUDSCRAPER_OK = True
+    
+except:
+    
+    CLOUDSCRAPER_OK = False
+    
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
     ( error_text, encoding ) = HydrusText.NonFailingUnicodeDecode( data, 'utf-8' )
@@ -128,6 +137,7 @@ class NetworkJob( object ):
         self._for_login = False
         
         self._current_connection_attempt_number = 1
+        self._we_tried_cloudflare_once = False
         
         self._additional_headers = {}
         
@@ -506,6 +516,75 @@ class NetworkJob( object ):
         self._wake_time = HydrusData.GetNow() + seconds
         
     
+    def _SolveCloudFlare( self, response ):
+        
+        if CLOUDSCRAPER_OK:
+            
+            try:
+                
+                is_firewall = cloudscraper.CloudScraper.is_Firewall_Blocked( response )
+                is_attemptable = cloudscraper.CloudScraper.is_reCaptcha_Challenge( response ) or cloudscraper.CloudScraper.is_IUAM_Challenge( response )
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'cloudflarescraper had an error looking at "{}" response: {}'.format( self._url, str( e ) ) )
+                
+                HydrusData.PrintException( e )
+                
+                return
+                
+            
+            if is_firewall:
+                
+                raise HydrusExceptions.CloudFlareException( 'It looks like the site has Firewall-Blocked your IP or IP range with CloudFlare.' )
+                
+            
+            if is_attemptable:
+                
+                try:
+                    
+                    with self._lock:
+                        
+                        ncs = list( self._network_contexts )
+                        snc = self._session_network_context
+                        
+                    
+                    headers = self.engine.domain_manager.GetHeaders( ncs )
+                    
+                    if 'User-Agent' not in headers:
+                        
+                        raise HydrusExceptions.CloudFlareException( 'No User-Agent set for hydrus!' )
+                        
+                    
+                    user_agent = headers[ 'User-Agent' ]
+                    
+                    ( cf_tokens, user_agent ) = cloudscraper.get_tokens( self._url, browser = { 'custom' : user_agent } )
+                    
+                    session = self.engine.session_manager.GetSession( snc )
+                    
+                    domain = '.{}'.format( ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( self._url ) )
+                    path = '/'
+                    expires = 30 * 86400
+                    
+                    for ( name, value ) in cf_tokens.items():
+                        
+                        ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires )
+                        
+                    
+                    self.engine.session_manager.SetDirty()
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    raise HydrusExceptions.CloudFlareException( 'Looks like an unsolvable CloudFlare issue: {}'.format( str( e ) ) )
+                    
+                
+                raise HydrusExceptions.ShouldReattemptNetworkException( 'CloudFlare needed solving.' )
+                
+            
+        
+    
     def _WaitOnConnectionError( self, status_text ):
         
         connection_error_wait_time = HG.client_controller.new_options.GetInteger( 'connection_error_wait_time' )
@@ -683,6 +762,28 @@ class NetworkJob( object ):
         with self._lock:
             
             return not HydrusData.TimeHasPassed( self._serverside_bandwidth_wake_time )
+            
+        
+    
+    def DomainOK( self ):
+        
+        with self._lock:
+            
+            if self._max_connection_attempts_allowed == 1:
+                
+                return True
+                
+            
+            domain_ok = self.engine.domain_manager.DomainOK( self._url )
+            
+            if not domain_ok:
+                
+                self._status_text = 'This domain has had several serious errors recently. Waiting a bit.'
+                
+                self._Sleep( 10 )
+                
+            
+            return domain_ok
             
         
     
@@ -1089,6 +1190,14 @@ class NetworkJob( object ):
                             self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
                             
                         
+                        # it is important we do this before ReadResponse, as the CF test needs r.text, which is nullified if we first access with iter_content
+                        if not self._we_tried_cloudflare_once:
+                            
+                            self._we_tried_cloudflare_once = True
+                            
+                            self._SolveCloudFlare( response )
+                            
+                        
                         self._ReadResponse( response, self._stream_io, 104857600 )
                         
                         with self._lock:
@@ -1114,9 +1223,13 @@ class NetworkJob( object ):
                     
                     self._current_connection_attempt_number += 1
                     
-                    if not self._CanReattemptRequest():
+                    if self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.NetworkException( 'Server reported very limited bandwidth: ' + str( e ) )
+                        self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                        
+                    else:
+                        
+                        raise HydrusExceptions.BandwidthException( 'Server reported very limited bandwidth: ' + str( e ) )
                         
                     
                     self._WaitOnServersideBandwidth( 'server reported limited bandwidth' )
@@ -1127,10 +1240,10 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.NetworkException( 'Ran out of reattempts on this error: ' + str( e ) )
+                        raise HydrusExceptions.NetworkInfrastructureException( 'Ran out of reattempts on this error: ' + str( e ) )
                         
                     
-                    self._WaitOnConnectionError( 'server suddenly stopped delivering data' )
+                    self._WaitOnConnectionError( str( e ) )
                     
                 except requests.exceptions.ChunkedEncodingError:
                     
@@ -1138,7 +1251,7 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.ConnectionException( 'Unable to complete request--it broke mid-way!' )
+                        raise HydrusExceptions.StreamTimeoutException( 'Unable to complete request--it broke mid-way!' )
                         
                     
                     self._WaitOnConnectionError( 'connection broke mid-request' )
@@ -1147,7 +1260,11 @@ class NetworkJob( object ):
                     
                     self._current_connection_attempt_number += 1
                     
-                    if not self._CanReattemptConnection():
+                    if self._CanReattemptConnection():
+                        
+                        self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                        
+                    else:
                         
                         raise HydrusExceptions.ConnectionException( 'Could not connect!' )
                         
@@ -1160,7 +1277,7 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.ConnectionException( 'Connection successful, but reading response timed out!' )
+                        raise HydrusExceptions.StreamTimeoutException( 'Connection successful, but reading response timed out!' )
                         
                     
                     self._WaitOnConnectionError( 'read timed out' )
@@ -1182,9 +1299,14 @@ class NetworkJob( object ):
                 
                 trace = traceback.format_exc()
                 
-                if not isinstance( e, ( HydrusExceptions.ConnectionException, HydrusExceptions.SizeException ) ):
+                if not isinstance( e, ( HydrusExceptions.NetworkInfrastructureException, HydrusExceptions.StreamTimeoutException, HydrusExceptions.SizeException ) ):
                     
                     HydrusData.Print( trace )
+                    
+                
+                if isinstance( e, HydrusExceptions.NetworkInfrastructureException ):
+                    
+                    self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
                     
                 
                 self._status_text = 'Error: ' + str( e )

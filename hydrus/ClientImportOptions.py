@@ -1113,7 +1113,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         for test_tags in ( tags, sibling_tags ):
             
-            ok_tags = self._tag_blacklist.Filter( test_tags )
+            ok_tags = self._tag_blacklist.Filter( test_tags, apply_unnamespaced_rules_to_namespaced_tags = True )
             
             if len( ok_tags ) < len( test_tags ):
                 

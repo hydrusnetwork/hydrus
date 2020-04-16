@@ -171,9 +171,16 @@ class RecentTagsPanel( QW.QWidget ):
     
     def EventClear( self ):
         
-        HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
+        from . import ClientGUIDialogsQuick
         
-        self._RefreshRecentTags()
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear recent tags?' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
+            
+            self._RefreshRecentTags()
+            
         
     
     def RefreshRecentTags( self ):

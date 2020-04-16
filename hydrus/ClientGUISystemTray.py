@@ -78,6 +78,8 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             ClientGUIMenus.DestroyMenu( parent_widget, old_menu )
             
         
+        self._UpdateTooltip()
+        
     
     def _UpdateNetworkTrafficMenuItemLabel( self ):
         
@@ -126,6 +128,33 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
         
     
+    def _UpdateTooltip( self ):
+        
+        title = HG.client_controller.new_options.GetString( 'main_gui_title' )
+        
+        if title is None or title == '':
+            
+            title = 'hydrus client'
+            
+        
+        tooltip = title
+        
+        if self._network_traffic_paused:
+            
+            tooltip = '{} - network traffic paused'.format( tooltip )
+            
+        
+        if self._subscriptions_paused:
+            
+            tooltip = '{} - subscriptions paused'.format( tooltip )
+            
+        
+        if self.toolTip != tooltip:
+            
+            self.setToolTip( tooltip )
+            
+        
+    
     def _WasActivated( self, activation_reason ):
         
         if activation_reason in ( QW.QSystemTrayIcon.Unknown, QW.QSystemTrayIcon.Trigger ):
@@ -162,6 +191,8 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             self._UpdateNetworkTrafficMenuItemLabel()
             
+            self._UpdateTooltip()
+            
         
     
     def SetSubscriptionsPaused( self, subscriptions_paused: bool ):
@@ -171,6 +202,8 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             self._subscriptions_paused = subscriptions_paused
             
             self._UpdateSubscriptionsMenuItemLabel()
+            
+            self._UpdateTooltip()
             
         
     

@@ -600,8 +600,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._data_to_indices[ new_data ] = data_index
         
         self._UpdateRow( data_index, display_tuple )
-
         
+    
 class BetterListCtrlPanel( QW.QWidget ):
     
     def __init__( self, parent ):
@@ -616,6 +616,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._permitted_object_types = []
         self._import_add_callable = lambda x: None
+        self._custom_get_callable = None
         
         self._button_infos = []
         
@@ -760,11 +761,18 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _GetExportObject( self ):
         
-        to_export = HydrusSerialisable.SerialisableList()
-        
-        for obj in self._listctrl.GetData( only_selected = True ):
+        if self._custom_get_callable is None:
             
-            to_export.append( obj )
+            to_export = HydrusSerialisable.SerialisableList()
+            
+            for obj in self._listctrl.GetData( only_selected = True ):
+                
+                to_export.append( obj )
+                
+            
+        else:
+            
+            to_export = [ self._custom_get_callable() ]
             
         
         if len( to_export ) == 0:
@@ -965,21 +973,25 @@ class BetterListCtrlPanel( QW.QWidget ):
         self.AddButton( 'delete', self._listctrl.ProcessDeleteAction, enabled_check_func = enabled_check_func, enabled_only_on_selection = enabled_only_on_selection )
         
     
-    def AddImportExportButtons( self, permitted_object_types, import_add_callable ):
+    def AddImportExportButtons( self, permitted_object_types, import_add_callable, custom_get_callable = None ):
         
         self._permitted_object_types = permitted_object_types
         self._import_add_callable = import_add_callable
+        self._custom_get_callable = custom_get_callable
         
         export_menu_items = []
         
         export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
         export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPng ) )
         
-        all_objs_are_named = False not in ( issubclass( o, HydrusSerialisable.SerialisableBaseNamed ) for o in self._permitted_object_types )
-        
-        if all_objs_are_named:
+        if self._custom_get_callable is None:
             
-            export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPngs ) )
+            all_objs_are_named = False not in ( issubclass( o, HydrusSerialisable.SerialisableBaseNamed ) for o in self._permitted_object_types )
+            
+            if all_objs_are_named:
+                
+                export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPngs ) )
+                
             
         
         import_menu_items = []

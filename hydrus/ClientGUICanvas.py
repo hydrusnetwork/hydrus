@@ -2166,6 +2166,8 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self._widget_event_filter.EVT_MOTION( self.EventMouseMove )
         
+        self._InitiateCursorHideWait()
+        
         HG.client_controller.sub( self, 'CloseFromHover', 'canvas_close' )
         HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
         

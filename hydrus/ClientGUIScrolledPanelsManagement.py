@@ -1753,6 +1753,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._serverside_bandwidth_wait_time = QP.MakeQSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
             self._serverside_bandwidth_wait_time.setToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' )
             
+            self._domain_network_infrastructure_error_velocity = ClientGUITime.VelocityCtrl( general, 0, 100, 30, hours = True, minutes = True, seconds = True, per_phrase = 'within', unit = 'errors' )
+            
             self._max_network_jobs = QP.MakeQSpinBox( general, min = 1, max = max_network_jobs_max )
             self._max_network_jobs_per_domain = QP.MakeQSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
             
@@ -1773,6 +1775,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._network_timeout.setValue( self._new_options.GetInteger( 'network_timeout' ) )
             self._connection_error_wait_time.setValue( self._new_options.GetInteger( 'connection_error_wait_time' ) )
             self._serverside_bandwidth_wait_time.setValue( self._new_options.GetInteger( 'serverside_bandwidth_wait_time' ) )
+            
+            number = self._new_options.GetInteger( 'domain_network_infrastructure_error_number' )
+            time_delta = self._new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
+            
+            self._domain_network_infrastructure_error_velocity.SetValue( ( number, time_delta ) )
             
             self._max_network_jobs.setValue( self._new_options.GetInteger( 'max_network_jobs' ) )
             self._max_network_jobs_per_domain.setValue( self._new_options.GetInteger( 'max_network_jobs_per_domain' ) )
@@ -1796,6 +1803,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
             rows.append( ( 'connection error retry wait (seconds): ', self._connection_error_wait_time ) )
             rows.append( ( 'serverside bandwidth retry wait (seconds): ', self._serverside_bandwidth_wait_time ) )
+            rows.append( ( 'Halt new jobs as long as this many network infrastructure errors on their domain (0 for never wait): ', self._domain_network_infrastructure_error_velocity ) )
             rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
             rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
             rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
@@ -1856,6 +1864,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'serverside_bandwidth_wait_time', self._serverside_bandwidth_wait_time.value() )
             self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.value() )
             self._new_options.SetInteger( 'max_network_jobs_per_domain', self._max_network_jobs_per_domain.value() )
+            
+            ( number, time_delta ) = self._domain_network_infrastructure_error_velocity.GetValue()
+            
+            self._new_options.SetInteger( 'domain_network_infrastructure_error_number', number )
+            self._new_options.SetInteger( 'domain_network_infrastructure_error_time_delta', time_delta )
             
         
     
@@ -2171,6 +2184,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = new_options
             
             self._always_show_system_everything = QW.QCheckBox( 'show system:everything even if total files is over 10,000', self )
+            self._always_show_system_everything.setToolTip( 'After users get some experience with the program and a larger collection, they tend to have less use for system:everything.' )
             
             self._always_show_system_everything.setChecked( self._new_options.GetBoolean( 'always_show_system_everything' ) )
             
@@ -2646,6 +2660,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._hide_message_manager_on_gui_deactive = QW.QCheckBox( self )
             self._hide_message_manager_on_gui_deactive.setToolTip( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
             
+            self._notify_client_api_cookies = QW.QCheckBox( self )
+            self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie information over the Client API.' )
+            
+            self._use_qt_file_dialogs = QW.QCheckBox( self )
+            self._use_qt_file_dialogs.setToolTip( 'If you get crashes opening file/directory dialogs, try this.' )
+            
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
             self._frame_locations = ClientGUIListCtrl.BetterListCtrl( frame_locations_panel, 'frame_locations', 15, 20, [ ( 'name', -1 ), ( 'remember size', 12 ), ( 'remember position', 12 ), ( 'last size', 12 ), ( 'last position', 12 ), ( 'default gravity', 12 ), ( 'default position', 12 ), ( 'maximised', 12 ), ( 'fullscreen', 12 ) ], data_to_tuples_func = lambda x: (self._GetPrettyFrameLocationInfo( x ), self._GetPrettyFrameLocationInfo( x )), activation_callback = self.EditFrameLocations )
@@ -2679,6 +2699,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._hide_message_manager_on_gui_iconise.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
             self._hide_message_manager_on_gui_deactive.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) )
             
+            self._notify_client_api_cookies.setChecked( self._new_options.GetBoolean( 'notify_client_api_cookies' ) )
+            
+            self._use_qt_file_dialogs.setChecked( self._new_options.GetBoolean( 'use_qt_file_dialogs' ) )
+            
             for ( name, info ) in self._new_options.GetFrameLocations():
                 
                 listctrl_list = QP.ListsToTuples( [ name ] + list( info ) )
@@ -2699,11 +2723,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Autocomplete results float in other windows: ', self._autocomplete_float_frames ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
+            rows.append( ( 'Make a short-lived popup on cookie updates through the Client API: ', self._notify_client_api_cookies ) )
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
+            rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -2778,10 +2804,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.pub( 'main_gui_title', title )
             
+            self._new_options.SetBoolean( 'notify_client_api_cookies', self._notify_client_api_cookies.isChecked() )
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.isChecked() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.isChecked() )
+            self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
             
             for listctrl_list in self._frame_locations.GetData():
                 

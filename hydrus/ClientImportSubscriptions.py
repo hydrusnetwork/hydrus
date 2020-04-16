@@ -184,7 +184,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return HydrusData.TimeHasPassed( self._no_work_until )
         
     
-    def _QueryFileLoginIsOK( self, query ):
+    def _QueryFileLoginOK( self, query ):
         
         file_seed_cache = query.GetFileSeedCache()
         
@@ -244,7 +244,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return result
         
     
-    def _QuerySyncLoginIsOK( self, query ):
+    def _QuerySyncLoginOK( self, query ):
         
         gallery_seed_log = query.GetGallerySeedLog()
         
@@ -504,10 +504,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                     p1 = not self._CanDoWorkNow()
-                    p4 = not query.BandwidthIsOK( self._name )
-                    p5 = not self._QueryFileLoginIsOK( query )
+                    p3 = not query.DomainOK()
+                    p4 = not query.BandwidthOK( self._name )
+                    p5 = not self._QueryFileLoginOK( query )
                     
                     if p1 or p4 or p5:
+                        
+                        if p3 and this_query_has_done_work:
+                            
+                            job_key.SetVariable( 'popup_text_2', 'domain had errors, will try again later' )
+                            
+                            self._DelayWork( 3600, 'domain errors, will try again later' )
+                            
+                            time.sleep( 5 )
+                            
                         
                         if p4 and this_query_has_done_work:
                             
@@ -666,14 +676,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if query.HasFileWorkToDo():
                 
-                if query.BandwidthIsOK( self._name ):
+                bandwidth_ok = query.BandwidthOK( self._name )
+                domain_ok = query.DomainOK( self._name )
+                
+                if HG.subscription_report_mode:
                     
-                    if HG.subscription_report_mode:
-                        
-                        HydrusData.ShowText( 'Subscription "{}" checking if any file work due: True'.format( self._name ) )
-                        
+                    HydrusData.ShowText( 'Subscription "{}" checking if any file work due: True, bandwidth ok: {}, domain ok: {}'.format( self._name, bandwidth_ok, domain_ok ) )
+                    
+                
+                if bandwidth_ok and domain_ok:
                     
                     return True
+                    
+                
+                if not domain_ok:
+                    
+                    self._DelayWork( 3600, 'domain errors, will try again later' )
                     
                 
             
@@ -779,7 +797,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 while gallery_seed_log.WorkToDo():
                     
                     p1 = not self._CanDoWorkNow()
-                    p3 = not self._QuerySyncLoginIsOK( query )
+                    p3 = not self._QuerySyncLoginOK( query )
                     
                     if p1 or p3:
                         
@@ -1005,7 +1023,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if this_is_initial_sync:
                     
-                    if not query.BandwidthIsOK( self._name ) and not have_made_an_initial_sync_bandwidth_notification:
+                    if not query.BandwidthOK( self._name ) and not have_made_an_initial_sync_bandwidth_notification:
                         
                         HydrusData.ShowText( 'FYI: The query "' + query_name + '" for subscription "' + self._name + '" performed its initial sync ok, but that domain is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.' )
                         
@@ -1846,8 +1864,15 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         url = file_seed.file_seed_data
         
-        example_nj = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, 'GET', url )
-        example_network_contexts = example_nj.GetNetworkContexts()
+        try: # if the url is borked for some reason
+            
+            example_nj = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, 'GET', url )
+            example_network_contexts = example_nj.GetNetworkContexts()
+            
+        except:
+            
+            return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
+            
         
         return example_network_contexts
         
@@ -1900,20 +1925,20 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def BandwidthIsOK( self, subscription_name ):
+    def BandwidthOK( self, subscription_name ):
         
         example_network_contexts = self._GetExampleNetworkContexts( subscription_name )
         
         threshold = 90
         
-        result = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
+        bandwidth_ok = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + self.GetHumanName() + '" bandwidth test. Bandwidth ok: ' + str( result ) + '.' )
+            HydrusData.ShowText( 'Query "' + self.GetHumanName() + '" bandwidth/domain test. Bandwidth ok: {}'.format( bandwidth_ok ) )
             
         
-        return result
+        return bandwidth_ok
         
     
     def CanCheckNow( self ):
@@ -1938,6 +1963,27 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         self._next_check_time = 0
         self._status = ClientImporting.CHECKER_STATUS_OK
+        
+    
+    def DomainOK( self ):
+        
+        file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
+        
+        if file_seed is None:
+            
+            return True
+            
+        
+        url = file_seed.file_seed_data
+        
+        domain_ok = HG.client_controller.network_engine.domain_manager.DomainOK( url )
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "' + self.GetHumanName() + '" domain test. Domain ok: {}'.format( domain_ok ) )
+            
+        
+        return domain_ok
         
     
     def GetBandwidthWaitingEstimate( self, subscription_name ):
@@ -2027,7 +2073,16 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         if self.HasFileWorkToDo():
             
-            file_bandwidth_estimate = self.GetBandwidthWaitingEstimate( subscription_name )
+            try:
+                
+                file_bandwidth_estimate = self.GetBandwidthWaitingEstimate( subscription_name )
+                
+            except:
+                
+                # this is tricky, but if there is a borked url in here causing trouble, we should let it run and error out immediately tbh
+                
+                file_bandwidth_estimate = 0
+                
             
             if file_bandwidth_estimate == 0:
                 

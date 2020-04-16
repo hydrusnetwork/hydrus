@@ -1266,7 +1266,41 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if len( all_parse_results ) == 0:
                         
-                        raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
+                        it_was_a_real_file = False
+                        
+                        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                        
+                        try:
+                            
+                            with open( temp_path, 'wb' ) as f:
+                                
+                                f.write( network_job.GetContentBytes() )
+                                
+                            
+                            mime = HydrusFileHandling.GetMime( temp_path )
+                            
+                            if mime in HC.ALLOWED_MIMES:
+                                
+                                it_was_a_real_file = True
+                                
+                                status_hook( 'page was actually a file, trying to import' )
+                                
+                                self.Import( temp_path, file_import_options, status_hook = status_hook )
+                                
+                            
+                        except:
+                            
+                            pass # in this special occasion, we will swallow the error
+                            
+                        finally:
+                            
+                            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                            
+                        
+                        if not it_was_a_real_file:
+                            
+                            raise HydrusExceptions.VetoException( 'The parser found nothing in the document, nor did it seem to be an importable file!' )
+                            
                         
                     elif len( all_parse_results ) > 1:
                         

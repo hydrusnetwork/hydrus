@@ -661,4 +661,39 @@ class TestSerialisables( unittest.TestCase ):
         
         self.assertEqual( tag_filter.Filter( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill', 'blue eyes' } )
         
+        # blacklist namespace test
+        
+        blacklist_tags = { 'nintendo', 'studio:nintendo' }
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'nintendo', CC.FILTER_BLACKLIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( blacklist_tags ), { 'studio:nintendo' } )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'nintendo', CC.FILTER_BLACKLIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( blacklist_tags, apply_unnamespaced_rules_to_namespaced_tags = True ), set() )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'nintendo', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'studio:nintendo', CC.FILTER_WHITELIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( blacklist_tags, apply_unnamespaced_rules_to_namespaced_tags = True ), { 'studio:nintendo' } )
+        
     

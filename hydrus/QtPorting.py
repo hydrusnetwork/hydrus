@@ -213,7 +213,16 @@ class DirPickerCtrl( QW.QWidget ):
         
         existing_path = self._path_edit.text()
         
-        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path )
+        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+            
+            options = QW.QFileDialog.Options( QW.QFileDialog.DontUseNativeDialog )
+            
+        else:
+            
+            options = QW.QFileDialog.Options()
+            
+        
+        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path, options = options )
         
         if path == '':
             
@@ -292,26 +301,35 @@ class FilePickerCtrl( QW.QWidget ):
             existing_path = self._starting_directory
             
         
+        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+            
+            options = QW.QFileDialog.Options( QW.QFileDialog.DontUseNativeDialog )
+            
+        else:
+            
+            options = QW.QFileDialog.Options()
+            
+        
         if self._save_mode:
             
             if self._wildcard:
-            
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard )[0]
+                
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, options = options )[0]
                 
             else:
-
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path )[0]
+                
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, options = options )[0]
                 
             
         else:
-
+            
             if self._wildcard:
                 
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, options = options )[0]
                 
             else:
-
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path )[0]
+                
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, options = options )[0]
                 
             
         
@@ -1637,7 +1655,7 @@ class CheckListBox( QW.QListWidget ):
         self.itemClicked.connect( self._ItemCheckStateChanged )
         
         self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
-    
+        
     
     def Check(self, index, state = True):
         
@@ -2058,6 +2076,11 @@ class DirDialog( QW.QFileDialog ):
         
         self.setOption( QW.QFileDialog.ShowDirsOnly, True )
         
+        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+            
+            self.setOption( QW.QFileDialog.DontUseNativeDialog, True )
+            
+        
     
     def __enter__( self ):
         
@@ -2087,7 +2110,7 @@ class DirDialog( QW.QFileDialog ):
 
 
 class FileDialog( QW.QFileDialog ):
-
+    
     def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFile, defaultFile = None, wildcard = None ):
 
         QW.QFileDialog.__init__( self, parent )
@@ -2101,7 +2124,12 @@ class FileDialog( QW.QFileDialog ):
         if defaultFile: self.setDirectory( defaultFile )
         
         if wildcard: self.setNameFilter( wildcard )
-
+        
+        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+            
+            self.setOption( QW.QFileDialog.DontUseNativeDialog, True )
+            
+        
 
     def __enter__( self ):
 

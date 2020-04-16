@@ -1,5 +1,6 @@
 beautifulsoup4==4.8.2
 chardet==3.0.4
+cloudscraper==1.2.33
 html5lib==1.0.1
 httplib2==0.9.2
 lxml==4.5.0

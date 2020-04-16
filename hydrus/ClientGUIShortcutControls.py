@@ -612,13 +612,19 @@ class EditShortcutAndCommandPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, shortcuts ):
+    def __init__( self, parent, shortcuts: ClientGUIShortcuts.ShortcutSet ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._name = QW.QLineEdit( self )
         
-        self._shortcuts = ClientGUIListCtrl.BetterListCtrl( self, 'shortcuts', 20, 20, [ ( 'shortcut', 20 ), ( 'command', -1 ) ], data_to_tuples_func = self._ConvertSortTupleToPrettyTuple, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+        self._shortcuts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._shortcuts = ClientGUIListCtrl.BetterListCtrl( self._shortcuts_panel, 'shortcuts', 20, 20, [ ( 'shortcut', 20 ), ( 'command', -1 ) ], data_to_tuples_func = self._ConvertSortTupleToPrettyTuple, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+        
+        self._shortcuts_panel.SetListCtrl( self._shortcuts )
+        
+        self._shortcuts_panel.AddImportExportButtons( ( ClientGUIShortcuts.ShortcutSet, ), self._AddShortcutSet, custom_get_callable = self._GetSelectedShortcutSet )
         
         self._shortcuts.setMinimumSize( QC.QSize( 360, 480 ) )
         
@@ -645,8 +651,8 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._name.setEnabled( False )
             
+        
         self._shortcuts.AddDatas( shortcuts )
-            
         
         self._shortcuts.Sort( 1 )
         
@@ -673,7 +679,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             QP.AddToLayout( vbox, description, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        QP.AddToLayout( vbox, self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._shortcuts_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, action_buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.widget().setLayout( vbox )
@@ -687,6 +693,25 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         sort_tuple = display_tuple
         
         return ( display_tuple, sort_tuple )
+        
+    
+    def _AddShortcutSet( self, shortcut_set: ClientGUIShortcuts.ShortcutSet ):
+        
+        self._shortcuts.AddDatas( shortcut_set )
+        
+    
+    def _GetSelectedShortcutSet( self ):
+        
+        name = self._name.text()
+        
+        shortcut_set = ClientGUIShortcuts.ShortcutSet( name )
+        
+        for ( shortcut, command ) in self._shortcuts.GetData( only_selected = True ):
+            
+            shortcut_set.SetCommand( shortcut, command )
+            
+        
+        return shortcut_set
         
     
     def AddShortcut( self ):

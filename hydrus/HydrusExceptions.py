@@ -52,8 +52,11 @@ class NetworkInfrastructureException( NetworkException ): pass
 class ConnectionException( NetworkInfrastructureException ): pass
 class FirewallException( NetworkInfrastructureException ): pass
 class ServerBusyException( NetworkInfrastructureException ): pass
+class CloudFlareException( NetworkInfrastructureException ): pass
+class BandwidthException( NetworkInfrastructureException ): pass
 
-class BandwidthException( NetworkException ): pass
+class StreamTimeoutException( NetworkException ): pass
+
 class NetworkVersionException( NetworkException ): pass
 class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass

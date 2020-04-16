@@ -5852,7 +5852,26 @@ class DB( HydrusDB.HydrusDB ):
                 
                 files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) ) )
+                if query_hash_ids is None:
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE {};'.format( ' AND '.join( files_info_predicates ) ) ) ) )
+                    
+                else:
+                    
+                    if is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
+                        
+                        query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info NATURAL JOIN {} WHERE {};'.format( 'file_inbox', ' AND '.join( files_info_predicates ) ) ) ) )
+                        
+                    else:
+                        
+                        with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                            
+                            self._AnalyzeTempTable( temp_table_name )
+                            
+                            query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info NATURAL JOIN {} WHERE {};'.format( temp_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
+                            
+                        
+                    
                 
                 have_cross_referenced_file_service = True
                 done_files_info_predicates = True
@@ -14293,6 +14312,40 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( [ 'e621 file page parser', 'sankaku file page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 392:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'deviant art file page extended_fetch api', 'deviant art file page', 'deviant art flash sandbox page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'deviant art flash sandbox page parser', 'deviant art file extended_fetch parser' ] )
                 
                 #
                 

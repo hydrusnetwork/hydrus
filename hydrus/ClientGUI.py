@@ -565,6 +565,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
+        
+        from . import ClientNetworkingJobs
+        
+        library_versions.append( ( 'cloudscraper present: ', str( ClientNetworkingJobs.CLOUDSCRAPER_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
@@ -2453,7 +2457,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageNetworkHeaders( self ):
         
-        title = 'manage network headers'
+        title = 'manage http headers'
         
         with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
             
@@ -3740,20 +3744,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._system_tray_icon.show()
             
+            self._system_tray_icon.SetShouldAlwaysShow( always_show_system_tray_icon )
+            self._system_tray_icon.SetUIIsCurrentlyShown( not self._currently_minimised_to_system_tray )
+            self._system_tray_icon.SetNetworkTrafficPaused( new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
+            self._system_tray_icon.SetSubscriptionsPaused( HC.options[ 'pause_subs_sync' ] )
+            
         else:
             
             if self._have_system_tray_icon:
                 
-                self._system_tray_icon.hide()
+                self._system_tray_icon.deleteLater()
                 
-            
-        
-        if self._have_system_tray_icon:
-            
-            self._system_tray_icon.SetShouldAlwaysShow( always_show_system_tray_icon )
-            self._system_tray_icon.SetUIIsCurrentlyShown( not self._currently_minimised_to_system_tray )
-            self._system_tray_icon.SetNetworkTrafficPaused( self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
-            self._system_tray_icon.SetSubscriptionsPaused( HC.options[ 'pause_subs_sync' ] )
+                self._system_tray_icon = None
+                
+                self._have_system_tray_icon = False
+                
             
         
     

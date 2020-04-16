@@ -223,6 +223,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'close_client_to_system_tray' ] = False
         self._dictionary[ 'booleans' ][ 'start_client_in_system_tray' ] = False
         
+        self._dictionary[ 'booleans' ][ 'use_qt_file_dialogs' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'notify_client_api_cookies' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -350,6 +354,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'animated_scanbar_height' ] = 20
         self._dictionary[ 'integers' ][ 'animated_scanbar_nub_width' ] = 10
+        
+        self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_number' ] = 3
+        self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_time_delta' ] = 600
         
         #
         

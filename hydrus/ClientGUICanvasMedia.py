@@ -915,23 +915,16 @@ class MediaContainer( QW.QWidget ):
         
         if media_window is not None:
             
-            if isinstance( media_window, ( Animation, StaticImage ) ):
-                
-                media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
+            if isinstance( media_window, ( Animation, StaticImage, ClientGUIMPV.mpvWidget ) ):
                 
                 media_window.ClearMedia()
                 
                 media_window.hide()
                 
-            elif isinstance( media_window, ClientGUIMPV.mpvWidget ):
-                
-                media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
-                
-                media_window.ClearMedia()
-                
-                media_window.hide()
-                
-                HG.client_controller.gui.ReleaseMPVWidget( media_window )
+                if isinstance( media_window, ClientGUIMPV.mpvWidget ):
+                    
+                    HG.client_controller.gui.ReleaseMPVWidget( media_window )
+                    
                 
             else:
                 
@@ -1041,16 +1034,28 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.installEventFilter( self._drag_click_reporting_filter )
             
-            if old_media_window is not None:
-                
-                old_media_window.removeEventFilter( self._drag_click_reporting_filter )
-                
-            
             launch_media_viewer_classes = ( Animation, ClientGUIMPV.mpvWidget, StaticImage )
             
             if isinstance( self._media_window, launch_media_viewer_classes ):
                 
                 self._media_window.launchMediaViewer.connect( self.launchMediaViewer )
+                
+            
+            if old_media_window is not None:
+                
+                old_media_window.removeEventFilter( self._drag_click_reporting_filter )
+                
+                if isinstance( old_media_window, launch_media_viewer_classes ):
+                    
+                    try:
+                        
+                        old_media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
+                        
+                    except RuntimeError:
+                        
+                        pass # lmao, weird 'Failed to disconnect signal launchMediaViewer()' error I couldn't figure out, I guess some out-of-order deleteLater gubbins
+                        
+                    
                 
             
             self._media_window

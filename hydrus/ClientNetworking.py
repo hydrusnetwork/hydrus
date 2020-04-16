@@ -384,6 +384,10 @@ class NetworkEngine( object ):
                     
                     return True
                     
+                elif not job.DomainOK():
+                    
+                    return True
+                    
                 else:
                     
                     if HG.network_report_mode:

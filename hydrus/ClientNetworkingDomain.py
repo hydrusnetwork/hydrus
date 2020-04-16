@@ -9,12 +9,31 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusNetworking
 from . import HydrusSerialisable
+import http.cookiejar
 import os
 import re
 import threading
 import time
 import urllib.parse
 
+def AddCookieToSession( session, name, value, domain, path, expires ):
+    
+    version = 0
+    port = None
+    port_specified = False
+    domain_specified = True
+    domain_initial_dot = domain.startswith( '.' )
+    path_specified = True
+    secure = False
+    discard = False
+    comment = None
+    comment_url = None
+    rest = {}
+    
+    cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+    
+    session.cookies.set_cookie( cookie )
+    
 def AlphabetiseQueryText( query_text ):
     
     ( query_dict, param_order ) = ConvertQueryTextToDict( query_text )
@@ -391,6 +410,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._url_class_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
         
         self._second_level_domains_to_url_classes = collections.defaultdict( list )
+        
+        self._second_level_domains_to_network_infrastructure_errors = collections.defaultdict( list )
         
         from . import ClientImportOptions
         
@@ -1173,6 +1194,52 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self.SetURLClasses( url_classes )
         
     
+    def DomainOK( self, url ):
+        
+        with self._lock:
+            
+            try:
+                
+                domain = ConvertURLIntoSecondLevelDomain( url )
+                
+            except:
+                
+                return True
+                
+            
+            number_of_errors = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
+            error_time_delta = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
+            
+            if number_of_errors == 0:
+                
+                return True
+                
+            
+            # this will become flexible and customisable when I have domain profiles/status/ui
+            # also should extend it to 'global', so if multiple domains are having trouble, we maybe assume the whole connection is down? it would really be nicer to have a better sockets-level check there
+            
+            if domain in self._second_level_domains_to_network_infrastructure_errors:
+                
+                network_infrastructure_errors = self._second_level_domains_to_network_infrastructure_errors[ domain ]
+                
+                network_infrastructure_errors = [ timestamp for timestamp in network_infrastructure_errors if not HydrusData.TimeHasPassed( timestamp + error_time_delta ) ]
+                
+                self._second_level_domains_to_network_infrastructure_errors[ domain ] = network_infrastructure_errors
+                
+                if len( network_infrastructure_errors ) >= number_of_errors:
+                    
+                    return False
+                    
+                elif len( network_infrastructure_errors ) == 0:
+                    
+                    del self._second_level_domains_to_network_infrastructure_errors[ domain ]
+                    
+                
+            
+            return True
+            
+        
+    
     def GenerateValidationPopupProcess( self, network_contexts ):
         
         with self._lock:
@@ -1627,6 +1694,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             parser_key = parser.GetParserKey()
             
             self._url_class_keys_to_parser_keys[ url_class_key ] = parser_key
+            
+        
+    
+    def ReportNetworkInfrastructureError( self, url ):
+        
+        with self._lock:
+            
+            try:
+                
+                domain = ConvertURLIntoDomain( url )
+                
+            except:
+                
+                return
+                
+            
+            self._second_level_domains_to_network_infrastructure_errors[ domain ].append( HydrusData.GetNow() )
             
         
     

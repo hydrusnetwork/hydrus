@@ -1624,6 +1624,7 @@ class TestClientAPI( unittest.TestCase ):
             metadata_row[ 'hash' ] = file_info_manager.hash.hex()
             metadata_row[ 'size' ] = file_info_manager.size
             metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
+            metadata_row[ 'ext' ] = HC.mime_ext_lookup[ file_info_manager.mime ]
             metadata_row[ 'width' ] = file_info_manager.width
             metadata_row[ 'height' ] = file_info_manager.height
             metadata_row[ 'duration' ] = file_info_manager.duration

@@ -413,13 +413,18 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         return NotImplemented
         
     
-    def _GetTagSlices( self, tag ):
+    def _GetTagSlices( self, tag, apply_unnamespaced_rules_to_namespaced_tags ):
         
         ( namespace, subtag ) = HydrusTags.SplitTag( tag )
         
         tag_slices = []
         
         tag_slices.append( tag )
+        
+        if tag != subtag and apply_unnamespaced_rules_to_namespaced_tags:
+            
+            tag_slices.append( subtag )
+            
         
         if namespace != '':
             
@@ -444,9 +449,9 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         self._tag_slices_to_rules = dict( serialisable_info )
         
     
-    def _TagOK( self, tag ):
+    def _TagOK( self, tag, apply_unnamespaced_rules_to_namespaced_tags = False ):
         
-        tag_slices = self._GetTagSlices( tag )
+        tag_slices = self._GetTagSlices( tag, apply_unnamespaced_rules_to_namespaced_tags = apply_unnamespaced_rules_to_namespaced_tags )
         
         blacklist_encountered = False
         
@@ -493,11 +498,11 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def Filter( self, tags ):
+    def Filter( self, tags, apply_unnamespaced_rules_to_namespaced_tags = False ):
         
         with self._lock:
             
-            return { tag for tag in tags if self._TagOK( tag ) }
+            return { tag for tag in tags if self._TagOK( tag, apply_unnamespaced_rules_to_namespaced_tags = apply_unnamespaced_rules_to_namespaced_tags ) }
             
         
     
@@ -517,11 +522,11 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def TagOK( self, tag ):
+    def TagOK( self, tag, apply_unnamespaced_rules_to_namespaced_tags = False ):
         
         with self._lock:
             
-            return self._TagOK( tag )
+            return self._TagOK( tag, apply_unnamespaced_rules_to_namespaced_tags = apply_unnamespaced_rules_to_namespaced_tags )
             
         
     

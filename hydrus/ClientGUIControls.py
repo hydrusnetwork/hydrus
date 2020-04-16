@@ -679,7 +679,18 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._example_string.setMinimumWidth( min_width )
             
-            self._example_string.setText( example_text )
+            self._example_text = example_text
+            
+            if isinstance( self._example_text, bytes ):
+                
+                self._example_string.setText( repr( self._example_text ) )
+                
+            else:
+                
+                self._example_string.setText( self._example_text )
+                
+            
+            
             
             self._example_transformation = QW.QLineEdit( self )
             
@@ -938,11 +949,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 transformations = [ self.GetValue() ]
                 
-                example_string = self._example_string.text()
+                string_converter = ClientParsing.StringConverter( transformations, self._example_text )
                 
-                string_converter = ClientParsing.StringConverter( transformations, example_string )
-                
-                example_transformation = string_converter.Convert( example_string )
+                example_transformation = string_converter.Convert( self._example_text )
                 
                 try:
                     

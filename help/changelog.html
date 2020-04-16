@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 393</h3></li>
+				<ul>
+					<li>cloudflare and network:</li>
+					<li>the hydrus client now has an experimental hook to the cloudscraper module, which is now an optional pip module for source users and included in all built releases. if a CF challenge page is downloaded, hydrus attempts to detect and solve it with cloudscraper and save the CF cookies back to the session before reattempting the request. all feedback on this working/breaking irl would be welcome. current expectation for this prototype is it can pass the basic 'wait five seconds' javascript challenge, and likely all but a handful of the more complicated captcha ones</li>
+					<li>if a CF challenge page is not solvable, the respective fail reason for that URL will be labelled appropriately about CloudFlare and have more technical information</li>
+					<li>.</li>
+					<li>the hydrus network engine now has the capability to remember recent serious network infrastructure errors (no connection, unsolvable cloudflare problem, etc..) on a per domain basis. if many serious errors have happened on a domain, new jobs will now wait until they are clear. this defaults to three or more such errors in the past ten minutes, and is configurable (and disableable) under options->connection. this will be built out to a flexible system in future, with per-domain options+status ui to see what's going on and actions to scrub delays</li>
+					<li>basically, if a server or your internet connection goes down, hydrus now throttles down to limit the damage</li>
+					<li>subscriptions now test if a domain is ok in order to decide whether they can start or continue file work, just like with bandwidth</li>
+					<li>serverside bandwidth alerts (429 or 509) are now classified as network infrastructure errors</li>
+					<li>I expect this system will need more tuning</li>
+					<li>.</li>
+					<li>the hydrus downloader system now recognises when an expected parseable document is actually an importable file. when this is true, the file is imported. this hopefully solves the situation where a site may deliver a post url or a file</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the windows build of hydrus is now in python 3.7.6, up from 3.6. this rolls in a host of small improvements, including to network stability and security (e.g. TLS 1.3), and possibly a couple of new bugs in more unusual hydrus systems</li>
+					<li>similarly, all the windows libraries are now their latest versions. opencv is now 4.2</li>
+					<li>greatly sped up several file searches that include no tags such as bare system:rating, most system file metadata predicates, or bare system:inbox, when the result size is much smaller than the total number of files in the file domain</li>
+					<li>thanks to some excellent work by a user, the Deviant Art downloader gets another pass--it can now get high res versions of images where they are available, and video, and flash, and pdf! the only proviso is that you need to be logged in to DA to get most content, otherwise you get 404. the current hydrus DA login script _seems_ to work ok</li>
+					<li>tag import options blacklists now test unnamespaced rules against namespaced tags. so if you blacklist 'metroid', a 'series:metroid' will be caught and the blacklist veto signal sent. this can be escaped with the 'advanced' exception panel, which now permits you to add 'redundant' rules</li>
+					<li>the edit tag filter panel now explains the blacklist rules explicitly and has a second 'test' green/red text to display test results for a tag import options blacklist, with the new sibling and namespace check</li>
+					<li>added some unit tests to test the new tag import options blacklist namespace rule</li>
+					<li>when 'default' tag import options are set, the edit panel now hides the per-service options, rather the the previous disable</li>
+					<li>the system tray icon now destroys itself when no longer needed, rather than hiding itself. it should now be more reliable in OSes that do not support system tray icon hide/show. if your OS still doesn't get rid of them, and you get a whole row of them, I recommend just leaving it always on</li>
+					<li>the system tray now has a tooltip with the main hydrus title and pause statuses</li>
+					<li>the timer that hides the mouse on the media viewer is now fired off when the window first opens (previously it would only initiate on the first mouse move over the window), so users who navigate mostly by keyboard should now see their cursors nicely hide on their own</li>
+					<li>added some semi-hacky import/export/duplicate buttons to edit shortcuts. I'll keep working on this, it'd be nice to have import/export for whole shortcut sets</li>
+					<li>added a semi-hacky duplicate button to the 'manage http headers' dialog</li>
+					<li>the 'clear' recent tag suggestions button is now wrapped in a yes/no dialog</li>
+					<li>a new checkbox under options->gui now lets you set it so when new cookies are sent from the API, or cookies are cleared, a popup message summarises the change. the popup dismisses itself after five seconds</li>
+					<li>the client api now also returns 'ext' on /get_files/file_metadata calls, just as a simpler alternative if the 'mime' is a pain</li>
+					<li>fixed a bug when petitioning tags through the client api, with or without reasons</li>
+					<li>fixed an error where subscriptions that somehow held invalid URLs would not be able to predict some bandwidth stuff, which would not allow the edit subs dialog to open</li>
+					<li>the string transformation dialog's step subdialog is now ok with example strings that are bytes. even then, this str/bytes dichotomy is an old artifact of python 2 and I will likely clean it up sometime so string transformers (and downloaders) only ever work utf-8 and hashes just work off utf-8 hex</li>
+					<li>added a BUGFIX checkbox to options->gui that tells the UI to use Qt file/directory picker dialogs, instead of the native OS one. users who have crashes on file selection are encouraged to try this out</li>
+					<li>updated running from source help with cloudscraper, a new pip masterline, and some windows venv info</li>
+					<li>the 'import with tags' button on 'import files' dialog gets another rename for new users, this time to 'add tags before the import &gt;&gt;'. it also gets a tooltip</li>
+					<li>handled an unusual rare error that could occur when switching out a media player inside a media viewer, perhaps during media viewer shutdown</li>
+				</ul>
 				<li><h3>version 392</h3></li>
 				<ul>
 					<li>db-level tag sibling cache:</li>

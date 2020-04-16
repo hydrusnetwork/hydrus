@@ -4,6 +4,7 @@ from . import ClientConstants as CC
 from . import ClientImportFileSeeds
 from . import ClientMedia
 from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
 from . import ClientSearch
 from . import ClientTags
 from . import HydrusConstants as HC
@@ -14,7 +15,6 @@ from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusServerResources
 from . import HydrusTags
-import http.cookiejar
 import json
 import os
 import time
@@ -917,7 +917,12 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                     
                     content_action = int( content_action )
                     
-                    tags = HydrusTags.CleanTags( tags )
+                    tags = list( tags )
+                    
+                    if isinstance( tags[0], str ):
+                        
+                        tags = HydrusTags.CleanTags( tags )
+                        
                     
                     if len( tags ) == 0:
                         
@@ -951,6 +956,8 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                     
                     if content_action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        tags = list( tags )
                         
                         if isinstance( tags[0], str ):
                             
@@ -1462,6 +1469,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 metadata_row[ 'hash' ] = file_info_manager.hash.hex()
                 metadata_row[ 'size' ] = file_info_manager.size
                 metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
+                metadata_row[ 'ext' ] = HC.mime_ext_lookup[ file_info_manager.mime ]
                 metadata_row[ 'width' ] = file_info_manager.width
                 metadata_row[ 'height' ] = file_info_manager.height
                 metadata_row[ 'duration' ] = file_info_manager.duration
@@ -1607,6 +1615,9 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
         
         cookie_rows = request.parsed_request_args.GetValue( 'cookies', list )
         
+        domains_cleared = set()
+        domains_set = set()
+        
         for cookie_row in cookie_rows:
             
             if len( cookie_row ) != 5:
@@ -1631,26 +1642,47 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
             
             if value is None:
                 
+                domains_cleared.add( domain )
+                
                 session.cookies.clear( domain, path, name )
                 
             else:
                 
-                version = 0
-                port = None
-                port_specified = False
-                domain_specified = True
-                domain_initial_dot = domain.startswith( '.' )
-                path_specified = True
-                secure = False
-                discard = False
-                comment = None
-                comment_url = None
-                rest = {}
+                domains_set.add( domain )
                 
-                cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+                ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires )
                 
-                session.cookies.set_cookie( cookie )
+            
+        
+        if HG.client_controller.new_options.GetBoolean( 'notify_client_api_cookies' ) and len( domains_cleared ) + len( domains_set ) > 0:
+            
+            domains_cleared = list( domains_cleared )
+            domains_set = list( domains_set )
+            
+            domains_cleared.sort()
+            domains_set.sort()
+            
+            message = 'Cookies sent from API:'
+            
+            if len( domains_cleared ) > 0:
                 
+                message = '{} ({} cleared)'.format( message, ', '.join( domains_cleared ) )
+                
+            
+            if len( domains_set ) > 0:
+                
+                message = '{} ({} set)'.format( message, ', '.join( domains_set ) )
+                
+            
+            from . import ClientThreading
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_text_1', message )
+            
+            job_key.Delete( 5 )
+            
+            HG.client_controller.pub( 'message', job_key )
             
         
         HG.client_controller.network_engine.session_manager.SetDirty()
