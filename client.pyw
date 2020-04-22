@@ -11,16 +11,16 @@ try:
     try: locale.setlocale( locale.LC_ALL, '' )
     except: pass
     
-    # initialise Qt here, important it is done early
-    from hydrus import QtPorting as QP
-    
-    from hydrus import HydrusConstants as HC
-    from hydrus import HydrusPaths
-    from hydrus import HydrusGlobals as HG
-    
     import os
-    
     import argparse
+    import traceback
+    
+    # initialise Qt here, important it is done early
+    from hydrus.client.gui import QtPorting as QP
+    
+    from hydrus.core import HydrusConstants as HC
+    from hydrus.core import HydrusPaths
+    from hydrus.core import HydrusGlobals as HG
     
     argparser = argparse.ArgumentParser( description = 'hydrus network client (windowed)' )
     
@@ -99,14 +99,8 @@ try:
     
     HydrusPaths.AddBaseDirToEnvPath()
     
-    from hydrus import HydrusPy2To3
-    
-    HydrusPy2To3.do_2to3_test()
-    
-    from hydrus import HydrusData
-    
-    from hydrus import HydrusLogger
-    import traceback
+    from hydrus.core import HydrusData
+    from hydrus.core import HydrusLogger
     
     try:
         
@@ -119,12 +113,9 @@ try:
     
 except Exception as e:
     
-    import traceback
-    import os
-    
     try:
         
-        from hydrus import HydrusData
+        from hydrus.core import HydrusData
         
         HydrusData.DebugPrint( 'Critical boot error occurred! Details written to crash.log!' )
         HydrusData.PrintException( e )
@@ -182,7 +173,7 @@ with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
             threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
             
         
-        from hydrus import ClientController
+        from hydrus.client import ClientController
         
         controller = ClientController.Controller( db_dir )
         
@@ -212,7 +203,6 @@ with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
         HydrusData.Print( 'hydrus client shut down' )
         
     
-
 HG.shutdown_complete = True
 
 if HG.restart:

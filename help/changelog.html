@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 394</h3></li>
+				<ul>
+					<li>autocomplete cleanup:</li>
+					<li>the text you type into tag autocomplete is now parsed in a unified object. all the variants of empty text, invalid text, valid text, namespace text, and wildcard text are all tested and fetched in one simple location with better code</li>
+					<li>autocomplete results caching is now a unified object that tracks and filters results in one location. wildcard searches are now never cached by accident, and switching from tag cache to system predicate cache and to non-initialised cache is instant and more reliable</li>
+					<li>when an autocomplete, either in a search page or a context that manages tags, has results include multiple sibling variants of the typed text, they are now all elevated to the top of the list. the ideal is at the top, the entered text is next, and any known siblings follow</li>
+					<li>the search character 'collapse' that ensures quote marks and hyphens and other odd characters are unified across tags now applies uniformly to all non-complicated-wildcard search tags, with namespace not collapsed and subtag always collapsed</li>
+					<li>when entering an explicit wildcard search, both strict and autocomplete versions (whether they end with an asterisk) are now displayed</li>
+					<li>the way tag results are filtered is now more accurate for some unusual wildcards</li>
+					<li>it is now more difficult to slip cpu-killer search tags (weird asterisk combinations) through</li>
+					<li>the quick-broadcast that happens when the user hits enter before any results have started loading now uses the unified object and chooses a safer and more reliable broadcast value. the test whether to do the quick-broadcast is also more reliable, particularly in unusual situations where a recent search was cancelled or delayed. note that for many users, the cache and search tech is fast enough that this very rarely triggers</li>
+					<li>searching with a wildcard below the autocomplete threshold can no longer trigger a full search, nor an invalid exact-text search</li>
+					<li>namespace count merging is now unified across db tag fetches and media fetches</li>
+					<li>include current/pending buttons now filter down to media-based tag autocomplete counts</li>
+					<li>namespace tag autocomplete queries will no longer show up some unusual siblings below the 'anything' tag</li>
+					<li>deleted a whole bunch of old a/c and caching code</li>
+					<li>added comprehensive unit tests for the new parsed autocomplete text object</li>
+					<li>added comprehensive unit tests for the new predicate results cache object</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed a stupid typo bug in the new domain checking code that was stopping subscriptions with incomplete file queues from starting. I apologise for this</li>
+					<li>network error responses 502 (Bad Gateway) and 503 (Service Unavailable) are now treated as a retryable. the 503 is assuming it is not a CF challenge page. if they fail all retries, they are considered a network infrastructure error</li>
+					<li>all other misc 5xx http responses are now treated as instant network infrastructure errors and will be logged in the new domain health tracker</li>
+					<li>the exit splash screen now opens a bit earlier, so you now shouldn't have any momentary uncertainty where no windows are open</li>
+					<li>clients that start minimised to system tray _should_ be better about restoring splitter positions on first show</li>
+					<li>the various 'management panels', the panels on the left of main gui pages, now have smaller minimum width where available. the gallery and watcher panels are still the widest, which is a limitation of the current list tech. when it gets better column sizing code and selection memory, this will improve</li>
+					<li>fixed an issue loading gifs with some OpenCV versions</li>
+					<li>brushed up some running from source help</li>
+					<li>deleted the Py2To3 script that attempts to detect a legacy python 2 install</li>
+					<li>improved all the gui files' import order</li>
+					<li>cleaned up and refactored some subscription code</li>
+					<li>added a bunch of type hints to edit panel code</li>
+					<li>misc code cleanup</li>
+					<li>.</li>
+					<li>environment updates:</li>
+					<li>did second step of hydrus project structure improvement--now the project is split into subdirectories for core/client/server/misc and some client subdirs. work here will continue</li>
+					<li>linux build gets some new libraries, cv is up to 4.2.0</li>
+					<li>it isn't important, but hydrus is now built in python rather than directly from command line. my build scripts now include cloudscraper and the new hydrus source code tree in the build as they are, rather than hardcoded copying</li>
+				</ul>
 				<li><h3>version 393</h3></li>
 				<ul>
 					<li>cloudflare and network:</li>
