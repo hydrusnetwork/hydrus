@@ -1,17 +1,17 @@
 import gc
 import hashlib
-from . import HydrusAudioHandling
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusDocumentHandling
-from . import HydrusExceptions
-from . import HydrusFlashHandling
-from . import HydrusImageHandling
-from . import HydrusNetwork
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusText
-from . import HydrusVideoHandling
+from hydrus.core import HydrusAudioHandling
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusDocumentHandling
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFlashHandling
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
+from hydrus.core import HydrusVideoHandling
 import os
 import threading
 import traceback

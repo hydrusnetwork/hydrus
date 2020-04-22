@@ -1,22 +1,24 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUIACDropdown
-from . import ClientGUICommon
-from . import ClientGUIDialogsQuick
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanels
-from . import ClientGUIShortcuts
-from . import ClientGUITopLevelWindows
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-from . import QtPorting as QP
 import os
 import typing
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 def ManageShortcuts( win: QW.QWidget ):
     
@@ -978,7 +980,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _RestoreDefaults( self ):
         
-        from . import ClientDefaults
+        from hydrus.client import ClientDefaults
         
         defaults = ClientDefaults.GetDefaultShortcuts()
         

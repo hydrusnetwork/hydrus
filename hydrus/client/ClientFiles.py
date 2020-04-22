@@ -1,24 +1,24 @@
-from . import ClientConstants as CC
-from . import ClientImageHandling
-from . import ClientPaths
-from . import ClientThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientImageHandling
+from hydrus.client import ClientPaths
+from hydrus.client import ClientThreading
 import collections
 import gc
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusGlobals as HG
-from . import HydrusImageHandling
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusThreading
 import os
 import random
 import threading
 import time
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
 REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1

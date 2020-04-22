@@ -1,21 +1,23 @@
-from . import ClientConstants as CC
-from . import ClientGUIFunctions
-from . import ClientGUICommon
-from . import ClientGUIDialogsQuick
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanels
-from . import ClientGUISearch
-from . import ClientGUITopLevelWindows
-from . import ClientSearch
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 import itertools
 import typing
+
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUISearch
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -34,8 +36,8 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        from . import ClientGUIACDropdown
-        from . import ClientGUIListBoxes
+        from hydrus.client.gui import ClientGUIACDropdown
+        from hydrus.client.gui import ClientGUIListBoxes
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, synchronised = synchronised, hide_favourites_edit_actions = True )
         

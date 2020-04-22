@@ -1,24 +1,24 @@
-from . import ClientImportFileSeeds
-from . import ClientImportOptions
-from . import ClientNetworkingDomain
-from . import ClientParsing
-from . import ClientThreading
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusThreading
+from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client import ClientParsing
+from hydrus.client import ClientThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusThreading
 import random
 import threading
-from . import HydrusData
-from . import ClientConstants as CC
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.client import ClientConstants as CC
+from hydrus.core import HydrusGlobals as HG
 
 def ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier ):
     
     gug_name = ConvertGalleryIdentifierToGUGName( gallery_identifier )
     
-    from . import ClientDefaults
+    from hydrus.client import ClientDefaults
     
     gugs = ClientDefaults.GetDefaultGUGs()
     

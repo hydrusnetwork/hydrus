@@ -1,7 +1,7 @@
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusVideoHandling
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusVideoHandling
 import os
 import re
 import subprocess

@@ -1,14 +1,16 @@
-from . import ClientGUICommon
-from . import ClientGUIFunctions
-from . import ClientGUIScrolledPanels
-from . import ClientSerialisable
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusPaths
-from . import HydrusSerialisable
 import os
+
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientSerialisable
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import QtPorting as QP
 
 class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     

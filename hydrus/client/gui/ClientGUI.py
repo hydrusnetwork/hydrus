@@ -1,74 +1,75 @@
-from . import HydrusConstants as HC
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUIDragDrop
-from . import ClientExporting
-from . import ClientGUIAsync
-from . import ClientGUICommon
-from . import ClientGUICore as CGC
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsManage
-from . import ClientGUIDialogsQuick
-from . import ClientGUIExport
-from . import ClientGUIFrames
-from . import ClientGUIFunctions
-from . import ClientGUIImport
-from . import ClientGUILogin
-from . import ClientGUIManagement
-from . import ClientGUIMediaControls
-from . import ClientGUIMenus
-from . import ClientGUIMPV
-from . import ClientGUIPages
-from . import ClientGUIParsing
-from . import ClientGUIPopupMessages
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIScrolledPanelsManagement
-from . import ClientGUIScrolledPanelsReview
-from . import ClientGUIShortcuts
-from . import ClientGUIShortcutControls
-from . import ClientGUIStyle
-from . import ClientGUISystemTray
-from . import ClientGUITags
-from . import ClientGUITopLevelWindows
-from . import ClientMedia
-from . import ClientNetworkingContexts
-from . import ClientParsing
-from . import ClientPaths
-from . import ClientRendering
-from . import ClientServices
-from . import ClientTags
-from . import ClientThreading
 import collections
-import cv2
 import gc
 import hashlib
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusImageHandling
-from . import HydrusPaths
-from . import HydrusGlobals as HG
-from . import HydrusNetwork
-from . import HydrusNetworking
-from . import HydrusSerialisable
-from . import HydrusText
-from . import HydrusVideoHandling
 import os
-import PIL
 import random
 import re
-import sqlite3
 import ssl
 import subprocess
 import sys
 import threading
 import time
 import traceback
+
+import cv2
+import PIL
+import sqlite3
+import qtpy
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
-import qtpy
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
+from hydrus.core import HydrusVideoHandling
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientExporting
+from hydrus.client import ClientMedia
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
+from hydrus.client import ClientRendering
+from hydrus.client import ClientServices
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsManage
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDragDrop
+from hydrus.client.gui import ClientGUIExport
+from hydrus.client.gui import ClientGUIFrames
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIImport
+from hydrus.client.gui import ClientGUILogin
+from hydrus.client.gui import ClientGUIManagement
+from hydrus.client.gui import ClientGUIMediaControls
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIMPV
+from hydrus.client.gui import ClientGUIPages
+from hydrus.client.gui import ClientGUIParsing
+from hydrus.client.gui import ClientGUIPopupMessages
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIScrolledPanelsManagement
+from hydrus.client.gui import ClientGUIScrolledPanelsReview
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUIShortcutControls
+from hydrus.client.gui import ClientGUIStyle
+from hydrus.client.gui import ClientGUISystemTray
+from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
 
@@ -566,7 +567,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         
-        from . import ClientNetworkingJobs
+        from hydrus.client.networking import ClientNetworkingJobs
         
         library_versions.append( ( 'cloudscraper present: ', str( ClientNetworkingJobs.CLOUDSCRAPER_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
@@ -1184,7 +1185,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def thread_wait( url ):
             
-            from . import ClientNetworkingJobs
+            from hydrus.client.networking import ClientNetworkingJobs
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
@@ -1686,7 +1687,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 page.PageHidden()
                 
             
-            from . import ClientGUICanvasFrame
+            from hydrus.client.gui import ClientGUICanvasFrame
             
             for tlw in visible_tlws:
                 
@@ -1713,6 +1714,14 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             if not self._have_shown_once:
                 
                 self._have_shown_once = True
+                
+                for page in self._notebook.GetPages():
+                    
+                    if isinstance( page, ClientGUIPages.PagesNotebook ):
+                        
+                        page.LayoutPages()
+                        
+                    
                 
                 for page in self._notebook.GetMediaPages():
                     
@@ -4047,7 +4056,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for window in windows:
                 
-                if not window or not QP.isValid( window ):
+                if not QP.isValid( window ):
                     
                     self._animation_update_windows.discard( window )
                     
@@ -5814,7 +5823,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         for window in list( self._ui_update_windows ):
             
-            if not window or not QP.isValid( window ):
+            if not QP.isValid( window ):
                 
                 self._ui_update_windows.discard( window )
                 
@@ -5921,7 +5930,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if menu_or_none is not None:
                     
-                    ClientGUIMenus.DestroyMenu( self, menu_or_none )
+                    ClientGUIMenus.DestroyMenu( menu_or_none )
                     
                 
             else:
@@ -5945,7 +5954,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     self._menubar.removeAction( old_action )
                     
                 
-                ClientGUIMenus.DestroyMenu( self, old_menu )
+                ClientGUIMenus.DestroyMenu( old_menu )
             
         
     
@@ -5975,6 +5984,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
+        if not HG.emergency_exit:
+            
+            self._controller.CreateSplash( 'hydrus client exiting' )
+            
+        
         try:
             
             if QP.isValid( self._message_manager ):
@@ -5998,7 +6012,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for tlw in QW.QApplication.topLevelWidgets():
                 
-                tlw.hide()
+                if not isinstance( tlw, FrameSplash ):
+                    
+                    tlw.hide()
+                    
                 
             
             if self._have_system_tray_icon:
@@ -6042,8 +6059,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._controller.Exit()
             
         else:
-            
-            self._controller.CreateSplash( 'hydrus client exiting' )
             
             QP.CallAfter( self._controller.Exit )
             

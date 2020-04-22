@@ -1,11 +1,12 @@
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUIFunctions
-from . import HydrusConstants as HC
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import QtPorting as QP
 
 class OptionsPanel( QW.QWidget ):
     

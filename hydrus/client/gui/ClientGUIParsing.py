@@ -1,41 +1,44 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientGUICommon
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIMenus
-from . import ClientGUIControls
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUISerialisable
-from . import ClientGUITopLevelWindows
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientNetworkingJobs
-from . import ClientParsing
-from . import ClientPaths
-from . import ClientSerialisable
-from . import ClientThreading
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
-from . import HydrusText
 import itertools
 import os
 import sys
 import threading
 import traceback
-from . import QtPorting as QP
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
+from hydrus.client import ClientSerialisable
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUISerialisable
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingJobs
+
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     

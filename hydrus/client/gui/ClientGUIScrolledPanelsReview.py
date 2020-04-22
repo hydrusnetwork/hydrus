@@ -1,58 +1,60 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientDefaults
-from . import ClientGUIDragDrop
-from . import ClientFiles
-from . import ClientGUIACDropdown
-from . import ClientGUIAsync
-from . import ClientGUICharts
-from . import ClientGUICommon
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
-from . import ClientGUIImport
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIPanels
-from . import ClientGUIPopupMessages
-from . import ClientGUITags
-from . import ClientGUITime
-from . import ClientGUITopLevelWindows
-from . import ClientMigration
-from . import ClientNetworking
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientNetworkingLogin
-from . import ClientParsing
-from . import ClientPaths
-from . import ClientRendering
-from . import ClientSearch
-from . import ClientSerialisable
-from . import ClientTags
-from . import ClientThreading
 import collections
 import http.cookiejar
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusGlobals as HG
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusTagArchive
-from . import HydrusText
 import os
 import queue
 import sys
 import threading
 import time
 import traceback
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTagArchive
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientFiles
+from hydrus.client import ClientMigration
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
+from hydrus.client import ClientRendering
+from hydrus.client import ClientSearch
+from hydrus.client import ClientSerialisable
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIDragDrop
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICharts
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIImport
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIPanels
+from hydrus.client.gui import ClientGUIPopupMessages
+from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.networking import ClientNetworking
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingLogin
 
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     

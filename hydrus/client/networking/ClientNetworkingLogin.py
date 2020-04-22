@@ -1,15 +1,15 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientNetworkingJobs
-from . import ClientParsing
-from . import ClientThreading
-from . import HydrusConstants as HC
-from . import HydrusGlobals as HG
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client import ClientParsing
+from hydrus.client import ClientThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 import itertools
 import os
 import json
@@ -572,7 +572,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            from . import ClientDefaults
+            from hydrus.client import ClientDefaults
             
             default_login_scripts = ClientDefaults.GetDefaultLoginScripts()
             

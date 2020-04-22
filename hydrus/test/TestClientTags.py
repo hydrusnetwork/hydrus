@@ -1,14 +1,14 @@
 import collections
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientManagers
-from . import ClientMedia
-from . import ClientSearch
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientManagers
+from hydrus.client import ClientMedia
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 import os
 import unittest
 
@@ -405,6 +405,304 @@ class TestTagDisplayManager( unittest.TestCase ):
         
     
 class TestTagObjects( unittest.TestCase ):
+    
+    def test_parsed_autocomplete_text( self ):
+        
+        def bool_tests( pat: ClientSearch.ParsedAutocompleteText, values ):
+            
+            self.assertEqual( pat.IsAcceptableForFiles(), values[0] )
+            self.assertEqual( pat.IsAcceptableForTags(), values[1] )
+            self.assertEqual( pat.IsEmpty(), values[2] )
+            self.assertEqual( pat.IsExplicitWildcard(), values[3] )
+            self.assertEqual( pat.IsNamespaceSearch(), values[4] )
+            self.assertEqual( pat.IsTagSearch(), values[5] )
+            self.assertEqual( pat.inclusive, values[6] )
+            
+        
+        def search_text_tests( pat: ClientSearch.ParsedAutocompleteText, values ):
+            
+            self.assertEqual( pat.GetSearchText( False ), values[0] )
+            self.assertEqual( pat.GetSearchText( True ), values[1] )
+            
+        
+        def read_predicate_tests( pat: ClientSearch.ParsedAutocompleteText, values ):
+            
+            self.assertEqual( pat.GetImmediateFileSearchPredicate(), values[0] )
+            self.assertEqual( pat.GetNonTagFileSearchPredicates(), values[1] )
+            
+        
+        def write_predicate_tests( pat: ClientSearch.ParsedAutocompleteText, values ):
+            
+            self.assertEqual( pat.GetAddTagPredicate(), values[0] )
+            
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '', True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, True, False, False, False, True ] )
+        search_text_tests( parsed_autocomplete_text, [ '', '' ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-', True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, False, False, False, False ] )
+        search_text_tests( parsed_autocomplete_text, [ '', '' ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'samus', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'samus', 'samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' ), [] ] )
+        write_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' ) ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-samus', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, False ] )
+        search_text_tests( parsed_autocomplete_text, [ 'samus', 'samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus', inclusive = False ), [] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'samus*', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'samus*', 'samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'character:samus ', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'character:samus', 'character:samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus' ), [] ] )
+        write_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus' ) ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-character:samus ', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, False ] )
+        search_text_tests( parsed_autocomplete_text, [ 'character:samus', 'character:samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus', inclusive = False ), [] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 's*s', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-s*s', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, False ] )
+        search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'metroid:', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, False, False, False, True, False, True ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'metroid' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'metroid' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-metroid:', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, False, False, False, True, False, False ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'metroid', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'metroid', inclusive = False ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 's*s a*n', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 's*s a*n', 's*s a*n*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( ' samus ', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'samus', 'samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' ), [] ] )
+        write_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' ) ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '[samus]', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'samus', 'samus*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, '[samus]' ), [] ] )
+        write_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, '[samus]' ) ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'creator-id:', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, False, False, False, True, False, True ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'creator-id' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'creator-id' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'creator-id:*', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, False, False, True, True, False, True ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'creator-id' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'creator-id' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'n*n g*s e*n:as*ka', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'n*n g*s e*n:as*ka', 'n*n g*s e*n:as*ka*' ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka' ) ] ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'system:samus ', True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        search_text_tests( parsed_autocomplete_text, [ 'samus', 'samus*' ] )
+        
+    
+    def test_predicate_results_cache( self ):
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheInit()
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        
+        #
+        
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheSystem( predicates )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        
+        #
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
+        
+        #
+        
+        predicates = [ samus, samus_aran, character_samus_aran ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, 'samus', False )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus br', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus br', False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus' ) ), { samus, samus_aran, character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus*' ) ), { samus, samus_aran, character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samas br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus ar*' ) ), { samus_aran, character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus aran*' ) ), { samus_aran, character_samus_aran } )
+        
+        #
+        
+        predicates = [ samus ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, 'samus', True )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus' ) ), { samus } )
+        
+        #
+        
+        predicates = [ character_samus_aran ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, 'character:samus', False )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus ar', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus ar', False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus br', True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus br', False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        
     
     def test_predicate_strings_and_namespaces( self ):
         

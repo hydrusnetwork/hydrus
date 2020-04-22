@@ -1,14 +1,14 @@
-from . import ClientConstants as CC
-from . import ClientNetworkingContexts
-from . import ClientParsing
-from . import ClientThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client import ClientParsing
+from hydrus.client import ClientThreading
 import collections
-from . import HydrusConstants as HC
-from . import HydrusGlobals as HG
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusNetworking
-from . import HydrusSerialisable
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusSerialisable
 import http.cookiejar
 import os
 import re
@@ -416,7 +416,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._second_level_domains_to_network_infrastructure_errors = collections.defaultdict( list )
         
-        from . import ClientImportOptions
+        from hydrus.client.importing import ClientImportOptions
         
         self._file_post_default_tag_import_options = ClientImportOptions.TagImportOptions()
         self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
@@ -785,7 +785,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            from . import ClientImportOptions
+            from hydrus.client.importing import ClientImportOptions
             
             self._file_post_default_tag_import_options = ClientImportOptions.TagImportOptions()
             self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
@@ -1627,7 +1627,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            from . import ClientDefaults
+            from hydrus.client import ClientDefaults
             
             default_gugs = ClientDefaults.GetDefaultGUGs()
             
@@ -1649,7 +1649,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            from . import ClientDefaults
+            from hydrus.client import ClientDefaults
             
             default_parsers = ClientDefaults.GetDefaultParsers()
             
@@ -1671,7 +1671,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            from . import ClientDefaults
+            from hydrus.client import ClientDefaults
             
             default_url_classes = ClientDefaults.GetDefaultURLClasses()
             

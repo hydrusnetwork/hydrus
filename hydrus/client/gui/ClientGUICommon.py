@@ -1,21 +1,23 @@
-from . import ClientConstants as CC
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import ClientGUIMenus
-from . import ClientGUIShortcuts
-from . import ClientPaths
-from . import ClientRatings
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 import os
 import re
-from . import QtPorting as QP
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientPaths
+from hydrus.client import ClientRatings
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 CANVAS_MEDIA_VIEWER = 0
 CANVAS_PREVIEW = 1
@@ -218,7 +220,7 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def setText( self, label ):
         
-        button_label = QP.EscapeMnemonics( label )
+        button_label = ClientGUIFunctions.EscapeMnemonics( label )
         
         QW.QPushButton.setText( self, button_label )
         
@@ -1270,8 +1272,8 @@ class NetworkContextButton( BetterButton ):
     
     def _Edit( self ):
         
-        from . import ClientGUITopLevelWindows
-        from . import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit network context' ) as dlg:
             
@@ -1975,8 +1977,8 @@ class RegexButton( BetterButton ):
         
         regex_favourites = HC.options[ 'regex_favourites' ]
         
-        from . import ClientGUITopLevelWindows
-        from . import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'manage regex favourites' ) as dlg:
             

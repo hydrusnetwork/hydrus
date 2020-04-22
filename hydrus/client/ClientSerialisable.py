@@ -1,15 +1,15 @@
-from . import ClientConstants as CC
-from . import ClientImageHandling
-from . import ClientImporting
-from . import ClientParsing
-from . import ClientPaths
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientImageHandling
+from hydrus.client.importing import ClientImporting
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
 import collections
 import cv2
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusPaths
-from . import HydrusSerialisable
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
 import numpy
 import os
 import shutil
@@ -17,7 +17,7 @@ import struct
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 if cv2.__version__.startswith( '2' ):
     

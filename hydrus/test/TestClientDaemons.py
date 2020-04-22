@@ -1,17 +1,17 @@
-from . import ClientDaemons
-from . import ClientImporting
-from . import ClientImportLocal
-from . import ClientPaths
+from hydrus.client import ClientDaemons
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportLocal
+from hydrus.client import ClientPaths
 import collections
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import os
 import shutil
 import stat
 import unittest
-from . import HydrusData
-from . import ClientConstants as CC
-from . import HydrusGlobals as HG
-from . import HydrusPaths
+from hydrus.core import HydrusData
+from hydrus.client import ClientConstants as CC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
 
 with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
     

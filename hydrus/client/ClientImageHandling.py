@@ -1,12 +1,12 @@
 import numpy
 import numpy.core.multiarray # important this comes before cv!
-from . import ClientConstants as CC
+from hydrus.client import ClientConstants as CC
 import cv2
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusImageHandling
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusGlobals as HG
 from functools import reduce
 
 cv_interpolation_enum_lookup = {}

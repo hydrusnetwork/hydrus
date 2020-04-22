@@ -1,12 +1,14 @@
-from . import ClientGUIMenus
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
+import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
-import os
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import QtPorting as QP
 
 SystemTrayAvailable = QW.QSystemTrayIcon.isSystemTrayAvailable
 
@@ -75,7 +77,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         if old_menu is not None:
             
-            ClientGUIMenus.DestroyMenu( parent_widget, old_menu )
+            ClientGUIMenus.DestroyMenu( old_menu )
             
         
         self._UpdateTooltip()

@@ -1,10 +1,12 @@
-from . import ClientGUIDialogsQuick
-from . import HydrusExceptions
 import os
 import traceback
-from . import HydrusData
-from . import HydrusGlobals as HG
+
 from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client.gui import ClientGUIDialogsQuick
 
 def ClearFalsePositives( win, hashes ):
     

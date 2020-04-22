@@ -9,59 +9,59 @@ import tempfile
 import time
 import traceback
 import unittest
-from . import HydrusConstants as HC
-from . import ClientConstants as CC
-from . import HydrusGlobals as HG
-from . import ClientAPI
-from . import ClientDefaults
-from . import ClientFiles
-from . import ClientManagers
-from . import ClientNetworking
-from . import ClientNetworkingBandwidth
-from . import ClientNetworkingDomain
-from . import ClientNetworkingLogin
-from . import ClientNetworkingSessions
-from . import ClientServices
-from . import ClientTags
-from . import ClientThreading
-from . import HydrusDB
-from . import HydrusExceptions
-from . import HydrusPubSub
-from . import HydrusSessions
-from . import HydrusTags
-from . import HydrusThreading
-from . import TestClientAPI
-from . import TestClientConstants
-from . import TestClientDaemons
-from . import TestClientData
-from . import TestClientDB
-from . import TestClientDBDuplicates
-from . import TestClientImageHandling
-from . import TestClientImportOptions
-from . import TestClientImportSubscriptions
-from . import TestClientListBoxes
-from . import TestClientMigration
-from . import TestClientNetworking
-from . import TestClientTags
-from . import TestClientThreading
-from . import TestDialogs
-from . import TestFunctions
-from . import TestHydrusNATPunch
-from . import TestHydrusNetworking
-from . import TestHydrusSerialisable
-from . import TestHydrusServer
-from . import TestHydrusSessions
-from . import TestServerDB
+from hydrus.core import HydrusConstants as HC
+from hydrus.client import ClientConstants as CC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientAPI
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientFiles
+from hydrus.client import ClientManagers
+from hydrus.client.networking import ClientNetworking
+from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client import ClientServices
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.core import HydrusDB
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusPubSub
+from hydrus.core import HydrusSessions
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusThreading
+from hydrus.test import TestClientAPI
+from hydrus.test import TestClientConstants
+from hydrus.test import TestClientDaemons
+from hydrus.test import TestClientData
+from hydrus.test import TestClientDB
+from hydrus.test import TestClientDBDuplicates
+from hydrus.test import TestClientImageHandling
+from hydrus.test import TestClientImportOptions
+from hydrus.test import TestClientImportSubscriptions
+from hydrus.test import TestClientListBoxes
+from hydrus.test import TestClientMigration
+from hydrus.test import TestClientNetworking
+from hydrus.test import TestClientTags
+from hydrus.test import TestClientThreading
+from hydrus.test import TestDialogs
+from hydrus.test import TestFunctions
+from hydrus.test import TestHydrusNATPunch
+from hydrus.test import TestHydrusNetworking
+from hydrus.test import TestHydrusSerialisable
+from hydrus.test import TestHydrusServer
+from hydrus.test import TestHydrusSessions
+from hydrus.test import TestServerDB
 from twisted.internet import reactor
-from . import ClientCaches
-from . import ClientData
-from . import ClientOptions
-from . import HydrusData
-from . import HydrusPaths
+from hydrus.client import ClientCaches
+from hydrus.client import ClientData
+from hydrus.client import ClientOptions
+from hydrus.core import HydrusData
+from hydrus.core import HydrusPaths
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 
 DB_DIR = None

@@ -1,15 +1,17 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-import typing
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
 
 SHORTCUT_TYPE_KEYBOARD_CHARACTER = 0
 SHORTCUT_TYPE_MOUSE = 1

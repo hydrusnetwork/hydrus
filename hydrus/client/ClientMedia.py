@@ -1,23 +1,23 @@
 import bisect
 import collections
-from . import ClientConstants as CC
-from . import ClientFiles
-from . import ClientRatings
-from . import ClientSearch
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusTags
-from . import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientFiles
+from hydrus.client import ClientRatings
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 import os
 import random
 import time
 import traceback
-from . import HydrusData
-from . import HydrusFileHandling
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusImageHandling
-from . import HydrusSerialisable
+from hydrus.core import HydrusData
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusSerialisable
 import itertools
 
 hashes_to_jpeg_quality = {}

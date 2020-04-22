@@ -1,33 +1,35 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientGUICommon
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIControls
-from . import ClientGUIFunctions
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIParsing
-from . import ClientGUIScrolledPanels
-from . import ClientGUITopLevelWindows
-from . import ClientImporting
-from . import ClientNetworking
-from . import ClientNetworkingBandwidth
-from . import ClientNetworkingContexts
-from . import ClientNetworkingLogin
-from . import ClientNetworkingSessions
-from . import ClientPaths
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
 import os
 import traceback
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientPaths
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIParsing
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.importing import ClientImporting
+from hydrus.client.networking import ClientNetworking
+from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingSessions
 
 class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -1135,7 +1137,7 @@ def GenerateTestNetworkJobPresentationContextFactory( window, network_job_contro
         
         def qt_set_it( nj ):
             
-            if not window or not QP.isValid( window ):
+            if not QP.isValid( window ):
                 
                 return
                 

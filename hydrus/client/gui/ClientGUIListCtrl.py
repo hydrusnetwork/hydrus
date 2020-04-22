@@ -1,18 +1,20 @@
-from . import ClientConstants as CC
-from . import ClientGUIDragDrop
-from . import ClientGUICommon
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import ClientSerialisable
-from . import ClientGUIShortcuts
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
 import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSerialisable
+from hydrus.client.gui import ClientGUIDragDrop
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
 
 def SafeNoneInt( value ):
     
@@ -501,7 +503,7 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def ShowDeleteSelectedDialog( self ):
         
-        from . import ClientGUIDialogsQuick
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
@@ -661,8 +663,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         choice_tuples = [ ( default.GetName(), default, selected ) for default in defaults ]
         
-        from . import ClientGUITopLevelWindows
-        from . import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
             
@@ -716,8 +718,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if export_object is not None:
             
-            from . import ClientGUITopLevelWindows
-            from . import ClientGUISerialisable
+            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUISerialisable
             
             with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
                 
@@ -746,8 +748,8 @@ class BetterListCtrlPanel( QW.QWidget ):
             return
             
         
-        from . import ClientGUITopLevelWindows
-        from . import ClientGUISerialisable
+        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUISerialisable
         
         with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
@@ -1048,7 +1050,7 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def ImportFromDragDrop( self, paths ):
         
-        from . import ClientGUIDialogsQuick
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
         message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
         

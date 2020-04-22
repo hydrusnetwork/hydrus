@@ -1,49 +1,50 @@
-from . import ClientConstants as CC
-from . import ClientGUIACDropdown
-from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
-from . import ClientGUIImport
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIPanels
-from . import ClientGUISearch
-from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIShortcuts
-from . import ClientGUITopLevelWindows
-from . import ClientNetworkingContexts
-from . import ClientNetworkingJobs
-from . import ClientNetworkingSessions
-from . import ClientMedia
-from . import ClientRatings
-from . import ClientServices
-from . import ClientGUIStyle
-from . import ClientGUITime
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetwork
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusTagArchive
-from . import HydrusTags
-from . import HydrusText
 import os
 import random
 import re
 import traceback
 import urllib.parse
-from . import QtPorting as QP
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTagArchive
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientMedia
+from hydrus.client import ClientRatings
+from hydrus.client import ClientServices
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIImport
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIPanels
+from hydrus.client.gui import ClientGUISearch
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUIStyle
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.networking import ClientNetworkingSessions
 
 class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
@@ -2990,7 +2991,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
             
-            from . import ClientGUIImport
+            from hydrus.client.gui import ClientGUIImport
             
             show_downloader_options = True
             
@@ -4249,7 +4250,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            from . import ClientGUISystemTray
+            from hydrus.client.gui import ClientGUISystemTray
             
             if not ClientGUISystemTray.SystemTrayAvailable():
                 

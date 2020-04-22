@@ -1,14 +1,14 @@
-from . import HydrusConstants as HC
-from . import HydrusController
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetworking
-from . import HydrusSessions
-from . import HydrusThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusController
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusSessions
+from hydrus.core import HydrusThreading
 import os
-from . import ServerDB
-from . import ServerServer
+from hydrus.server import ServerDB
+from hydrus.server import ServerServer
 import requests
 import sys
 import time

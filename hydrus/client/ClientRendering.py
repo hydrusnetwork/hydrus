@@ -1,20 +1,20 @@
-from . import ClientFiles
-from . import ClientImageHandling
-from . import ClientVideoHandling
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusImageHandling
-from . import HydrusGlobals as HG
-from . import HydrusThreading
-from . import HydrusVideoHandling
+from hydrus.client import ClientFiles
+from hydrus.client import ClientImageHandling
+from hydrus.client import ClientVideoHandling
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusVideoHandling
 import os
 import threading
 import time
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 LZ4_OK = False
 

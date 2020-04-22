@@ -1,24 +1,25 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUICommon
-from . import ClientGUIDialogs
-from . import ClientGUIListBoxes
-from . import ClientGUIParsing
-from . import ClientMedia
-from . import ClientParsing
-from . import ClientSearch
-from . import ClientTags
-from . import ClientThreading
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientMedia
+from hydrus.client import ClientParsing
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIParsing
+from hydrus.client.gui import QtPorting as QP
 
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
@@ -171,7 +172,7 @@ class RecentTagsPanel( QW.QWidget ):
     
     def EventClear( self ):
         
-        from . import ClientGUIDialogsQuick
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear recent tags?' )
         

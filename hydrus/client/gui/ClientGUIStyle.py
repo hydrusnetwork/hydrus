@@ -1,8 +1,10 @@
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
 import os
+
 from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 
 STYLESHEET_DIR = os.path.join( HC.BASE_DIR, 'static', 'qss' )
 

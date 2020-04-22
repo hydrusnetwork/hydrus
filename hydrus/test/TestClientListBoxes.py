@@ -1,18 +1,18 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientGUIListBoxes
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client.gui import ClientGUIListBoxes
 import collections
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import os
 import random
-from . import TestController
+from hydrus.test import TestController
 import time
 import unittest
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     

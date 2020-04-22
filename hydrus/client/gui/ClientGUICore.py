@@ -1,6 +1,7 @@
-from . import ClientGUIMenus
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
+
+from hydrus.client.gui import ClientGUIMenus
 
 class GUICore( QC.QObject ):
     
@@ -54,7 +55,7 @@ class GUICore( QC.QObject ):
             self._menu_open = False
             
         
-        ClientGUIMenus.DestroyMenu( window, menu )
+        ClientGUIMenus.DestroyMenu( menu )
         
     
 core = GUICore.instance

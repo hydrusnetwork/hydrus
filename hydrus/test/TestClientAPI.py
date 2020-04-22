@@ -1,21 +1,21 @@
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientAPI
-from . import ClientLocalServer
-from . import ClientLocalServerResources
-from . import ClientManagers
-from . import ClientMedia
-from . import ClientRatings
-from . import ClientSearch
-from . import ClientServices
-from . import ClientTags
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientAPI
+from hydrus.client import ClientLocalServer
+from hydrus.client import ClientLocalServerResources
+from hydrus.client import ClientManagers
+from hydrus.client import ClientMedia
+from hydrus.client import ClientRatings
+from hydrus.client import ClientSearch
+from hydrus.client import ClientServices
+from hydrus.client import ClientTags
 import collections
 import hashlib
 import http.client
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusTags
-from . import HydrusText
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 import json
 import os
 import random
@@ -24,8 +24,8 @@ import time
 import unittest
 import urllib
 from twisted.internet import reactor
-from . import HydrusData
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 
 class TestClientAPI( unittest.TestCase ):
     

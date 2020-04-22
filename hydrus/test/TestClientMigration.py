@@ -1,25 +1,25 @@
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientDB
-from . import ClientImportFileSeeds
-from . import ClientImportOptions
-from . import ClientManagers
-from . import ClientMigration
-from . import ClientServices
-from . import ClientTags
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDB
+from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client import ClientManagers
+from hydrus.client import ClientMigration
+from hydrus.client import ClientServices
+from hydrus.client import ClientTags
 import collections
 import hashlib
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusTagArchive
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusTagArchive
 import os
 import random
 import shutil
 import time
 import unittest
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import TestController
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.test import TestController
 
 current_tag_pool = [ 'blonde hair', 'blue eyes', 'bodysuit', 'character:samus aran', 'series:metroid', 'studio:nintendo' ]
 pending_tag_pool = [ 'favourites', 'kino', 'brown shirt', 'huge knees' ]

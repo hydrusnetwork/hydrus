@@ -1,36 +1,36 @@
-from . import ClientAPI
-from . import ClientCaches
-from . import ClientData
-from . import ClientDefaults
-from . import ClientFiles
-from . import ClientMedia
-from . import ClientNetworkingBandwidth
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientNetworkingLogin
-from . import ClientNetworkingSessions
-from . import ClientOptions
-from . import ClientRatings
-from . import ClientSearch
-from . import ClientServices
-from . import ClientTags
-from . import ClientThreading
+from hydrus.client import ClientAPI
+from hydrus.client import ClientCaches
+from hydrus.client import ClientData
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientFiles
+from hydrus.client import ClientMedia
+from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client import ClientOptions
+from hydrus.client import ClientRatings
+from hydrus.client import ClientSearch
+from hydrus.client import ClientServices
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
 import collections
 import gc
 import hashlib
 import itertools    
 import json
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusDB
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetwork
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import ClientConstants as CC
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusDB
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.client import ClientConstants as CC
 import os
 import psutil
 import random
@@ -42,7 +42,7 @@ import traceback
 import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 #
 #                                𝓑𝓵𝓮𝓼𝓼𝓲𝓷𝓰𝓼 𝓸𝓯 𝓽𝓱𝓮 𝓢𝓱𝓻𝓲𝓷𝓮 𝓸𝓷 𝓽𝓱𝓲𝓼 𝓗𝓮𝓵𝓵 𝓒𝓸𝓭𝓮
@@ -4435,7 +4435,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 predicates = []
                 
-                if ClientSearch.ConvertTagToSearchable( half_complete_subtag ) in ( '', '*' ):
+                if ClientSearch.ConvertSubtagToSearchable( half_complete_subtag ) in ( '', '*' ):
                     
                     return set()
                     
@@ -8145,7 +8145,7 @@ class DB( HydrusDB.HydrusDB ):
             
             subtag_id = self._c.lastrowid
             
-            subtag_searchable = ClientSearch.ConvertTagToSearchable( subtag )
+            subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
             
             self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
             
@@ -11689,7 +11689,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( subtag, ) = self._c.execute( 'SELECT subtag FROM subtags WHERE subtag_id = ?;', ( subtag_id, ) ).fetchone()
                 
-                subtag_searchable = ClientSearch.ConvertTagToSearchable( subtag )
+                subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
                 
                 do_it = True
                 
@@ -13279,7 +13279,7 @@ class DB( HydrusDB.HydrusDB ):
                                 message += os.linesep * 2
                                 message += 'The PTR is at a new address, "https://ptr.hydrus.network:45871". Would you like to automatically redirect your client\'s PTR service, "{}", to that new location and keep using it?'.format( name )
                                 
-                                from . import ClientGUIDialogsQuick
+                                from hydrus.client.gui import ClientGUIDialogsQuick
                                 
                                 result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'PTR has moved!', yes_label = 'yes, move me to the new location', no_label = 'no, pause my ptr as it is' )
                                 
@@ -13835,7 +13835,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     media_viewer_browser_shortcuts = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'media_viewer_browser' )
                     
-                    from . import ClientGUIShortcuts
+                    from hydrus.client.gui import ClientGUIShortcuts
                     
                     right_up = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_RELEASE, [] )
                     
@@ -13865,7 +13865,7 @@ class DB( HydrusDB.HydrusDB ):
             
             existing_shortcut_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
             
-            from . import ClientGUIShortcuts
+            from hydrus.client.gui import ClientGUIShortcuts
             
             updates_to_do = {}
             

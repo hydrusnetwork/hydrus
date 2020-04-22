@@ -1,4 +1,4 @@
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW

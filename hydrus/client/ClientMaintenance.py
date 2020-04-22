@@ -1,14 +1,14 @@
-from . import ClientConstants as CC
-from . import ClientThreading
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusGlobals as HG
-from . import HydrusImageHandling
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusThreading
 import os
 import random
 import threading

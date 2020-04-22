@@ -1,10 +1,11 @@
-from . import ClientGUIScrolledPanelsButtonQuestions
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUITopLevelWindows
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUITopLevelWindows
 
 def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key = None ):
     

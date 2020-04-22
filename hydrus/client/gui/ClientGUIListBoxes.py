@@ -1,30 +1,31 @@
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUICommon
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import ClientGUIMenus
-from . import ClientGUISearch
-from . import ClientGUIShortcuts
-from . import ClientMedia
-from . import ClientSearch
-from . import ClientSerialisable
-from . import ClientTags
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
-from . import HydrusTags
 import os
 import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientMedia
+from hydrus.client import ClientSearch
+from hydrus.client import ClientSerialisable
+from hydrus.client import ClientTags
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUISearch
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
 
 class AddEditDeleteListBox( QW.QWidget ):
     
@@ -123,8 +124,8 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         choice_tuples = [ ( self._data_to_pretty_callable( default ), default, selected ) for default in defaults ]
         
-        from . import ClientGUITopLevelWindows
-        from . import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
             
@@ -155,7 +156,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         indices.sort( reverse = True )
         
-        from . import ClientGUIDialogsQuick
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
@@ -236,8 +237,8 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         if export_object is not None:
             
-            from . import ClientGUITopLevelWindows
-            from . import ClientGUISerialisable
+            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUISerialisable
             
             with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
                 
@@ -266,8 +267,8 @@ class AddEditDeleteListBox( QW.QWidget ):
             return
             
         
-        from . import ClientGUITopLevelWindows
-        from . import ClientGUISerialisable
+        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUISerialisable
         
         with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
@@ -640,7 +641,7 @@ class QueueListBox( QW.QWidget ):
         
         indices.sort( reverse = True )
         
-        from . import ClientGUIDialogsQuick
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
@@ -1720,7 +1721,14 @@ class ListBoxTags( ListBox ):
                 
                 if isinstance( term, ClientSearch.Predicate ):
                     
-                    text = term.ToString( with_count = False )
+                    if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+                        
+                        text = term.GetValue()
+                        
+                    else:
+                        
+                        text = term.ToString( with_count = False )
+                        
                     
                 else:
                     
@@ -1796,7 +1804,7 @@ class ListBoxTags( ListBox ):
             
         else:
             
-            from . import ClientGUITags
+            from hydrus.client.gui import ClientGUITags
             
             if command == 'parent':
                 
@@ -1807,8 +1815,8 @@ class ListBoxTags( ListBox ):
                 title = 'manage tag siblings'
                 
             
-            from . import ClientGUITopLevelWindows
-            from . import ClientGUISerialisable
+            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUISerialisable
             
             with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
                 
@@ -1883,7 +1891,7 @@ class ListBoxTags( ListBox ):
                     
                     if isinstance( term, ClientSearch.Predicate ):
                         
-                        if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG and term.IsInclusive():
+                        if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
                             
                             selected_tags.add( term.GetValue() )
                             
@@ -1918,7 +1926,14 @@ class ListBoxTags( ListBox ):
                     
                     if isinstance( term, ClientSearch.Predicate ):
                         
-                        selection_string = term.ToString( with_count = False )
+                        if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+                            
+                            selection_string = term.GetValue()
+                            
+                        else:
+                            
+                            selection_string = term.ToString( with_count = False )
+                            
                         
                     else:
                         
@@ -2599,7 +2614,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         if len( namespaces ) > 0:
             
-            from . import ClientGUIDialogsQuick
+            from hydrus.client.gui import ClientGUIDialogsQuick
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete all selected colours?' )
             

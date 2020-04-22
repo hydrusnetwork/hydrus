@@ -1,11 +1,11 @@
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 import queue
 import threading
 import traceback
 import weakref
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusGlobals as HG
 import time
 
 class HydrusPubSub( object ):

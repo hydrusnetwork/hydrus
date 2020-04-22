@@ -1,5 +1,6 @@
 import os
 import sys
+import typing
 
 # old method of getting frozen dir, doesn't work for symlinks looks like:
 # BASE_DIR = getattr( sys, '_MEIPASS', None )
@@ -18,7 +19,9 @@ else:
         
         hc_realpath_dir = os.path.dirname( os.path.realpath( __file__ ) )
         
-        BASE_DIR = os.path.split( hc_realpath_dir )[0]
+        HYDRUS_MODULE_DIR = os.path.split( hc_realpath_dir )[0]
+        
+        BASE_DIR = os.path.split( HYDRUS_MODULE_DIR )[0]
         
     except NameError: # if __file__ is not defined due to some weird OS
         
@@ -70,7 +73,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 393
+SOFTWARE_VERSION = 394
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -81,6 +84,11 @@ UPDATE_DURATION = 100000
 READ_BLOCK_SIZE = 256 * 1024
 
 lifetimes = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), ( 'six months', 6 * 31 * 86400 ), ( 'one year', 12 * 31 * 86400 ), ( 'two years', 24 * 31 * 86400 ), ( 'five years', 60 * 31 * 86400 ), ( 'does not expire', None ) ]
+
+# some typing stuff
+
+noneable_int = typing.Optional[ int ]
+noneable_str = typing.Optional[ str ]
 
 # Enums
 

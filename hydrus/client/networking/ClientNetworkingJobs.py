@@ -1,14 +1,14 @@
 import io
-from . import ClientConstants as CC
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetworking
-from . import HydrusThreading
-from . import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusText
 import os
 import requests
 import threading
@@ -72,16 +72,24 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.BandwidthException
         
-    elif status_code >= 500:
+    elif status_code == 502:
         
-        if is_hydrus_service and status_code == 503:
+        eclass = HydrusExceptions.ShouldReattemptNetworkException
+        
+    elif status_code == 503:
+        
+        if is_hydrus_service:
             
             eclass = HydrusExceptions.ServerBusyException
             
         else:
             
-            eclass = HydrusExceptions.ServerException
+            eclass = HydrusExceptions.ShouldReattemptNetworkException
             
+        
+    elif status_code >= 500:
+        
+        eclass = HydrusExceptions.ServerException
         
     else:
         
@@ -1217,7 +1225,7 @@ class NetworkJob( object ):
                             
                             ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data, self.IS_HYDRUS_SERVICE )
                             
-                            if isinstance( e, HydrusExceptions.BandwidthException ):
+                            if isinstance( e, ( HydrusExceptions.BandwidthException, HydrusExceptions.ShouldReattemptNetworkException ) ):
                                 
                                 raise e
                                 

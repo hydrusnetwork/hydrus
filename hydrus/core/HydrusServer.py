@@ -1,10 +1,10 @@
-from . import HydrusConstants as HC
-from . import HydrusServerResources
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusServerResources
 import traceback
 from twisted.web.http import _GenericHTTPChannelProtocol, HTTPChannel
 from twisted.web.server import Request, Site
 from twisted.web.resource import Resource
-from . import HydrusData
+from hydrus.core import HydrusData
 import time
 
 LOCAL_DOMAIN = HydrusServerResources.HydrusDomain( True )

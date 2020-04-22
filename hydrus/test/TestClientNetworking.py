@@ -1,24 +1,24 @@
-from . import ClientConstants as CC
-from . import ClientNetworking
-from . import ClientNetworkingBandwidth
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientNetworkingJobs
-from . import ClientNetworkingLogin
-from . import ClientNetworkingSessions
-from . import ClientParsing
-from . import ClientServices
+from hydrus.client import ClientConstants as CC
+from hydrus.client.networking import ClientNetworking
+from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client import ClientParsing
+from hydrus.client import ClientServices
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusNetworking
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNetworking
 import os
-from . import TestController
+from hydrus.test import TestController
 import threading
 import time
 import unittest
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusGlobals as HG
 from httmock import all_requests, urlmatch, HTTMock, response
 from mock import patch
 

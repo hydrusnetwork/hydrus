@@ -1,15 +1,15 @@
-from . import HydrusExceptions
+from hydrus.core import HydrusExceptions
 import queue
 import threading
 import time
 import traceback
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusThreading
 import os
 import typing
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 class JobKey( object ):
     
@@ -529,7 +529,7 @@ class QtAwareJob( HydrusThreading.SingleJob ):
         
         def qt_code():
             
-            if not self._window or not QP.isValid( self._window ):
+            if self._window is None or not QP.isValid( self._window ):
                 
                 return
                 
@@ -542,7 +542,7 @@ class QtAwareJob( HydrusThreading.SingleJob ):
     
     def _MyWindowDead( self ):
         
-        return not self._window
+        return self._window is None or not QP.isValid( self._window )
         
     
     def IsCancelled( self ):
@@ -573,7 +573,9 @@ class QtAwareRepeatingJob(HydrusThreading.RepeatingJob):
     
     def _QTWork( self ):
         
-        if not self._window or not QP.isValid( self._window ):
+        if self._window is None or not QP.isValid( self._window ):
+            
+            self._window = None
             
             return
             
@@ -588,7 +590,7 @@ class QtAwareRepeatingJob(HydrusThreading.RepeatingJob):
     
     def _MyWindowDead( self ):
         
-        return not self._window
+        return self._window is None or not QP.isValid( self._window )
         
     
     def IsCancelled( self ):

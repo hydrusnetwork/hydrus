@@ -1,7 +1,7 @@
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusPaths
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
 import os
 import webbrowser
 

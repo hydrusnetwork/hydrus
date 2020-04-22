@@ -1,23 +1,24 @@
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUIListCtrl
-from . import ClientGUIDialogs
-from . import ClientGUIShortcuts
-from . import ClientRatings
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNATPunch
-from . import HydrusNetwork
 import itertools
 import os
 import traceback
-from . import QtPorting as QP
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNATPunch
+from hydrus.core import HydrusNetwork
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientRatings
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
 
 # Option Enums
 

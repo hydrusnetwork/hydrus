@@ -1,5 +1,5 @@
-from . import HydrusConstants as HC
-from . import HydrusData
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 import os
 import sys
 import threading

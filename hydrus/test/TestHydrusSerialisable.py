@@ -1,23 +1,24 @@
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientDefaults
-from . import ClientDownloading
-from . import ClientDuplicates
-from . import ClientGUIShortcuts
-from . import ClientImporting
-from . import ClientImportOptions
-from . import ClientImportSubscriptions
-from . import ClientMedia
-from . import ClientNetworkingDomain
-from . import ClientRatings
-from . import ClientSearch
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusNetwork
-from . import HydrusSerialisable
-from . import TestController as TC
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientDownloading
+from hydrus.client import ClientDuplicates
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing import ClientImportSubscriptions
+from hydrus.client.importing import ClientImportSubscriptionQuery
+from hydrus.client import ClientMedia
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client import ClientRatings
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusSerialisable
+from hydrus.test import TestController as TC
 import os
 import unittest
 from qtpy import QtCore as QC
@@ -488,7 +489,7 @@ class TestSerialisables( unittest.TestCase ):
         self._dump_and_load_and_test( sub, test )
         
         gug_key_and_name = ( HydrusData.GenerateKey(), 'muh test gug' )
-        queries = [ ClientImportSubscriptions.SubscriptionQuery( 'test query' ), ClientImportSubscriptions.SubscriptionQuery( 'test query 2' ) ]
+        queries = [ ClientImportSubscriptionQuery.SubscriptionQuery( 'test query' ), ClientImportSubscriptionQuery.SubscriptionQuery( 'test query 2' ) ]
         checker_options = ClientImportOptions.CheckerOptions()
         initial_file_limit = 100
         periodic_file_limit = 50
@@ -502,7 +503,9 @@ class TestSerialisables( unittest.TestCase ):
         
         no_work_until = HydrusData.GetNow() - 86400 * 20
         
-        sub.SetTuple( gug_key_and_name, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
+        sub.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
+        
+        sub.SetQueries( queries )
         
         self.assertEqual( sub.GetGUGKeyAndName(), gug_key_and_name )
         self.assertEqual( sub.GetTagImportOptions(), tag_import_options )

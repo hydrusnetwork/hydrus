@@ -1,10 +1,11 @@
-from . import ClientConstants as CC
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 import threading
 import traceback
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import QtPorting as QP
 
 class AsyncQtUpdater( object ):
     
@@ -38,9 +39,9 @@ class AsyncQtUpdater( object ):
     
     def _doWork( self ):
         
-        def deliver_result( result ):
+        def qt_deliver_result( result ):
             
-            if not self._win or not QP.isValid( self._win ):
+            if self._win is None or not QP.isValid( self._win ):
                 
                 self._win = None
                 
@@ -63,7 +64,7 @@ class AsyncQtUpdater( object ):
             
             try:
                 
-                HG.client_controller.CallBlockingToQt( self._win, deliver_result, result )
+                HG.client_controller.CallBlockingToQt( self._win, qt_deliver_result, result )
                 
             except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
                 
@@ -93,7 +94,7 @@ class AsyncQtUpdater( object ):
     
     def update( self ):
         
-        if not self._win or not QP.isValid( self._win ):
+        if self._win is None or not QP.isValid( self._win ):
             
             self._win = None
             
@@ -136,7 +137,7 @@ class FastThreadToGUIUpdater( object ):
     
     def QtDoIt( self ):
         
-        if not self._win or not QP.isValid( self._win ):
+        if self._win is None or not QP.isValid( self._win ):
             
             self._win = None
             

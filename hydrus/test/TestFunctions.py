@@ -1,12 +1,12 @@
 import collections
-from . import HydrusConstants as HC
-from . import HydrusGlobals as HG
-from . import ClientData
-from . import ClientTags
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientData
+from hydrus.client import ClientTags
 import os
 import unittest
-from . import HydrusData
-from . import ClientConstants as CC
+from hydrus.core import HydrusData
+from hydrus.client import ClientConstants as CC
 
 class TestFunctions( unittest.TestCase ):
     

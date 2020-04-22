@@ -1,20 +1,22 @@
-from . import ClientConstants as CC
-from . import ClientGUIDialogsQuick
-from . import ClientGUIMenus
-from . import ClientMedia
-from . import ClientPaths
-from . import ClientThreading
-from . import HydrusExceptions
-from . import HydrusPaths
 import os
 import random
 import time
-from . import HydrusData
-from . import HydrusGlobals as HG
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientMedia
+from hydrus.client import ClientPaths
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import QtPorting as QP
 
 def CopyMediaURLs( medias ):
     

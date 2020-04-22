@@ -1,15 +1,15 @@
-from . import ClientConstants as CC
-from . import ClientGUIManagement
-from . import ClientManagers
-from . import ClientNetworking
-from . import ClientCaches
-from . import ClientServices
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIManagement
+from hydrus.client import ClientManagers
+from hydrus.client.networking import ClientNetworking
+from hydrus.client import ClientCaches
+from hydrus.client import ClientServices
 import collections
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import os
 import unittest
-from . import HydrusData
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 
 class TestManagers( unittest.TestCase ):
     

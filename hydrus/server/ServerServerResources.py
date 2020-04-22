@@ -1,14 +1,14 @@
 import http.cookies
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetwork
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusServerResources
-from . import ServerFiles
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusServerResources
+from hydrus.server import ServerFiles
 import threading
 
 class HydrusResourceBusyCheck( HydrusServerResources.Resource ):

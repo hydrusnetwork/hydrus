@@ -1,26 +1,28 @@
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import ClientGUIMenus
-from . import ClientGUIOptionsPanels
-from . import ClientGUIScrolledPanels
-from . import ClientGUIShortcuts
-from . import ClientGUITime
-from . import ClientMedia
-from . import ClientRatings
-from . import ClientSearch
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusText
 import os
 import re
 import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientMedia
+from hydrus.client import ClientRatings
+from hydrus.client import ClientSearch
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIOptionsPanels
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import QtPorting as QP
 
 def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
     
@@ -36,7 +38,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearc
         
         if value is None and predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
             
-            from . import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUITopLevelWindows
             
             with ClientGUITopLevelWindows.DialogEdit( window, 'input predicate', hide_buttons = True ) as dlg:
                 
@@ -202,13 +204,13 @@ class MediaSortControl( QW.QWidget ):
         self._sort_type_button = ClientGUICommon.BetterButton( self, 'sort', self._SortTypeButtonClick )
         self._sort_asc_choice = ClientGUICommon.BetterChoice( self )
         
-        asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
-        
-        self._sort_asc_choice.setMinimumWidth( asc_width )
-        
-        type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 10 )
+        type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 14 )
         
         self._sort_type_button.setMinimumWidth( type_width )
+        
+        asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_asc_choice, 14 )
+        
+        self._sort_asc_choice.setMinimumWidth( asc_width )
         
         self._sort_asc_choice.addItem( '', CC.SORT_ASC )
         

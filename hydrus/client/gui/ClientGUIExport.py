@@ -1,27 +1,29 @@
-from . import ClientConstants as CC
-from . import ClientExporting
-from . import ClientGUIACDropdown
-from . import ClientGUICommon
-from . import ClientGUIDialogsQuick
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUITime
-from . import ClientGUITopLevelWindows
-from . import ClientSearch
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusPaths
 import os
 import time
 import traceback
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientExporting
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     

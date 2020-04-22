@@ -1,28 +1,28 @@
-from . import ClientConstants as CC
-from . import ClientDownloading
-from . import ClientFiles
-from . import ClientImporting
-from . import ClientNetworkingContexts
-from . import ClientNetworkingJobs
-from . import ClientRatings
-from . import ClientThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDownloading
+from hydrus.client import ClientFiles
+from hydrus.client.importing import ClientImporting
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client import ClientRatings
+from hydrus.client import ClientThreading
 import hashlib
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNATPunch
-from . import HydrusNetwork
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusSerialisable
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNATPunch
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
 import json
 import os
 import threading
 import time
 import traceback
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -2328,7 +2328,7 @@ class ServiceIPFS( ServiceRemote ):
             
             try:
                 
-                from . import ClientGUIDialogs
+                from hydrus.client.gui import ClientGUIDialogs
                 
                 with ClientGUIDialogs.DialogSelectFromURLTree( HG.client_controller.gui, url_tree ) as dlg:
                     

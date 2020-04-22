@@ -1,13 +1,13 @@
 import bisect
 import collections
-from . import HydrusExceptions
+from hydrus.core import HydrusExceptions
 import queue
 import random
 import threading
 import time
 import traceback
-from . import HydrusData
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 import os
 
 NEXT_THREAD_CLEAROUT = 0

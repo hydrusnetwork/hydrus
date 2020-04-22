@@ -51,9 +51,10 @@ class NetworkException( HydrusException ): pass
 class NetworkInfrastructureException( NetworkException ): pass
 class ConnectionException( NetworkInfrastructureException ): pass
 class FirewallException( NetworkInfrastructureException ): pass
-class ServerBusyException( NetworkInfrastructureException ): pass
 class CloudFlareException( NetworkInfrastructureException ): pass
 class BandwidthException( NetworkInfrastructureException ): pass
+class ServerException( NetworkInfrastructureException ): pass
+class ServerBusyException( NetworkInfrastructureException ): pass
 
 class StreamTimeoutException( NetworkException ): pass
 
@@ -66,7 +67,6 @@ class MissingCredentialsException( NetworkException ): pass
 class DoesNotSupportCORSException( NetworkException ): pass
 class InsufficientCredentialsException( NetworkException ): pass
 class RedirectionException( NetworkException ): pass
-class ServerException( NetworkException ): pass
 class SessionException( NetworkException ): pass
 class WrongServiceTypeException( NetworkException ): pass
 class ValidationException( NetworkException ): pass

@@ -1,11 +1,11 @@
-from . import ClientConstants as CC
-from . import ClientImportFileSeeds
-from . import ClientImportOptions
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client import ClientTags
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 import os
 import unittest
 from mock import patch

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from hydrus import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 from qtpy import QtWidgets as QW
 from qtpy import QtCore as QC
 
@@ -8,10 +8,10 @@ import locale
 try: locale.setlocale( locale.LC_ALL, '' )
 except: pass
 
-from hydrus import HydrusConstants as HC
-from hydrus import HydrusData
-from hydrus import HydrusGlobals as HG
-from hydrus import TestController
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.test import TestController
 import sys
 import threading
 import traceback

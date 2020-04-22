@@ -1,4 +1,4 @@
-from . import HydrusData
+from hydrus.core import HydrusData
 import json
 import zlib
 

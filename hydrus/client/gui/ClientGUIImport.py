@@ -1,39 +1,41 @@
-from . import ClientConstants as CC
-from . import ClientGUIACDropdown
-from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUICore as CGC
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFileSeedCache
-from . import ClientGUIFunctions
-from . import ClientGUIGallerySeedLog
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIMenus
-from . import ClientGUIOptionsPanels
-from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUITime
-from . import ClientGUITopLevelWindows
-from . import ClientImporting
-from . import ClientImportLocal
-from . import ClientImportOptions
-from . import ClientTags
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import HydrusText
 import os
 import re
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientTags
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFileSeedCache
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIGallerySeedLog
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIOptionsPanels
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportLocal
+from hydrus.client.importing import ClientImportOptions
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     

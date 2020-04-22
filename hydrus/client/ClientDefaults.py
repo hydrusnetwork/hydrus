@@ -1,9 +1,9 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusNetworking
-from . import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusSerialisable
 import re
 import os
 
@@ -100,7 +100,7 @@ def GetClientDefaultOptions():
     
 def GetDefaultCheckerOptions( name ):
     
-    from . import ClientImportOptions
+    from hydrus.client.importing import ClientImportOptions
     
     if name == 'thread':
         
@@ -160,13 +160,13 @@ def GetDefaultGUGs():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
     
-    from . import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingDomain
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) )
     
 def GetDefaultNGUGs():
     
-    from . import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingDomain
     
     gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
     
@@ -174,7 +174,7 @@ def GetDefaultNGUGs():
     
 def GetDefaultSingleGUGs():
     
-    from . import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingDomain
     
     gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ) ]
     
@@ -278,7 +278,7 @@ def GetDefaultLoginScripts():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'login_scripts' )
     
-    from . import ClientNetworkingLogin
+    from hydrus.client.networking import ClientNetworkingLogin
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingLogin.LoginScriptDomain, ) )
     
@@ -286,13 +286,13 @@ def GetDefaultParsers():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
     
-    from . import ClientParsing
+    from hydrus.client import ClientParsing
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.PageParser, ) )
     
 def GetDefaultScriptRows():
     
-    from . import HydrusData
+    from hydrus.core import HydrusData
     
     script_info = []
     
@@ -304,7 +304,7 @@ def GetDefaultScriptRows():
     
 def GetDefaultShortcuts():
     
-    from . import ClientGUIShortcuts
+    from hydrus.client.gui import ClientGUIShortcuts
     
     shortcuts = []
     
@@ -450,7 +450,7 @@ def GetDefaultSimpleDownloaderFormulae():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'simple_downloader_formulae' )
     
-    from . import ClientParsing
+    from hydrus.client import ClientParsing
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
     
@@ -458,7 +458,7 @@ def GetDefaultURLClasses():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
     
-    from . import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingDomain
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLClass, ) )
     
@@ -471,7 +471,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
     default_objects = []
     
-    from . import ClientSerialisable
+    from hydrus.client import ClientSerialisable
     
     for filename in os.listdir( dir_path ):
         
@@ -510,7 +510,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
 def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
-    from . import ClientNetworkingContexts
+    from hydrus.client.networking import ClientNetworkingContexts
     
     KB = 1024
     MB = KB ** 2
@@ -597,8 +597,8 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    from . import ClientNetworkingContexts
-    from . import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingContexts
+    from hydrus.client.networking import ClientNetworkingDomain
     
     custom_header_dict = {}
     
@@ -644,8 +644,8 @@ def SetDefaultDomainManagerData( domain_manager ):
     
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
-    from . import ClientMedia
-    from . import ClientSearch
+    from hydrus.client import ClientMedia
+    from hydrus.client import ClientSearch
     
     rows = []
     

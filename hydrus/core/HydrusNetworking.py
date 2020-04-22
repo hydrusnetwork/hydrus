@@ -2,10 +2,10 @@ import calendar
 import collections
 import datetime
 import http.client
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusSerialisable
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 import json
 import psutil
 import socket

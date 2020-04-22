@@ -1,49 +1,54 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientDuplicates
-from . import ClientImporting
-from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
-from . import ClientGUIImport
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanels
-from . import ClientGUIFileSeedCache
-from . import ClientGUIGallerySeedLog
-from . import ClientGUIMPV
-from . import ClientGUITags
-from . import ClientGUITime
-from . import ClientGUITopLevelWindows
-from . import ClientImportFileSeeds
-from . import ClientImportOptions
-from . import ClientImportSubscriptions
-from . import ClientMedia
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientParsing
-from . import ClientPaths
-from . import ClientTags
 import collections
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetwork
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import HydrusText
 import os
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientDuplicates
+from hydrus.client import ClientMedia
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
+from hydrus.client import ClientTags
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIImport
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIFileSeedCache
+from hydrus.client.gui import ClientGUIGallerySeedLog
+from hydrus.client.gui import ClientGUIMPV
+from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing import ClientImportSubscriptions
+from hydrus.client.importing import ClientImportSubscriptionQuery
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, service_type, account_type ):
+    def __init__( self, parent: QW.QWidget, service_type: int, account_type: HydrusNetwork.AccountType ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -137,7 +142,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         return permission_choices
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> HydrusNetwork.AccountType:
         
         title = self._title.text()
         
@@ -160,7 +165,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, bandwidth_rules, summary = '' ):
+    def __init__( self, parent: QW.QWidget, bandwidth_rules: HydrusNetworking.BandwidthRules, summary = '' ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -181,14 +186,14 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> HydrusNetworking.BandwidthRules:
         
         return self._bandwidth_rules_ctrl.GetValue()
         
     
 class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, choice_tuples ):
+    def __init__( self, parent: QW.QWidget, choice_tuples: list ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -231,14 +236,14 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> list:
         
         return self._checkboxes.GetChecked()
         
     
 class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, name, value, domain, path, expires ):
+    def __init__( self, parent: QW.QWidget, name: str, value: str, domain: str, path: str, expires: HC.noneable_int ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -329,7 +334,7 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, url_classes, parsers, url_class_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ):
+    def __init__( self, parent: QW.QWidget, url_classes, parsers, url_class_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -584,7 +589,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, media, default_reason, suggested_file_service_key = None ):
+    def __init__( self, parent: QW.QWidget, media, default_reason, suggested_file_service_key = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -890,7 +895,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, url_classes, network_contexts_to_custom_header_dicts ):
+    def __init__( self, parent: QW.QWidget, url_classes, network_contexts_to_custom_header_dicts ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -920,7 +925,7 @@ class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display ):
+    def __init__( self, parent: QW.QWidget, network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1129,7 +1134,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, duplicate_action, duplicate_action_options, for_custom_action = False ):
+    def __init__( self, parent: QW.QWidget, duplicate_action, duplicate_action_options, for_custom_action = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1548,7 +1553,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientDuplicates.DuplicateActionOptions:
         
         tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, ( action, tag_filter ) ) in self._service_keys_to_tag_options.items() ]
         rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._service_keys_to_rating_options.items() ]
@@ -1562,7 +1567,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, file_import_options, show_downloader_options ):
+    def __init__( self, parent: QW.QWidget, file_import_options: ClientImportOptions.FileImportOptions, show_downloader_options: bool ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1751,7 +1756,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         QW.QMessageBox.information( self, 'Information', help_message )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientImportOptions.FileImportOptions:
         
         exclude_deleted = self._exclude_deleted.isChecked()
         do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.isChecked()
@@ -1781,7 +1786,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
     
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, info ):
+    def __init__( self, parent: QW.QWidget, info ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1876,7 +1881,7 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, gug ):
+    def __init__( self, parent: QW.QWidget, gug: ClientNetworkingDomain.GalleryURLGenerator ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2010,7 +2015,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientNetworkingDomain.GalleryURLGenerator:
         
         gug = self._GetValue()
         
@@ -2028,7 +2033,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, ngug, available_gugs ):
+    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingDomain.NestedGalleryURLGenerator, available_gugs: typing.List[ ClientNetworkingDomain.GalleryURLGenerator ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2149,7 +2154,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientNetworkingDomain.NestedGalleryURLGenerator:
         
         gug_key = self._original_ngug.GetGUGKey()
         name = self._name.text()
@@ -2166,7 +2171,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, gugs ):
+    def __init__( self, parent: QW.QWidget, gugs ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2515,7 +2520,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, info ):
+    def __init__( self, parent: QW.QWidget, info ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2791,7 +2796,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_context, limited_types = None, allow_default = True ):
+    def __init__( self, parent: QW.QWidget, network_context: ClientNetworkingContexts.NetworkContext, limited_types = None, allow_default = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2913,7 +2918,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientNetworkingContexts.NetworkContext:
         
         context_type = self._context_type.GetValue()
         
@@ -2942,7 +2947,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_contexts_to_custom_header_dicts ):
+    def __init__( self, parent: QW.QWidget, network_contexts_to_custom_header_dicts ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -3086,7 +3091,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
         
-        def __init__( self, parent, network_context, key, value, approved, reason ):
+        def __init__( self, parent: QW.QWidget, network_context: ClientNetworkingContexts.NetworkContext, key: str, value: str, approved: int, reason: str ):
             
             ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
             
@@ -3144,7 +3149,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNoneableIntegerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, value, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
+    def __init__( self, parent: QW.QWidget, value: HC.noneable_int, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -3159,14 +3164,14 @@ class EditNoneableIntegerPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> HC.noneable_int:
         
         return self._value.GetValue()
         
     
 class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, regex_favourites ):
+    def __init__( self, parent: QW.QWidget, regex_favourites ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -3284,7 +3289,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
 class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, serverside_service ):
+    def __init__( self, parent: QW.QWidget, serverside_service: HydrusNetwork.ServerService ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -3325,7 +3330,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> HydrusNetwork.ServerService:
         
         ( name, port, dictionary_part ) = self._service_panel.GetValue()
         
@@ -3345,7 +3350,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
     class _ServicePanel( ClientGUICommon.StaticBox ):
         
-        def __init__( self, parent, name, port, dictionary ):
+        def __init__( self, parent: QW.QWidget, name: str, port: int, dictionary ):
             
             ClientGUICommon.StaticBox.__init__( self, parent, 'basic information' )
             
@@ -3401,7 +3406,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
     class _ServiceRestrictedPanel( QW.QWidget ):
         
-        def __init__( self, parent, dictionary ):
+        def __init__( self, parent: QW.QWidget, dictionary ):
             
             QW.QWidget.__init__( self, parent )
             
@@ -3430,7 +3435,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
     class _ServiceFileRepositoryPanel( ClientGUICommon.StaticBox ):
         
-        def __init__( self, parent, dictionary ):
+        def __init__( self, parent: QW.QWidget, dictionary ):
             
             ClientGUICommon.StaticBox.__init__( self, parent, 'file repository' )
             
@@ -3473,7 +3478,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
     class _ServiceServerAdminPanel( ClientGUICommon.StaticBox ):
         
-        def __init__( self, parent, dictionary ):
+        def __init__( self, parent: QW.QWidget, dictionary ):
             
             ClientGUICommon.StaticBox.__init__( self, parent, 'server-wide bandwidth' )
             
@@ -3511,7 +3516,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, subscription ):
+    def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription ):
         
         subscription = subscription.Duplicate()
         
@@ -3739,7 +3744,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         initial_search_text = HG.client_controller.network_engine.domain_manager.GetInitialSearchText( gug_key_and_name )
         
-        query = ClientImportSubscriptions.SubscriptionQuery( initial_search_text )
+        query = ClientImportSubscriptionQuery.SubscriptionQuery( initial_search_text )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription query' ) as dlg:
             
@@ -4184,7 +4189,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
                 QW.QMessageBox.information( self, 'Information', message )
                 
             
-            queries = [ ClientImportSubscriptions.SubscriptionQuery( query_text ) for query_text in new_query_texts ]
+            queries = [ ClientImportSubscriptionQuery.SubscriptionQuery( query_text ) for query_text in new_query_texts ]
             
             self._queries.AddDatas( queries )
             
@@ -4267,15 +4272,13 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         self._delay_st.setText( status )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientImportSubscriptions.Subscription:
         
         name = self._name.text()
         
         subscription = ClientImportSubscriptions.Subscription( name )
         
         gug_key_and_name = self._gug_key_and_name.GetValue()
-        
-        queries = self._queries.GetData()
         
         initial_file_limit = self._initial_file_limit.value()
         periodic_file_limit = self._periodic_file_limit.value()
@@ -4286,7 +4289,11 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         file_import_options = self._file_import_options.GetValue()
         tag_import_options = self._tag_import_options.GetValue()
         
-        subscription.SetTuple( gug_key_and_name, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        queries = self._queries.GetData()
+        
+        subscription.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        
+        subscription.SetQueries( queries )
         
         show_a_popup_while_working = self._show_a_popup_while_working.isChecked()
         publish_files_to_popup_button = self._publish_files_to_popup_button.isChecked()
@@ -4301,7 +4308,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
     
 class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, query ):
+    def __init__( self, parent: QW.QWidget, query: ClientImportSubscriptionQuery.SubscriptionQuery ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -4382,7 +4389,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         HG.client_controller.CallAfterQtSafe( self._query_text, self._query_text.setFocus, QC.Qt.OtherFocusReason )
         
     
-    def _GetValue( self ):
+    def _GetValue( self ) -> ClientImportSubscriptionQuery.SubscriptionQuery:
         
         query = self._original_query.Duplicate()
         
@@ -4403,10 +4410,10 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query = self._GetValue()
         
-        self._status_st.setText( 'next check: '+query.GetNextCheckStatusString() )
+        self._status_st.setText( 'next check: {}'.format( query.GetNextCheckStatusString() ) )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientImportSubscriptionQuery.SubscriptionQuery:
         
         query = self._GetValue()
         
@@ -4415,7 +4422,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, subscriptions, subs_are_globally_paused = False ):
+    def __init__( self, parent: QW.QWidget, subscriptions: typing.List[ ClientImportSubscriptions.Subscription ], subs_are_globally_paused: bool = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -4865,7 +4872,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions.Sort()
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> typing.List[ ClientImportSubscriptions.Subscription ]:
         
         subscriptions = self._subscriptions.GetData()
         
@@ -5329,7 +5336,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_import_options, show_downloader_options, allow_default_selection = False ):
+    def __init__( self, parent: QW.QWidget, tag_import_options: ClientImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -5574,7 +5581,7 @@ Please note that once you know what tags you like, you can (and should) set up t
             
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientImportOptions.TagImportOptions:
         
         is_default = self._is_default.isChecked()
         
@@ -5599,7 +5606,7 @@ Please note that once you know what tags you like, you can (and should) set up t
     
 class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, choice_tuples, value_to_select = None, sort_tuples = True ):
+    def __init__( self, parent: QW.QWidget, choice_tuples: list, value_to_select = None, sort_tuples = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -5690,7 +5697,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, choices ):
+    def __init__( self, parent: QW.QWidget, choices ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -5733,7 +5740,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, service_key, service_tag_import_options, show_downloader_options = True ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: ClientImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -5900,7 +5907,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._get_tags_filter_button.setEnabled( should_enable_filter )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientImportOptions.ServiceTagImportOptions:
         
         get_tags = self._get_tags_checkbox.isChecked()
         
@@ -5926,7 +5933,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_summary_generator ):
+    def __init__( self, parent: QW.QWidget, tag_summary_generator: ClientGUITags.TagSummaryGenerator ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -6094,7 +6101,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         self._test_result.setText( tag_summary_generator.GenerateExampleSummary() )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientGUITags.TagSummaryGenerator:
         
         show = self._show.isChecked()
         
@@ -6109,7 +6116,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, tag_summary_generator ):
+    def __init__( self, parent: QW.QWidget, tag_summary_generator: ClientGUITags.TagSummaryGenerator ):
         
         label = tag_summary_generator.GenerateExampleSummary()
         
@@ -6135,14 +6142,14 @@ class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
             
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientGUITags.TagSummaryGenerator:
         
         return self._tag_summary_generator
         
     
 class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, url_class: ClientNetworkingDomain.URLClass ):
+    def __init__( self, parent: QW.QWidget, url_class: ClientNetworkingDomain.URLClass ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
 
@@ -6956,7 +6963,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientNetworkingDomain.URLClass:
         
         url_class = self._GetValue()
         
@@ -6974,7 +6981,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, url_classes ):
+    def __init__( self, parent: QW.QWidget, url_classes: typing.List[ ClientNetworkingDomain.URLClass ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -7165,7 +7172,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateURLClassCheckerText()
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> typing.List[ ClientNetworkingDomain.URLClass ]:
         
         url_classes = self._list_ctrl.GetData()
         
@@ -7174,7 +7181,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_engine, url_classes, parsers, url_class_keys_to_parser_keys ):
+    def __init__( self, parent: QW.QWidget, network_engine, url_classes, parsers, url_class_keys_to_parser_keys ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         

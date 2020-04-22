@@ -1,14 +1,14 @@
-from . import ClientConstants as CC
-from . import ClientPaths
-from . import ClientSearch
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import HydrusThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientPaths
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusThreading
 import os
 import re
 

@@ -1,19 +1,21 @@
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUIMedia
-from . import ClientGUIMediaControls
-from . import ClientGUIShortcuts
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusImageHandling
-from . import HydrusPaths
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-from . import QtPorting as QP
 import locale
 import os
 import traceback
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusPaths
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIMedia
+from hydrus.client.gui import ClientGUIMediaControls
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
 
 mpv_failed_reason = 'MPV seems ok!'
 

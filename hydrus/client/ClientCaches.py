@@ -1,18 +1,18 @@
-from . import ClientFiles
-from . import ClientImageHandling
-from . import ClientParsing
-from . import ClientRendering
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusImageHandling
-from . import HydrusThreading
+from hydrus.client import ClientFiles
+from hydrus.client import ClientImageHandling
+from hydrus.client import ClientParsing
+from hydrus.client import ClientRendering
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusThreading
 import json
 import os
 import threading
 import time
-from . import HydrusData
-from . import ClientConstants as CC
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.client import ClientConstants as CC
+from hydrus.core import HydrusGlobals as HG
 import collections
 import traceback
 import typing

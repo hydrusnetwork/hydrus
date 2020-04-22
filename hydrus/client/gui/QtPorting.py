@@ -2,8 +2,6 @@
 
 import os
 
-from . import HydrusConstants as HC
-
 # If not explicitely set, prefer PySide2 instead of the qtpy default which is PyQt5
 # It is important that this runs on startup *before* anything is imported from qtpy.
 # Since test.py, client.py and client.pyw all import this module first before any other Qt related ones, this requirement is satisfied.
@@ -20,10 +18,6 @@ if not 'QT_API' in os.environ:
         pass
         
 
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import ClientConstants as CC
-
 # 
 import qtpy
 from qtpy import QtCore as QC
@@ -35,7 +29,7 @@ from collections import defaultdict
 if qtpy.PYQT5:
     
     import sip # pylint: disable=E0401
-
+    
     def isValid( obj ):
         
         if isinstance( obj, sip.simplewrapper ):
@@ -49,12 +43,18 @@ if qtpy.PYQT5:
 elif qtpy.PYSIDE2:
     
     import shiboken2
-
+    
     isValid = shiboken2.isValid
-
+    
 else:
-
+    
     raise RuntimeError( 'You need either PySide2 or PyQt5' )
+    
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
 
 def MonkeyPatchMissingMethods():
     
@@ -1090,12 +1090,6 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         
         item.setContentsMargins( margin, margin, margin, margin )
         
-
-
-def EscapeMnemonics( str ):
-    
-    return str.replace( "&", "&&" )
-
 
 def ScrollAreaVisibleRect( scroll_area ):
     

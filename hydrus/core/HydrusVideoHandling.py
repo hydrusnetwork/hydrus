@@ -1,11 +1,11 @@
-from . import HydrusAudioHandling
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusImageHandling
-from . import HydrusPaths
-from . import HydrusText
-from . import HydrusThreading
+from hydrus.core import HydrusAudioHandling
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusText
+from hydrus.core import HydrusThreading
 import numpy
 import os
 import re

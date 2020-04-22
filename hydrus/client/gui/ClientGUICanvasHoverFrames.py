@@ -1,28 +1,30 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUIDragDrop
-from . import ClientGUICommon
-from . import ClientGUICore as CGC
-from . import ClientGUIFunctions
-from . import ClientGUIListBoxes
-from . import ClientGUIMediaControls
-from . import ClientGUIMenus
-from . import ClientGUIMPV
-from . import ClientGUITopLevelWindows
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIShortcuts
-from . import ClientGUIShortcutControls
-from . import ClientMedia
-from . import ClientRatings
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
 import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientMedia
+from hydrus.client import ClientRatings
+from hydrus.client.gui import ClientGUIDragDrop
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIMediaControls
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIMPV
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUIShortcutControls
+from hydrus.client.gui import QtPorting as QP
 
 class RatingLikeCanvas( ClientGUICommon.RatingLike ):
     

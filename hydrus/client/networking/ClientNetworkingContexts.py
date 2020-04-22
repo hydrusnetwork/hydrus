@@ -1,7 +1,7 @@
-from . import ClientConstants as CC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
+from hydrus.client import ClientConstants as CC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
 import os
 
 class NetworkContext( HydrusSerialisable.SerialisableBase ):

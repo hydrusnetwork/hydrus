@@ -1,6 +1,6 @@
 import collections
-from . import HydrusConstants as HC
-from . import HydrusExceptions
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
 import hashlib
 import os
 import queue
@@ -10,8 +10,8 @@ import sys
 import threading
 import time
 import traceback
-from . import HydrusData
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 
 HYDRUS_SESSION_LIFETIME = 30 * 86400
 

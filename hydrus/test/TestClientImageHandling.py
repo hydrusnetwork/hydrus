@@ -1,7 +1,7 @@
-from . import ClientConstants as CC
-from . import ClientImageHandling
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientImageHandling
 import collections
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import os
 import unittest
 

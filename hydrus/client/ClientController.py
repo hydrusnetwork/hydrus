@@ -3,44 +3,44 @@ import sys
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
    
-from . import ClientAPI
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientDB
-from . import ClientDaemons
-from . import ClientDefaults
-from . import ClientDownloading
-from . import ClientFiles
-from . import ClientGUI
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIScrolledPanelsManagement
-from . import ClientGUIStyle
-from . import ClientGUITopLevelWindows
-from . import ClientImportSubscriptions
-from . import ClientManagers
-from . import ClientNetworking
-from . import ClientNetworkingBandwidth
-from . import ClientNetworkingDomain
-from . import ClientNetworkingLogin
-from . import ClientNetworkingSessions
-from . import ClientOptions
-from . import ClientSearch
-from . import ClientTags
-from . import ClientThreading
+from hydrus.client import ClientAPI
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDB
+from hydrus.client import ClientDaemons
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientDownloading
+from hydrus.client import ClientFiles
+from hydrus.client.gui import ClientGUI
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIScrolledPanelsManagement
+from hydrus.client.gui import ClientGUIStyle
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.importing import ClientImportSubscriptions
+from hydrus.client import ClientManagers
+from hydrus.client.networking import ClientNetworking
+from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client import ClientOptions
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
 import hashlib
-from . import HydrusConstants as HC
-from . import HydrusController
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusThreading
-from . import HydrusVideoHandling
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusController
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusVideoHandling
 import gc
 import psutil
 import signal
@@ -667,7 +667,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
                             
-                            from . import ClientGUIDialogsQuick
+                            from hydrus.client.gui import ClientGUIDialogsQuick
                             
                             text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
                             text += os.linesep * 2
@@ -1020,7 +1020,7 @@ class Controller( HydrusController.HydrusController ):
             
             shortcut_sets = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
             
-            from . import ClientGUIShortcuts
+            from hydrus.client.gui import ClientGUIShortcuts
             
             ClientGUIShortcuts.ShortcutsManager( shortcut_sets = shortcut_sets )
             
@@ -1312,7 +1312,7 @@ class Controller( HydrusController.HydrusController ):
     
     def RestoreDatabase( self ):
         
-        from . import ClientGUIDialogsQuick
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
         with QP.DirDialog( self.gui, 'Select backup location.' ) as dlg:
             
@@ -1359,7 +1359,7 @@ class Controller( HydrusController.HydrusController ):
         
         QP.MonkeyPatchMissingMethods()
         
-        from . import ClientGUICore
+        from hydrus.client.gui import ClientGUICore
         
         ClientGUICore.GUICore()
         
@@ -1531,7 +1531,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     try:
                         
-                        from . import ClientLocalServer
+                        from hydrus.client import ClientLocalServer
                         
                         if service_type == HC.LOCAL_BOORU:
                             

@@ -1,6 +1,6 @@
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 

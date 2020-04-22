@@ -1,4 +1,4 @@
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import OpenSSL
 import os
 import stat

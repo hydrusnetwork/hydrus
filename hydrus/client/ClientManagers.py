@@ -1,12 +1,12 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientSearch
-from . import ClientServices
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusTags
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientSearch
+from hydrus.client import ClientServices
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTags
 import random
 import threading
 import collections
@@ -475,7 +475,7 @@ class ServicesManager( object ):
         
         self._lock = threading.Lock()
         self._keys_to_services: typing.Dict[ bytes, ClientServices.Service ] = {}
-        self._services_sorted: typing.List( ClientServices.Service ) = []
+        self._services_sorted: typing.List[ ClientServices.Service ] = []
         
         self.RefreshServices()
         
@@ -1034,6 +1034,35 @@ class TagSiblingsManager( object ):
             
         
     
+    def ExpandPredicate( self, service_key: bytes, predicate: ClientSearch.Predicate, service_strict: bool = False ):
+        
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        ideal_sibling_predicate = predicate
+        other_sibling_predicates = []
+        
+        if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
+            
+            tag = predicate.GetValue()
+            
+            ideal_sibling = self.CollapseTag( service_key, tag, service_strict = service_strict )
+            
+            ideal_sibling_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, ideal_sibling, predicate.IsInclusive() )
+            
+            other_siblings = set( self.GetAllSiblings( service_key, tag, service_strict = service_strict ) )
+            
+            other_siblings.discard( tag )
+            other_siblings.discard( ideal_sibling )
+            
+            other_sibling_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, sibling, predicate.IsInclusive() ) for sibling in other_siblings ]
+            
+            
+        return ( ideal_sibling_predicate, other_sibling_predicates )
+        
+    
     def GetSibling( self, service_key, tag, service_strict = False ):
         
         if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
@@ -1056,7 +1085,7 @@ class TagSiblingsManager( object ):
             
         
     
-    def GetAllSiblings( self, service_key, tag, service_strict = False ):
+    def GetAllSiblings( self, service_key, tag, service_strict = False ) -> typing.Set[ str ]:
         
         if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
@@ -1078,12 +1107,12 @@ class TagSiblingsManager( object ):
                 
             else:
                 
-                return [ tag ]
+                return { tag }
                 
             
-            all_siblings = list( reverse_lookup[ best_tag ] )
+            all_siblings = set( reverse_lookup[ best_tag ] )
             
-            all_siblings.append( best_tag )
+            all_siblings.add( best_tag )
             
             return all_siblings
             

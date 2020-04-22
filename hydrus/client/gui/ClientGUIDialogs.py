@@ -1,22 +1,24 @@
-from . import HydrusConstants as HC
-from . import ClientConstants as CC
-from . import ClientGUIACDropdown
-from . import ClientGUIFrames
-from . import ClientGUIFunctions
-from . import ClientGUICommon
-from . import ClientGUIListBoxes
-from . import ClientGUIShortcuts
-from . import ClientGUITopLevelWindows
-from . import HydrusExceptions
 import os
 import re
 import traceback
-from . import HydrusData
-from . import HydrusGlobals as HG
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUIFrames
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class Dialog( QP.Dialog ):
     

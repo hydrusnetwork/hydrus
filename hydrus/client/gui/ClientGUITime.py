@@ -1,16 +1,18 @@
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUIScrolledPanels
-from . import ClientGUITopLevelWindows
-from . import ClientImporting
-from . import ClientImportOptions
-from . import HydrusData
-from . import HydrusGlobals as HG
 import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportOptions
 
 class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
     
@@ -23,7 +25,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
-        from . import ClientDefaults
+        from hydrus.client import ClientDefaults
         
         defaults_panel = ClientGUICommon.StaticBox( self, 'reasonable defaults' )
         

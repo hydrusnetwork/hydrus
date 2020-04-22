@@ -23,7 +23,7 @@
 				<li>(navigate to your hydrus extract folder)</li>
 				<li>pip3 install virtualenv (if you need it)</li>
 				<li>mkdir venv</li>
-				<li>virtualenv venv</li>
+				<li>virtualenv --python=python3 venv</li>
 				<li>. venv/bin/activate</li>
 			</ul>
 			<p>That '. venv/bin/activate' line turns your venv on, and will be needed every time you run the client.pyw/server.py files. You can easily tuck it into a launch script.</p>
@@ -35,13 +35,13 @@
 			<p>You may want to do all that in smaller batches.</p>
 			<p>You will also need Qt5. Either PySide2 (default) or PyQt5 are supported, through qtpy. You can install, again, with pip:</p>
 			<ul>
-				<li>pip3 install qtpy PySide2</li>
+				<li>pip3 install qtpy PySide2==5.13.2</li>
 			</ul>
-			<p>I have had some stability trouble with the recent Qt 5.14, so you might like instead to do:</p>
+			<p>-or-</p>
 			<ul>
-				<li>pip3 install PySide2==5.13.2</li>
+				<li>pip3 install qtpy PyQtChart==5.13.1 PyQt5==5.13.1</li>
 			</ul>
-			<p>If your Linux package manager splits Qt into several pieces, you may not get QtCharts by default. This is optional but not required.</p>
+			<p>I have had some stability trouble with the recent Qt 5.14, so I recommend the 5.13.</p>
 			<p>And optionally, you can add these packages:</p>
 			<ul>
 				<li>lz4 - for some memory compression in the client</li>
@@ -49,10 +49,7 @@
 				<li>cloudscraper - for attempting to solve CloudFlare check pages</li>
 				<li>pysocks - for socks4/socks5 proxy support (although you may want to try "requests[socks]" instead)</li>
 				<li>mock httmock pyinstaller - if you want to run test.py and make a build yourself</li>
-			</ul>
-			<p>Depending on your OS, you might need something else. Ultimately, the best way to figure out if you have enough for hydrus is to just keep running client.pyw and see what it complains about missing. If you are not familiar with pip and get an error about a library already existing, know that you update an existing library with the --upgrade switch, like so:</p>
-			<ul>
-				<li>pip3 install --upgrade libraryname</li>
+				<li>PyWin32 pypiwin32 pywin32-ctypes - helpful to ensure you have if you want to make a build in Windows</li>
 			</ul>
 			<p>Here is a masterline with everything for general use:</p>
 			<ul>

@@ -1,18 +1,18 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientGUIDialogs
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIScrolledPanelsManagement
-from . import ClientGUITopLevelWindows
-from . import ClientThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIScrolledPanelsManagement
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client import ClientThreading
 import collections
-from . import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC
 import os
 import unittest
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusGlobals as HG
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 def HitButton( button ):
     

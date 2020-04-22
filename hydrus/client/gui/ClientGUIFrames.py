@@ -1,10 +1,12 @@
-from . import ClientConstants as CC
-from . import ClientGUITopLevelWindows
-from . import HydrusConstants as HC
-from . import HydrusGlobals as HG
 import os
+
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class ShowKeys( ClientGUITopLevelWindows.Frame ):
     

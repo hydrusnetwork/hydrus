@@ -1,11 +1,12 @@
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusText
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusText
+from hydrus.client.gui import QtPorting as QP
 
 def AppendMenu( menu, submenu, label ):
     
@@ -134,16 +135,11 @@ def BindMenuItem( menu_item, callable, *args, **kwargs ):
     
     menu_item.triggered.connect( event_callable )
     
-def DestroyMenu( window, menu ):
+def DestroyMenu( menu ):
     
-    # The below check does not seem to be necessary with Qt and just leads to spurious error messages. Keeping it in commented for future reference in case some kind of check turns out to be necessary.
-    # if the window we just popupmenu'd on is dead now (i.e. it died while the menu was open), destroying the menu will cause a crash and letting the event continue will cause a crash
-    
-    #if not window:
+    if menu is None:
         
-    #    message = 'A window just died before its menu could be safely destroyed! If an exception were not raised here, the program would crash! If you know you did something tricky, please avoid this in future. If you think you did something normal, please let hydrus dev know.'
-        
-    #    raise Exception( message )
+        return
         
     
     if QP.isValid( menu ):

@@ -1,19 +1,19 @@
-import calendar
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientTags
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientTags
 import collections
 import datetime
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import HydrusText
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 import re
 import threading
 import time
+import typing
 
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
@@ -92,52 +92,44 @@ SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS )
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
 IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : ' ' for char in IGNORED_TAG_SEARCH_CHARACTERS }
 
-def ConvertTagToSearchable( tag ):
+def ConvertSubtagToSearchable( subtag ):
     
-    if tag == '':
+    if subtag == '':
         
         return ''
         
     
-    while '**' in tag:
-        
-        tag = tag.replace( '**', '*' )
-        
+    subtag = CollapseWildcardCharacters( subtag )
     
-    if IsComplexWildcard( tag ):
+    if IsComplexWildcard( subtag ):
         
-        return tag
+        return subtag
         
     
-    tag = tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
+    subtag = subtag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
     
-    tag = HydrusText.re_multiple_spaces.sub( ' ', tag )
+    subtag = HydrusText.re_multiple_spaces.sub( ' ', subtag )
     
-    tag = tag.strip()
+    subtag = subtag.strip()
     
-    return tag
+    return subtag
     
-def ConvertEntryTextToSearchText( entry_text ):
+def ConvertTagToSearchable( tag ):
     
-    wildcard_text = entry_text
+    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
-    while '**' in wildcard_text:
+    searchable_subtag = ConvertSubtagToSearchable( subtag )
+    
+    return HydrusTags.CombineTag( namespace, searchable_subtag )
+    
+def CollapseWildcardCharacters( text ):
+    
+    while '**' in text:
         
-        wildcard_text = wildcard_text.replace( '**', '*' )
-        
-    
-    entry_text = ConvertTagToSearchable( entry_text )
-    
-    ( namespace, subtag ) = HydrusTags.SplitTag( entry_text )
-    
-    search_text = entry_text
-    
-    if len( subtag ) > 0 and not subtag.endswith( '*' ):
-        
-        search_text += '*'
+        text = text.replace( '**', '*' )
         
     
-    return ( wildcard_text, search_text )
+    return text
     
 def FilterPredicatesBySearchText( service_key, search_text, predicates ):
     
@@ -200,6 +192,8 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         return re.compile( beginning + s + end )
         
     
+    is_complex_wildcard = IsComplexWildcard( search_text )
+    
     re_predicate = compile_re( search_text )
     
     siblings_manager = HG.client_controller.tag_siblings_manager
@@ -214,12 +208,12 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
             
         else:
             
-            possible_tags = [ tag ]
+            possible_tags = { tag }
             
         
-        if not IsComplexWildcard( search_text ):
+        if not is_complex_wildcard:
             
-            possible_tags = list(map( ConvertTagToSearchable, possible_tags ))
+            possible_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
             
         
         for possible_tag in possible_tags:
@@ -245,22 +239,6 @@ def IsComplexWildcard( search_text ):
         
     
     if num_stars == 1 and not search_text.endswith( '*' ):
-        
-        return True
-        
-    
-    return False
-    
-def IsUnacceptableTagSearch( search_text ):
-    
-    if search_text in ( '', ':', '*' ):
-        
-        return True
-        
-    
-    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
-    
-    if namespace == '*':
         
         return True
         
@@ -1137,7 +1115,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Predicate'
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, predicate_type = None, value = None, inclusive = True, min_current_count = 0, min_pending_count = 0, max_current_count = None, max_pending_count = None ):
+    def __init__( self, predicate_type: int = None, value: object = None, inclusive: bool = True, min_current_count: HC.noneable_int = 0, min_pending_count: HC.noneable_int = 0, max_current_count: HC.noneable_int = None, max_pending_count: HC.noneable_int = None ):
         
         if isinstance( value, ( list, set ) ):
             
@@ -1519,7 +1497,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def ToString( self, with_count = True, sibling_service_key = None, render_for_user = False, or_under_construction = False ):
+    def ToString( self, with_count: bool = True, sibling_service_key: typing.Optional[ bytes ] = None, render_for_user: bool = False, or_under_construction: bool = False ):
         
         count_text = ''
         
@@ -2138,7 +2116,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 base += 'OR: '
                 
             
-            base += ' OR '.join( ( or_predicate.ToString( render_for_user = render_for_user ) for or_predicate in or_predicates ) )
+            base += ' OR '.join( ( or_predicate.ToString( render_for_user = render_for_user ) for or_predicate in or_predicates ) ) # pylint: disable=E1101
             
         elif self._predicate_type == PREDICATE_TYPE_LABEL:
             
@@ -2186,3 +2164,266 @@ SYSTEM_PREDICATE_ARCHIVE = Predicate( PREDICATE_TYPE_SYSTEM_ARCHIVE, None )
 SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM_LOCAL, None )
 
 SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None )
+
+class ParsedAutocompleteText( object ):
+    
+    def __init__( self, raw_input: str, collapse_search_characters: bool ):
+        
+        self.raw_input = raw_input
+        
+        self._collapse_search_characters = collapse_search_characters
+        
+        self.inclusive = not self.raw_input.startswith( '-' )
+        
+        self.raw_content = HydrusTags.CleanTag( self.raw_input )
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, ParsedAutocompleteText ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self.raw_input, self._collapse_search_characters ).__hash__()
+        
+    
+    def __repr__( self ):
+        
+        return 'AC Tag Text: {}'.format( self.raw_input )
+        
+    
+    def _GetSearchText( self, always_autocompleting: bool ):
+        
+        text = CollapseWildcardCharacters( self.raw_content )
+        
+        if self._collapse_search_characters:
+            
+            text = ConvertTagToSearchable( text )
+            
+        
+        if always_autocompleting:
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( text )
+            
+            if len( subtag ) > 0 and not subtag.endswith( '*' ):
+                
+                text = '{}*'.format( text )
+                
+            
+        
+        return text
+        
+    
+    def GetAddTagPredicate( self ):
+        
+        return Predicate( PREDICATE_TYPE_TAG, self.raw_content )
+        
+    
+    def GetImmediateFileSearchPredicate( self ):
+        
+        non_tag_predicates = self.GetNonTagFileSearchPredicates()
+        
+        if len( non_tag_predicates ) > 0:
+            
+            return non_tag_predicates[0]
+            
+        
+        tag_search_predicate = Predicate( PREDICATE_TYPE_TAG, self.raw_content, self.inclusive )
+        
+        return tag_search_predicate
+        
+    
+    def GetSearchText( self, always_autocompleting: bool ):
+        
+        return self._GetSearchText( always_autocompleting )
+        
+    
+    def GetNonTagFileSearchPredicates( self ):
+        
+        predicates = []
+        
+        if self.IsNamespaceSearch():
+            
+            search_text = self._GetSearchText( False )
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+            
+            predicate = Predicate( PREDICATE_TYPE_NAMESPACE, namespace, self.inclusive )
+            
+            predicates.append( predicate )
+            
+        elif self.IsExplicitWildcard():
+            
+            search_texts = [ self._GetSearchText( True ), self._GetSearchText( False ) ]
+            
+            search_texts = HydrusData.DedupeList( search_texts )
+            
+            predicates.extend( ( Predicate( PREDICATE_TYPE_WILDCARD, search_text, self.inclusive ) for search_text in search_texts ) )
+            
+        
+        return predicates
+        
+    
+    def IsAcceptableForTags( self ):
+        
+        search_text = self._GetSearchText( False )
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        
+        bad_namespace = namespace == '*'
+        bad_subtag = subtag in ( '', '*' )
+        
+        if bad_namespace or bad_subtag:
+            
+            return False
+            
+        
+        return True
+        
+    
+    def IsAcceptableForFiles( self ):
+        
+        search_text = self._GetSearchText( False )
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        
+        bad_namespace = namespace == '*'
+        bad_subtag = namespace == '' and subtag in ( '', '*' )
+        
+        if bad_namespace or bad_subtag:
+            
+            return False
+            
+        
+        return True
+        
+    
+    def IsEmpty( self ):
+        
+        return self.raw_input == ''
+        
+    
+    def IsExplicitWildcard( self ):
+        
+        if not self.IsAcceptableForFiles():
+            
+            return False
+            
+        
+        # user has intentionally put a '*' in
+        return '*' in self.raw_content
+        
+    
+    def IsNamespaceSearch( self ):
+        
+        if not self.IsAcceptableForFiles():
+            
+            return False
+            
+        
+        search_text = self._GetSearchText( False )
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        
+        is_namespace_search = namespace != '' and subtag in ( '', '*' )
+        
+        return is_namespace_search
+        
+    
+    def IsTagSearch( self ):
+        
+        return not ( self.IsEmpty() or self.IsExplicitWildcard() or self.IsNamespaceSearch() ) and self.IsAcceptableForFiles()
+        
+    
+    def SetInclusive( self, inclusive: bool ):
+        
+        self.inclusive = inclusive
+        
+    
+class PredicateResultsCache( object ):
+    
+    def __init__( self, predicates: typing.List[ Predicate ] ):
+        
+        self._predicates = predicates
+        
+    
+    def CanServeTagResults( self, strict_search_text: str, exact_match: bool ):
+        
+        return False
+        
+    
+    def FilterPredicates( self, service_key: bytes, search_text: str ):
+        
+        return []
+        
+    
+    def GetPredicates( self ):
+        
+        return self._predicates
+        
+    
+class PredicateResultsCacheInit( PredicateResultsCache ):
+    
+    def __init__( self ):
+        
+        PredicateResultsCache.__init__( self, [] )
+        
+    
+class PredicateResultsCacheSystem( PredicateResultsCache ):
+    
+    pass
+    
+class PredicateResultsCacheTag( PredicateResultsCache ):
+    
+    def __init__( self, predicates: typing.List[ Predicate ], strict_search_text: str, exact_match: bool ):
+        
+        PredicateResultsCache.__init__( self, predicates )
+        
+        self._strict_search_text = strict_search_text
+        
+        ( self._strict_search_text_namespace, self._strict_search_text_subtag ) = HydrusTags.SplitTag( self._strict_search_text )
+        
+        self._exact_match = exact_match
+        
+    
+    def CanServeTagResults( self, strict_search_text: str, exact_match: bool ):
+        
+        if self._exact_match:
+            
+            if exact_match and strict_search_text == self._strict_search_text:
+                
+                return True
+                
+            else:
+                
+                return False
+                
+            
+        else:
+            
+            # a cache for 'cha' is invalid for 'character:sam'
+            
+            ( strict_search_text_namespace, strict_search_text_subtag ) = HydrusTags.SplitTag( strict_search_text )
+            
+            if strict_search_text_namespace == self._strict_search_text_namespace:
+                
+                return strict_search_text_subtag.startswith( self._strict_search_text_subtag )
+                
+            else:
+                
+                return False
+                
+            
+        
+    
+    def FilterPredicates( self, service_key: bytes, search_text: str ):
+        
+        return FilterPredicatesBySearchText( service_key, search_text, self._predicates )
+        
+    

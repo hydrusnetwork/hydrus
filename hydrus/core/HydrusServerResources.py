@@ -1,10 +1,10 @@
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusImageHandling
-from . import HydrusNetworking
-from . import HydrusPaths
-from . import HydrusSerialisable
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
 import os
 import time
 import traceback
@@ -13,8 +13,8 @@ from twisted.internet.threads import deferToThread
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
 from twisted.web.static import File as FileResource, NoRangeStaticProducer
-from . import HydrusData
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 
 def GenerateEris( service ):
     

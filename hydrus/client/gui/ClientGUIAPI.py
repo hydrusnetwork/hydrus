@@ -1,18 +1,20 @@
-from . import ClientAPI
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUIFunctions
-from . import ClientGUIScrolledPanels
-from . import ClientGUITags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientAPI
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import QtPorting as QP
 
 class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPanel ):
     

@@ -1,18 +1,19 @@
-from . import ClientCaches
-from . import ClientConstants as CC
-from . import ClientGUIFunctions
-from . import ClientGUIMenus
-from . import ClientGUIShortcuts
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
 
 CHILD_POSITION_PADDING = 24
 FUZZY_PADDING = 10

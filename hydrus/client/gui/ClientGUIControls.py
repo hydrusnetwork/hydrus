@@ -1,24 +1,25 @@
-from . import ClientConstants as CC
-from . import ClientGUICommon
-from . import ClientGUICore as CGC
-from . import ClientGUIDialogs
-from . import ClientGUIFunctions
-from . import ClientGUIListCtrl
-from . import ClientGUIMenus
-from . import ClientGUIScrolledPanels
-from . import ClientGUITime
-from . import ClientGUITopLevelWindows
-from . import ClientParsing
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNetworking
-from . import HydrusText
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientParsing
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUITime
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
@@ -456,7 +457,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = 'Delete all selected?'
             
-            from . import ClientGUIDialogsQuick
+            from hydrus.client.gui import ClientGUIDialogsQuick
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             

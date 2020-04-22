@@ -1,18 +1,18 @@
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientDownloading
-from . import ClientDuplicates
-from . import ClientImporting
-from . import HydrusConstants as HC
-from . import HydrusGlobals as HG
-from . import HydrusData
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusTags
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientDownloading
+from hydrus.client import ClientDuplicates
+from hydrus.client.importing import ClientImporting
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 import os
 import threading
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+from hydrus.client.gui import QtPorting as QP
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -37,7 +37,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         # media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
         
-        from . import ClientGUIMPV
+        from hydrus.client.gui import ClientGUIMPV
         
         if ClientGUIMPV.MPV_IS_AVAILABLE:
             
@@ -267,7 +267,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
-        from . import ClientTags
+        from hydrus.client import ClientTags
         
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
@@ -456,7 +456,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title' ] )
         
-        from . import ClientGUITags
+        from hydrus.client.gui import ClientGUITags
         
         tsg = ClientGUITags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
         
@@ -514,7 +514,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         present_already_in_inbox_files = False
         present_already_in_archive_files = False
         
-        from . import ClientImportOptions
+        from hydrus.client.importing import ClientImportOptions
         
         quiet_file_import_options = ClientImportOptions.FileImportOptions()
         
@@ -586,7 +586,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        from . import ClientMedia
+        from hydrus.client import ClientMedia
         
         self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )

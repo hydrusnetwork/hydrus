@@ -1,14 +1,14 @@
-from . import ClientConstants as CC
+from hydrus.client import ClientConstants as CC
 import collections
 import hashlib
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusNetwork
-from . import HydrusSessions
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusSessions
 import os
 import unittest
-from . import HydrusData
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 
 class TestSessions( unittest.TestCase ):
     

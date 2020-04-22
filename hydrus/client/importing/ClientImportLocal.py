@@ -1,20 +1,20 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientFiles
-from . import ClientImporting
-from . import ClientImportFileSeeds
-from . import ClientImportOptions
-from . import ClientPaths
-from . import ClientTags
-from . import ClientThreading
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusGlobals as HG
-from . import HydrusPaths
-from . import HydrusSerialisable
-from . import HydrusThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientFiles
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client import ClientPaths
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusThreading
 import os
 import threading
 import time

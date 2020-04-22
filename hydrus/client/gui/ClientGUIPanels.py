@@ -1,27 +1,28 @@
-from . import ClientAPI
-from . import ClientConstants as CC
-from . import ClientGUIAPI
-from . import ClientGUIAsync
-from . import ClientGUICommon
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIListCtrl
-from . import ClientGUIScrolledPanelsReview
-from . import ClientGUITopLevelWindows
-from . import ClientPaths
-from . import ClientThreading
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusPaths
 import os
 import time
-from . import QtPorting as QP
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.client import ClientAPI
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientPaths
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIAPI
+from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIScrolledPanelsReview
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     

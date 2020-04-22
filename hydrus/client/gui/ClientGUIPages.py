@@ -1,27 +1,29 @@
-from . import HydrusConstants as HC
-from . import ClientConstants as CC
-from . import ClientGUICanvas
-from . import ClientGUICore as CGC
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
-from . import ClientGUIManagement
-from . import ClientGUIMenus
-from . import ClientGUIResults
-from . import ClientSearch
-from . import ClientGUIShortcuts
-from . import ClientThreading
 import collections
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusSerialisable
-from . import HydrusText
 import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUICanvas
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIManagement
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIResults
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtPorting as QP
 
 RESERVED_SESSION_NAMES = { '', 'just a blank page', 'last session', 'exit session' }
 
@@ -1369,7 +1371,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             page_name += ' (' + num_string + ')'
             
         
-        safe_page_name = QP.EscapeMnemonics( page_name )
+        safe_page_name = ClientGUIFunctions.EscapeMnemonics( page_name )
         
         existing_page_name = self.tabText( index )
         

@@ -1,20 +1,22 @@
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
-from . import ClientGUITopLevelWindows
-from . import ClientThreading
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
 import os
 import sys
 import traceback
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from . import QtPorting as QP
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
 
 class PopupWindow( QW.QFrame ):
     
@@ -1118,7 +1120,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
                 continue
                 
             
-            from . import ClientGUI
+            from hydrus.client.gui import ClientGUI
             
             if isinstance( tlw, ClientGUI.FrameGUI ):
                 

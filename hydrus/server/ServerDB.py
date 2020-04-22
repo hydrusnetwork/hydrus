@@ -1,22 +1,22 @@
 import collections
 import hashlib
-from . import HydrusConstants as HC
-from . import HydrusDB
-from . import HydrusEncryption
-from . import HydrusExceptions
-from . import HydrusNetwork
-from . import HydrusPaths
-from . import HydrusSerialisable
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusDB
+from hydrus.core import HydrusEncryption
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
 import os
 import random
-from . import ServerFiles
+from hydrus.server import ServerFiles
 import sqlite3
 import sys
 import time
 import traceback
-from . import HydrusData
-from . import HydrusTags
-from . import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusGlobals as HG
 
 def GenerateRepositoryMasterMapTableNames( service_id ):
     

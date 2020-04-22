@@ -1,14 +1,14 @@
 import collections
 import gc
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusDB
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
-from . import HydrusNATPunch
-from . import HydrusPaths
-from . import HydrusPubSub
-from . import HydrusThreading
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusDB
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNATPunch
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusPubSub
+from hydrus.core import HydrusThreading
 import os
 import random
 import sys

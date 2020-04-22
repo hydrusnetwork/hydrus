@@ -1,13 +1,15 @@
 import collections
-from . import ClientTags
-from . import HydrusConstants as HC
-from . import HydrusData
-from . import HydrusExceptions
-from . import HydrusGlobals as HG
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientTags
+from hydrus.client.gui import QtPorting as QP
 
 def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
@@ -144,7 +146,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
                 message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
                 
-                from . import ClientGUIDialogs
+                from hydrus.client.gui import ClientGUIDialogs
                 
                 with ClientGUIDialogs.DialogTextEntry( parent, message ) as dlg:
                     
@@ -318,6 +320,10 @@ def DialogIsOpen():
         
     
     return False
+    
+def EscapeMnemonics( str ):
+    
+    return str.replace( "&", "&&" )
     
 def GetTLWParents( widget ):
     

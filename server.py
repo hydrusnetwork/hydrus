@@ -6,30 +6,26 @@
 
 try:
     
-    from hydrus import HydrusPy2To3
-    
-    HydrusPy2To3.do_2to3_test()
-    
     import locale
     
     try: locale.setlocale( locale.LC_ALL, '' )
     except: pass
     
-    from hydrus import HydrusExceptions
-    from hydrus import HydrusConstants as HC
-    from hydrus import HydrusData
-    from hydrus import HydrusPaths
-    
     import os
     import sys
     import time
-    
-    from hydrus import ServerController
-    import threading
-    from twisted.internet import reactor
-    from hydrus import HydrusGlobals as HG
-    from hydrus import HydrusLogger
     import traceback
+    import threading
+    
+    from hydrus.core import HydrusExceptions
+    from hydrus.core import HydrusConstants as HC
+    from hydrus.core import HydrusData
+    from hydrus.core import HydrusPaths
+    
+    from hydrus.server import ServerController
+    from twisted.internet import reactor
+    from hydrus.core import HydrusGlobals as HG
+    from hydrus.core import HydrusLogger
     
     #
     
@@ -134,9 +130,6 @@ try:
         
     
 except Exception as e:
-    
-    import traceback
-    import os
     
     error_trace = traceback.format_exc()
     

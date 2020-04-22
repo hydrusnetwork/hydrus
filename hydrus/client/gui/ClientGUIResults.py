@@ -1,44 +1,48 @@
-from . import HydrusConstants as HC
-from . import ClientConstants as CC
-from . import ClientData
-from . import ClientGUIDragDrop
-from . import ClientFiles
-from . import ClientGUICanvas
-from . import ClientGUICanvasFrame
-from . import ClientGUICore as CGC
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsManage
-from . import ClientGUIDialogsQuick
-from . import ClientGUIDuplicates
-from . import ClientGUIExport
-from . import ClientGUIFunctions
-from . import ClientGUIMedia
-from . import ClientGUIMenus
-from . import ClientGUIScrolledPanels
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUIScrolledPanelsManagement
-from . import ClientGUIShortcuts
-from . import ClientGUITags
-from . import ClientGUITopLevelWindows
-from . import ClientMedia
-from . import ClientPaths
-from . import ClientSearch
-from . import ClientTags
-from . import HydrusExceptions
-from . import HydrusNetwork
-from . import HydrusPaths
 import itertools
 import os
 import random
 import time
 import traceback
-from . import QtPorting as QP
-from . import HydrusData
-from . import HydrusGlobals as HG
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusPaths
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientFiles
+from hydrus.client import ClientMedia
+from hydrus.client import ClientPaths
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client.gui import ClientGUIDragDrop
+from hydrus.client.gui import ClientGUICanvas
+from hydrus.client.gui import ClientGUICanvasFrame
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsManage
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDuplicates
+from hydrus.client.gui import ClientGUIExport
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMedia
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIScrolledPanelsManagement
+from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import ClientGUITopLevelWindows
+
+from hydrus.client.gui import QtPorting as QP
+
+from hydrus.client.gui import QtPorting as QP
 import typing
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):

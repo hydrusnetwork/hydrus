@@ -1,6 +1,6 @@
-from . import hexagonitswfheader
-from . import HydrusConstants as HC
-from . import HydrusData
+from hydrus.external import hexagonitswfheader
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 import os
 import subprocess
 import time

@@ -1,55 +1,56 @@
-from . import HydrusConstants as HC
-from . import HydrusExceptions
-from . import HydrusSerialisable
-from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientGUIACDropdown
-from . import ClientGUICanvas
-from . import ClientGUICanvasFrame
-from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUICore as CGC
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
-from . import ClientGUIFunctions
-from . import ClientGUIImport
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIMedia
-from . import ClientGUIMenus
-from . import ClientGUIParsing
-from . import ClientGUIResults
-from . import ClientGUIScrolledPanels
-from . import ClientGUIFileSeedCache
-from . import ClientGUIGallerySeedLog
-from . import ClientGUIScrolledPanelsEdit
-from . import ClientGUISearch
-from . import ClientGUITopLevelWindows
-from . import ClientImportGallery
-from . import ClientImportLocal
-from . import ClientImportOptions
-from . import ClientImportSimpleURLs
-from . import ClientImportWatchers
-from . import ClientMedia
-from . import ClientParsing
-from . import ClientPaths
-from . import ClientSearch
-from . import ClientTags
-from . import ClientThreading
-from . import HydrusData
-from . import HydrusGlobals as HG
-from . import HydrusTags
-from . import HydrusThreading
 import os
 import random
 import time
 import traceback
 import typing
-from . import QtPorting as QP
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from . import QtPorting as QP
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusThreading
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDefaults
+from hydrus.client import ClientMedia
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIACDropdown
+from hydrus.client.gui import ClientGUICanvas
+from hydrus.client.gui import ClientGUICanvasFrame
+from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIControls
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIImport
+from hydrus.client.gui import ClientGUIListBoxes
+from hydrus.client.gui import ClientGUIListCtrl
+from hydrus.client.gui import ClientGUIMedia
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIParsing
+from hydrus.client.gui import ClientGUIResults
+from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIFileSeedCache
+from hydrus.client.gui import ClientGUIGallerySeedLog
+from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUISearch
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.importing import ClientImportGallery
+from hydrus.client.importing import ClientImportLocal
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing import ClientImportSimpleURLs
+from hydrus.client.importing import ClientImportWatchers
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
@@ -921,7 +922,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel )
+        self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel, ellipsize_end = True )
         self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.global_pixmaps().refresh, self.RefreshMaintenanceNumbers )
         
         menu_items = []
@@ -947,7 +948,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._searching_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'finding potential duplicates' )
         
-        self._eligible_files = ClientGUICommon.BetterStaticText( self._searching_panel )
+        self._eligible_files = ClientGUICommon.BetterStaticText( self._searching_panel, ellipsize_end = True )
         
         menu_items = []
         
@@ -989,7 +990,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
         
-        self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
+        self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel, ellipsize_end = True )
         self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.global_pixmaps().refresh, self.RefreshDuplicateNumbers )
         
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
@@ -1538,7 +1539,8 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import summary' )
         
-        self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
+        self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
+        
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
@@ -3108,6 +3110,10 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._page_url_input.setPlaceholderText( 'url to be parsed by the selected formula' )
         
         self._formulae = ClientGUICommon.BetterChoice( self._simple_parsing_jobs_panel )
+        
+        formulae_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._formulae, 10 )
+        
+        self._formulae.setMinimumWidth( formulae_width )
         
         menu_items = []
         

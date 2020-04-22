@@ -1,5 +1,5 @@
-from . import HydrusServer
-from . import ServerServerResources
+from hydrus.core import HydrusServer
+from hydrus.server import ServerServerResources
 
 class HydrusServiceRestricted( HydrusServer.HydrusService ):
     
