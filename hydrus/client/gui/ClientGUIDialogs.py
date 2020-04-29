@@ -17,7 +17,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 
 class Dialog( QP.Dialog ):
@@ -71,7 +70,7 @@ class Dialog( QP.Dialog ):
     
     def SetInitialSize( self, size: QC.QSize ):
         
-        display_size = ClientGUITopLevelWindows.GetDisplaySize( self )
+        display_size = ClientGUIFunctions.GetDisplaySize( self )
         
         width = min( display_size.width(), size.width() )
         height = min( display_size.height(), size.height() )

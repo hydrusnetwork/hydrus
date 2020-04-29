@@ -592,9 +592,18 @@ class NetworkJob( object ):
                     
                 except Exception as e:
                     
+                    if isinstance( e, cloudscraper.exceptions.CloudflareReCaptchaProvider ):
+                        
+                        message = 'The page had a captcha, and hydrus does not yet plug cloudscraper into a captcha-solving service.'
+                        
+                    else:
+                        
+                        message = str( e )
+                        
+                    
                     HydrusData.PrintException( e )
                     
-                    raise HydrusExceptions.CloudFlareException( 'Looks like an unsolvable CloudFlare issue: {}'.format( str( e ) ) )
+                    raise HydrusExceptions.CloudFlareException( 'Looks like an unsolvable CloudFlare issue: {}'.format( message ) )
                     
                 
                 raise HydrusExceptions.ShouldReattemptNetworkException( 'CloudFlare needed solving.' )

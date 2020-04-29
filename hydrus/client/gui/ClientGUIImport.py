@@ -31,7 +31,7 @@ from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportLocal
@@ -51,7 +51,7 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
     def _EditOptions( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit checker options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit checker options' ) as dlg:
             
             panel = ClientGUITime.EditCheckerOptions( dlg, self._checker_options )
             
@@ -108,7 +108,7 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _EditOptions( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit file import options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit file import options' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditFileImportOptions( dlg, self._file_import_options, self._show_downloader_options )
             
@@ -885,7 +885,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         import_folder = ClientImportLocal.ImportFolder( 'import folder' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit import folder' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import folder' ) as dlg:
             
             panel = EditImportFolderPanel( dlg, import_folder )
             
@@ -938,7 +938,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for import_folder in import_folders:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit import folder' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import folder' ) as dlg:
                 
                 panel = EditImportFolderPanel( dlg, import_folder )
                 
@@ -1207,7 +1207,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
             filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
             
@@ -1365,7 +1365,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( service_key, filename_tagging_options ) = data
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
                 
                 panel = EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
                 
@@ -2109,7 +2109,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _EditOptions( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._tag_import_options, self._show_downloader_options, allow_default_selection = self._allow_default_selection )
             

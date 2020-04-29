@@ -20,7 +20,7 @@ from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
@@ -483,7 +483,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         payload = self._GetExportableSourcesString()
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
             
             panel = ClientGUISerialisable.PngExportPanel( dlg, payload )
             
@@ -538,7 +538,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             if self._file_seed_cache_set_callable is None: # throw up a dialog that edits the file_seed cache in place
                 
-                with ClientGUITopLevelWindows.DialogNullipotent( self, 'file import status' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'file import status' ) as dlg:
                     
                     panel = EditFileSeedCachePanel( dlg, self._controller, file_seed_cache )
                     
@@ -551,7 +551,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                 
                 dupe_file_seed_cache = file_seed_cache.Duplicate()
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'file import status' ) as dlg:
                     
                     panel = EditFileSeedCachePanel( dlg, self._controller, dupe_file_seed_cache )
                     
@@ -569,7 +569,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             title = 'file import status'
             frame_key = 'file_import_status'
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
             
             panel = EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
             

@@ -627,11 +627,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if self._tag_import_options.HasAdditionalTags():
                         
-                        in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                        media_result = HG.client_controller.Read( 'media_result', hash )
                         
                         downloaded_tags = []
                         
-                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
                         
                         if len( service_keys_to_content_updates ) > 0:
                             

@@ -1,12 +1,16 @@
 from hydrus.client import ClientConstants as CC
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
+from hydrus.client import ClientMedia
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientRatings
+import collections
 import os
+import random
 import unittest
 from mock import patch
 
@@ -392,12 +396,41 @@ class TestFileImportOptions( unittest.TestCase ):
         self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         
     
+def GetMediaResult( hash, in_inbox, service_key, deleted_tags ):
+    
+    file_id = 123
+    size = random.randint( 8192, 20 * 1048576 )
+    mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+    width = random.randint( 200, 4096 )
+    height = random.randint( 200, 4096 )
+    duration = random.choice( [ 220, 16.66667, None ] )
+    has_audio = random.choice( [ True, False ] )
+    
+    file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+    
+    service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+    
+    service_keys_to_statuses_to_tags[ service_key ] = { HC.CONTENT_STATUS_DELETED : deleted_tags }
+    
+    tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+    
+    locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set(), inbox = in_inbox )
+    ratings_manager = ClientRatings.RatingsManager( {} )
+    file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
+    
+    media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+    
+    return media_result
+    
 class TestTagImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
+        example_service_key = HG.test_controller.example_tag_repo_service_key
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -410,7 +443,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         self.assertEqual( blacklist.Filter( some_tags ), some_tags )
         
-        self.assertEqual( default_tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), {} )
+        self.assertEqual( default_tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), {} )
         
         #
         
@@ -433,6 +466,8 @@ class TestTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
         
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        
         #
         
         tag_blacklist = ClientTags.TagFilter()
@@ -443,7 +478,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_import_options = ClientImportOptions.TagImportOptions( tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
-        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags )
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
         self.assertIn( example_service_key, result )
         
@@ -456,12 +491,43 @@ class TestTagImportOptions( unittest.TestCase ):
         self.assertTrue( len( content_updates ), len( filtered_tags ) )
         
     
+    def test_external_additional_tags( self ):
+        
+        some_tags = {}
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = HG.test_controller.example_tag_repo_service_key
+        
+        external_service_keys_to_tags = { example_service_key : { 'bodysuit', 'character:samus aran', 'series:metroid' } }
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        
+        #
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_service_keys_to_tags = external_service_keys_to_tags )
+        
+        self.assertIn( example_service_key, result )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        content_updates = result[ example_service_key ]
+        
+        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        
+        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        
+    
     def test_services( self ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
         example_service_key_1 = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         example_service_key_2 = HG.test_controller.example_tag_repo_service_key
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key_1, set() )
         
         #
         
@@ -472,7 +538,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
-        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags )
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
         self.assertIn( example_service_key_1, result )
         self.assertNotIn( example_service_key_2, result )
@@ -483,7 +549,99 @@ class TestTagImportOptions( unittest.TestCase ):
         
         self.assertEqual( len( content_updates_1 ), 3 )
         
-
+    
+    def test_overwrite_deleted_regular( self ):
+        
+        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = HG.test_controller.example_tag_repo_service_key
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        
+        #
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
+        
+        self.assertIn( example_service_key, result )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        content_updates = result[ example_service_key ]
+        
+        filtered_tags = { 'character:samus aran' }
+        
+        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        
+        #
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
+        
+        self.assertIn( example_service_key, result )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        content_updates = result[ example_service_key ]
+        
+        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        
+        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        
+    
+    def test_overwrite_deleted_external_additional_tags( self ):
+        
+        some_tags = {}
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = HG.test_controller.example_tag_repo_service_key
+        
+        external_service_keys_to_tags = { example_service_key : { 'bodysuit', 'character:samus aran', 'series:metroid' } }
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        
+        #
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_service_keys_to_tags = external_service_keys_to_tags )
+        
+        self.assertIn( example_service_key, result )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        content_updates = result[ example_service_key ]
+        
+        filtered_tags = { 'character:samus aran' }
+        
+        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        
+        #
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_service_keys_to_tags = external_service_keys_to_tags )
+        
+        self.assertIn( example_service_key, result )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        content_updates = result[ example_service_key ]
+        
+        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        
+        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        
+    
 class TestServiceTagImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
@@ -491,6 +649,8 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -503,7 +663,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         self.assertEqual( default_service_tag_import_options._to_already_in_archive, True )
         self.assertEqual( default_service_tag_import_options._only_add_existing_tags, False )
         
-        self.assertEqual( default_service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
+        self.assertEqual( default_service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), set() )
         
     
     def test_get_tags_filtering( self ):
@@ -512,11 +672,13 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        
         #
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags )
         
         #
         
@@ -526,7 +688,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'character:samus aran', 'series:metroid' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran', 'series:metroid' } )
         
         #
         
@@ -538,7 +700,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'character:samus aran' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
     
     def test_additional( self ):
@@ -547,11 +709,67 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        
         #
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = [ 'wew' ] )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags.union( [ 'wew' ] ) )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags.union( [ 'wew' ] ) )
+        
+    
+    def test_overwrite_deleted_get_tags_filtering( self ):
+        
+        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = HydrusData.GenerateKey()
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = False )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags )
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags_overwrite_deleted = True )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        
+    
+    def test_overwrite_deleted_additional( self ):
+        
+        some_tags = set()
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = HydrusData.GenerateKey()
+        
+        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = False )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = True )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, get_tags_overwrite_deleted = True )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
     
     def test_application( self ):
@@ -560,29 +778,32 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
+        inbox_media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        archive_media_result = GetMediaResult( example_hash, False, example_service_key, set() )
+        
         #
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags )
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True, example_hash, some_tags ), set() )
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False, example_hash, some_tags ), set() )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), some_tags )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), set() )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, archive_media_result, some_tags ), set() )
         
         #
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True, example_hash, some_tags ), some_tags )
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False, example_hash, some_tags ), set() )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), set() )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), some_tags )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, archive_media_result, some_tags ), set() )
         
         #
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True, example_hash, some_tags ), set() )
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False, example_hash, some_tags ), some_tags )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), set() )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), set() )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, archive_media_result, some_tags ), some_tags )
         
     
     def test_existing( self ):
@@ -592,13 +813,15 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
+        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        
         #
         
         HG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), existing_tags )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), existing_tags )
         
         #
         
@@ -613,6 +836,6 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         
     

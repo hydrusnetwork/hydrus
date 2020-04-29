@@ -22,7 +22,7 @@ from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 from hydrus.client.networking import ClientNetworking
@@ -132,7 +132,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def CanOK( self ):
+    def UserIsOKToOK( self ):
         
         veto_errors = []
         
@@ -418,7 +418,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( credential_definitions ) > 0:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit login' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login' ) as dlg:
                 
                 panel = EditLoginCredentialsPanel( dlg, credential_definitions, credentials )
                 
@@ -806,7 +806,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( credential_definitions ) > 0:
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit login' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login' ) as dlg:
                     
                     credentials = dict( credentials_tuple )
                     
@@ -1394,7 +1394,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         new_credential_definition = ClientNetworkingLogin.LoginCredentialDefinition()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
             panel = EditLoginCredentialDefinitionPanel( dlg_edit, new_credential_definition )
             
@@ -1548,7 +1548,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for credential_definition in credential_definitions:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditLoginCredentialDefinitionPanel( dlg, credential_definition )
                 
@@ -1687,7 +1687,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( credential_definitions ) > 0:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit login' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login' ) as dlg:
                 
                 panel = EditLoginCredentialsPanel( dlg, credential_definitions, self._test_credentials )
                 
@@ -1792,7 +1792,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditLoginStep( self, login_step ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit login step' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login step' ) as dlg:
             
             panel = EditLoginStepPanel( dlg, login_step )
             
@@ -1825,7 +1825,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for test_result in self._test_listctrl.GetData( only_selected = True ):
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'login test result' )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'login test result' )
             
             panel = ReviewTestResultPanel( frame, test_result )
             
@@ -1917,7 +1917,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         new_login_script = ClientNetworkingLogin.LoginScriptDomain()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
             panel = EditLoginScriptPanel( dlg_edit, new_login_script )
             
@@ -1965,7 +1965,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for login_script in login_scripts:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditLoginScriptPanel( dlg, login_script )
                 

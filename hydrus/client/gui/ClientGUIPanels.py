@@ -21,7 +21,7 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
@@ -528,7 +528,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             title = 'waiting for API access permissions request'
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title ) as dlg:
                 
                 panel = ClientGUIAPI.CaptureAPIAccessPermissionsRequestPanel( dlg )
                 
@@ -559,7 +559,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             title = 'edit api access permissions'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                 
                 panel = ClientGUIAPI.EditAPIPermissionsPanel( dlg, api_permissions )
                 
@@ -626,7 +626,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 title = 'edit api access permissions'
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
                     panel = ClientGUIAPI.EditAPIPermissionsPanel( dlg, api_permissions )
                     
@@ -2117,7 +2117,7 @@ class ReviewServicePanel( QW.QWidget ):
         
         def _MigrateTags( self ):
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'migrate tags' )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'migrate tags' )
             
             panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._service.GetServiceKey() )
             
@@ -2195,7 +2195,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             if result == QW.QDialog.Accepted:
                 
-                def do_it():
+                def do_it( service ):
                     
                     hashes = HG.client_controller.Read( 'trash_hashes' )
                     
@@ -2205,10 +2205,10 @@ class ReviewServicePanel( QW.QWidget ):
                     
                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
-                    HG.client_controller.pub( 'service_updated', self._service )
+                    HG.client_controller.pub( 'service_updated', service )
                     
                 
-                HG.client_controller.CallToThread( do_it )
+                HG.client_controller.CallToThread( do_it, self._service )
                 
             
         

@@ -1,4 +1,5 @@
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -269,7 +270,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def AddDatas( self, datas ):
+    def AddDatas( self, datas: typing.Iterable[ object ] ):
         
         for data in datas:
             
@@ -289,7 +290,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.customContextMenuRequested.connect( self.EventShowMenu )
         
     
-    def DeleteDatas( self, datas ):
+    def DeleteDatas( self, datas: typing.Iterable[ object ] ):
         
         deletees = [ ( self._data_to_indices[ data ], data ) for data in datas ]
         
@@ -432,7 +433,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
         
     
-    def HasData( self, data ):
+    def HasData( self, data: object ):
         
         return data in self._data_to_indices
         
@@ -459,7 +460,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def SelectDatas( self, datas ):
+    def SelectDatas( self, datas: typing.Iterable[ object ] ):
         
         for data in datas:
             
@@ -472,7 +473,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def SetData( self, datas ):
+    def SetData( self, datas: typing.Iterable[ object ] ):
         
         existing_datas = set( self._data_to_indices.keys() )
         
@@ -530,7 +531,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.listCtrlChanged.emit()
         
     
-    def UpdateDatas( self, datas = None ):
+    def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None ):
         
         if datas is None:
             
@@ -578,14 +579,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         return sort_data_has_changed
     
 
-    def SetNonDupeName( self, obj ):
+    def SetNonDupeName( self, obj: object ):
 
         current_names = { o.GetName() for o in self.GetData() if o is not obj }
 
         HydrusSerialisable.SetNonDupeName( obj, current_names )
         
     
-    def ReplaceData( self, old_data, new_data ):
+    def ReplaceData( self, old_data: object, new_data: object ):
         
         new_data = QP.ListsToTuples( new_data )
         
@@ -663,10 +664,10 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         choice_tuples = [ ( default.GetName(), default, selected ) for default in defaults ]
         
-        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
         from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select the defaults to add' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             
@@ -718,10 +719,10 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if export_object is not None:
             
-            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             from hydrus.client.gui import ClientGUISerialisable
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
                 
                 panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
                 
@@ -748,10 +749,10 @@ class BetterListCtrlPanel( QW.QWidget ):
             return
             
         
-        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
         from hydrus.client.gui import ClientGUISerialisable
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
             panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
             

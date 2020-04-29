@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 395</h3></li>
+				<ul>
+					<li>some more suggested tags fixes/qol:</li>
+					<li>favourite tags now correctly refreshes on new media</li>
+					<li>the tag suggestion lists in manage tags now discard current and pending tags that _all_ the current media already have, and all tag suggestion lists update this filter any time the media gets a tag content update! they _should_ update live now</li>
+					<li>all tag and predicate taglists now try to move the selection to a 'nice' neigbour when a keyboard enter activation results in the current selection being removed (e.g. as in these tag suggestion lists). the nice selection should be the tag after, before, or at the top of the list, and should make it nicer to keep navigating the list and add tags with your keyboard</li>
+					<li>all tag and predicate taglists now try to preserve selection on simple clear-and-set data refreshes</li>
+					<li>.</li>
+					<li>deleted tags overwrite update:</li>
+					<li>due to an unfortunate oversight, until now tag parsing has not filtered out previously deleted tags from the tags it parses and sends to the local database</li>
+					<li>as the majority of downloaded files are parsed once per site per user and in a similar time window before manual editing ever occurs, and most non-tag-sibling-eligible bad tags are site specific or not parsed to begin with, and as these undesired tags were not broadcast up to the tag repository, this problem has not been very obvious and I believe has not affected most users too much. this is however a reason why some users who have more recently downloaded many older files are seeing smaller 'deleted mappings' counts on their ptr review panel (and some low quality tags in their db), as they have been re-adding previously deleted tags to their local store</li>
+					<li>this has been fixed. tag import options now load the pending importee file's metadata before tags are filtered and discard currently deleted tags from those to be added or pended. this applies to parsed tags, additional tags, and those tags added through special other means, such as from a parent gallery page. </li>
+					<li>if you do wish to allow parsed or additional tags to overwrite currently deleted tags for a particular job, the cog icons on the edit tag import options panel now allow you to permit overwrite for either</li>
+					<li>tags added via hard drive imports or the migrate tags tool still overwrite deleted tags as before</li>
+					<li>as this is a local-only problem, there is thankfully a retroactive fix for this issue for tag repository domains, involving a content reprocess run to re-apply deleted tags. I am not activating this automatically this week as this is a heavy job for the ptr and I need to study the true fallout of the problem more, but I may in future, likely as a smaller and more targeted maintenance job. advanced users can do it now under the ptr's review services panel</li>
+					<li>I regret missing this, and I am sorry for any inconvenience. I only discovered it through the serendipity of some users recently reporting unusual deleted counts and a personal item in my todo to check the reliability of deleted mapping filtering for local tag domains--turns out it never got added, and we never specifically noticed, fugg</li>
+					<li>there are now unit tests for the improved tag filtering pipeline and both of these new overwrite options</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>hydrus can now use several different zoom 'centerpoints' about which to expand and shrink a zooming file. this was previously hardcoded to the center of the media. under options->media, you can now set it to be the media window center (the new default, which feels much nicer after a pan), the mouse cursor, the old media center, or the media top-left corner</li>
+					<li>cleaned up the related zoom positioning code, and removed the jarring old re-centering off-screen rescue hack when zooming out to canvas zoom</li>
+					<li>added a warning about big zooms to the media options page</li>
+					<li>fixed tag autocomplete filtering in python 3.7 so 'character:aran' matches 'character:samus aran' again</li>
+					<li>when the hover windows on a media viewer have focus, they _should_ now pass up all options->shortcuts shortcuts to the media viewer</li>
+					<li>mouse back/forward buttons _should_ now be supported in the shortcuts system, as much as your OS allows them to work like regular clicks</li>
+					<li>fixed a rare crash with the 'clear trash' button</li>
+					<li>the client will now not re-analyze tables that have been previously scanned with at least 100k rows in the normal 'soft' maintenance cycle, as this is an expensive operation with limited benefit</li>
+					<li>the client will now not vacuum database files greater than 1GB in the normal 'soft' maintenance cycle, as this is an expensive operation with limited benefit</li>
+					<li>the new 'cannot vacuum because xxxx' log entry is now only ever printed once per boot. however due to the above change, it likely won't appear in the normal maintenance cycle anyway now</li>
+					<li>cleaned up some vacuum code</li>
+					<li>reworked the panel system to better test data validity vs 'woah, you sure you want to do this?' tests and generally cleaned and simplified the canok/cancancel/isvalid testing logic for all panels. panels like manage siblings will now not produce two message boxes if you try to ok them on an uncommited pair and then back out of the ok</li>
+					<li>refactored the top level window code and improved scrollable panel code typing</li>
+					<li>more standalone gui function code refactoring</li>
+					<li>fixed a click-selection-test bug when clicking on certain whitespace in certain predicate lists</li>
+					<li>the text of the cloudflare-specific error when encountering a captcha page is improved</li>
+					<li>cleaned up some tag list menu copy and select code, both the menu labels and the copy action, for unusual tags. the 'copyable tags' fetching code is now flexible and unified for menu and action</li>
+					<li>cleaned up the taglist sibling copy code, eliminating the chance of dupes</li>
+					<li>fixed a _little_ of the wording on the discard/exclude tag list menu labels for negated predicates, it still feels a bit awkward and I will keep working here</li>
+					<li>cleaned up some old media metadata fetching code</li>
+					<li>misc import code typing</li>
+					<li>misc list/iterable typing improvements</li>
+					<li>added some misc media-tag tool code</li>
+					<li>unified the tag import options tag filtering pipeline somewhat to deal with the deleted overwrite situation</li>
+					<li>improved a debug ui test to no longer need window focus</li>
+					<li>misc help cleanup</li>
+				</ul>
 				<li><h3>version 394</h3></li>
 				<ul>
 					<li>autocomplete cleanup:</li>

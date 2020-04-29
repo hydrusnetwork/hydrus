@@ -49,7 +49,7 @@ from hydrus.client.gui import ClientGUIPanels
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingContexts
@@ -701,7 +701,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'migrating files' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'migrating files' ) as dlg:
             
             panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
             
@@ -889,7 +889,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
         
         # no parent because this has to outlive the gui, obvs
         
-        with ClientGUITopLevelWindows.DialogNullipotent( None, 'migrating files' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( None, 'migrating files' ) as dlg:
             
             panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
             
@@ -1919,7 +1919,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + network_context.ToString() ) as dlg_2:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit bandwidth rules for ' + network_context.ToString() ) as dlg_2:
             
             summary = network_context.GetSummary()
             
@@ -2009,7 +2009,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             parent = self.window().parentWidget()
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review bandwidth for ' + network_context.ToString() )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( parent, 'review bandwidth for ' + network_context.ToString() )
             
             panel = ReviewNetworkContextBandwidthPanel( frame, self._controller, network_context )
             
@@ -2342,7 +2342,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             choice_tuples.extend( [ ( 'Login Script: ' + login_script.GetName(), login_script, True ) for login_script in new_login_scripts ] )
             choice_tuples.extend( [ ( 'Domain Metadata: ' + domain_metadata.GetDomain(), domain_metadata, True ) for domain_metadata in new_domain_metadatas ] )
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'select objects to add' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select objects to add' ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
                 
@@ -3077,7 +3077,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             file_import_options = self._file_import_options.GetValue()
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
                 
                 panel = ClientGUIImport.EditLocalImportFilenameTaggingPanel( dlg, paths )
                 
@@ -3634,7 +3634,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _EditRules( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + self._network_context.ToString() ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit bandwidth rules for ' + self._network_context.ToString() ) as dlg:
             
             summary = self._network_context.GetSummary()
             
@@ -3872,7 +3872,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Add( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'enter new network context' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'enter new network context' ) as dlg:
             
             network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'example.com' )
             
@@ -4017,7 +4017,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             parent = self.window().parentWidget()
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review session for ' + network_context.ToString() )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( parent, 'review session for ' + network_context.ToString() )
             
             panel = ReviewNetworkSessionPanel( frame, self._session_manager, network_context )
             
@@ -4097,7 +4097,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Add( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit cookie' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit cookie' ) as dlg:
             
             name = 'name'
             value = '123'
@@ -4185,7 +4185,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for cookie in self._listctrl.GetData( only_selected = True ):
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit cookie' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit cookie' ) as dlg:
                 
                 name = cookie.name
                 value = cookie.value

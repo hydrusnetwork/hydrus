@@ -20,10 +20,11 @@ from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
+from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 class RatingLikeCanvas( ClientGUICommon.RatingLike ):
@@ -304,13 +305,6 @@ class CanvasHoverFrame( QW.QFrame ):
             
             self._position_initialised = True
             
-        
-    
-    def keyPressEvent( self, event ):
-        
-        # sendEvent here does some shortcutoverride pain in the neck
-        
-        self._my_canvas.keyPressEvent( event )
         
     
     def SetDisplayMedia( self, canvas_key, media ):
@@ -644,7 +638,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
             
@@ -665,7 +659,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
             

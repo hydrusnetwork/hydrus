@@ -300,6 +300,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'total_pages_warning' ] = 165
         
+        from hydrus.client.gui import ClientGUICanvas
+        
+        self._dictionary[ 'integers' ][ 'media_viewer_zoom_center' ] = ClientGUICanvas.ZOOM_CENTERPOINT_VIEWER_CENTER
+        
         self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
         
         self._dictionary[ 'integers' ][ 'shutdown_work_period' ] = 86400

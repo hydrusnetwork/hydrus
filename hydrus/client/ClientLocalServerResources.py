@@ -1360,7 +1360,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIR
                 
                 hash = request.parsed_request_args.GetValue( 'hash', bytes )
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                media_result = HG.client_controller.Read( 'media_result', hash )
                 
             else:
                 
@@ -1537,7 +1537,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
                 
                 hash = request.parsed_request_args.GetValue( 'hash', bytes )
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                media_result = HG.client_controller.Read( 'media_result', hash )
                 
             else:
                 

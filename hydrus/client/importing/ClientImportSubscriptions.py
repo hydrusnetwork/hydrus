@@ -562,11 +562,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                                 hash = file_seed.GetHash()
                                 
-                                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                                media_result = HG.client_controller.Read( 'media_result', hash )
                                 
                                 downloaded_tags = []
                                 
-                                service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                                service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
                                 
                                 if len( service_keys_to_content_updates ) > 0:
                                     
@@ -1332,9 +1332,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._merge_query_publish_events = merge_query_publish_events
         
     
-    def SetQueries( self, queries: typing.List[ ClientImportSubscriptionQuery.SubscriptionQuery ] ):
+    def SetQueries( self, queries: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQuery ] ):
         
-        self._queries = queries
+        self._queries = list( queries )
         
     
     def SetTagImportOptions( self, tag_import_options ):

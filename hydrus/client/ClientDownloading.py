@@ -276,7 +276,7 @@ class QuickDownloadManager( object ):
                 errors_occured = []
                 file_successful = False
                 
-                ( media_result, ) = self._controller.Read( 'media_results', ( hash, ) )
+                media_result = self._controller.Read( 'media_result', hash )
                 
                 service_keys = list( media_result.GetLocationsManager().GetCurrent() )
                 

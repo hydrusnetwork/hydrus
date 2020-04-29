@@ -9,7 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportOptions
@@ -271,7 +271,7 @@ class TimeDeltaButton( QW.QPushButton ):
     
     def EventButton( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit time delta' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit time delta' ) as dlg:
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             

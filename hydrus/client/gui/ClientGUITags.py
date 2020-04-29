@@ -28,11 +28,11 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITagSuggestions
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1342,25 +1342,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def CanCancel( self ):
-        
-        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
-        
-        if len( groups_of_service_keys_to_content_updates ) > 0:
-            
-            message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result != QW.QDialog.Accepted:
-                
-                return False
-                
-            
-        
-        return True
-        
-    
     def CleanBeforeDestroy( self ):
         
         ClientGUIScrolledPanels.ManagePanel.CleanBeforeDestroy( self )
@@ -1483,6 +1464,25 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         return command_processed
         
     
+    def UserIsOKToCancel( self ):
+        
+        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
+        
+        if len( groups_of_service_keys_to_content_updates ) > 0:
+            
+            message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
     class _Panel( QW.QWidget ):
         
         okSignal = QC.Signal()
@@ -1587,7 +1587,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box.ChangeTagService( self._tag_service_key )
             
-            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, media, self.AddTags, canvas_key = self._canvas_key )
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, media, self.AddTags )
             
             self.SetMedia( media )
             
@@ -1920,6 +1920,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     self._groups_of_content_updates.append( content_updates_group )
                     
+                    self._suggested_tags.MediaUpdated()
+                    
                 
             
             self._tags_box.SetTagsByMedia( self._media )
@@ -1936,7 +1938,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def do_it( tag_service_key, hashes ):
                 
-                frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'tag migration' )
+                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'tag migration' )
                 
                 panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
                 
@@ -2299,6 +2301,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box.SetTagsByMedia( self._media )
             
+            self._suggested_tags.MediaUpdated()
+            
         
         def RemoveTags( self, tags ):
             
@@ -2399,18 +2403,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        if self._tag_repositories.currentWidget().HasUncommittedPair():
-            
-            message = 'Are you sure you want to OK? You have an uncommitted pair.'
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result != QW.QDialog.Accepted:
-                
-                raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
-                
-            
-        
         service_keys_to_content_updates = {}
         
         for page in self._tag_repositories.GetPages():
@@ -2428,6 +2420,24 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         
+    
+    def UserIsOKToOK( self ):
+        
+        if self._tag_repositories.currentWidget().HasUncommittedPair():
+            
+            message = 'Are you sure you want to OK? You have an uncommitted pair.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
     class _Panel( QW.QWidget ):
         
         def __init__( self, parent, service_key, tags = None ):
@@ -3204,18 +3214,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        if self._tag_repositories.currentWidget().HasUncommittedPair():
-            
-            message = 'Are you sure you want to OK? You have an uncommitted pair.'
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result != QW.QDialog.Accepted:
-                
-                raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
-                
-            
-        
         service_keys_to_content_updates = {}
         
         for page in self._tag_repositories.GetPages():
@@ -3232,6 +3230,23 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
+        
+    
+    def UserIsOKToOK( self ):
+        
+        if self._tag_repositories.currentWidget().HasUncommittedPair():
+            
+            message = 'Are you sure you want to OK? You have an uncommitted pair.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return False
+                
+            
+        
+        return True
         
     
     def EventServiceChanged( self, event ):
@@ -4065,7 +4080,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
     
     def _EditTagFilter( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag filter' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag filter' ) as dlg:
             
             namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             

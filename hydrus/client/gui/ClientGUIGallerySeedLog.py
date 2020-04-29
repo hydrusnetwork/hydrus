@@ -18,7 +18,7 @@ from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImportGallerySeeds
 
@@ -439,7 +439,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         payload = self._GetExportableURLsString()
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
             
             panel = ClientGUISerialisable.PngExportPanel( dlg, payload )
             
@@ -480,7 +480,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             if self._gallery_seed_log_set_callable is None: # throw up a dialog that edits the gallery_seed log in place
                 
-                with ClientGUITopLevelWindows.DialogNullipotent( self, 'gallery import log' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'gallery import log' ) as dlg:
                     
                     panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
                     
@@ -493,7 +493,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                 
                 dupe_gallery_seed_log = gallery_seed_log.Duplicate()
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'gallery import log' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'gallery import log' ) as dlg:
                     
                     panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, dupe_gallery_seed_log )
                     
@@ -511,7 +511,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             title = 'gallery import log'
             frame_key = 'gallery_import_log'
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
             
             panel = EditGallerySeedLogPanel( frame, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
             

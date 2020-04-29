@@ -639,7 +639,7 @@ class PopupMessageManager( QW.QWidget ):
         
         parent = self.parentWidget()
         
-        possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
+        possibly_on_hidden_virtual_desktop = not ClientGUIFunctions.MouseIsOnMyDisplay( parent )
         
         going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
         
@@ -710,7 +710,7 @@ class PopupMessageManager( QW.QWidget ):
             
             gui_frame = self.parentWidget()
             
-            possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( gui_frame )
+            possibly_on_hidden_virtual_desktop = not ClientGUIFunctions.MouseIsOnMyDisplay( gui_frame )
             
             gui_is_hidden = not gui_frame.isVisible()
             
@@ -811,7 +811,7 @@ class PopupMessageManager( QW.QWidget ):
         
         # test both because when user uses a shortcut to send gui to a diff monitor, we can't chase it
         # this may need a better test for virtual display dismissal
-        not_on_hidden_or_virtual_display = ClientGUITopLevelWindows.MouseIsOnMyDisplay( main_gui ) or ClientGUITopLevelWindows.MouseIsOnMyDisplay( self )
+        not_on_hidden_or_virtual_display = ClientGUIFunctions.MouseIsOnMyDisplay( main_gui ) or ClientGUIFunctions.MouseIsOnMyDisplay( self )
         
         main_gui_up = not main_gui.isMinimized()
         
@@ -1085,17 +1085,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
         
-
-    def CanCancel( self ):
-
-        return True
-        
-
-    def CanOK( self ):
-        
-        return True
-        
-
+    
     def CleanBeforeDestroy( self ):
 
         pass
@@ -1180,45 +1170,56 @@ class PopupMessageDialogPanel( QW.QWidget ):
         return
         
     
-    def TryToClose( self ):
+    def CheckValid( self ):
+        
+        return True
+        
+    
+    def UserIsOKToOK( self ):
+        
+        return self.UserIsOKToCancel()
+        
+    
+    def UserIsOKToCancel( self ):
         
         if self._job_key.IsDone():
             
             self._ReleaseMessage()
             
-        else:
+        elif self._job_key.IsCancellable():
             
-            if self._job_key.IsCancellable():
+            text = 'Cancel/stop job?'
+            
+            self._yesno_open = True
+            
+            try:
                 
-                text = 'Cancel/stop job?'
+                result = ClientGUIDialogsQuick.GetYesNo( self, text )
                 
-                self._yesno_open = True
+            finally:
                 
-                try:
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, text )
-                    
-                finally:
-                    
-                    self._yesno_open = False
-                    
+                self._yesno_open = False
                 
-                if result == QW.QDialog.Accepted:
-                    
-                    self._job_key.Cancel()
-                    
-                    self._ReleaseMessage()
-                    
-                else:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+            
+            if result == QW.QDialog.Accepted:
+                
+                self._job_key.Cancel()
+                
+                self._ReleaseMessage()
                 
             else:
                 
-                raise HydrusExceptions.VetoException( 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
+                return False
                 
             
+        else:
+            
+            QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
+            
+            return False
+            
+        
+        return True
         
     
     def REPEATINGUpdate( self ):

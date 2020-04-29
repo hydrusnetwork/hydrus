@@ -69,6 +69,7 @@ from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUISystemTray
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
@@ -273,7 +274,7 @@ class BonedUpdater( ClientGUIAsync.AsyncQtUpdater ):
         
         boned_stats = result
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self._win, 'review your fate' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self._win, 'review your fate' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
         
@@ -1222,27 +1223,27 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _DebugMakeDelayedModalPopup( self ):
+    def _DebugMakeDelayedModalPopup( self, cancellable ):
         
-        def do_it( controller ):
+        def do_it( controller, cancellable ):
             
             time.sleep( 5 )
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_key = ClientThreading.JobKey( cancellable = cancellable )
             
             job_key.SetVariable( 'popup_title', 'debug modal job' )
             
             controller.pub( 'modal_message', job_key )
             
-            for i in range( 5 ):
+            for i in range( 10 ):
                 
                 if job_key.IsCancelled():
                     
                     break
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'Will auto-dismiss in ' + HydrusData.TimeDeltaToPrettyTimeDelta( 5 - i ) + '.' )
-                job_key.SetVariable( 'popup_gauge_1', ( i, 5 ) )
+                job_key.SetVariable( 'popup_text_1', 'Will auto-dismiss in ' + HydrusData.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
+                job_key.SetVariable( 'popup_gauge_1', ( i, 10 ) )
                 
                 time.sleep( 1 )
                 
@@ -1250,7 +1251,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             job_key.Delete()
             
         
-        self._controller.CallToThread( do_it, self._controller )
+        self._controller.CallToThread( do_it, self._controller, cancellable )
         
     
     def _DebugLongTextPopup( self ):
@@ -1595,7 +1596,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ExportDownloader( self ):
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export downloaders' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export downloaders' ) as dlg:
             
             panel = ClientGUIParsing.DownloaderExportPanel( dlg, self._controller.network_engine )
             
@@ -1762,7 +1763,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ImportDownloaders( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'import downloaders' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'import downloaders' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewDownloaderImport( frame, self._controller.network_engine )
         
@@ -1776,7 +1777,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             paths = []
             
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'importing files' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'importing files' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewLocalFileImports( frame, paths )
         
@@ -2127,7 +2128,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage account types'
         
-        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
             panel = ClientGUIScrolledPanelsManagement.ManageAccountTypesPanel( dlg, service_key )
             
@@ -2141,7 +2142,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage default tag import options'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2169,7 +2170,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage downloader display'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2201,7 +2202,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             export_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folders' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folders' ) as dlg:
                 
                 panel = ClientGUIExport.EditExportFoldersPanel( dlg, export_folders )
                 
@@ -2295,7 +2296,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage gallery url generators'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2320,7 +2321,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             import_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit import folders' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import folders' ) as dlg:
                 
                 panel = ClientGUIImport.EditImportFoldersPanel( dlg, import_folders )
                 
@@ -2414,7 +2415,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage logins'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             login_manager = self._controller.network_engine.login_manager
             
@@ -2445,7 +2446,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage login scripts'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             login_manager = self._controller.network_engine.login_manager
             
@@ -2468,7 +2469,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage http headers'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2492,7 +2493,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         title = 'manage options'
         frame_key = 'manage_options_dialog'
         
-        with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
             
             panel = ClientGUIScrolledPanelsManagement.ManageOptionsPanel( dlg )
             
@@ -2549,7 +2550,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage parsers'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2574,7 +2575,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage parsing scripts'
         
-        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
             panel = ClientGUIParsing.ManageParsingScriptsPanel( dlg )
             
@@ -2588,7 +2589,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage server services'
         
-        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
             panel = ClientGUIScrolledPanelsManagement.ManageServerServicesPanel( dlg, service_key )
             
@@ -2608,7 +2609,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             title = 'manage services'
             
-            with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsManagement.ManageClientServicesPanel( dlg )
                 
@@ -2630,7 +2631,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             title = 'manage subscriptions'
             frame_key = 'manage_subscriptions_dialog'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, title, frame_key ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, subscriptions, original_pause_status )
                 
@@ -2737,7 +2738,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage tag display'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             panel = ClientGUITags.EditTagDisplayManagerPanel( dlg, self._controller.tag_display_manager )
             
@@ -2758,7 +2759,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageTagParents( self ):
         
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage tag parents' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, 'manage tag parents' ) as dlg:
             
             panel = ClientGUITags.ManageTagParents( dlg )
             
@@ -2770,7 +2771,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageTagSiblings( self ):
         
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage tag siblings' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, 'manage tag siblings' ) as dlg:
             
             panel = ClientGUITags.ManageTagSiblings( dlg )
             
@@ -2784,7 +2785,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage url classes'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2809,7 +2810,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         title = 'manage url class links'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             domain_manager = self._controller.network_engine.domain_manager
             
@@ -2838,7 +2839,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _MigrateDatabase( self ):
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'migrate database' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'migrate database' ) as dlg:
             
             panel = ClientGUIScrolledPanelsReview.MigrateDatabasePanel( dlg, self._controller )
             
@@ -2856,7 +2857,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'migrate tags' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'migrate tags' )
         
         panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, default_tag_repository_key )
         
@@ -3072,7 +3073,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewBandwidth( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewAllBandwidthPanel( frame, self._controller )
         
@@ -3081,7 +3082,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewFileMaintenance( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'file maintenance' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'file maintenance' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewFileMaintenance( frame, self._controller )
         
@@ -3090,7 +3091,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewNetworkJobs( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review network jobs' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review network jobs' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewNetworkJobs( frame, self._controller )
         
@@ -3099,7 +3100,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewNetworkSessions( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review session cookies' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review session cookies' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewNetworkSessionsPanel( frame, self._controller.network_engine.session_manager )
         
@@ -3108,7 +3109,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewServices( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewServicesPanel( frame, self._controller )
         
@@ -3117,7 +3118,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewThreads( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review threads' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review threads' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewThreads( frame, self._controller )
         
@@ -3215,24 +3216,26 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 t += 0.25
                 
             
-            t += 1
+            t += 0.25
             
             HG.client_controller.CallLaterQtSafe(self, t, self._notebook.CloseCurrentPage)
             
-            t += 1
+            t += 0.25
             
             HG.client_controller.CallLaterQtSafe(self, t, self.DeleteAllClosedPages)
             
         
         def qt_test_ac():
             
-            SYS_PRED_REFRESH = 3.0
+            SYS_PRED_REFRESH = 1.0
             
             page = self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, page_name = 'test', select_page = True )
             
             t = 0.5
             
             HG.client_controller.CallLaterQtSafe(self, t, page.SetSearchFocus)
+            
+            ac_widget = page.GetManagementPanel()._tag_autocomplete._text_ctrl
             
             t += 0.5
             
@@ -3248,36 +3251,36 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             for c in 'the colour of her hair':
                 
-                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ord( c ), text = c )
+                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, ord( c ), text = c )
                 
-                t += 0.02
+                t += 0.01
                 
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Down)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
             
             t += 0.05
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Down)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
             
             t += 0.05
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
             
             for i in range( 16 ):
                 
@@ -3285,25 +3288,25 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 for j in range( i + 1 ):
                     
-                    HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Down)
+                    HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
                     
                     t += 0.1
                     
                 
-                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
                 
                 t += SYS_PRED_REFRESH
                 
-                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, None, QC.Qt.Key_Return)
                 
             
             t += 1.0
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Down)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
             
             t += 0.05
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
             
             t += 1.0
             
@@ -3708,7 +3711,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Unfortunately, there is a problem with starting the upload: '+str(e) )
+            QW.QMessageBox.critical( self, 'Error', 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )
             
             return
             
@@ -3872,7 +3875,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             hide_close_button = not job_key.IsCancellable()
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, title, hide_buttons = hide_close_button, do_not_activate = True ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title, hide_buttons = hide_close_button, do_not_activate = True ) as dlg:
                 
                 panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
                 
@@ -4647,7 +4650,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, True )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a non-cancellable modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, False )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
@@ -6348,7 +6352,7 @@ class FrameSplash( QW.QWidget ):
         
         self.setLayout( self._vbox )
         
-        screen = ClientGUITopLevelWindows.GetMouseScreen()
+        screen = ClientGUIFunctions.GetMouseScreen()
         
         if screen is not None:
             

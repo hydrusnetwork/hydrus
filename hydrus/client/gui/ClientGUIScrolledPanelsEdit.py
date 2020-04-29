@@ -36,7 +36,7 @@ from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
@@ -465,7 +465,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for url_class in url_classes_to_edit:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
                 
                 tag_import_options = self._GetDefaultTagImportOptions( url_class )
                 show_downloader_options = True
@@ -1384,7 +1384,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_filter = ClientTags.TagFilter()
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                 
                 namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
                 
@@ -1527,7 +1527,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                 
                 namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
                 
@@ -2033,12 +2033,12 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingDomain.NestedGalleryURLGenerator, available_gugs: typing.List[ ClientNetworkingDomain.GalleryURLGenerator ] ):
+    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingDomain.NestedGalleryURLGenerator, available_gugs: typing.Iterable[ ClientNetworkingDomain.GalleryURLGenerator ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._original_ngug = ngug
-        self._available_gugs = available_gugs
+        self._available_gugs = list( available_gugs )
         
         self._available_gugs.sort( key = lambda g: g.GetName() )
         
@@ -2112,7 +2112,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'choose gugs' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'choose gugs' ) as dlg:
             
             panel = EditChooseMultiple( dlg, choice_tuples )
             
@@ -2259,7 +2259,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gug = ClientNetworkingDomain.GalleryURLGenerator( 'new gallery url generator' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit gallery url generator' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit gallery url generator' ) as dlg:
             
             panel = EditGUGPanel( dlg, gug )
             
@@ -2282,7 +2282,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         available_gugs = self._gug_list_ctrl.GetData()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit nested gallery url generator' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit nested gallery url generator' ) as dlg:
             
             panel = EditNGUGPanel( dlg, ngug, available_gugs )
             
@@ -2433,7 +2433,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for gug in self._gug_list_ctrl.GetData( only_selected = True ):
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit gallery url generator' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit gallery url generator' ) as dlg:
                 
                 panel = EditGUGPanel( dlg, gug )
                 
@@ -2465,7 +2465,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for ngug in self._ngug_list_ctrl.GetData( only_selected = True ):
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit nested gallery url generator' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit nested gallery url generator' ) as dlg:
                 
                 panel = EditNGUGPanel( dlg, ngug, available_gugs )
                 
@@ -2995,7 +2995,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         approved = ClientNetworkingDomain.VALID_APPROVED
         reason = 'EXAMPLE REASON: HTTP header login--needed for access.'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit header' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit header' ) as dlg:
             
             panel = self._EditPanel( dlg, network_context, key, value, approved, reason )
             
@@ -3053,7 +3053,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( network_context, ( key, value ), approved, reason ) = data
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit header' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit header' ) as dlg:
                 
                 panel = self._EditPanel( dlg, network_context, key, value, approved, reason )
                 
@@ -3746,7 +3746,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         query = ClientImportSubscriptionQuery.SubscriptionQuery( initial_search_text )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription query' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription query' ) as dlg:
             
             panel = EditSubscriptionQueryPanel( dlg, query )
             
@@ -3912,7 +3912,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         for old_query in selected_queries:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription query' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription query' ) as dlg:
                 
                 panel = EditSubscriptionQueryPanel( dlg, old_query )
                 
@@ -4422,7 +4422,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, subscriptions: typing.List[ ClientImportSubscriptions.Subscription ], subs_are_globally_paused: bool = False ):
+    def __init__( self, parent: QW.QWidget, subscriptions: typing.Iterable[ ClientImportSubscriptions.Subscription ], subs_are_globally_paused: bool = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -4805,7 +4805,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         frame_key = 'edit_subscription_dialog'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription', frame_key ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg_edit:
             
             panel = EditSubscriptionPanel( dlg_edit, empty_subscription )
             
@@ -4842,7 +4842,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             frame_key = 'edit_subscription_dialog'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
                 
                 original_name = subscription.GetName()
                 
@@ -5143,7 +5143,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             choice_tuples = [ ( query.GetHumanName(), query, False ) for query in queries ]
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'select the queries to extract' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select the queries to extract' ) as dlg:
                 
                 panel = EditChooseMultiple( dlg, choice_tuples )
                 
@@ -5282,7 +5282,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         checker_options = subscriptions[0].GetCheckerOptions()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit check timings' ) as dlg:
             
             panel = ClientGUITime.EditCheckerOptions( dlg, checker_options )
             
@@ -5314,7 +5314,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         tag_import_options = subscriptions[0].GetTagImportOptions()
         show_downloader_options = True
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
             panel = EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection = True )
             
@@ -5745,6 +5745,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._service_key = service_key
+        self._show_downloader_options = show_downloader_options
         
         name = HG.client_controller.services_manager.GetName( self._service_key )
         
@@ -5752,7 +5753,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter ) = service_tag_import_options.ToTuple()
+        ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = service_tag_import_options.ToTuple()
         
         #
         
@@ -5798,7 +5799,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        if not show_downloader_options:
+        if not self._show_downloader_options:
             
             downloader_options_panel.hide()
             
@@ -5839,7 +5840,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditOnlyAddExistingTagsFilter( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit already-exist filter' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit already-exist filter' ) as dlg:
             
             namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             
@@ -5882,6 +5883,19 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'separator', 0, 0, 0 ) )
         
+        if self._show_downloader_options:
+            
+            check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_get_tags_overwrite_deleted' )
+            
+            menu_items.append( ( 'check', 'parsed tags overwrite previously deleted tags', 'Tags parsed and filtered will overwrite the deleted record.', check_manager ) )
+            
+        
+        check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_additional_tags_overwrite_deleted' )
+        
+        menu_items.append( ( 'check', 'additional tags overwrite previously deleted tags', 'The manually added tags will overwrite the deleted record.', check_manager ) )
+        
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_only_add_existing_tags' )
         
         menu_items.append( ( 'check', 'only add tags that already exist', 'Only add tags to this service if they have non-zero count.', check_manager ) )
@@ -5913,7 +5927,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         get_tags_filter = self._get_tags_filter_button.GetValue()
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
         
         return service_tag_import_options
         
@@ -6127,7 +6141,7 @@ class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag summary' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag summary' ) as dlg:
             
             panel = EditTagSummaryGeneratorPanel( dlg, self._tag_summary_generator )
             
@@ -6443,7 +6457,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_match = ClientParsing.StringMatch()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
             
             panel = ClientGUIControls.EditStringMatchPanel( dlg, string_match )
             
@@ -6573,7 +6587,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
                 
                 panel = ClientGUIControls.EditStringMatchPanel( dlg, original_string_match )
                 
@@ -6633,7 +6647,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( string_match, default ) = row
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit path component' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit path component' ) as dlg:
             
             panel = ClientGUIControls.EditStringMatchPanel( dlg, string_match )
             
@@ -6981,7 +6995,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, url_classes: typing.List[ ClientNetworkingDomain.URLClass ] ):
+    def __init__( self, parent: QW.QWidget, url_classes: typing.Iterable[ ClientNetworkingDomain.URLClass ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -7046,7 +7060,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         url_class = ClientNetworkingDomain.URLClass( 'new url class' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit url class' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit url class' ) as dlg:
             
             panel = EditURLClassPanel( dlg, url_class )
             
@@ -7092,7 +7106,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for url_class in self._list_ctrl.GetData( only_selected = True ):
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit url class' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit url class' ) as dlg:
                 
                 panel = EditURLClassPanel( dlg, url_class )
                 

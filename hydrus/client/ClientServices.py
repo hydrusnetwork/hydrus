@@ -2472,7 +2472,7 @@ class ServiceIPFS( ServiceRemote ):
                 job_key.SetVariable( 'popup_text_1', 'ensuring files are pinned: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
                 job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                media_result = HG.client_controller.Read( 'media_result', hash )
                 
                 mime = media_result.GetMime()
                 
@@ -2689,7 +2689,7 @@ class ServiceIPFS( ServiceRemote ):
             raise HydrusExceptions.DataMissing( message )
             
         
-        ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+        media_result = HG.client_controller.Read( 'media_result', hash )
         
         file_info_manager = media_result.GetFileInfoManager()
         

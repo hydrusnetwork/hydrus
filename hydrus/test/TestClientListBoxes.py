@@ -63,13 +63,15 @@ def PressKey( window, key ):
     
     uias = QP.UIActionSimulator()
     
-    uias.Char( key )
+    uias.Char( window, key )
     
 def PressKeyOnFocusedWindow( key ):
     
+    window = QW.QApplication.focusWidget()
+    
     uias = QP.UIActionSimulator()
     
-    uias.Char( key )
+    uias.Char( window, key )
     
 class TestListBoxes( unittest.TestCase ):
     

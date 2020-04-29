@@ -75,6 +75,8 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( data, favicon )
         
+        time.sleep( 3 )
+        
     
     def _test_client_api_basics( self, connection ):
         
@@ -1792,7 +1794,7 @@ class TestClientAPI( unittest.TestCase ):
         
         media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
         
-        HG.test_controller.SetRead( 'media_results', ( media_result, ) )
+        HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
@@ -1935,7 +1937,7 @@ class TestClientAPI( unittest.TestCase ):
         
         media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
         
-        HG.test_controller.SetRead( 'media_results', ( media_result, ) )
+        HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
         
         #

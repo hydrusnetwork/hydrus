@@ -1272,10 +1272,10 @@ class NetworkContextButton( BetterButton ):
     
     def _Edit( self ):
         
-        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
         from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit network context' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit network context' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditNetworkContextPanel( dlg, self._network_context, limited_types = self._limited_types, allow_default = self._allow_default )
             
@@ -1977,10 +1977,10 @@ class RegexButton( BetterButton ):
         
         regex_favourites = HC.options[ 'regex_favourites' ]
         
-        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
         from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'manage regex favourites' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'manage regex favourites' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( dlg, regex_favourites )
             

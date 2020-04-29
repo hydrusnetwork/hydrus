@@ -146,12 +146,26 @@ SHORTCUT_MOUSE_SCROLL_UP = 3
 SHORTCUT_MOUSE_SCROLL_DOWN = 4
 SHORTCUT_MOUSE_SCROLL_LEFT = 5
 SHORTCUT_MOUSE_SCROLL_RIGHT = 6
+SHORTCUT_MOUSE_BACK = 7
+SHORTCUT_MOUSE_FORWARD = 8
+
+SHORTCUT_MOUSE_CLICKS = { SHORTCUT_MOUSE_LEFT, SHORTCUT_MOUSE_MIDDLE, SHORTCUT_MOUSE_RIGHT, SHORTCUT_MOUSE_BACK, SHORTCUT_MOUSE_FORWARD }
+
+qt_mouse_buttons_to_hydrus_mouse_buttons = {}
+
+qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.LeftButton ] = SHORTCUT_MOUSE_LEFT
+qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.MiddleButton ] = SHORTCUT_MOUSE_MIDDLE
+qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.RightButton ] = SHORTCUT_MOUSE_RIGHT
+qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.BackButton ] = SHORTCUT_MOUSE_BACK
+qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.ForwardButton ] = SHORTCUT_MOUSE_FORWARD
 
 shortcut_mouse_string_lookup = {}
 
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'left-click'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_MIDDLE ] = 'middle-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_BACK ] = 'back'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_FORWARD ] = 'forward'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_UP ] = 'scroll up'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
@@ -300,7 +314,7 @@ def ConvertKeyEventToSimpleTuple( event ):
     
     return ( modifier, key )
     
-def ConvertMouseEventToShortcut( event ):
+def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
     
     key = None
     
@@ -308,17 +322,14 @@ def ConvertMouseEventToShortcut( event ):
     
     if event.type() == QC.QEvent.MouseButtonPress:
         
-        if event.buttons() & QC.Qt.LeftButton:
+        for ( qt_button, hydrus_button ) in qt_mouse_buttons_to_hydrus_mouse_buttons.items():
             
-            key = SHORTCUT_MOUSE_LEFT
-            
-        elif event.buttons() & QC.Qt.MiddleButton:
-            
-            key = SHORTCUT_MOUSE_MIDDLE
-            
-        elif event.buttons() & QC.Qt.RightButton:
-            
-            key = SHORTCUT_MOUSE_RIGHT
+            if event.buttons() & qt_button:
+                
+                key = hydrus_button
+                
+                break
+                
             
         
     elif event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
@@ -332,17 +343,14 @@ def ConvertMouseEventToShortcut( event ):
             shortcut_press_type = SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
             
         
-        if event.button() == QC.Qt.LeftButton:
+        for ( qt_button, hydrus_button ) in qt_mouse_buttons_to_hydrus_mouse_buttons.items():
             
-            key = SHORTCUT_MOUSE_LEFT
-            
-        elif event.button() == QC.Qt.MiddleButton:
-            
-            key = SHORTCUT_MOUSE_MIDDLE
-            
-        elif event.button() == QC.Qt.RightButton:
-            
-            key = SHORTCUT_MOUSE_RIGHT
+            if event.button() == qt_button:
+                
+                key = hydrus_button
+                
+                break
+                
             
         
     elif event.type() == QC.QEvent.Wheel:
@@ -1009,11 +1017,16 @@ class ShortcutsHandler( QC.QObject ):
         return shortcut_processed
         
     
+    def AddWindowToFilter( self, win: QW.QWidget ):
+        
+        win.installEventFilter( self )
+        
+    
     def eventFilter( self, watched, event ):
         
         if event.type() == QC.QEvent.KeyPress:
             
-            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, event = event )
+            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( watched, event = event )
             
             shortcut = ConvertKeyEventToShortcut( event )
             
@@ -1062,7 +1075,7 @@ class ShortcutsHandler( QC.QObject ):
                     return False
                     
                 
-                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, event = event )
+                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( watched, event = event )
                 
                 shortcut = ConvertMouseEventToShortcut( event )
                 
@@ -1232,7 +1245,7 @@ class ShortcutsManager( QC.QObject ):
             
         
     
-    def GetCommand( self, shortcuts_names: typing.List[ str ], shortcut: Shortcut ):
+    def GetCommand( self, shortcuts_names: typing.Iterable[ str ], shortcut: Shortcut ):
         
         # process more specific shortcuts with higher priority
         shortcuts_names = list( shortcuts_names )
@@ -1281,7 +1294,7 @@ class ShortcutsManager( QC.QObject ):
         return list( self._names_to_shortcut_sets.values() )
         
     
-    def SetShortcutSets( self, shortcut_sets: typing.List[ ShortcutSet ] ):
+    def SetShortcutSets( self, shortcut_sets: typing.Iterable[ ShortcutSet ] ):
         
         self._names_to_shortcut_sets = { shortcut_set.GetName() : shortcut_set for shortcut_set in shortcut_sets }
         

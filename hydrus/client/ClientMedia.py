@@ -11,6 +11,7 @@ from hydrus.core import HydrusText
 import os
 import random
 import time
+import threading
 import traceback
 from hydrus.core import HydrusData
 from hydrus.core import HydrusFileHandling
@@ -439,9 +440,37 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     return statements_and_scores
     
-def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
+def GetMediasTags( pool, tag_service_key, tag_display_type, content_statuses ):
     
-    siblings_manager = HG.client_controller.tag_siblings_manager
+    tags_managers = []
+    
+    for media in pool:
+        
+        if media.IsCollection():
+            
+            tags_managers.extend( media.GetSingletonsTagsManagers() )
+            
+        else:
+            
+            tags_managers.append( media.GetTagsManager() )
+            
+        
+    
+    tags = set()
+    
+    for tags_manager in tags_managers:
+        
+        statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, tag_display_type )
+        
+        for content_status in content_statuses:
+            
+            tags.update( statuses_to_tags[ content_status ] )
+            
+        
+    
+    return tags
+    
+def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     
     tags_managers = []
     
@@ -474,9 +503,464 @@ def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
+class TagsManager( object ):
+    
+    def __init__( self, service_keys_to_statuses_to_tags ):
+        
+        self._tag_display_types_to_service_keys_to_statuses_to_tags = { ClientTags.TAG_DISPLAY_STORAGE : service_keys_to_statuses_to_tags }
+        
+        self._cache_is_dirty = True
+        
+        self._lock = threading.Lock()
+        
+    
+    def _GetServiceKeysToStatusesToTags( self, tag_display_type ):
+        
+        self._RecalcCaches()
+        
+        return self._tag_display_types_to_service_keys_to_statuses_to_tags[ tag_display_type ]
+        
+    
+    def _RecalcCaches( self ):
+        
+        if self._cache_is_dirty:
+            
+            # siblings (parents later)
+            
+            tag_siblings_manager = HG.client_controller.tag_siblings_manager
+            
+            # ultimately, we would like to just have these values pre-computed on the db so we can just read them in, but one step at a time
+            # and ultimately, this will make parents virtual, whether that is before or after we move this calc down to db cache level
+            # we'll want to keep this live updating capability though so we can keep up with content updates without needing a db refresh
+            # main difference is cache_dirty will default to False or similar
+            
+            source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_STORAGE ]
+            
+            destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+            
+            for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
+                
+                destination_statuses_to_tags = tag_siblings_manager.CollapseStatusesToTags( service_key, source_statuses_to_tags )
+                
+                destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
+                
+            
+            self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ] = destination_service_keys_to_statuses_to_tags
+            
+            # display filtering
+            
+            tag_display_manager = HG.client_controller.tag_display_manager
+            
+            cache_jobs = []
+            
+            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
+            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SELECTION_LIST ) )
+            
+            for ( source_tag_display_type, dest_tag_display_type ) in cache_jobs:
+                
+                source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ source_tag_display_type ]
+                
+                destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+                
+                for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
+                    
+                    if tag_display_manager.FiltersTags( dest_tag_display_type, service_key ):
+                        
+                        destination_statuses_to_tags = HydrusData.default_dict_set()
+                        
+                        for ( status, source_tags ) in source_statuses_to_tags.items():
+                            
+                            dest_tags = tag_display_manager.FilterTags( dest_tag_display_type, service_key, source_tags )
+                            
+                            if len( source_tags ) != len( dest_tags ):
+                                
+                                destination_statuses_to_tags[ status ] = dest_tags
+                                
+                            else:
+                                
+                                destination_statuses_to_tags[ status ] = source_tags
+                                
+                            
+                        
+                        destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
+                        
+                    else:
+                        
+                        destination_service_keys_to_statuses_to_tags[ service_key ] = source_statuses_to_tags
+                        
+                    
+                
+                self._tag_display_types_to_service_keys_to_statuses_to_tags[ dest_tag_display_type ] = destination_service_keys_to_statuses_to_tags
+                
+            
+            # combined service merge calculation
+            # would be great if this also could be db pre-computed
+            
+            for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
+                
+                combined_statuses_to_tags = HydrusData.default_dict_set()
+                
+                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                    
+                    if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                        
+                        continue
+                        
+                    
+                    for ( status, tags ) in statuses_to_tags.items():
+                        
+                        combined_statuses_to_tags[ status ].update( tags )
+                        
+                    
+                
+                service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
+                
+            
+            #
+            
+            self._cache_is_dirty = False
+            
+        
+    
+    @staticmethod
+    def MergeTagsManagers( tags_managers ):
+        
+        def CurrentAndPendingFilter( items ):
+            
+            for ( service_key, statuses_to_tags ) in items:
+                
+                filtered = { status : tags for ( status, tags ) in list(statuses_to_tags.items()) if status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) }
+                
+                yield ( service_key, filtered )
+                
+            
+        
+        # [[( service_key, statuses_to_tags )]]
+        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE ).items() ) for tags_manager in tags_managers )
+        
+        # [(service_key, statuses_to_tags)]
+        flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
+        
+        # service_key : [ statuses_to_tags ]
+        s_k_s_t_t_dict = HydrusData.BuildKeyToListDict( flattened_s_k_s_t_t )
+        
+        # now let's merge so we have service_key : statuses_to_tags
+        
+        merged_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        for ( service_key, several_statuses_to_tags ) in list(s_k_s_t_t_dict.items()):
+            
+            # [[( status, tags )]]
+            s_t_t_tupled = ( list(s_t_t.items()) for s_t_t in several_statuses_to_tags )
+            
+            # [( status, tags )]
+            flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
+            
+            statuses_to_tags = HydrusData.default_dict_set()
+            
+            for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
+            
+            merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
+            
+        
+        return TagsManager( merged_service_keys_to_statuses_to_tags )
+        
+    
+    def DeletePending( self, service_key ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            if len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] ) + len( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] ) > 0:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] = set()
+                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] = set()
+                
+                self._cache_is_dirty = True
+                
+            
+        
+    
+    def Duplicate( self ):
+        
+        with self._lock:
+            
+            dupe_tags_manager = TagsManager( {} )
+            
+            dupe_tag_display_types_to_service_keys_to_statuses_to_tags = dict()
+            
+            for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
+                
+                dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+                
+                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                    
+                    dupe_statuses_to_tags = HydrusData.default_dict_set()
+                    
+                    for ( status, tags ) in statuses_to_tags.items():
+                        
+                        dupe_statuses_to_tags[ status ] = set( tags )
+                        
+                    
+                    dupe_service_keys_to_statuses_to_tags[ service_key ] = dupe_statuses_to_tags
+                    
+                
+                dupe_tag_display_types_to_service_keys_to_statuses_to_tags[ tag_display_type ] = dupe_service_keys_to_statuses_to_tags
+                
+            
+            dupe_tags_manager._tag_display_types_to_service_keys_to_statuses_to_tags = dupe_tag_display_types_to_service_keys_to_statuses_to_tags
+            dupe_tags_manager._cache_is_dirty = self._cache_is_dirty
+            
+            return dupe_tags_manager
+            
+        
+    
+    def GetComparableNamespaceSlice( self, namespaces, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            
+            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            
+            combined = combined_current.union( combined_pending )
+            
+            pairs = [ HydrusTags.SplitTag( tag ) for tag in combined ]
+            
+            slice = []
+            
+            for desired_namespace in namespaces:
+                
+                subtags = [ HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ]
+                
+                subtags.sort()
+                
+                slice.append( tuple( subtags ) )
+                
+            
+            return tuple( slice )
+            
+        
+    
+    def GetCurrent( self, service_key, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+            
+        
+    
+    def GetCurrentAndPending( self, service_key, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+            
+        
+    
+    def GetDeleted( self, service_key, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            return statuses_to_tags[ HC.CONTENT_STATUS_DELETED ]
+            
+        
+    
+    def GetNamespaceSlice( self, namespaces, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            
+            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            
+            combined = combined_current.union( combined_pending )
+            
+            slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
+            
+            slice = frozenset( slice )
+            
+            return slice
+            
+        
+    
+    def GetNumTags( self, tag_search_context: ClientSearch.TagSearchContext, tag_display_type ):
+        
+        with self._lock:
+            
+            num_tags = 0
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ tag_search_context.service_key ]
+            
+            if tag_search_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+            if tag_search_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+            
+            return num_tags
+            
+        
+    
+    def GetPending( self, service_key, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            return statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            
+        
+    
+    def GetPetitioned( self, service_key, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            return statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ]
+            
+        
+    
+    def GetServiceKeysToStatusesToTags( self, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            return service_keys_to_statuses_to_tags
+            
+        
+    
+    def GetStatusesToTags( self, service_key, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            return service_keys_to_statuses_to_tags[ service_key ]
+            
+        
+    
+    def HasTag( self, tag, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            
+            return tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] or tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            
+        
+    
+    def NewTagDisplayRules( self ):
+        
+        with self._lock:
+            
+            self._cache_is_dirty = True
+            
+        
+    
+    def ProcessContentUpdate( self, service_key, content_update ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            ( data_type, action, row ) = content_update.ToTuple()
+            
+            ( tag, hashes ) = row
+            
+            if action == HC.CONTENT_UPDATE_ADD:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].add( tag )
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
+                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_DELETE:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].add( tag )
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].discard( tag )
+                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_PEND:
+                
+                if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
+                    
+                    statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].add( tag )
+                    
+                
+            elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_PETITION:
+                
+                if tag in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
+                    
+                    statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].add( tag )
+                    
+                
+            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
+                
+            
+            self._cache_is_dirty = True
+            
+        
+    
+    def ResetService( self, service_key ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
+            
+            if service_key in service_keys_to_statuses_to_tags:
+                
+                del service_keys_to_statuses_to_tags[ service_key ]
+                
+                self._cache_is_dirty = True
+                
+            
+        
+    
 class MediaResult( object ):
     
-    def __init__( self, file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager ):
+    def __init__( self, file_info_manager, tags_manager: TagsManager, locations_manager, ratings_manager, file_viewing_stats_manager ):
         
         self._file_info_manager = file_info_manager
         self._tags_manager = tags_manager
@@ -584,7 +1068,7 @@ class MediaResult( object ):
         return self._file_info_manager.size
         
     
-    def GetTagsManager( self ):
+    def GetTagsManager( self ) -> TagsManager:
         
         return self._tags_manager
         
@@ -3450,410 +3934,5 @@ class SortedList( object ):
         self._sorted_list.sort( key = sort_key, reverse = reverse )
         
         self._DirtyIndices()
-        
-    
-class TagsManager( object ):
-    
-    def __init__( self, service_keys_to_statuses_to_tags ):
-        
-        self._tag_display_types_to_service_keys_to_statuses_to_tags = { ClientTags.TAG_DISPLAY_STORAGE : service_keys_to_statuses_to_tags }
-        
-        self._cache_is_dirty = True
-        
-    
-    def _GetServiceKeysToStatusesToTags( self, tag_display_type ):
-        
-        self._RecalcCaches()
-        
-        return self._tag_display_types_to_service_keys_to_statuses_to_tags[ tag_display_type ]
-        
-    
-    def _RecalcCaches( self ):
-        
-        if self._cache_is_dirty:
-            
-            # siblings (parents later)
-            
-            tag_siblings_manager = HG.client_controller.tag_siblings_manager
-            
-            # ultimately, we would like to just have these values pre-computed on the db so we can just read them in, but one step at a time
-            # and ultimately, this will make parents virtual, whether that is before or after we move this calc down to db cache level
-            # we'll want to keep this live updating capability though so we can keep up with content updates without needing a db refresh
-            # main difference is cache_dirty will default to False or similar
-            
-            source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_STORAGE ]
-            
-            destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-            
-            for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
-                
-                destination_statuses_to_tags = tag_siblings_manager.CollapseStatusesToTags( service_key, source_statuses_to_tags )
-                
-                destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
-                
-            
-            self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ] = destination_service_keys_to_statuses_to_tags
-            
-            # display filtering
-            
-            tag_display_manager = HG.client_controller.tag_display_manager
-            
-            cache_jobs = []
-            
-            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
-            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SELECTION_LIST ) )
-            
-            for ( source_tag_display_type, dest_tag_display_type ) in cache_jobs:
-                
-                source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ source_tag_display_type ]
-                
-                destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-                
-                for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
-                    
-                    if tag_display_manager.FiltersTags( dest_tag_display_type, service_key ):
-                        
-                        destination_statuses_to_tags = HydrusData.default_dict_set()
-                        
-                        for ( status, source_tags ) in source_statuses_to_tags.items():
-                            
-                            dest_tags = tag_display_manager.FilterTags( dest_tag_display_type, service_key, source_tags )
-                            
-                            if len( source_tags ) != len( dest_tags ):
-                                
-                                destination_statuses_to_tags[ status ] = dest_tags
-                                
-                            else:
-                                
-                                destination_statuses_to_tags[ status ] = source_tags
-                                
-                            
-                        
-                        destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
-                        
-                    else:
-                        
-                        destination_service_keys_to_statuses_to_tags[ service_key ] = source_statuses_to_tags
-                        
-                    
-                
-                self._tag_display_types_to_service_keys_to_statuses_to_tags[ dest_tag_display_type ] = destination_service_keys_to_statuses_to_tags
-                
-            
-            # combined service merge calculation
-            # would be great if this also could be db pre-computed
-            
-            for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
-                
-                combined_statuses_to_tags = HydrusData.default_dict_set()
-                
-                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                    
-                    if service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                        
-                        continue
-                        
-                    
-                    for ( status, tags ) in statuses_to_tags.items():
-                        
-                        combined_statuses_to_tags[ status ].update( tags )
-                        
-                    
-                
-                service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
-                
-            
-            #
-            
-            self._cache_is_dirty = False
-            
-        
-    
-    @staticmethod
-    def MergeTagsManagers( tags_managers ):
-        
-        def CurrentAndPendingFilter( items ):
-            
-            for ( service_key, statuses_to_tags ) in items:
-                
-                filtered = { status : tags for ( status, tags ) in list(statuses_to_tags.items()) if status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) }
-                
-                yield ( service_key, filtered )
-                
-            
-        
-        # [[( service_key, statuses_to_tags )]]
-        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE ).items() ) for tags_manager in tags_managers )
-        
-        # [(service_key, statuses_to_tags)]
-        flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
-        
-        # service_key : [ statuses_to_tags ]
-        s_k_s_t_t_dict = HydrusData.BuildKeyToListDict( flattened_s_k_s_t_t )
-        
-        # now let's merge so we have service_key : statuses_to_tags
-        
-        merged_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-        
-        for ( service_key, several_statuses_to_tags ) in list(s_k_s_t_t_dict.items()):
-            
-            # [[( status, tags )]]
-            s_t_t_tupled = ( list(s_t_t.items()) for s_t_t in several_statuses_to_tags )
-            
-            # [( status, tags )]
-            flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
-            
-            statuses_to_tags = HydrusData.default_dict_set()
-            
-            for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
-            
-            merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
-            
-        
-        return TagsManager( merged_service_keys_to_statuses_to_tags )
-        
-    
-    def DeletePending( self, service_key ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        if len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] ) + len( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] ) > 0:
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] = set()
-            statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] = set()
-            
-            self._cache_is_dirty = True
-            
-        
-    
-    def Duplicate( self ):
-        
-        dupe_tags_manager = TagsManager( {} )
-        
-        dupe_tag_display_types_to_service_keys_to_statuses_to_tags = dict()
-        
-        for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
-            
-            dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-            
-            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                
-                dupe_statuses_to_tags = HydrusData.default_dict_set()
-                
-                for ( status, tags ) in statuses_to_tags.items():
-                    
-                    dupe_statuses_to_tags[ status ] = set( tags )
-                    
-                
-                dupe_service_keys_to_statuses_to_tags[ service_key ] = dupe_statuses_to_tags
-                
-            
-            dupe_tag_display_types_to_service_keys_to_statuses_to_tags[ tag_display_type ] = dupe_service_keys_to_statuses_to_tags
-            
-        
-        dupe_tags_manager._tag_display_types_to_service_keys_to_statuses_to_tags = dupe_tag_display_types_to_service_keys_to_statuses_to_tags
-        dupe_tags_manager._cache_is_dirty = self._cache_is_dirty
-        
-        return dupe_tags_manager
-        
-    
-    def GetComparableNamespaceSlice( self, namespaces, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
-        
-        combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-        combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-        
-        combined = combined_current.union( combined_pending )
-        
-        pairs = [ HydrusTags.SplitTag( tag ) for tag in combined ]
-        
-        slice = []
-        
-        for desired_namespace in namespaces:
-            
-            subtags = [ HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ]
-            
-            subtags.sort()
-            
-            slice.append( tuple( subtags ) )
-            
-        
-        return tuple( slice )
-        
-    
-    def GetCurrent( self, service_key, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-        
-    
-    def GetCurrentAndPending( self, service_key, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
-        
-    
-    def GetDeleted( self, service_key, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        return statuses_to_tags[ HC.CONTENT_STATUS_DELETED ]
-        
-    
-    def GetNamespaceSlice( self, namespaces, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
-        
-        combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-        combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-        
-        combined = combined_current.union( combined_pending )
-        
-        slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
-        
-        slice = frozenset( slice )
-        
-        return slice
-        
-    
-    def GetNumTags( self, tag_search_context: ClientSearch.TagSearchContext, tag_display_type ):
-        
-        num_tags = 0
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ tag_search_context.service_key ]
-        
-        if tag_search_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
-        if tag_search_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
-        
-        return num_tags
-        
-    
-    def GetPending( self, service_key, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        return statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-        
-    
-    def GetPetitioned( self, service_key, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        return statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ]
-        
-    
-    def GetServiceKeysToStatusesToTags( self, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        return service_keys_to_statuses_to_tags
-        
-    
-    def GetStatusesToTags( self, service_key, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        return service_keys_to_statuses_to_tags[ service_key ]
-        
-    
-    def HasTag( self, tag, tag_display_type ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-        
-        combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
-        
-        return tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] or tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-        
-    
-    def NewTagDisplayRules( self ):
-        
-        self._cache_is_dirty = True
-        
-    
-    def ProcessContentUpdate( self, service_key, content_update ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-        
-        statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-        
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        ( tag, hashes ) = row
-        
-        if action == HC.CONTENT_UPDATE_ADD:
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].add( tag )
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
-            statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
-            
-        elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].add( tag )
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].discard( tag )
-            statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
-            
-        elif action == HC.CONTENT_UPDATE_PEND:
-            
-            if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].add( tag )
-                
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
-            
-        elif action == HC.CONTENT_UPDATE_PETITION:
-            
-            if tag in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].add( tag )
-                
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
-            
-        elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
-            
-            statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
-            
-        
-        self._cache_is_dirty = True
-        
-    
-    def ResetService( self, service_key ):
-        
-        service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-        
-        if service_key in service_keys_to_statuses_to_tags:
-            
-            del service_keys_to_statuses_to_tags[ service_key ]
-            
-            self._cache_is_dirty = True
-            
         
     

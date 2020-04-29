@@ -44,7 +44,7 @@ from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISearch
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
@@ -685,6 +685,11 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
         
     
+    def _CanProvideCurrentPagePredicates( self ):
+        
+        return self._tag_autocomplete is not None
+        
+    
     def _GetCurrentFileServiceKey( self ):
         
         return self._management_controller.GetKey( 'file_service' )
@@ -702,30 +707,25 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
         
     
-    def _HasCurrentPagePredicates( self ):
-        
-        return self._tag_autocomplete is not None
-        
-    
     def _ProcessMenuPredicateEvent( self, command ):
         
-        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+        ( predicates, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
         
-        if command == 'add_include_predicates':
+        if command == 'add_predicates':
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_remove = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates, permit_remove = False )
             
-        elif command == 'remove_include_predicates':
+        elif command == 'remove_predicates':
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_add = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates, permit_add = False )
             
-        elif command == 'add_exclude_predicates':
+        elif command == 'add_inverse_predicates':
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_remove = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, inverse_predicates, permit_remove = False )
             
-        elif command == 'remove_exclude_predicates':
+        elif command == 'remove_inverse_predicates':
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, inverse_predicates, permit_add = False )
             
         
     
@@ -1111,7 +1111,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
             
@@ -1310,13 +1310,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
         media_results = self._controller.Read( 'media_results', hashes, sorted = True )
-        
-        if len( media_results ) == 0:
-            
-            QW.QMessageBox.information( self, 'Information', 'Files were found, but no media results could be loaded for them. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
-            
-            return
-            
         
         panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
@@ -3228,7 +3221,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                     
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( dlg, 'edit formula' ) as dlg_3:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( dlg, 'edit formula' ) as dlg_3:
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_3 )
                 
@@ -3266,7 +3259,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         formulae.sort( key = lambda o: o.GetName() )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit simple downloader formulae' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit simple downloader formulae' ) as dlg:
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             

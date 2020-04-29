@@ -25,7 +25,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUISearch
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.external import LogicExpressionQueryParser
 
@@ -434,6 +434,142 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
         
     
     HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    
+class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
+    
+    def __init__( self, parent, callable, service_key, float_mode, **kwargs ):
+        
+        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, **kwargs )
+        
+        self._callable = callable
+        self._service_key = service_key
+        self._float_mode = float_mode
+        
+        self._predicates = {}
+        
+    
+    def _Activate( self ):
+        
+        shift_down = QW.QApplication.keyboardModifiers() & QC.Qt.ShiftModifier
+        
+        predicates = [ term for term in self._selected_terms if term.GetType() != ClientSearch.PREDICATE_TYPE_PARENT ]
+        
+        if self._float_mode:
+            
+            widget = self.window().parentWidget()
+            
+        else:
+            
+            widget = self
+            
+        
+        predicates = ClientGUISearch.FleshOutPredicates( widget, predicates )
+        
+        if len( predicates ) > 0:
+            
+            self._callable( predicates, shift_down )
+            
+        
+    
+    def SetPredicates( self, predicates ):
+        
+        # need to do a clever compare, since normal predicate compare doesn't take count into account
+        
+        they_are_the_same = True
+        
+        if len( predicates ) == len( self._predicates ):
+            
+            for index in range( len( predicates ) ):
+                
+                p_1 = predicates[ index ]
+                p_2 = self._predicates[ index ]
+                
+                if p_1 != p_2 or p_1.GetCount() != p_2.GetCount():
+                    
+                    they_are_the_same = False
+                    
+                    break
+                    
+                
+            
+        else:
+            
+            they_are_the_same = False
+            
+        
+        if not they_are_the_same:
+            
+            # important to make own copy, as same object originals can be altered (e.g. set non-inclusive) in cache, and we need to notice that change just above
+            self._predicates = [ predicate.GetCopy() for predicate in predicates ]
+            
+            self._Clear()
+            
+            for predicate in predicates:
+                
+                self._AppendTerm( predicate )
+                
+            
+            self._DataHasChanged()
+            
+            if len( predicates ) > 0:
+                
+                hit_index = 0
+                
+                if len( predicates ) > 1:
+                    
+                    skip_ors = True
+                    
+                    skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' )
+                    
+                    for ( index, predicate ) in enumerate( predicates ):
+                        
+                        # now only apply this to simple tags, not wildcards and system tags
+                        
+                        if skip_ors and predicate.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
+                            
+                            continue
+                            
+                        
+                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
+                            
+                            continue
+                            
+                        
+                        hit_index = index
+                        
+                        break
+                        
+                    
+                
+                self._Hit( False, False, hit_index )
+                
+            
+        
+    
+    def SetTagService( self, service_key ):
+        
+        self._service_key = service_key
+        
+    
+class ListBoxTagsACRead( ListBoxTagsAC ):
+    
+    ors_are_under_construction = True
+    
+    def _GetTextFromTerm( self, term ):
+        
+        predicate = term
+        
+        return predicate.ToString( render_for_user = True, or_under_construction = self.ors_are_under_construction )
+        
+    
+class ListBoxTagsACWrite( ListBoxTagsAC ):
+    
+    def _GetTextFromTerm( self, term ):
+        
+        predicate = term
+        
+        return predicate.ToString( sibling_service_key = self._service_key )
+        
     
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( QW.QWidget ):
@@ -1392,7 +1528,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         title = 'enter advanced OR predicates'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             panel = EditAdvancedORPredicates( dlg )
             
@@ -1589,7 +1725,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, height_num_chars = self._list_height_num_chars )
+        favs_list = ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
@@ -1605,7 +1741,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._list_height_num_chars = 8
             
         
-        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        return ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
     
     def _LoadFavouriteSearch( self, folder_name, name ):
@@ -1637,7 +1773,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         title = 'edit favourite searches'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             panel = ClientGUISearchPanels.EditFavouriteSearchesPanel( dlg, favourite_searches_rows, initial_search_row_to_edit = favourite_search_row_to_save )
             
@@ -1925,6 +2061,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
         
     
+    def _CanProvideCurrentPagePredicates( self ):
+        
+        return True
+        
+    
     def _DeleteActivate( self ):
         
         self._Activate()
@@ -1994,30 +2135,25 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         return predicate.ToString( render_for_user = True )
         
     
-    def _HasCurrentPagePredicates( self ):
-        
-        return True
-        
-    
     def _ProcessMenuPredicateEvent( self, command ):
         
-        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+        ( predicates, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
         
-        if command == 'add_include_predicates':
+        if command == 'add_predicates':
             
-            self._EnterPredicates( include_predicates, permit_remove = False )
+            self._EnterPredicates( predicates, permit_remove = False )
             
-        elif command == 'remove_include_predicates':
+        elif command == 'remove_predicates':
             
-            self._EnterPredicates( include_predicates, permit_add = False )
+            self._EnterPredicates( predicates, permit_add = False )
             
-        elif command == 'add_exclude_predicates':
+        elif command == 'add_inverse_predicates':
             
-            self._EnterPredicates( exclude_predicates, permit_remove = False )
+            self._EnterPredicates( inverse_predicates, permit_remove = False )
             
-        elif command == 'remove_exclude_predicates':
+        elif command == 'remove_inverse_predicates':
             
-            self._EnterPredicates( exclude_predicates, permit_add = False )
+            self._EnterPredicates( inverse_predicates, permit_add = False )
             
         
     
@@ -2133,7 +2269,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        favs_list = ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
@@ -2142,7 +2278,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._list_height_num_chars = 8
         
-        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        return ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
     
     def _Paste( self ):
@@ -2306,7 +2442,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         summary += os.linesep * 2
         summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor.'
         summary += os.linesep * 2
-        summary += 'Parentheses work the usual way. \ can be used to escape characters (e.g. to search for tags including parentheses)'
+        summary += 'Parentheses work the usual way. \\ can be used to escape characters (e.g. to search for tags including parentheses)'
         
         st = ClientGUICommon.BetterStaticText( self, summary )
         st.setWordWrap( True )

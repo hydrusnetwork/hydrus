@@ -1,5 +1,3 @@
-import os
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -8,24 +6,13 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.client import ClientCaches
-from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 
 CHILD_POSITION_PADDING = 24
 FUZZY_PADDING = 10
 
-def GetDisplayPosition( window ):
-    
-    return QW.QApplication.desktop().availableGeometry( window ).topLeft()
-    
-def GetDisplaySize( window ):
-    
-    return QW.QApplication.desktop().availableGeometry( window ).size()
-    
 def GetSafePosition( position: QC.QPoint ):
     
     # some window managers size the windows just off screen to cut off borders
@@ -139,7 +126,7 @@ def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
             
         
     
-    display_size = GetDisplaySize( tlw )
+    display_size = ClientGUIFunctions.GetDisplaySize( tlw )
     
     display_available_size = display_size - frame_padding
     
@@ -191,25 +178,6 @@ def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSiz
             SlideOffScreenTLWUpAndLeft( tlw )
             
         
-    
-def GetMouseScreen():
-    
-    return QW.QApplication.screenAt( QG.QCursor.pos() )
-    
-def MouseIsOnMyDisplay( window ):
-    
-    window_handle = window.window().windowHandle()
-    
-    if window_handle is None:
-        
-        return False
-        
-    
-    window_screen = window_handle.screen()
-    
-    mouse_screen = GetMouseScreen()
-    
-    return mouse_screen is window_screen
     
 def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
@@ -294,7 +262,7 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
             
             we_care_about_off_screen_messages = False
             
-            screen = GetMouseScreen()
+            screen = ClientGUIFunctions.GetMouseScreen()
             
             if screen is not None:
                 
@@ -316,7 +284,7 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
             
             we_care_about_off_screen_messages = False
             
-            screen = GetMouseScreen()
+            screen = ClientGUIFunctions.GetMouseScreen()
             
             if screen is not None:
                 
@@ -368,8 +336,8 @@ def SlideOffScreenTLWUpAndLeft( tlw ):
     tlw_right = tlw_bottom_right.x()
     tlw_bottom = tlw_bottom_right.y()
     
-    display_size = GetDisplaySize( tlw )
-    display_pos = GetDisplayPosition( tlw )
+    display_size = ClientGUIFunctions.GetDisplaySize( tlw )
+    display_pos = ClientGUIFunctions.GetDisplayPosition( tlw )
     
     display_right = display_pos.x() + display_size.width() - CHILD_POSITION_PADDING
     display_bottom = display_pos.y() + display_size.height() - CHILD_POSITION_PADDING
@@ -425,24 +393,19 @@ class NewDialog( QP.Dialog ):
         event.ignore()
         
     
-    def _CanCancel( self ):
+    def _DoClose( self, value ):
         
-        return True
-        
-    
-    def _CanOK( self ):
-        
-        return True
-        
-    
-    def _ReadyToClose( self, value ):
-        
-        return True
+        return
         
     
     def _SaveOKPosition( self ):
         
         pass
+        
+    
+    def _TestValidityAndPresentVetoMessage( self, value ):
+        
+        return True
         
     
     def _TryEndModal( self, value ):
@@ -452,30 +415,26 @@ class NewDialog( QP.Dialog ):
             return False
             
         
-        if not self._ReadyToClose( value ):
+        if not self._TestValidityAndPresentVetoMessage( value ):
+            
+            return False
+            
+        
+        if not self._UserIsOKToClose( value ):
             
             return False
             
         
         if value == QW.QDialog.Rejected:
             
-            if not self._CanCancel():
-                
-                return False
-                
-            
             self.SetCancelled( True )
             
-        
-        if value == QW.QDialog.Accepted:
-            
-            if not self._CanOK():
-                
-                return False
-                
+        elif value == QW.QDialog.Accepted:
             
             self._SaveOKPosition()
             
+        
+        self._DoClose( value )
         
         self.CleanBeforeDestroy()
         
@@ -511,6 +470,11 @@ class NewDialog( QP.Dialog ):
                 HydrusData.ShowText( 'The dialog would not destroy on command.' )
                 
             
+        
+        return True
+        
+    
+    def _UserIsOKToClose( self, value ):
         
         return True
         
@@ -620,220 +584,6 @@ class DialogThatResizes( NewDialog ):
         SaveTLWSizeAndPosition( self, self._frame_key )
         
     
-class DialogThatTakesScrollablePanel( DialogThatResizes ):
-    
-    def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False, do_not_activate = False ):
-        
-        self._panel = None
-        self._hide_buttons = hide_buttons
-        
-        DialogThatResizes.__init__( self, parent, title, frame_key, do_not_activate = do_not_activate )
-        
-        self._InitialiseButtons()
-        
-    
-    def _CanCancel( self ):
-        
-        return self._panel.CanCancel()
-        
-    
-    def _CanOK( self ):
-        
-        return self._panel.CanOK()
-        
-    
-    def _GetButtonBox( self ):
-        
-        raise NotImplementedError()
-        
-    
-    def _InitialiseButtons( self ):
-        
-        raise NotImplementedError()
-        
-    
-    def CleanBeforeDestroy( self ):
-        
-        DialogThatResizes.CleanBeforeDestroy( self )
-        
-        if hasattr( self._panel, 'CleanBeforeDestroy' ):
-            
-            self._panel.CleanBeforeDestroy()
-            
-        
-    
-    def SetPanel( self, panel ):
-        
-        self._panel = panel
-        
-        if hasattr( self._panel, 'okSignal'): self._panel.okSignal.connect( self.DoOK )
-        
-        buttonbox = self._GetButtonBox()
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        if buttonbox is not None:
-            
-            QP.AddToLayout( vbox, buttonbox, CC.FLAGS_BUTTON_SIZER )
-            
-        
-        self.setLayout( vbox )
-        
-        SetInitialTLWSizeAndPosition( self, self._frame_key )
-        
-    
-class DialogNullipotent( DialogThatTakesScrollablePanel ):
-    
-    def _GetButtonBox( self ):
-        
-        buttonbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( buttonbox, self._close )
-        
-        return buttonbox
-        
-    
-    def _InitialiseButtons( self ):
-        
-        self._close = QW.QPushButton( 'close', self )
-        self._close.clicked.connect( self.DoOK )
-        
-        if self._hide_buttons:
-            
-            self._close.setVisible( False )
-            
-        
-    
-    def _ReadyToClose( self, value ):
-        
-        try:
-            
-            self._panel.TryToClose()
-            
-            return True
-            
-        except HydrusExceptions.VetoException as e:
-            
-            message = str( e )
-            
-            if len( message ) > 0:
-                
-                QW.QMessageBox.critical( self, 'Error', message )
-                
-            
-            return False
-            
-        
-    
-class DialogApplyCancel( DialogThatTakesScrollablePanel ):
-    
-    def _GetButtonBox( self ):
-        
-        buttonbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( buttonbox, self._apply )
-        QP.AddToLayout( buttonbox, self._cancel )
-        
-        return buttonbox
-        
-    
-    def _InitialiseButtons( self ):
-        
-        self._apply = QW.QPushButton( 'apply', self )
-        self._apply.setObjectName( 'HydrusAccept' )
-        self._apply.clicked.connect( self.EventDialogButtonApply )
-        
-        self._cancel = QW.QPushButton( 'cancel', self )
-        self._cancel.setObjectName( 'HydrusCancel' )
-        self._cancel.clicked.connect( self.EventDialogButtonCancel )
-        
-        if self._hide_buttons:
-            
-            self._apply.setVisible( False )
-            self._cancel.setVisible( False )
-            
-        
-    
-class DialogEdit( DialogApplyCancel ):
-    
-    def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
-        
-        DialogApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
-        
-    
-    def _ReadyToClose( self, value ):
-        
-        if value != QW.QDialog.Accepted:
-            
-            return True
-            
-        
-        try:
-            
-            value = self._panel.GetValue()
-            
-            return True
-            
-        except HydrusExceptions.VetoException as e:
-            
-            message = str( e )
-            
-            if len( message ) > 0:
-                
-                QW.QMessageBox.critical( self, 'Error', message )
-                
-            
-            return False
-            
-        
-    
-class DialogManage( DialogApplyCancel ):
-    
-    def _ReadyToClose( self, value ):
-        
-        if value != QW.QDialog.Accepted:
-            
-            return True
-            
-        
-        try:
-            
-            self._panel.CommitChanges()
-            
-            return True
-            
-        except HydrusExceptions.VetoException as e:
-            
-            message = str( e )
-            
-            if len( message ) > 0:
-                
-                QW.QMessageBox.critical( self, 'Error', message )
-                
-            
-            return False
-            
-        
-    
-class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
-    
-    def __init__( self, parent, title, frame_key = 'regular_center_dialog' ):
-        
-        DialogThatTakesScrollablePanel.__init__( self, parent, title, frame_key = frame_key )
-        
-    
-    def _GetButtonBox( self ):
-        
-        return None
-        
-    
-    def _InitialiseButtons( self ):
-        
-        pass
-        
-    
 class Frame( QW.QWidget ):
     
     def __init__( self, parent, title ):
@@ -937,6 +687,7 @@ class FrameThatResizes( Frame ):
         
     
 class FrameThatResizesWithHovers( FrameThatResizes ): pass
+
 class MainFrameThatResizes( MainFrame ):
 
     def __init__( self, parent, title, frame_key ):
@@ -956,67 +707,5 @@ class MainFrameThatResizes( MainFrame ):
         HG.client_controller.CallLaterQtSafe( self, 0.1, SaveTLWSizeAndPosition, self, self._frame_key )
 
         return True # was: event.ignore()
-        
-    
-class FrameThatTakesScrollablePanel( FrameThatResizes ):
-    
-    def __init__( self, parent, title, frame_key = 'regular_dialog' ):
-        
-        self._panel = None
-        
-        FrameThatResizes.__init__( self, parent, title, frame_key )
-        
-        self._ok = QW.QPushButton( 'close', self )
-        self._ok.clicked.connect( self.close )
-        
-    
-    def CleanBeforeDestroy( self ):
-        
-        FrameThatResizes.CleanBeforeDestroy( self )
-        
-        if hasattr( self._panel, 'CleanBeforeDestroy' ):
-            
-            self._panel.CleanBeforeDestroy()
-            
-        
-    
-    def keyPressEvent( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key == QC.Qt.Key_Escape:
-            
-            self.close()
-            
-        else:
-            
-            event.ignore()
-            
-        
-    
-    def GetPanel( self ):
-        
-        return self._panel
-        
-    
-    def SetPanel( self, panel ):
-        
-        self._panel = panel
-        
-        if hasattr( self._panel, 'okSignal' ):
-            
-            self._panel.okSignal.connect( self.close )
-            
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._panel )
-        QP.AddToLayout( vbox, self._ok, CC.FLAGS_LONE_BUTTON )
-        
-        self.setLayout( vbox )
-        
-        SetInitialTLWSizeAndPosition( self, self._frame_key )
-        
-        self.show()
         
     

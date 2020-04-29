@@ -296,6 +296,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._initial_messages = []
         
+        self._have_printed_a_cannot_vacuum_message = False
+        
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
     
@@ -4601,8 +4603,8 @@ class DB( HydrusDB.HydrusDB ):
             
             boundaries.append( ( 100, True, 6 * 3600 ) )
             boundaries.append( ( 10000, True, 3 * 86400 ) )
-            boundaries.append( ( 1000000, False, 3 * 30 * 86400 ) )
-            boundaries.append( ( None, False, 18 * 30 * 86400 ) )
+            boundaries.append( ( 100000, False, 3 * 30 * 86400 ) )
+            # anything bigger than 100k rows will now not be analyzed
             
             existing_names_to_info = { name : ( num_rows, timestamp ) for ( name, num_rows, timestamp ) in self._c.execute( 'SELECT name, num_rows, timestamp FROM analyze_timestamps;' ) }
             
@@ -4612,33 +4614,35 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if name in existing_names_to_info:
                     
-                    for ( row_limit_for_this_boundary, can_analyze_now, period ) in boundaries:
+                    ( num_rows, timestamp ) = existing_names_to_info[ name ]
+                    
+                    for ( row_limit_for_this_boundary, can_analyze_immediately, period ) in boundaries:
                         
-                        ( num_rows, timestamp ) = existing_names_to_info[ name ]
-                        
-                        if row_limit_for_this_boundary is not None and num_rows > row_limit_for_this_boundary:
+                        if num_rows > row_limit_for_this_boundary:
                             
                             continue
                             
                         
-                        if HydrusData.TimeHasPassed( timestamp + period ):
+                        if not HydrusData.TimeHasPassed( timestamp + period ):
                             
-                            if can_analyze_now:
-                                
-                                # if it has grown, send up to user, as it could be huge. else do it now
-                                if self._TableHasAtLeastRowCount( name, row_limit_for_this_boundary ):
-                                    
-                                    names_to_analyze.append( name )
-                                    
-                                else:
-                                    
-                                    self._AnalyzeTable( name )
-                                    
-                                
-                            else:
+                            continue
+                            
+                        
+                        if can_analyze_immediately:
+                            
+                            # if it has grown, send up to user, as it could be huge. else do it now
+                            if self._TableHasAtLeastRowCount( name, row_limit_for_this_boundary ):
                                 
                                 names_to_analyze.append( name )
                                 
+                            else:
+                                
+                                self._AnalyzeTable( name )
+                                
+                            
+                        else:
+                            
+                            names_to_analyze.append( name )
                             
                         
                     
@@ -7157,7 +7161,7 @@ class DB( HydrusDB.HydrusDB ):
         return tables
         
     
-    def _GetMediaResults( self, hash_ids ):
+    def _GetMediaResults( self, hash_ids: typing.Iterable[ int ] ):
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -7282,7 +7286,14 @@ class DB( HydrusDB.HydrusDB ):
         return media_results
         
     
-    def _GetMediaResultsFromHashes( self, hashes, sorted = False ):
+    def _GetMediaResultFromHash( self, hash ) -> ClientMedia.MediaResult:
+        
+        media_results = self._GetMediaResultsFromHashes( [ hash ] )
+        
+        return media_results[0]
+        
+    
+    def _GetMediaResultsFromHashes( self, hashes: typing.Iterable[ bytes ], sorted: bytes = False ) -> typing.List[ ClientMedia.MediaResult ]:
         
         query_hash_ids = set( self._GetHashIds( hashes ) )
         
@@ -7676,7 +7687,7 @@ class DB( HydrusDB.HydrusDB ):
         
         [ ( gumpf, largest_count ) ] = hash_ids_counter.most_common( 1 )
         
-        hash_ids = [ hash_id for ( hash_id, count ) in list(hash_ids_counter.items()) if count > largest_count * 0.8 ]
+        hash_ids = [ hash_id for ( hash_id, count ) in hash_ids_counter.items() if count > largest_count * 0.8 ]
         
         counter = collections.Counter()
         
@@ -7714,7 +7725,7 @@ class DB( HydrusDB.HydrusDB ):
         inclusive = True
         pending_count = 0
         
-        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_to_counts.items() if tag not in search_tags ]
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_to_counts.items() ]
         
         return predicates
         
@@ -11238,6 +11249,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'maintenance_due': result = self._GetMaintenanceDue( *args, **kwargs )
+        elif action == 'media_result': result = self._GetMediaResultFromHash( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
         elif action == 'migration_get_mappings': result = self._MigrationGetMappings( *args, **kwargs )
@@ -14780,7 +14792,13 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            due_names = [ name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+            due_names = [ name for name in db_names if name in self._db_filenames ]
+            
+            due_names = [ name for name in due_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+            
+            SIZE_LIMIT = 1024 * 1024 * 1024
+            
+            due_names = [ name for name in due_names if os.path.getsize( os.path.join( self._db_dir, self._db_filenames[ name ] ) ) < SIZE_LIMIT ]
             
         
         if len( due_names ) > 0:
@@ -14801,11 +14819,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for name in due_names:
                     
-                    if name not in self._db_filenames:
-                        
-                        continue
-                        
-                    
                     if self._controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
                         
                         break
@@ -14821,7 +14834,12 @@ class DB( HydrusDB.HydrusDB ):
                             
                         except Exception as e:
                             
-                            HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
+                            if not self._have_printed_a_cannot_vacuum_message:
+                                
+                                HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
+                                
+                                self._have_printed_a_cannot_vacuum_message = True
+                                
                             
                             continue
                             

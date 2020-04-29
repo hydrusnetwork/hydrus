@@ -3318,6 +3318,8 @@ class DB( HydrusDB.HydrusDB ):
             
             db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
             
+            db_names = [ name for name in db_names if name in self._db_filenames ]
+            
             self._CloseDBCursor()
             
             try:
@@ -3325,11 +3327,6 @@ class DB( HydrusDB.HydrusDB ):
                 names_done = []
                 
                 for name in db_names:
-                    
-                    if name not in self._db_filenames:
-                        
-                        continue
-                        
                     
                     try:
                         

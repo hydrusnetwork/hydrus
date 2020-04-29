@@ -23,6 +23,7 @@ from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -72,7 +73,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folder' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
             
             panel = EditExportFolderPanel( dlg, export_folder )
             
@@ -147,7 +148,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for export_folder in export_folders:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folder' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
                 
                 panel = EditExportFolderPanel( dlg, export_folder )
                 
@@ -346,7 +347,7 @@ If you select synchronise, be careful!'''
             
         
     
-    def CanOK( self ):
+    def UserIsOKToOK( self ):
         
         if self._delete_from_client_after_export.isChecked():
             
@@ -871,7 +872,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select tag services' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select tag services' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             

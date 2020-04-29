@@ -3,7 +3,7 @@ from hydrus.client import ClientDefaults
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client import ClientThreading
 import collections
 from hydrus.core import HydrusConstants as HC
@@ -56,7 +56,7 @@ def PressKey( window, key ):
     
     uias = QP.UIActionSimulator()
     
-    uias.Char( key )
+    uias.Char( window, key )
     
 class TestDBDialogs( unittest.TestCase ):
     
@@ -66,7 +66,7 @@ class TestDBDialogs( unittest.TestCase ):
             
             title = 'subs test'
             
-            with ClientGUITopLevelWindows.DialogEdit( None, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( None, title ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, [] )
                 

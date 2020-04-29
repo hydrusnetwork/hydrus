@@ -836,7 +836,7 @@ class TestClientDB( unittest.TestCase ):
             
             written_hash = file_import_job.GetHash()
             
-            ( media_result, ) = self._read( 'media_results', ( written_hash, ) )
+            media_result = self._read( 'media_result', written_hash )
             
             ( mr_file_info_manager, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
             
@@ -985,7 +985,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        media_result = self._read( 'media_result', hash )
         
         ( mr_file_info_manager, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
         

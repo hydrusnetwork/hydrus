@@ -124,10 +124,10 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         choice_tuples = [ ( self._data_to_pretty_callable( default ), default, selected ) for default in defaults ]
         
-        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
         from hydrus.client.gui import ClientGUIScrolledPanelsEdit
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select the defaults to add' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             
@@ -237,10 +237,10 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         if export_object is not None:
             
-            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             from hydrus.client.gui import ClientGUISerialisable
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
                 
                 panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
                 
@@ -267,10 +267,10 @@ class AddEditDeleteListBox( QW.QWidget ):
             return
             
         
-        from hydrus.client.gui import ClientGUITopLevelWindows
+        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
         from hydrus.client.gui import ClientGUISerialisable
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
             panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
             
@@ -881,6 +881,44 @@ class ListBox( QW.QScrollArea ):
         pass
         
     
+    def _ActivateFromKeyboard( self ):
+        
+        selected_indices = []
+        
+        for term in self._selected_terms:
+            
+            try:
+                
+                index = self._GetIndexFromTerm( term )
+                
+                selected_indices.append( index )
+                
+            except HydrusExceptions.DataMissing:
+                
+                pass
+                
+            
+        
+        self._Activate()
+        
+        if len( self._selected_terms ) == 0 and len( selected_indices ) > 0:
+            
+            ideal_index = min( selected_indices )
+            
+            ideal_indices = [ ideal_index, ideal_index - 1, 0 ]
+            
+            for ideal_index in ideal_indices:
+                
+                if self._CanSelectIndex( ideal_index ):
+                    
+                    self._Hit( False, False, ideal_index )
+                    
+                    break
+                    
+                
+            
+        
+    
     def _DeleteActivate( self ):
         
         pass
@@ -949,6 +987,16 @@ class ListBox( QW.QScrollArea ):
         self._selected_terms = set()
         
     
+    def _GetIndexFromTerm( self, term ):
+        
+        if term in self._ordered_terms:
+            
+            return self._ordered_terms.index( term )
+            
+        
+        raise HydrusExceptions.DataMissing()
+        
+    
     def _GetIndexUnderMouse( self, mouse_event ):
         
         y = mouse_event.pos().y()
@@ -965,34 +1013,34 @@ class ListBox( QW.QScrollArea ):
         return row_index
         
     
-    def _GetSelectedIncludeExcludePredicates( self ):
+    def _GetSelectedPredicatesAndInverseCopies( self ):
         
-        include_predicates = []
-        exclude_predicates = []
+        predicates = []
+        inverse_predicates = []
         
         for term in self._selected_terms:
             
             if isinstance( term, ClientSearch.Predicate ):
                 
-                include_predicates.append( term )
+                predicates.append( term )
                 
                 possible_inverse = term.GetInverseCopy()
                 
                 if possible_inverse is not None:
                     
-                    exclude_predicates.append( possible_inverse )
+                    inverse_predicates.append( possible_inverse )
                     
                 
             else:
                 
                 s = term
                 
-                include_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
-                exclude_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term, False ) )
+                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
+                inverse_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term, False ) )
                 
             
         
-        return ( include_predicates, exclude_predicates )
+        return ( predicates, inverse_predicates )
         
     
     def _GetSafeHitIndex( self, hit_index, direction = None ):
@@ -1183,6 +1231,36 @@ class ListBox( QW.QScrollArea ):
         self.widget().update()
         
     
+    def _HitFirstSelectedItem( self ):
+        
+        selected_indices = []
+        
+        if len( self._selected_terms ) > 0:
+            
+            for term in self._selected_terms:
+                
+                try:
+                    
+                    index = self._GetIndexFromTerm( term )
+                    
+                    selected_indices.append( index )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    pass
+                    
+                
+            
+            if len( selected_indices ) > 0:
+                
+                first_index = min( selected_indices )
+                
+                self._Hit( False, False, first_index )
+                
+            
+        
+        
+    
     def _IsSelected( self, index ):
         
         try:
@@ -1312,9 +1390,16 @@ class ListBox( QW.QScrollArea ):
             return
             
         
-        term = self._GetTerm( index )
-        
-        self._selected_terms.add( term )
+        try:
+            
+            term = self._GetTerm( index )
+            
+            self._selected_terms.add( term )
+            
+        except HydrusExceptions.DataMissing:
+            
+            pass
+            
         
     
     def _SelectAll( self ):
@@ -1361,7 +1446,7 @@ class ListBox( QW.QScrollArea ):
             
         elif key_code in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
             
-            self._Activate()
+            self._ActivateFromKeyboard()
             
         else:
             
@@ -1578,16 +1663,14 @@ class ListBoxTags( ListBox ):
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
     
+    def _CanProvideCurrentPagePredicates( self ):
+        
+        return False
+        
+    
     def _GetNamespaceColours( self ):
         
         return HC.options[ 'namespace_colours' ]
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        texts = [ self._terms_to_texts[ term ] for term in self._ordered_terms ]
-        
-        return texts
         
     
     def _GetCurrentFileServiceKey( self ):
@@ -1603,6 +1686,71 @@ class ListBoxTags( ListBox ):
     def _GetNamespaceFromTerm( self, term ):
         
         raise NotImplementedError()
+        
+    
+    def _GetSelectedActualTags( self ):
+        
+        selected_actual_tags = set()
+        
+        for term in self._selected_terms:
+            
+            if isinstance( term, ClientSearch.Predicate ):
+                
+                if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
+                    
+                    tag = term.GetValue()
+                    
+                    selected_actual_tags.add( tag )
+                    
+                
+            else:
+                
+                tag = term
+                
+                selected_actual_tags.add( tag )
+                
+            
+        
+        return selected_actual_tags
+        
+    
+    def _GetCopyableTagStrings( self, only_selected = False, with_counts = False ):
+        
+        if only_selected:
+            
+            terms = self._selected_terms
+            
+        else:
+            
+            terms = self._ordered_terms
+            
+        
+        selected_copyable_tag_strings = set()
+        
+        for term in terms:
+            
+            if isinstance( term, ClientSearch.Predicate ):
+                
+                if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+                    
+                    tag = term.GetValue()
+                    
+                else:
+                    
+                    tag = term.ToString( with_count = with_counts )
+                    
+                
+                selected_copyable_tag_strings.add( tag )
+                
+            else:
+                
+                tag = str( term )
+                
+                selected_copyable_tag_strings.add( tag )
+                
+            
+        
+        return selected_copyable_tag_strings
         
     
     def _GetTagFromTerm( self, term ):
@@ -1644,11 +1792,6 @@ class ListBoxTags( ListBox ):
             
         
         return texts_and_colours
-        
-    
-    def _HasCurrentPagePredicates( self ):
-        
-        return False
         
     
     def _NewSearchPage( self ):
@@ -1713,57 +1856,36 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuCopyEvent( self, command ):
         
-        if command in ( 'copy_terms', 'copy_sub_terms' ):
+        only_selected = False
+        with_counts = False
+        
+        texts = []
+        
+        if command in ( 'copy_selected_terms', 'copy_selected_sub_terms' ):
             
-            texts = []
-            
-            for term in self._selected_terms:
-                
-                if isinstance( term, ClientSearch.Predicate ):
-                    
-                    if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
-                        
-                        text = term.GetValue()
-                        
-                    else:
-                        
-                        text = term.ToString( with_count = False )
-                        
-                    
-                else:
-                    
-                    text = str( term )
-                    
-                
-                if command == 'copy_sub_terms':
-                    
-                    ( namespace_gumpf, text ) = HydrusTags.SplitTag( text )
-                    
-                
-                texts.append( text )
-                
-            
-            texts.sort()
-            
-            text = os.linesep.join( texts )
-            
-        elif command in ( 'copy_all_tags', 'copy_all_tags_with_counts' ):
-            
-            if command == 'copy_all_tags':
-                
-                with_counts = False
-                
-            else:
-                
-                with_counts = True
-                
-            
-            texts = self._GetAllTagsForClipboard( with_counts = with_counts )
-            
-            text = os.linesep.join( texts )
+            only_selected = True
             
         
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        if command == 'copy_all_tags_with_counts':
+            
+            with_counts = True
+            
+        
+        texts = self._GetCopyableTagStrings( only_selected = only_selected, with_counts = with_counts )
+        
+        texts = HydrusTags.SortNumericTags( texts )
+        
+        if command == 'copy_selected_sub_terms':
+            
+            texts = [ subtag for ( namespace, subtag ) in [ HydrusTags.SplitTag( text ) for text in texts ] ]
+            
+        
+        if len( texts ) > 0:
+            
+            text = os.linesep.join( texts )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
         
     
     def _ProcessMenuPredicateEvent( self, command ):
@@ -1815,10 +1937,10 @@ class ListBoxTags( ListBox ):
                 title = 'manage tag siblings'
                 
             
-            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             from hydrus.client.gui import ClientGUISerialisable
             
-            with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
                 if command == 'parent':
                     
@@ -1883,71 +2005,27 @@ class ListBoxTags( ListBox ):
             
             copy_menu = QW.QMenu( menu )
             
-            selected_tags = set()
+            selected_copyable_tag_strings = self._GetCopyableTagStrings( only_selected = True, with_counts = False )
+            selected_actual_tags = self._GetSelectedActualTags()
             
-            if len( self._selected_terms ) > 0:
+            if len( selected_copyable_tag_strings ) == 1:
                 
-                for term in self._selected_terms:
-                    
-                    if isinstance( term, ClientSearch.Predicate ):
-                        
-                        if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
-                            
-                            selected_tags.add( term.GetValue() )
-                            
-                        
-                    else:
-                        
-                        selected_tags.add( term )
-                        
-                    
+                ( selection_string, ) = selected_copyable_tag_strings 
                 
-                siblings = []
+            else:
                 
-                if len( selected_tags ) == 1:
-                    
-                    ( selected_tag, ) = selected_tags
-                    
-                    ( selected_namespace, selected_subtag ) = HydrusTags.SplitTag( selected_tag )
-                    
-                    siblings = set( HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, selected_tag ) )
-                    
-                    siblings.discard( selected_tag )
-                    siblings.discard( selected_subtag )
-                    
-                    siblings = list( siblings )
-                    
-                    HydrusTags.SortNumericTags( siblings )
-                    
+                selection_string = 'selected'
                 
-                if len( self._selected_terms ) == 1:
-                    
-                    ( term, ) = self._selected_terms
-                    
-                    if isinstance( term, ClientSearch.Predicate ):
-                        
-                        if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
-                            
-                            selection_string = term.GetValue()
-                            
-                        else:
-                            
-                            selection_string = term.ToString( with_count = False )
-                            
-                        
-                    else:
-                        
-                        selection_string = str( term )
-                        
-                    
-                else:
-                    
-                    selection_string = 'selected'
-                    
+            
+            selected_stuff_to_copy = len( selected_copyable_tag_strings ) > 0
+            
+            if selected_stuff_to_copy:
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_terms' )
+                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_selected_terms' )
                 
-                if len( self._selected_terms ) == 1:
+                if len( selected_copyable_tag_strings ) == 1:
+                    
+                    ( selection_string, ) = selected_copyable_tag_strings 
                     
                     ( namespace, subtag ) = HydrusTags.SplitTag( selection_string )
                     
@@ -1955,38 +2033,64 @@ class ListBoxTags( ListBox ):
                         
                         sub_selection_string = subtag
                         
-                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected sub-predicate to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected sub-predicate to your clipboard.', self._ProcessMenuCopyEvent, 'copy_selected_sub_terms' )
                         
                     
                 else:
                     
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_selected_sub_terms' )
                     
                 
-                if len( siblings ) > 0:
+                siblings = []
+                
+                if len( selected_actual_tags ) == 1:
                     
-                    siblings_menu = QW.QMenu( copy_menu )
+                    ( selected_tag, ) = selected_actual_tags
                     
-                    for sibling in siblings:
+                    ( selected_namespace, selected_subtag ) = HydrusTags.SplitTag( selected_tag )
+                    
+                    sibling_tags_seen = set()
+                    
+                    sibling_tags_seen.add( selected_tag )
+                    sibling_tags_seen.add( selected_subtag )
+                    
+                    siblings = set( HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, selected_tag ) )
+                    
+                    siblings.difference_update( sibling_tags_seen )
+                    
+                    if len( siblings ) > 0:
                         
-                        ClientGUIMenus.AppendMenuItem( siblings_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
+                        siblings = HydrusTags.SortNumericTags( siblings )
                         
-                        if len( self._selected_terms ) == 1:
+                        siblings_menu = QW.QMenu( copy_menu )
+                        
+                        for sibling in siblings:
+                            
+                            if sibling not in sibling_tags_seen:
+                                
+                                ClientGUIMenus.AppendMenuItem( siblings_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
+                                
+                                sibling_tags_seen.add( sibling )
+                                
                             
                             ( sibling_namespace, sibling_subtag ) = HydrusTags.SplitTag( sibling )
                             
-                            if sibling_namespace != '':
+                            if sibling_subtag not in sibling_tags_seen:
                                 
                                 ClientGUIMenus.AppendMenuItem( siblings_menu, sibling_subtag, 'Copy the selected sibling subtag to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling_subtag )
                                 
+                                sibling_tags_seen.add( sibling_subtag )
+                                
                             
                         
-                    
-                    ClientGUIMenus.AppendMenu( copy_menu, siblings_menu, 'siblings' )
+                        ClientGUIMenus.AppendMenu( copy_menu, siblings_menu, 'siblings' )
+                        
                     
                 
             
-            if len( self._ordered_terms ) > len( self._selected_terms ):
+            copy_all_is_appropriate = len( self._ordered_terms ) > len( self._selected_terms )
+            
+            if copy_all_is_appropriate:
                 
                 ClientGUIMenus.AppendSeparator( copy_menu )
                 
@@ -1998,57 +2102,51 @@ class ListBoxTags( ListBox ):
                     
                 
             
-            if len( self._ordered_terms ) > 0:
-                
-                ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
-                
+            ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
             
             if len( self._selected_terms ) > 0:
                 
-                if len( selected_tags ) > 0:
+                if len( selected_actual_tags ) > 0 and self._page_key is not None:
                     
-                    if self._page_key is not None:
+                    select_menu = QW.QMenu( menu )
+                    
+                    tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_actual_tags )
+                    
+                    tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu )
+                    
+                    while len( tags_sorted_to_show_on_menu_string ) > 64:
                         
-                        select_menu = QW.QMenu( menu )
-                        
-                        tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_tags )
-                        
-                        tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu )
-                        
-                        while len( tags_sorted_to_show_on_menu_string ) > 64:
+                        if len( tags_sorted_to_show_on_menu ) == 1:
                             
-                            if len( tags_sorted_to_show_on_menu ) == 1:
-                                
-                                tags_sorted_to_show_on_menu_string = '(many/long tags)'
-                                
-                            else:
-                                
-                                tags_sorted_to_show_on_menu.pop( -1 )
-                                
-                                tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ '\u2026' ] )
-                                
-                            
-                        
-                        if len( selected_tags ) == 1:
-                            
-                            label = 'files with "{}"'.format( tags_sorted_to_show_on_menu_string )
+                            tags_sorted_to_show_on_menu_string = '(many/long tags)'
                             
                         else:
                             
-                            label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                            tags_sorted_to_show_on_menu.pop( -1 )
+                            
+                            tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ '\u2026' ] )
                             
                         
-                        ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_tags ) )
+                    
+                    if len( selected_actual_tags ) == 1:
                         
-                        if len( selected_tags ) > 1:
-                            
-                            label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
-                            
-                            ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_tags ) )
-                            
+                        label = 'files with "{}"'.format( tags_sorted_to_show_on_menu_string )
                         
-                        ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+                    else:
                         
+                        label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_actual_tags ) )
+                    
+                    if len( selected_actual_tags ) > 1:
+                        
+                        label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                        
+                        ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_actual_tags ) )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
                     
                 
                 if self.can_spawn_new_windows:
@@ -2063,50 +2161,72 @@ class ListBoxTags( ListBox ):
                         
                     
                 
-                if self._HasCurrentPagePredicates():
+                if self._CanProvideCurrentPagePredicates():
                     
                     current_predicates = self._GetCurrentPagePredicates()
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
-                    ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+                    ( predicates, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
                     
-                    if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
+                    predicates = set( predicates )
+                    inverse_predicates = set( inverse_predicates )
+                    
+                    if len( predicates ) == 1:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'discard ' + selection_string + ' from current search', 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_include_predicates' )
+                        ( pred, ) = predicates
+                        
+                        predicates_selection_string = pred.ToString( with_count = False )
+                        
+                    else:
+                        
+                        predicates_selection_string = 'selected'
                         
                     
-                    if True in ( include_predicate not in current_predicates for include_predicate in include_predicates ):
+                    some_selected_in_current = len( predicates.intersection( current_predicates ) ) > 0
+                    
+                    if some_selected_in_current:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'require ' + selection_string + ' for current search', 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_include_predicates' )
+                        ClientGUIMenus.AppendMenuItem( menu, 'discard {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
                         
                     
-                    if True in ( exclude_predicate in current_predicates for exclude_predicate in exclude_predicates ):
+                    some_selected_not_in_current = len( predicates.intersection( current_predicates ) ) < len( predicates )
+                    
+                    if some_selected_not_in_current:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'permit ' + selection_string + ' for current search', 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_exclude_predicates' )
+                        ClientGUIMenus.AppendMenuItem( menu, 'require {} for current search'.format( predicates_selection_string ), 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
                         
                     
-                    if True in ( exclude_predicate not in current_predicates for exclude_predicate in exclude_predicates ):
+                    some_selected_are_excluded_explicitly = len( inverse_predicates.intersection( current_predicates ) ) > 0
+                    
+                    if some_selected_are_excluded_explicitly:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'exclude ' + selection_string + ' from current search', 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_exclude_predicates' )
+                        ClientGUIMenus.AppendMenuItem( menu, 'permit {} for current search'.format( predicates_selection_string ), 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_inverse_predicates' )
+                        
+                    
+                    some_selected_are_not_excluded_explicitly = len( inverse_predicates.intersection( current_predicates ) ) < len( inverse_predicates )
+                    
+                    if some_selected_are_not_excluded_explicitly:
+                        
+                        ClientGUIMenus.AppendMenuItem( menu, 'exclude {} from current search'.format( predicates_selection_string ), 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
                         
                     
                 
             
-            if len( selected_tags ) == 1:
+            if len( selected_actual_tags ) == 1:
                 
-                ( tag, ) = selected_tags
+                ( selected_tag, ) = selected_actual_tags
                 
                 if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
-                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                    ( namespace, subtag ) = HydrusTags.SplitTag( selected_tag )
                     
                     hide_menu = QW.QMenu( menu )
                     
                     ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
-                    ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
+                    ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( selected_tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
                     
                     ClientGUIMenus.AppendMenu( menu, hide_menu, 'hide' )
                     
@@ -2124,31 +2244,31 @@ class ListBoxTags( ListBox ):
                     HG.client_controller.pub( 'notify_new_favourite_tags' )
                     
                 
-                if tag in favourite_tags:
+                if selected_tag in favourite_tags:
                     
-                    favourite_tags.remove( tag )
+                    favourite_tags.remove( selected_tag )
                     
-                    label = 'remove "{}" from favourites'.format( tag )
+                    label = 'remove "{}" from favourites'.format( selected_tag )
                     description = 'Remove this tag from your favourites'
                     
                 else:
                     
-                    favourite_tags.append( tag )
+                    favourite_tags.append( selected_tag )
                     
-                    label = 'add "{}" to favourites'.format( tag )
+                    label = 'add "{}" to favourites'.format( selected_tag )
                     description = 'Add this tag from your favourites'
                     
                 
                 ClientGUIMenus.AppendMenuItem( menu, label, description, set_favourite_tags, favourite_tags )
                 
             
-            if len( selected_tags ) > 0 and self.can_spawn_new_windows:
+            if len( selected_actual_tags ) > 0 and self.can_spawn_new_windows:
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                if len( selected_tags ) == 1:
+                if len( selected_actual_tags ) == 1:
                     
-                    ( tag, ) = selected_tags
+                    ( tag, ) = selected_actual_tags
                     
                     text = tag
                     
@@ -2188,7 +2308,14 @@ class ListBoxTagsPredicates( ListBoxTags ):
             return False
             
         
-        term = self._GetTerm( index )
+        try:
+            
+            term = self._GetTerm( index )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
         
         if term.GetType() in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
             
@@ -2207,7 +2334,14 @@ class ListBoxTagsPredicates( ListBoxTags ):
             return False
             
         
-        term = self._GetTerm( index )
+        try:
+            
+            term = self._GetTerm( index )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
         
         if term.GetType() == ClientSearch.PREDICATE_TYPE_LABEL:
             
@@ -2225,11 +2359,6 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
             ListBoxTags._Deselect( self, index )
             
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        return [ term.ToString( with_counts ) for term in self._ordered_terms ]
         
     
     def _GetMutuallyExclusivePredicates( self, predicate ):
@@ -2266,7 +2395,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         predicate = term
         
-        return predicate.ToString( with_counts = False )
+        return predicate.ToString( with_count = False )
         
     
     def _GetTextFromTerm( self, term ):
@@ -2328,140 +2457,28 @@ class ListBoxTagsPredicates( ListBoxTags ):
         return set( self._terms )
         
     
-class ListBoxTagsAC( ListBoxTagsPredicates ):
-    
-    def __init__( self, parent, callable, service_key, float_mode, **kwargs ):
-        
-        ListBoxTagsPredicates.__init__( self, parent, **kwargs )
-        
-        self._callable = callable
-        self._service_key = service_key
-        self._float_mode = float_mode
-        
-        self._predicates = {}
-        
-    
-    def _Activate( self ):
-        
-        shift_down = QW.QApplication.keyboardModifiers() & QC.Qt.ShiftModifier
-        
-        predicates = [ term for term in self._selected_terms if term.GetType() != ClientSearch.PREDICATE_TYPE_PARENT ]
-        
-        if self._float_mode:
-            
-            widget = self.window().parentWidget()
-            
-        else:
-            
-            widget = self
-            
-        
-        predicates = ClientGUISearch.FleshOutPredicates( widget, predicates )
-        
-        if len( predicates ) > 0:
-            
-            self._callable( predicates, shift_down )
-            
-        
-    
     def SetPredicates( self, predicates ):
         
-        # need to do a clever compare, since normal predicate compare doesn't take count into account
+        selected_terms = set( self._selected_terms )
         
-        they_are_the_same = True
+        self._Clear()
         
-        if len( predicates ) == len( self._predicates ):
+        for predicate in predicates:
             
-            for index in range( len( predicates ) ):
-                
-                p_1 = predicates[ index ]
-                p_2 = self._predicates[ index ]
-                
-                if p_1 != p_2 or p_1.GetCount() != p_2.GetCount():
-                    
-                    they_are_the_same = False
-                    
-                    break
-                    
-                
-            
-        else:
-            
-            they_are_the_same = False
+            self._AppendTerm( predicate )
             
         
-        if not they_are_the_same:
+        for term in selected_terms:
             
-            # important to make own copy, as same object originals can be altered (e.g. set non-inclusive) in cache, and we need to notice that change just above
-            self._predicates = [ predicate.GetCopy() for predicate in predicates ]
-            
-            self._Clear()
-            
-            for predicate in predicates:
+            if term in self._ordered_terms:
                 
-                self._AppendTerm( predicate )
-                
-            
-            self._DataHasChanged()
-            
-            if len( predicates ) > 0:
-                
-                hit_index = 0
-                
-                if len( predicates ) > 1:
-                    
-                    skip_ors = True
-                    
-                    skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' )
-                    
-                    for ( index, predicate ) in enumerate( predicates ):
-                        
-                        # now only apply this to simple tags, not wildcards and system tags
-                        
-                        if skip_ors and predicate.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
-                            
-                            continue
-                            
-                        
-                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
-                            
-                            continue
-                            
-                        
-                        hit_index = index
-                        
-                        break
-                        
-                    
-                
-                self._Hit( False, False, hit_index )
+                self._selected_terms.add( term )
                 
             
         
-    
-    def SetTagService( self, service_key ):
+        self._HitFirstSelectedItem()
         
-        self._service_key = service_key
-        
-    
-class ListBoxTagsACRead( ListBoxTagsAC ):
-    
-    ors_are_under_construction = True
-    
-    def _GetTextFromTerm( self, term ):
-        
-        predicate = term
-        
-        return predicate.ToString( render_for_user = True, or_under_construction = self.ors_are_under_construction )
-        
-    
-class ListBoxTagsACWrite( ListBoxTagsAC ):
-    
-    def _GetTextFromTerm( self, term ):
-        
-        predicate = term
-        
-        return predicate.ToString( sibling_service_key = self._service_key )
+        self._DataHasChanged()
         
     
 class ListBoxTagsCensorship( ListBoxTags ):
@@ -2800,12 +2817,24 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def SetTags( self, tags ):
         
+        selected_terms = set( self._selected_terms )
+        
         self._Clear()
         
         for tag in tags:
             
             self._AppendTerm( tag )
             
+        
+        for term in selected_terms:
+            
+            if term in self._ordered_terms:
+                
+                self._selected_terms.add( term )
+                
+            
+        
+        self._HitFirstSelectedItem()
         
         self._RecalcTags()
         
@@ -2944,18 +2973,6 @@ class ListBoxTagsMedia( ListBoxTags ):
         self._show_deleted = False
         self._show_pending = True
         self._show_petitioned = True
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        if with_counts:
-            
-            return [ self._terms_to_texts[ term ] for term in self._ordered_terms ]
-            
-        else:
-            
-            return list( self._ordered_terms )
-            
         
     
     def _GetNamespaceFromTerm( self, term ):

@@ -18,7 +18,7 @@ from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITime
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
@@ -54,7 +54,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         rule = ( HC.BANDWIDTH_TYPE_DATA, None, 1024 * 1024 * 100 )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit rule' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rule' ) as dlg:
             
             panel = self._EditPanel( dlg, rule )
             
@@ -100,7 +100,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         for rule in selected_rules:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit rule' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rule' ) as dlg:
                 
                 panel = self._EditPanel( dlg, rule )
                 
@@ -370,7 +370,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             example_string_at_this_point = self._example_string.text()
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
             
             panel = self._TransformationPanel( dlg, transformation_type, data, example_string_at_this_point )
             
@@ -524,7 +524,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 example_string_at_this_point = self._example_string.text()
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = self._TransformationPanel( dlg, transformation_type, data, example_string_at_this_point )
                 
@@ -1555,7 +1555,7 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string converter', frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit string converter', frame_key = 'deeply_nested_dialog' ) as dlg:
             
             panel = EditStringConverterPanel( dlg, self._string_converter, example_string_override = self._example_string_override )
             
@@ -1617,7 +1617,7 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string match', frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit string match', frame_key = 'deeply_nested_dialog' ) as dlg:
             
             panel = EditStringMatchPanel( dlg, self._string_match )
             
@@ -1701,7 +1701,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
     
     def _Add( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
             
             string_match = ClientParsing.StringMatch()
             
@@ -1719,7 +1719,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
                 
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
             
             string_match = ClientParsing.StringMatch()
             
@@ -1744,7 +1744,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
             
             ( key_string_match, value_string_match ) = data
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
                 
                 panel = EditStringMatchPanel( dlg, key_string_match )
                 
@@ -1760,7 +1760,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
                     
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
                 
                 panel = EditStringMatchPanel( dlg, value_string_match )
                 
@@ -1804,7 +1804,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string dictionary' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit string dictionary' ) as dlg:
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
@@ -2050,7 +2050,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
                     return
                     
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
                     
                     string_match = ClientParsing.StringMatch()
                     
@@ -2096,7 +2096,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
                     
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
                 
                 string_match = ClientParsing.StringMatch()
                 

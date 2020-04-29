@@ -16,7 +16,7 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUISearch
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -107,7 +107,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._media_collect.setEnabled( self._include_media_collect.isChecked() )
         
     
-    def CanOK( self ):
+    def UserIsOKToOK( self ):
         
         ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) = self.GetValue()
         
@@ -233,7 +233,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = HydrusData.GetNonDupeName( name, existing_names )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit favourite search' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit favourite search' ) as dlg:
             
             panel = EditFavouriteSearchPanel( dlg, existing_folders_to_names, foldername, name, file_search_context, synchronised, media_sort, media_collect )
             
@@ -313,7 +313,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             existing_folders_to_names = self._GetExistingFoldersToNames()
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit favourite search' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit favourite search' ) as dlg:
                 
                 panel = EditFavouriteSearchPanel( dlg, existing_folders_to_names, foldername, name, file_search_context, synchronised, media_sort, media_collect )
                 

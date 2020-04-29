@@ -40,7 +40,7 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITime
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
@@ -91,7 +91,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         account_type = HydrusNetwork.AccountType.GenerateNewAccountTypeFromParameters( title, permissions, bandwidth_rules )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit account type' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit account type' ) as dlg_edit:
             
             panel = ClientGUIScrolledPanelsEdit.EditAccountTypePanel( dlg_edit, self._admin_service.GetServiceType(), account_type )
             
@@ -174,7 +174,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for account_type in datas:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit account type' ) as dlg_edit:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit account type' ) as dlg_edit:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditAccountTypePanel( dlg_edit, self._admin_service.GetServiceType(), account_type )
                 
@@ -284,7 +284,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         service = ClientServices.GenerateService( service_key, service_type, name )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit service' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service' ) as dlg:
             
             panel = self._EditPanel( dlg, service )
             
@@ -382,7 +382,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for service in selected_services:
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit service' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service' ) as dlg:
                     
                     panel = self._EditPanel( dlg, service )
                     
@@ -415,6 +415,13 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         services = self._listctrl.GetData()
         
+        HG.client_controller.SetServices( services )
+        
+    
+    def UserIsOKToOK( self ):
+        
+        services = self._listctrl.GetData()
+        
         new_service_keys = { service.GetServiceKey() for service in services }
         
         deletee_service_names = [ service.GetName() for service in self._original_services if service.GetServiceKey() not in new_service_keys ]
@@ -431,12 +438,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if result != QW.QDialog.Accepted:
                 
-                raise HydrusExceptions.VetoException( 'Commit cancelled by user! If you do not believe you meant to delete any services (i.e the code accidentally intended to delete them all by itself), please inform hydrus dev immediately.' )
+                return False
                 
             
-            
         
-        HG.client_controller.SetServices( services )
+        return True
         
     
     class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -539,7 +545,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in archive_namespaces ]
                     
-                    with ClientGUITopLevelWindows.DialogEdit( self, 'select namespaces' ) as dlg:
+                    with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select namespaces' ) as dlg:
                         
                         panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
                         
@@ -587,7 +593,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, namespace in existing_namespaces ) for namespace in archive_namespaces ]
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'select namespaces' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select namespaces' ) as dlg:
                     
                     panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
                     
@@ -2768,7 +2774,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 title = 'set frame location information'
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
                     panel = ClientGUIScrolledPanelsEdit.EditFrameLocationPanel( dlg, listctrl_list )
                     
@@ -3311,6 +3317,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( self )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( self )
             
+            from hydrus.client.gui import ClientGUICanvas
+            
+            self._media_viewer_zoom_center = ClientGUICommon.BetterChoice()
+            
+            for zoom_centerpoint_type in ClientGUICanvas.ZOOM_CENTERPOINT_TYPES:
+                
+                self._media_viewer_zoom_center.addItem( ClientGUICanvas.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
+                
+            
+            tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit.'
+            
+            self._media_viewer_zoom_center.setToolTip( tt )
+            
             self._media_zooms = QW.QLineEdit( self )
             self._media_zooms.textChanged.connect( self.EventZoomsChanged )
             
@@ -3344,6 +3363,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
             
+            self._media_viewer_zoom_center.SetValue( self._new_options.GetInteger( 'media_viewer_zoom_center' ) )
+            
             media_zooms = self._new_options.GetMediaZooms()
             
             self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
@@ -3363,11 +3384,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
+            text = 'Please be warned that hydrus does not currently zoom in very efficiently at high zooms!'
+            text += os.linesep
+            text += 'Just be careful at >400%, particularly for already large files--it can lag out and eat a chunk of memory.'
+            
+            st = ClientGUICommon.BetterStaticText( self, text )
+            st.setObjectName( 'HydrusWarning' )
+            
+            QP.AddToLayout( vbox, st )
+            
             rows = []
             
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
             rows.append( ( 'Always Loop GIFs:', self._always_loop_gifs ) )
+            rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
@@ -3531,7 +3562,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             title = 'add media view options information'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, data )
                 
@@ -3552,7 +3583,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 title = 'edit media view options information'
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
                     panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, data )
                     
@@ -3618,6 +3649,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
             self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
+            
+            self._new_options.SetInteger( 'media_viewer_zoom_center', self._media_viewer_zoom_center.GetValue() )
             
             try:
                 
@@ -4038,7 +4071,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventFullscreensUpdate( self, value ):
             
-            display_size = ClientGUITopLevelWindows.GetDisplaySize( self )
+            display_size = ClientGUIFunctions.GetDisplaySize( self )
             
             estimated_bytes_per_fullscreen = 3 * display_size.width() * display_size.height()
             
@@ -5014,7 +5047,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         service = HydrusNetwork.GenerateService( service_key, service_type, name, port, dictionary )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
             
             panel = ClientGUIScrolledPanelsEdit.EditServersideService( dlg_edit, service )
             
@@ -5064,7 +5097,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             original_name = service.GetName()
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditServersideService( dlg_edit, service )
                 
@@ -5123,7 +5156,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def CommitChanges( self ):
+    def CheckValid( self ):
         
         services = self._services_listctrl.GetData()
         
@@ -5133,6 +5166,11 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             raise HydrusExceptions.VetoException( 'It looks like some of those services share ports! Please give them unique ports!' )
             
+        
+    
+    def CommitChanges( self ):
+        
+        services = self._services_listctrl.GetData()
         
         try:
             
@@ -5595,32 +5633,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _SetLocations( self ):
-        
-        prefixes = self._locations.GetData( only_selected = True )
-        
-        if len( prefixes ) > 0:
-            
-            with QP.DirDialog( self, 'Select correct location.' ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    path = dlg.GetPath()
-                    
-                    for prefix in prefixes:
-                        
-                        ok = os.path.exists( os.path.join( path, prefix ) )
-                        
-                        self._correct_locations[ prefix ] = ( path, ok )
-                        
-                    
-                    self._locations.UpdateDatas()
-                    
-                
-            
-        
-    
-    def CommitChanges( self ):
+    def _GetValue( self ):
         
         correct_rows = []
         
@@ -5663,6 +5676,51 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             correct_rows.append( ( incorrect_location, prefix, correct_location ) )
             
         
+        return ( correct_rows, thumb_problems )
+        
+    
+    def _SetLocations( self ):
+        
+        prefixes = self._locations.GetData( only_selected = True )
+        
+        if len( prefixes ) > 0:
+            
+            with QP.DirDialog( self, 'Select correct location.' ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    path = dlg.GetPath()
+                    
+                    for prefix in prefixes:
+                        
+                        ok = os.path.exists( os.path.join( path, prefix ) )
+                        
+                        self._correct_locations[ prefix ] = ( path, ok )
+                        
+                    
+                    self._locations.UpdateDatas()
+                    
+                
+            
+        
+    
+    def CheckValid( self ):
+        
+        # raises veto if invalid
+        self._GetValue()
+        
+    
+    def CommitChanges( self ):
+        
+        ( correct_rows, thumb_problems ) = self._GetValue()
+        
+        HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+        
+    
+    def UserIsOKToOK( self ):
+        
+        ( correct_rows, thumb_problems ) = self._GetValue()
+        
         if thumb_problems:
             
             message = 'Some or all of your incorrect paths have not been corrected, but they are all thumbnail paths.'
@@ -5675,10 +5733,9 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if result != QW.QDialog.Accepted:
                 
-                raise HydrusExceptions.VetoException()
+                return False
                 
             
         
-        HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+        return True
         
-    

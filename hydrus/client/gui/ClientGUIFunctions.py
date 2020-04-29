@@ -325,6 +325,18 @@ def EscapeMnemonics( str ):
     
     return str.replace( "&", "&&" )
     
+def GetDisplayPosition( window ):
+    
+    return QW.QApplication.desktop().availableGeometry( window ).topLeft()
+    
+def GetDisplaySize( window ):
+    
+    return QW.QApplication.desktop().availableGeometry( window ).size()
+    
+def GetMouseScreen():
+    
+    return QW.QApplication.screenAt( QG.QCursor.pos() )
+    
 def GetTLWParents( widget ):
     
     widget_tlw = widget.window()        
@@ -372,6 +384,21 @@ def IsQtAncestor( child, ancestor, through_tlws = False ):
         
     
     return False
+    
+def MouseIsOnMyDisplay( window ):
+    
+    window_handle = window.window().windowHandle()
+    
+    if window_handle is None:
+        
+        return False
+        
+    
+    window_screen = window_handle.screen()
+    
+    mouse_screen = GetMouseScreen()
+    
+    return mouse_screen is window_screen
     
 def NotebookScreenToHitTest( notebook, screen_position ):
     

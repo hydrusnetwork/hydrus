@@ -34,8 +34,22 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+
+ZOOM_CENTERPOINT_MEDIA_CENTER = 0
+ZOOM_CENTERPOINT_VIEWER_CENTER = 1
+ZOOM_CENTERPOINT_MOUSE = 2
+ZOOM_CENTERPOINT_MEDIA_TOP_LEFT = 3
+
+ZOOM_CENTERPOINT_TYPES = ( ZOOM_CENTERPOINT_VIEWER_CENTER, ZOOM_CENTERPOINT_MOUSE, ZOOM_CENTERPOINT_MEDIA_CENTER, ZOOM_CENTERPOINT_MEDIA_TOP_LEFT )
+
+zoom_centerpoints_str_lookup = {}
+
+zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MEDIA_CENTER ] = 'media center'
+zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_VIEWER_CENTER ] = 'viewer center'
+zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MOUSE ] = 'mouse (or viewer center if mouse outside)'
+zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MEDIA_TOP_LEFT ] = 'media top-left'
 
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
@@ -748,7 +762,7 @@ class Canvas( QW.QWidget ):
             
             title = 'manage notes'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
                 
@@ -825,7 +839,7 @@ class Canvas( QW.QWidget ):
         
         for child in self.children():
             
-            if isinstance( child, ClientGUITopLevelWindows.FrameThatTakesScrollablePanel ):
+            if isinstance( child, ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel ):
                 
                 panel = child.GetPanel()
                 
@@ -848,7 +862,7 @@ class Canvas( QW.QWidget ):
         title = 'manage tags'
         frame_key = 'manage_tags_frame'
         
-        manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        manage_tags = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
         panel = ClientGUITags.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
         
@@ -864,7 +878,7 @@ class Canvas( QW.QWidget ):
         
         title = 'manage known urls'
         
-        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
             panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, ( self._current_media, ) )
             
@@ -1109,22 +1123,54 @@ class Canvas( QW.QWidget ):
         old_size_bigger = my_size.width() < media_window_width or my_size.height() < media_window_height
         new_size_fits = my_size.width() >= new_media_window_width and my_size.height() >= new_media_window_height
         
-        width_delta = media_window_width - new_media_window_width
-        height_delta = media_window_height - new_media_window_height
+        #
         
-        half_delta = QC.QPoint( width_delta // 2, height_delta // 2 )
+        zoom_center_type = HG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
         
-        self._media_window_pos += half_delta
+        # viewer center is the default
+        zoom_centerpoint = QC.QPoint( my_size.width() // 2, my_size.height() // 2 )
+        
+        if zoom_center_type == ZOOM_CENTERPOINT_MEDIA_CENTER:
+            
+            zoom_centerpoint = self._media_window_pos + QC.QPoint( media_window_width // 2, media_window_height // 2 )
+            
+        elif zoom_center_type == ZOOM_CENTERPOINT_MEDIA_TOP_LEFT:
+            
+            zoom_centerpoint = self._media_window_pos
+            
+        elif zoom_center_type == ZOOM_CENTERPOINT_MOUSE:
+            
+            mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
+            
+            if self.rect().contains( mouse_pos ):
+                
+                zoom_centerpoint = mouse_pos
+                
+            
+        
+        # probably a simpler way to calc this, but hey
+        widths_centerpoint_is_from_pos = ( zoom_centerpoint.x() - self._media_window_pos.x() ) / media_window_width
+        heights_centerpoint_is_from_pos = ( zoom_centerpoint.y() - self._media_window_pos.y() ) / media_window_height
+        
+        zoom_width_delta = media_window_width - new_media_window_width
+        zoom_height_delta = media_window_height - new_media_window_height
+        
+        centerpoint_adjusted_delta = QC.QPoint( int( zoom_width_delta * widths_centerpoint_is_from_pos ), int( zoom_height_delta * heights_centerpoint_is_from_pos ) )
+        
+        self._media_window_pos += centerpoint_adjusted_delta
+        
+        #
         
         self._current_zoom = new_zoom
         
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-        
+        '''
+        # rescue hack no longer needed as media center zoom is non-default
         if old_size_bigger and new_size_fits:
             
             self._ResetMediaWindowCenterPosition()
             
-        
+        '''
         # due to the foolish 'giganto window' system for large zooms, some auto-update stuff doesn't work right if the convas rect is contained by the media rect, so do a refresh here
         self._DrawCurrentMedia()
         
@@ -2152,9 +2198,13 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self._GenerateHoverTopFrame()
         
-        ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, self._canvas_key )
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, self._canvas_key )
         
-        ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, self._canvas_key )
+        self._my_shortcuts_handler.AddWindowToFilter( hover )
+        
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, self._canvas_key )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( hover )
         
         for name in self._new_options.GetStringList( 'default_media_viewer_custom_shortcuts' ):
             
@@ -2407,7 +2457,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         CanvasWithHovers.__init__( self, parent )
         
-        ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( hover )
         
         self._file_search_context = file_search_context
         self._both_files_match = both_files_match
@@ -2562,7 +2614,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
                 
@@ -2649,7 +2701,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GenerateHoverTopFrame( self ):
         
-        ClientGUICanvasHoverFrames.CanvasHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( hover )
         
     
     def _GetBackgroundColour( self ):
@@ -2843,7 +2897,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         for tlw in tlws:
             
-            if isinstance( tlw, ClientGUITopLevelWindows.DialogCustomButtonQuestion ) and tlw.isModal():
+            if isinstance( tlw, ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion ) and tlw.isModal():
                 
                 return
                 
@@ -3718,7 +3772,9 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        ClientGUICanvasHoverFrames.CanvasHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( hover )
         
     
     def _Keep( self ):
@@ -3930,7 +3986,9 @@ class CanvasMediaListNavigable( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        ClientGUICanvasHoverFrames.CanvasHoverFrameTopNavigableList( self, self, self._canvas_key )
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopNavigableList( self, self, self._canvas_key )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( hover )
         
     
     def Archive( self, canvas_key ):

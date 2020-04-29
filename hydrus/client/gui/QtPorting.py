@@ -1356,11 +1356,17 @@ def ListWidgetSetSelection( widget, idxs ):
         
         idxs = [ idxs ]
         
+    
+    count = widget.count()
+    
     for idx in idxs:
         
-        if idx != -1: widget.item( idx ).setSelected( True )
-
-
+        if 0 <= idx <= count -1:
+            
+            widget.item( idx ).setSelected( True )
+            
+        
+    
 def MakeQSpinBox( parent = None, initial = None, min = None, max = None, width = None ):
     
     spinbox = QW.QSpinBox( parent )
@@ -1560,13 +1566,18 @@ class UIActionSimulator:
         pass
         
     
-    def Char( self, key, text = None ):
+    def Char( self, widget, key, text = None ):
+        
+        if widget is None:
+            
+            widget = QW.QApplication.focusWidget()
+            
         
         ev1 = QG.QKeyEvent( QC.QEvent.KeyPress, key, QC.Qt.NoModifier, text = text )
         ev2 = QG.QKeyEvent( QC.QEvent.KeyRelease, key, QC.Qt.NoModifier, text = text )
         
-        QW.QApplication.postEvent( QW.QApplication.focusWidget(), ev1 )
-        QW.QApplication.postEvent( QW.QApplication.focusWidget(), ev2 )
+        QW.QApplication.postEvent( widget, ev1 )
+        QW.QApplication.postEvent( widget, ev2 )
         
 
 class AboutBox( QW.QDialog ):

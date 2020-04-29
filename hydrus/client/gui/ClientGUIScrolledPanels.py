@@ -53,14 +53,9 @@ class ResizingScrolledPanel( QW.QScrollArea ):
         self.okSignal.emit()
         
     
-    def CanCancel( self ):
+    def CheckValid( self ):
         
-        return True
-        
-    
-    def CanOK( self ):
-        
-        return True
+        pass
         
     
     def CleanBeforeDestroy( self ):
@@ -104,9 +99,14 @@ class ResizingScrolledPanel( QW.QScrollArea ):
             
         
     
-    def TryToClose( self ):
+    def UserIsOKToOK( self ):
         
-        pass
+        return True
+        
+    
+    def UserIsOKToCancel( self ):
+        
+        return True
         
     
     def WidgetJustSized( self, width_larger, height_larger ):
@@ -148,6 +148,12 @@ class EditPanel( ResizingScrolledPanel ):
     def GetValue( self ):
         
         raise NotImplementedError()
+        
+    
+    def CheckValid( self ):
+        
+        # raises veto if not valid
+        self.GetValue()
         
     
 class EditSingleCtrlPanel( EditPanel ):

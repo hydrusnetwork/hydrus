@@ -2,6 +2,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientImageHandling
 from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportOptions
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
@@ -20,140 +21,9 @@ import os
 import threading
 import time
 import traceback
+import typing
 import urllib.parse
 
-def GenerateFileSeedCacheStatus( file_seed_cache ):
-    
-    statuses_to_counts = file_seed_cache.GetStatusesToCounts()
-    
-    return GenerateStatusesToCountsStatus( statuses_to_counts )
-    
-def GenerateFileSeedCachesStatus( file_seed_caches ):
-    
-    statuses_to_counts = collections.Counter()
-    
-    for file_seed_cache in file_seed_caches:
-        
-        statuses_to_counts.update( file_seed_cache.GetStatusesToCounts() )
-        
-    
-    return GenerateStatusesToCountsStatus( statuses_to_counts )
-    
-def GenerateStatusesToCountsStatus( statuses_to_counts ):
-    
-    num_successful_and_new = statuses_to_counts[ CC.STATUS_SUCCESSFUL_AND_NEW ]
-    num_successful_but_redundant = statuses_to_counts[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ]
-    num_ignored = statuses_to_counts[ CC.STATUS_VETOED ]
-    num_deleted = statuses_to_counts[ CC.STATUS_DELETED ]
-    num_failed = statuses_to_counts[ CC.STATUS_ERROR ]
-    num_skipped = statuses_to_counts[ CC.STATUS_SKIPPED ]
-    num_unknown = statuses_to_counts[ CC.STATUS_UNKNOWN ]
-    
-    status_strings = []
-    
-    num_successful = num_successful_and_new + num_successful_but_redundant
-    
-    if num_successful > 0:
-        
-        s = HydrusData.ToHumanInt( num_successful ) + ' successful'
-        
-        if num_successful_and_new > 0:
-            
-            if num_successful_but_redundant > 0:
-                
-                s += ' (' + HydrusData.ToHumanInt( num_successful_but_redundant ) + ' already in db)'
-                
-            
-        else:
-            
-            s += ' (all already in db)'
-            
-        
-        status_strings.append( s )
-        
-    
-    if num_ignored > 0:
-        
-        status_strings.append( HydrusData.ToHumanInt( num_ignored ) + ' ignored' )
-        
-    
-    if num_deleted > 0:
-        
-        status_strings.append( HydrusData.ToHumanInt( num_deleted ) + ' previously deleted' )
-        
-    
-    if num_failed > 0:
-        
-        status_strings.append( HydrusData.ToHumanInt( num_failed ) + ' failed' )
-        
-    
-    if num_skipped > 0:
-        
-        status_strings.append( HydrusData.ToHumanInt( num_skipped ) + ' skipped' )
-        
-    
-    status = ', '.join( status_strings )
-    
-    #
-    
-    total = sum( statuses_to_counts.values() )
-    
-    total_processed = total - num_unknown
-    
-    #
-    
-    simple_status = ''
-    
-    if total > 0:
-        
-        if num_unknown > 0:
-            
-            simple_status += HydrusData.ConvertValueRangeToPrettyString( total_processed, total )
-            
-        else:
-            
-            simple_status += HydrusData.ToHumanInt( total_processed )
-            
-        
-        show_new_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_new_on_file_seed_short_summary' )
-        
-        if show_new_on_file_seed_short_summary and num_successful_and_new:
-            
-            simple_status += ' - ' + HydrusData.ToHumanInt( num_successful_and_new ) + 'N'
-            
-        
-        simple_status_strings = []
-        
-        if num_ignored > 0:
-            
-            simple_status_strings.append( HydrusData.ToHumanInt( num_ignored ) + 'Ig' )
-            
-        
-        show_deleted_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )
-        
-        if show_deleted_on_file_seed_short_summary and num_deleted > 0:
-            
-            simple_status_strings.append( HydrusData.ToHumanInt( num_deleted ) + 'D' )
-            
-        
-        if num_failed > 0:
-            
-            simple_status_strings.append( HydrusData.ToHumanInt( num_failed ) + 'F' )
-            
-        
-        if num_skipped > 0:
-            
-            simple_status_strings.append( HydrusData.ToHumanInt( num_skipped ) + 'S' )
-            
-        
-        if len( simple_status_strings ) > 0:
-            
-            simple_status += ' - ' + ''.join( simple_status_strings )
-            
-        
-    
-    return ( status, simple_status, ( total_processed, total ) )
-    
 class FileImportJob( object ):
     
     def __init__( self, temp_path, file_import_options = None ):
@@ -431,7 +301,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Import'
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, file_seed_type = None, file_seed_data = None ):
+    def __init__( self, file_seed_type: int = None, file_seed_data: str = None ):
         
         if file_seed_type is None:
             
@@ -483,7 +353,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.__hash__() != other.__hash__()
         
     
-    def _CheckTagsBlacklist( self, tags, tag_import_options ):
+    def _CheckTagsBlacklist( self, tags, tag_import_options: ClientImportOptions.TagImportOptions ):
         
         tag_import_options.CheckBlacklist( tags )
         
@@ -533,7 +403,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return associable_urls
         
     
-    def _SetupTagImportOptions( self, given_tag_import_options ):
+    def _SetupTagImportOptions( self, given_tag_import_options: ClientImportOptions.TagImportOptions ) -> ClientImportOptions.TagImportOptions:
         
         if given_tag_import_options.IsDefault():
             
@@ -595,7 +465,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddParseResults( self, parse_results, file_import_options ):
+    def AddParseResults( self, parse_results, file_import_options: ClientImportOptions.FileImportOptions ):
         
         for ( hash_type, hash ) in ClientParsing.GetHashesFromParseResults( parse_results ):
             
@@ -641,7 +511,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._UpdateModified()
         
     
-    def AddURL( self, url ):
+    def AddURL( self, url: str ):
         
         urls = ( url, )
         
@@ -652,12 +522,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._urls.update( associable_urls )
         
     
-    def CheckPreFetchMetadata( self, tag_import_options ):
+    def CheckPreFetchMetadata( self, tag_import_options: ClientImportOptions.TagImportOptions ):
         
         self._CheckTagsBlacklist( self._tags, tag_import_options )
         
     
-    def DownloadAndImportRawFile( self, file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False ):
+    def DownloadAndImportRawFile( self, file_url: str, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False ):
         
         self.AddURL( file_url )
         
@@ -702,12 +572,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FetchPageMetadata( self, tag_import_options ):
+    def FetchPageMetadata( self, tag_import_options: ClientImportOptions.TagImportOptions ):
         
         pass
         
     
-    def GetAPIInfoDict( self, simple ):
+    def GetAPIInfoDict( self, simple: bool ):
         
         d = {}
         
@@ -749,7 +619,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return None
         
     
-    def GetPreImportStatusPredictionHash( self, file_import_options ):
+    def GetPreImportStatusPredictionHash( self, file_import_options: ClientImportOptions.FileImportOptions ):
         
         UNKNOWN_DEFAULT = ( CC.STATUS_UNKNOWN, None, '' )
         
@@ -786,7 +656,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return ( status, hash, note )
         
     
-    def GetPreImportStatusPredictionURL( self, file_import_options, file_url = None ):
+    def GetPreImportStatusPredictionURL( self, file_import_options: ClientImportOptions.FileImportOptions, file_url = None ):
         
         UNKNOWN_DEFAULT = ( CC.STATUS_UNKNOWN, None, '' )
         
@@ -856,7 +726,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 my_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( my_url )
                                 
-                                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                                media_result = HG.client_controller.Read( 'media_result', hash )
                                 
                                 this_files_urls = media_result.GetLocationsManager().GetURLs()
                                 
@@ -930,7 +800,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.GetHash() is not None
         
     
-    def Import( self, temp_path, file_import_options, status_hook = None ):
+    def Import( self, temp_path: str, file_import_options: ClientImportOptions.FileImportOptions, status_hook = None ):
         
         file_import_job = FileImportJob( temp_path, file_import_options )
         
@@ -940,7 +810,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.SetHash( hash )
         
     
-    def ImportPath( self, file_seed_cache, file_import_options, limited_mimes = None, status_hook = None ):
+    def ImportPath( self, file_seed_cache: "FileSeedCache", file_import_options: ClientImportOptions.FileImportOptions, limited_mimes = None, status_hook = None ):
         
         try:
             
@@ -1037,7 +907,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PredictPreImportStatus( self, file_import_options, tag_import_options, file_url = None ):
+    def PredictPreImportStatus( self, file_import_options: ClientImportOptions.FileImportOptions, tag_import_options: ClientImportOptions.TagImportOptions, file_url = None ):
         
         ( url_status, url_hash, url_note ) = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
         ( hash_status, hash_hash, hash_note ) = self.GetPreImportStatusPredictionHash( file_import_options )
@@ -1091,13 +961,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return ( should_download_metadata, should_download_file )
         
     
-    def PresentToPage( self, page_key ):
+    def PresentToPage( self, page_key: bytes ):
         
         hash = self.GetHash()
         
         if hash is not None:
             
-            ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+            media_result = HG.client_controller.Read( 'media_result', hash )
             
             HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
             
@@ -1116,12 +986,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetReferralURL( self, referral_url ):
+    def SetReferralURL( self, referral_url: str ):
         
         self._referral_url = referral_url
         
     
-    def SetStatus( self, status, note = '', exception = None ):
+    def SetStatus( self, status: int, note: str = '', exception = None ):
         
         if exception is not None:
             
@@ -1141,7 +1011,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._UpdateModified()
         
     
-    def ShouldPresent( self, file_import_options, in_inbox = None ):
+    def ShouldPresent( self, file_import_options: ClientImportOptions.FileImportOptions, in_inbox = None ):
         
         hash = self.GetHash()
         
@@ -1201,7 +1071,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, file_seed_cache, status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, tag_import_options ):
+    def WorkOnURL( self, file_seed_cache: "FileSeedCache", status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options: ClientImportOptions.FileImportOptions, tag_import_options: ClientImportOptions.TagImportOptions ):
         
         did_substantial_work = False
         
@@ -1499,7 +1369,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return did_substantial_work
         
     
-    def WriteContentUpdates( self, tag_import_options = None ):
+    def WriteContentUpdates( self, tag_import_options: typing.Optional[ ClientImportOptions.TagImportOptions ] = None ):
         
         did_work = False
         
@@ -1541,23 +1411,25 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
             
         
-        if tag_import_options is not None:
+        if tag_import_options is None:
             
-            in_inbox = HG.client_controller.Read( 'in_inbox', hash )
-            
-            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, in_inbox, hash, set( self._tags ) ).items():
+            for ( service_key, content_updates ) in ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( ( hash, ), self._fixed_service_keys_to_tags ).items():
                 
                 service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
                 did_work = True
                 
             
-        
-        for ( service_key, content_updates ) in ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( ( hash, ), self._fixed_service_keys_to_tags ).items():
+        else:
             
-            service_keys_to_content_updates[ service_key ].extend( content_updates )
+            media_result = HG.client_controller.Read( 'media_result', hash )
             
-            did_work = True
+            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, media_result, set( self._tags ), external_service_keys_to_tags = self._fixed_service_keys_to_tags ).items():
+                
+                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                
+                did_work = True
+                
             
         
         if len( service_keys_to_content_updates ) > 0:
@@ -1609,7 +1481,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = False
         
     
-    def _GetFileSeeds( self, status = None ):
+    def _GetFileSeeds( self, status: int = None ):
         
         if status is None:
             
@@ -1626,7 +1498,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return self._file_seeds.GetSerialisableTuple()
         
     
-    def _GetSourceTimestamp( self, file_seed ):
+    def _GetSourceTimestamp( self, file_seed: FileSeed ):
         
         source_timestamp = file_seed.source_time
         
@@ -1653,7 +1525,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return statuses_to_counts
         
     
-    def _HasFileSeed( self, file_seed ):
+    def _HasFileSeed( self, file_seed: FileSeed ):
         
         search_file_seeds = file_seed.GetSearchFileSeeds()
         
@@ -1883,7 +1755,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddFileSeeds( self, file_seeds ):
+    def AddFileSeeds( self, file_seeds: typing.Iterable[ FileSeed ] ):
         
         if len( file_seeds ) == 0:
             
@@ -1927,7 +1799,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return len( new_file_seeds )
         
     
-    def AdvanceFileSeed( self, file_seed ):
+    def AdvanceFileSeed( self, file_seed: FileSeed ):
         
         with self._lock:
             
@@ -1949,7 +1821,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self.NotifyFileSeedsUpdated( ( file_seed, ) )
         
     
-    def CanCompact( self, compact_before_this_source_time ):
+    def CanCompact( self, compact_before_this_source_time: int ):
         
         with self._lock:
             
@@ -1975,7 +1847,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def Compact( self, compact_before_this_source_time ):
+    def Compact( self, compact_before_this_source_time: int ):
         
         with self._lock:
             
@@ -2006,7 +1878,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def DelayFileSeed( self, file_seed ):
+    def DelayFileSeed( self, file_seed: FileSeed ):
         
         with self._lock:
             
@@ -2028,7 +1900,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self.NotifyFileSeedsUpdated( ( file_seed, ) )
         
     
-    def GetAPIInfoDict( self, simple ):
+    def GetAPIInfoDict( self, simple: bool ):
         
         with self._lock:
             
@@ -2075,7 +1947,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return self._file_seed_cache_key
         
     
-    def GetFileSeedCount( self, status = None ):
+    def GetFileSeedCount( self, status: int = None ):
         
         result = 0
         
@@ -2100,7 +1972,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return result
         
     
-    def GetFileSeeds( self, status = None ):
+    def GetFileSeeds( self, status: int = None ):
         
         with self._lock:
             
@@ -2108,7 +1980,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetFileSeedIndex( self, file_seed ):
+    def GetFileSeedIndex( self, file_seed: FileSeed ):
         
         with self._lock:
             
@@ -2172,7 +2044,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return None
         
     
-    def GetNumNewFilesSince( self, since ):
+    def GetNumNewFilesSince( self, since: int ):
         
         num_files = 0
         
@@ -2192,7 +2064,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return num_files
         
     
-    def GetPresentedHashes( self, file_import_options ):
+    def GetPresentedHashes( self, file_import_options: ClientImportOptions.FileImportOptions ):
         
         with self._lock:
             
@@ -2276,7 +2148,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def HasFileSeed( self, file_seed ):
+    def HasFileSeed( self, file_seed: FileSeed ):
         
         with self._lock:
             
@@ -2284,7 +2156,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def InsertFileSeeds( self, index, file_seeds ):
+    def InsertFileSeeds( self, index: int, file_seeds: typing.Iterable[ FileSeed ] ):
         
         if len( file_seeds ) == 0:
             
@@ -2323,7 +2195,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return len( new_file_seeds )
         
     
-    def NotifyFileSeedsUpdated( self, file_seeds ):
+    def NotifyFileSeedsUpdated( self, file_seeds: typing.Iterable[ FileSeed ] ):
         
         with self._lock:
             
@@ -2333,7 +2205,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         HG.client_controller.pub( 'file_seed_cache_file_seeds_updated', self._file_seed_cache_key, file_seeds )
         
     
-    def RemoveFileSeeds( self, file_seeds ):
+    def RemoveFileSeeds( self, file_seeds: typing.Iterable[ FileSeed ] ):
         
         with self._lock:
             
@@ -2349,7 +2221,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self.NotifyFileSeedsUpdated( file_seeds_to_delete )
         
     
-    def RemoveFileSeedsByStatus( self, statuses_to_remove ):
+    def RemoveFileSeedsByStatus( self, statuses_to_remove: typing.Iterable[ int ] ):
         
         with self._lock:
             
@@ -2415,3 +2287,136 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE ] = FileSeedCache
+
+def GenerateFileSeedCacheStatus( file_seed_cache: FileSeedCache ):
+    
+    statuses_to_counts = file_seed_cache.GetStatusesToCounts()
+    
+    return GenerateStatusesToCountsStatus( statuses_to_counts )
+    
+def GenerateFileSeedCachesStatus( file_seed_caches: typing.Iterable[ FileSeedCache ] ):
+    
+    statuses_to_counts = collections.Counter()
+    
+    for file_seed_cache in file_seed_caches:
+        
+        statuses_to_counts.update( file_seed_cache.GetStatusesToCounts() )
+        
+    
+    return GenerateStatusesToCountsStatus( statuses_to_counts )
+    
+def GenerateStatusesToCountsStatus( statuses_to_counts: collections.Counter ):
+    
+    num_successful_and_new = statuses_to_counts[ CC.STATUS_SUCCESSFUL_AND_NEW ]
+    num_successful_but_redundant = statuses_to_counts[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ]
+    num_ignored = statuses_to_counts[ CC.STATUS_VETOED ]
+    num_deleted = statuses_to_counts[ CC.STATUS_DELETED ]
+    num_failed = statuses_to_counts[ CC.STATUS_ERROR ]
+    num_skipped = statuses_to_counts[ CC.STATUS_SKIPPED ]
+    num_unknown = statuses_to_counts[ CC.STATUS_UNKNOWN ]
+    
+    status_strings = []
+    
+    num_successful = num_successful_and_new + num_successful_but_redundant
+    
+    if num_successful > 0:
+        
+        s = HydrusData.ToHumanInt( num_successful ) + ' successful'
+        
+        if num_successful_and_new > 0:
+            
+            if num_successful_but_redundant > 0:
+                
+                s += ' (' + HydrusData.ToHumanInt( num_successful_but_redundant ) + ' already in db)'
+                
+            
+        else:
+            
+            s += ' (all already in db)'
+            
+        
+        status_strings.append( s )
+        
+    
+    if num_ignored > 0:
+        
+        status_strings.append( HydrusData.ToHumanInt( num_ignored ) + ' ignored' )
+        
+    
+    if num_deleted > 0:
+        
+        status_strings.append( HydrusData.ToHumanInt( num_deleted ) + ' previously deleted' )
+        
+    
+    if num_failed > 0:
+        
+        status_strings.append( HydrusData.ToHumanInt( num_failed ) + ' failed' )
+        
+    
+    if num_skipped > 0:
+        
+        status_strings.append( HydrusData.ToHumanInt( num_skipped ) + ' skipped' )
+        
+    
+    status = ', '.join( status_strings )
+    
+    #
+    
+    total = sum( statuses_to_counts.values() )
+    
+    total_processed = total - num_unknown
+    
+    #
+    
+    simple_status = ''
+    
+    if total > 0:
+        
+        if num_unknown > 0:
+            
+            simple_status += HydrusData.ConvertValueRangeToPrettyString( total_processed, total )
+            
+        else:
+            
+            simple_status += HydrusData.ToHumanInt( total_processed )
+            
+        
+        show_new_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_new_on_file_seed_short_summary' )
+        
+        if show_new_on_file_seed_short_summary and num_successful_and_new:
+            
+            simple_status += ' - ' + HydrusData.ToHumanInt( num_successful_and_new ) + 'N'
+            
+        
+        simple_status_strings = []
+        
+        if num_ignored > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_ignored ) + 'Ig' )
+            
+        
+        show_deleted_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )
+        
+        if show_deleted_on_file_seed_short_summary and num_deleted > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_deleted ) + 'D' )
+            
+        
+        if num_failed > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_failed ) + 'F' )
+            
+        
+        if num_skipped > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_skipped ) + 'S' )
+            
+        
+        if len( simple_status_strings ) > 0:
+            
+            simple_status += ' - ' + ''.join( simple_status_strings )
+            
+        
+    
+    return ( status, simple_status, ( total_processed, total ) )
+    

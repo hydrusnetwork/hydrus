@@ -32,7 +32,7 @@ from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISerialisable
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
@@ -123,7 +123,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( gug.GetName(), gug, False ) for gug in choosable_gugs ]
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select gugs' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select gugs' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             
@@ -165,7 +165,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( login_script.GetName(), login_script, False ) for login_script in choosable_login_scripts ]
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select login scripts' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select login scripts' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             
@@ -192,7 +192,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( parser.GetName(), parser, False ) for parser in choosable_parsers ]
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select parsers' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select parsers' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             
@@ -219,7 +219,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( url_class.GetName(), url_class, False ) for url_class in choosable_url_classes ]
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'select url classes' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select url classes' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
             
@@ -310,7 +310,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         num_gugs = len( gug_names )
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
             
             title = 'easy-import downloader png'
             
@@ -636,7 +636,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         existing_formula = ClientParsing.ParseFormulaHTML()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
             
             panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestContextForChild )
             
@@ -681,7 +681,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             old_formula = QP.GetClientData( self._formulae, selection )
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestContextForChild )
                 
@@ -975,7 +975,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         dlg_title = 'edit formula'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
             panel = panel_class( dlg, self._current_formula, test_context )
             
@@ -1347,7 +1347,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         dlg_title = 'edit tag rule'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
             new_rule = ClientParsing.ParseRuleHTML()
             
@@ -1389,7 +1389,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_title = 'edit tag rule'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditHTMLTagRulePanel( dlg, rule )
                 
@@ -1681,7 +1681,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         dlg_title = 'edit parse rule'
         
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
             new_rule = ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
             
@@ -1723,7 +1723,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_title = 'edit parse rule'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditJSONParsingRulePanel( dlg, rule )
                 
@@ -2259,7 +2259,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         content_parser = ClientParsing.ContentParser( 'new content parser', formula = formula )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
             panel = EditContentParserPanel( dlg_edit, content_parser, test_context, self._permitted_content_types )
             
@@ -2305,7 +2305,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         for content_parser in content_parsers:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 test_context = self._test_context_callable()
                 
@@ -2481,7 +2481,7 @@ class EditNodes( QW.QWidget ):
     
     def AddNode( self, dlg_title, empty_node, panel_class ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
             referral_url = self._referral_url_callable()
             example_data = self._example_data_callable()
@@ -2546,7 +2546,7 @@ class EditNodes( QW.QWidget ):
         
         for node in self._nodes.GetData( only_selected = True ):
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit node', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit node', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 referral_url = self._referral_url_callable()
                 example_data = self._example_data_callable()
@@ -3106,7 +3106,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'div', tag_attributes = { 'class' : 'thumb' } ) ], content_to_fetch = ClientParsing.HTML_CONTENT_HTML )
         page_parser = ClientParsing.PageParser( 'new sub page parser' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
             panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContextForChild() )
             
@@ -3174,7 +3174,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( formula, page_parser ) = sub_page_parser
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContextForChild() )
                 
@@ -3328,7 +3328,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         new_parser = ClientParsing.PageParser( 'new page parser' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
             panel = EditPageParserPanel( dlg_edit, new_parser )
             
@@ -3382,7 +3382,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for parser in parsers:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 panel = EditPageParserPanel( dlg, parser )
                 
@@ -3885,7 +3885,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def AddScript( self, dlg_title, empty_script, panel_class ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg_edit:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
             panel = panel_class( dlg_edit, empty_script )
             
@@ -3946,7 +3946,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 dlg_title = 'edit file lookup script'
                 
             
-            with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
                 
                 original_name = script.GetName()
                 
@@ -3988,7 +3988,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if export_object is not None:
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
                 
                 panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
                 

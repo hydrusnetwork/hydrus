@@ -3,6 +3,7 @@ import os
 import random
 import time
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -39,11 +40,8 @@ from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindows
-
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
-
-from hydrus.client.gui import QtPorting as QP
-import typing
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
@@ -419,7 +417,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
             
             panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
             
@@ -455,7 +453,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     
                 
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'export files' )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'export files' )
             
             panel = ClientGUIExport.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
             
@@ -888,7 +886,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             title = 'manage notes'
             
-            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
                 
@@ -976,7 +974,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             title = 'manage tags for ' + HydrusData.ToHumanInt( num_files ) + ' files'
             frame_key = 'manage_tags_dialog'
             
-            with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
                 
                 panel = ClientGUITags.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
                 
@@ -997,7 +995,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             title = 'manage urls for {} files'.format( num_files )
             
-            with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._selected_media )
                 
@@ -1570,7 +1568,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options, for_custom_action = True )
             

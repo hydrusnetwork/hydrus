@@ -24,7 +24,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
 
-def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
+def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
     
     window = widget.window()
     
@@ -38,9 +38,9 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.List[ ClientSearc
         
         if value is None and predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
             
-            from hydrus.client.gui import ClientGUITopLevelWindows
+            from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             
-            with ClientGUITopLevelWindows.DialogEdit( window, 'input predicate', hide_buttons = True ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( window, 'input predicate', hide_buttons = True ) as dlg:
                 
                 panel = InputFileSystemPredicate( dlg, predicate_type )
                 

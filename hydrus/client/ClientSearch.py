@@ -165,19 +165,25 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         # \Z is end of string
         # \s is whitespace
         
-        if r'\:' in s:
+        # ':' is no longer escaped to '\:' in py 3.7 lmaooooo, so some quick hackery
+        if re.escape( ':' ) == r'\:':
+            
+            s = s.replace( r'\:', ':' )
+            
+        
+        if ':' in s:
             
             beginning = r'\A'
             
-            s = s.replace( r'\:', r'(\:|.*\s)', 1 )
+            s = s.replace( r':', r'(:|.*\s)', 1 )
             
         elif s.startswith( '.*' ):
             
-            beginning = r'(\A|\:)'
+            beginning = r'(\A|:)'
             
         else:
             
-            beginning = r'(\A|\:|\s)'
+            beginning = r'(\A|:|\s)'
             
         
         if s.endswith( '.*' ):
@@ -2348,9 +2354,9 @@ class ParsedAutocompleteText( object ):
     
 class PredicateResultsCache( object ):
     
-    def __init__( self, predicates: typing.List[ Predicate ] ):
+    def __init__( self, predicates: typing.Iterable[ Predicate ] ):
         
-        self._predicates = predicates
+        self._predicates = list( predicates )
         
     
     def CanServeTagResults( self, strict_search_text: str, exact_match: bool ):
@@ -2381,7 +2387,7 @@ class PredicateResultsCacheSystem( PredicateResultsCache ):
     
 class PredicateResultsCacheTag( PredicateResultsCache ):
     
-    def __init__( self, predicates: typing.List[ Predicate ], strict_search_text: str, exact_match: bool ):
+    def __init__( self, predicates: typing.Iterable[ Predicate ], strict_search_text: str, exact_match: bool ):
         
         PredicateResultsCache.__init__( self, predicates )
         

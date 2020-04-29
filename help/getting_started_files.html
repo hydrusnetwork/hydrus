@@ -75,7 +75,7 @@
 				<li><b>application/zip</b> (.zip)</li>
 				<li><b>application/x-7z-compressed</b> (.7z)</li>
 			</ul>
-			<p>Although some support is imperfect for the complicated filetypes. Most videos will not play audio yet, some animated gifs with unusual transparency will render like static, and flash cannot embed into Linux or macOS. When something does not render how you want, right-clicking on its thumbnail presents the option 'open externally', which will open the file in the appropriate default program (e.g. ACDSee, VLC).</p>
+			<p>Although some support is imperfect for the complicated filetypes. For the Windows and Linux built releases, hydrus now embeds an MPV player for video, audio and gifs, which provides smooth playback and audio, but some other environments may not support MPV and so will default when possible to the native hydrus software renderer, which does not support audio. When something does not render how you want, right-clicking on its thumbnail presents the option 'open externally', which will open the file in the appropriate default program (e.g. ACDSee, VLC).</p>
 			<p>The client can also download files from several websites, including 4chan and other imageboards, many boorus, and gallery sites like deviant art and hentai foundry. You will learn more about this later.</p>
 			<h3>inbox and archiving</h3>
 			<p>The client sends newly imported files to an <b>inbox</b>, just like your email. Inbox acts like a tag, matched by 'system:inbox'. A small envelope icon is drawn in the top corner of all inbox files:</p>
@@ -99,6 +99,7 @@
 			<p>This saves time.</p>
 			<h3>lastly</h3>
 			<p>The hydrus client's workflows are not designed for half-finished files that you are still working on. Think of it as a giant archive for everything excellent you have decided to store away. It lets you find and remember these things quickly.</p>
+			<p>In general, hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.</p>
 			<p>And although the client can hold millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui window. As you learn to use it, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total <i>items</i>, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy. One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million files queued up! Just try and take things slow until you figure out what your computer's limits are.</p>
 			<p class="right"><a href="getting_started_more_files.html">I want to learn more about files! ----></a></p>
 			<p class="right"><a href="getting_started_tags.html">No, let's learn about tags! ----></a></p>

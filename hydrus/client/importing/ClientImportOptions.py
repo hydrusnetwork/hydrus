@@ -1,5 +1,8 @@
+import typing
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientMedia
 from hydrus.client import ClientTags
 import collections
 from hydrus.core import HydrusConstants as HC
@@ -11,6 +14,16 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 import os
 import re
+
+def FilterDeletedTags( service_key: bytes, media_result: ClientMedia.MediaResult, tags: typing.Iterable[ str ] ):
+    
+    tags_manager = media_result.GetTagsManager()
+    
+    deleted_tags = tags_manager.GetDeleted( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+    
+    tags = set( tags ).difference( deleted_tags )
+    
+    return tags
 
 def NewInboxArchiveMatch( new_files, inbox_files, archive_files, status, inbox ):
     
@@ -1126,7 +1139,12 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetServiceKeysToContentUpdates( self, status, in_inbox, hash, parsed_tags ):
+    def GetServiceKeysToContentUpdates( self, status: int, media_result: ClientMedia.MediaResult, parsed_tags: typing.Iterable[ str ], external_service_keys_to_tags = None ):
+        
+        if external_service_keys_to_tags is None:
+            
+            external_service_keys_to_tags = dict()
+            
         
         siblings_manager = HG.client_controller.tag_siblings_manager
         parents_manager = HG.client_controller.tag_parents_manager
@@ -1137,10 +1155,15 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         for ( service_key, service_tag_import_options ) in self._service_keys_to_service_tag_import_options.items():
             
+            if service_key in external_service_keys_to_tags:
+                
+                parsed_tags = set( parsed_tags ).union( external_service_keys_to_tags[ service_key ] )
+                
+            
             service_parsed_tags = siblings_manager.CollapseTags( service_key, parsed_tags )
             service_parsed_tags = parents_manager.ExpandTags( service_key, service_parsed_tags )
             
-            service_tags = service_tag_import_options.GetTags( service_key, status, in_inbox, hash, service_parsed_tags )
+            service_tags = service_tag_import_options.GetTags( service_key, status, media_result, service_parsed_tags )
             
             if len( service_tags ) > 0:
                 
@@ -1150,6 +1173,8 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 service_keys_to_tags[ service_key ] = service_tags
                 
             
+        
+        hash = media_result.GetHash()
         
         service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
         
@@ -1282,9 +1307,9 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_TAG_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'Service Tag Import Options'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, get_tags = False, get_tags_filter = None, additional_tags = None, to_new_files = True, to_already_in_inbox = True, to_already_in_archive = True, only_add_existing_tags = False, only_add_existing_tags_filter = None ):
+    def __init__( self, get_tags = False, get_tags_filter = None, additional_tags = None, to_new_files = True, to_already_in_inbox = True, to_already_in_archive = True, only_add_existing_tags = False, only_add_existing_tags_filter = None, get_tags_overwrite_deleted = False, additional_tags_overwrite_deleted = False ):
         
         if get_tags_filter is None:
             
@@ -1311,6 +1336,8 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         self._to_already_in_archive = to_already_in_archive
         self._only_add_existing_tags = only_add_existing_tags
         self._only_add_existing_tags_filter = only_add_existing_tags_filter
+        self._get_tags_overwrite_deleted = get_tags_overwrite_deleted
+        self._additional_tags_overwrite_deleted = additional_tags_overwrite_deleted
         
     
     def _GetSerialisableInfo( self ):
@@ -1318,12 +1345,12 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_get_tags_filter = self._get_tags_filter.GetSerialisableTuple()
         serialisable_only_add_existing_tags_filter = self._only_add_existing_tags_filter.GetSerialisableTuple()
         
-        return ( self._get_tags, serialisable_get_tags_filter, list( self._additional_tags ), self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, serialisable_only_add_existing_tags_filter )
+        return ( self._get_tags, serialisable_get_tags_filter, list( self._additional_tags ), self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, serialisable_only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._get_tags, serialisable_get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, serialisable_only_add_existing_tags_filter ) = serialisable_info
+        ( self._get_tags, serialisable_get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, serialisable_only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = serialisable_info
         
         self._get_tags_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_get_tags_filter )
         self._only_add_existing_tags_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_only_add_existing_tags_filter )
@@ -1381,6 +1408,18 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( get_tags, serialisable_get_tags_filter, additional_tags, to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags, serialisable_only_add_existing_tags_filter ) = old_serialisable_info
+            
+            get_tags_overwrite_deleted = False
+            additional_tags_overwrite_deleted = False
+            
+            new_serialisable_info = ( get_tags, serialisable_get_tags_filter, additional_tags, to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags, serialisable_only_add_existing_tags_filter, get_tags_overwrite_deleted, additional_tags_overwrite_deleted )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def GetSummaryStatements( self ):
         
@@ -1403,9 +1442,11 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         return statements
         
     
-    def GetTags( self, service_key, status, in_inbox, hash, parsed_tags ):
+    def GetTags( self, service_key: bytes, status: int, media_result: ClientMedia.MediaResult, parsed_tags: typing.Iterable[ str ] ):
         
         tags = set()
+        
+        in_inbox = media_result.GetInbox()
         
         if NewInboxArchiveMatch( self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, status, in_inbox ):
             
@@ -1413,10 +1454,22 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
                 
                 filtered_tags = self._get_tags_filter.Filter( parsed_tags )
                 
+                if not self._get_tags_overwrite_deleted:
+                    
+                    filtered_tags = FilterDeletedTags( service_key, media_result, filtered_tags )
+                    
+                
                 tags.update( filtered_tags )
                 
             
-            tags.update( HydrusTags.CleanTags( self._additional_tags ) )
+            additional_tags = HydrusTags.CleanTags( self._additional_tags )
+            
+            if not self._additional_tags_overwrite_deleted:
+                
+                additional_tags = FilterDeletedTags( service_key, media_result, additional_tags )
+                
+            
+            tags.update( additional_tags )
             
             if self._only_add_existing_tags:
                 
@@ -1440,7 +1493,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._get_tags, self._get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter )
+        return ( self._get_tags, self._get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted )
         
     
     def WorthFetchingTags( self ):

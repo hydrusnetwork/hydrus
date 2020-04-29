@@ -5,13 +5,13 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 
 def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key = None ):
     
     title = 'Delete files?'
     
-    with ClientGUITopLevelWindows.DialogEdit( win, title, frame_key = 'regular_center_dialog' ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'regular_center_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsEdit.EditDeleteFilesPanel( dlg, media, default_reason, suggested_file_service_key = suggested_file_service_key )
         
@@ -38,7 +38,7 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
     
 def GetFinishFilteringAnswer( win, label ):
     
-    with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, label ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:
         
         panel = ClientGUIScrolledPanelsButtonQuestions.QuestionFinishFilteringPanel( dlg, label )
         
@@ -51,7 +51,7 @@ def GetFinishFilteringAnswer( win, label ):
     
 def GetInterstitialFilteringAnswer( win, label ):
     
-    with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, label ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:
         
         panel = ClientGUIScrolledPanelsButtonQuestions.QuestionCommitInterstitialFilteringPanel( dlg, label )
         
@@ -64,7 +64,7 @@ def GetInterstitialFilteringAnswer( win, label ):
     
 def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
     
-    with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, title ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
         
         panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesNoPanel( dlg, message, yes_label = yes_label, no_label = no_label )
         
@@ -98,7 +98,7 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
     
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):
     
-    with ClientGUITopLevelWindows.DialogEdit( win, title ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
         panel = ClientGUIScrolledPanelsEdit.EditSelectFromListPanel( dlg, choice_tuples, value_to_select = value_to_select, sort_tuples = sort_tuples )
         
@@ -118,7 +118,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
     
 def SelectFromListButtons( win, title, choice_tuples ):
     
-    with ClientGUITopLevelWindows.DialogEdit( win, title, hide_buttons = True ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, hide_buttons = True ) as dlg:
         
         panel = ClientGUIScrolledPanelsEdit.EditSelectFromListButtonsPanel( dlg, choice_tuples )
         

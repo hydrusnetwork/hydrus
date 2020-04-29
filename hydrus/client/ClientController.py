@@ -18,7 +18,7 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIStyle
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client import ClientManagers
 from hydrus.client.networking import ClientNetworking
@@ -763,7 +763,7 @@ class Controller( HydrusController.HydrusController ):
         
         def qt_code( missing_locations ):
             
-            with ClientGUITopLevelWindows.DialogManage( None, 'repair file system' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogManage( None, 'repair file system' ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_locations )
                 

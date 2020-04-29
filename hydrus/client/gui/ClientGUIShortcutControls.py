@@ -17,7 +17,7 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUITopLevelWindows
+from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
 def ManageShortcuts( win: QW.QWidget ):
@@ -26,7 +26,7 @@ def ManageShortcuts( win: QW.QWidget ):
     
     all_shortcuts = shortcuts_manager.GetShortcutSets()
     
-    with ClientGUITopLevelWindows.DialogEdit( win, 'manage shortcuts' ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'manage shortcuts' ) as dlg:
         
         panel = EditShortcutsPanel( dlg, all_shortcuts )
         
@@ -722,7 +722,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         command = ClientData.ApplicationCommand()
         name = self._name.text()
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcut command' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcut command' ) as dlg:
             
             panel = EditShortcutAndCommandPanel( dlg, shortcut, command, name )
             
@@ -748,7 +748,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
             ( shortcut, command ) = data
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcut command' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcut command' ) as dlg:
                 
                 panel = EditShortcutAndCommandPanel( dlg, shortcut, command, name )
                 
@@ -890,7 +890,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         shortcut_set = ClientGUIShortcuts.ShortcutSet( 'new shortcuts' )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
             
             panel = EditShortcutSetPanel( dlg, shortcut_set )
             
@@ -921,7 +921,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for shortcuts in all_selected:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
                 
                 panel = EditShortcutSetPanel( dlg, shortcuts )
                 
@@ -947,7 +947,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for shortcuts in all_selected:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
                 
                 panel = EditShortcutSetPanel( dlg, shortcuts )
                 
@@ -1288,7 +1288,7 @@ class MouseShortcutButton( QW.QPushButton ):
         
         self._press_instead_of_release = press_instead_of_release
         
-        if self._shortcut.shortcut_press_type != ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK and self._shortcut.shortcut_key in ( ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT ):
+        if self._shortcut.shortcut_press_type != ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK and self._shortcut.shortcut_key in ClientGUIShortcuts.SHORTCUT_MOUSE_CLICKS:
             
             self._shortcut = self._shortcut.Duplicate()
             

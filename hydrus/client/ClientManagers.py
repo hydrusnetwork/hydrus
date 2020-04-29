@@ -494,7 +494,7 @@ class ServicesManager( object ):
             
         
     
-    def _SetServices( self, services: typing.List[ ClientServices.Service ] ):
+    def _SetServices( self, services: typing.Iterable[ ClientServices.Service ] ):
         
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
@@ -506,7 +506,7 @@ class ServicesManager( object ):
         self._services_sorted.sort( key = key )
         
     
-    def Filter( self, service_keys: typing.List[ bytes ], desired_types: typing.List[ int ] ):
+    def Filter( self, service_keys: typing.Iterable[ bytes ], desired_types: typing.Iterable[ int ] ):
         
         with self._lock:
             
@@ -516,7 +516,7 @@ class ServicesManager( object ):
             
         
     
-    def FilterValidServiceKeys( self, service_keys: typing.List[ bytes ] ):
+    def FilterValidServiceKeys( self, service_keys: typing.Iterable[ bytes ] ):
         
         with self._lock:
             
@@ -552,7 +552,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceKeyFromName( self, allowed_types: typing.List[ int ], service_name: str ):
+    def GetServiceKeyFromName( self, allowed_types: typing.Iterable[ int ], service_name: str ):
         
         with self._lock:
             
@@ -568,7 +568,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceKeys( self, desired_types: typing.List[ int ] = HC.ALL_SERVICES ):
+    def GetServiceKeys( self, desired_types: typing.Iterable[ int ] = HC.ALL_SERVICES ):
         
         with self._lock:
             
@@ -578,7 +578,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServices( self, desired_types: typing.List[ int ] = HC.ALL_SERVICES, randomised: bool = False ):
+    def GetServices( self, desired_types: typing.Iterable[ int ] = HC.ALL_SERVICES, randomised: bool = False ):
         
         with self._lock:
             

@@ -21,6 +21,36 @@ from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import QtPorting as QP
 
+def FilterSuggestedPredicatesForMedia( predicates, media, service_key ):
+    
+    tags = { predicate.GetValue() for predicate in predicates }
+    
+    filtered_tags = FilterSuggestedTagsForMedia( tags, media, service_key )
+    
+    predicates = [ predicate for predicate in predicates if predicate.GetValue() in filtered_tags ]
+    
+    return predicates
+    
+def FilterSuggestedTagsForMedia( tags, media, service_key ):
+    
+    tags = set( tags )
+    
+    ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, service_key, ClientTags.TAG_DISPLAY_STORAGE )
+    
+    current_tags_to_count.update( pending_tags_to_count )
+    
+    num_media = len( media )
+    
+    for ( tag, count ) in current_tags_to_count.items():
+        
+        if count == num_media:
+            
+            tags.discard( tag )
+            
+        
+    
+    return tags
+    
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, activate_callable, sort_tags = True ):
@@ -85,7 +115,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             tags = { predicate.GetValue() for predicate in self._selected_terms }
             
-            self._activate_callable( tags )
+            self._activate_callable( tags, only_add = True )
             
             self._RemoveSelectedTerms()
             
@@ -100,18 +130,6 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         return predicate.ToString( with_count = False )
         
     
-    def SetPredicates( self, predicates ):
-        
-        self._Clear()
-        
-        for predicate in predicates:
-            
-            self._AppendTerm( predicate )
-            
-        
-        self._DataHasChanged()
-        
-    
     def TakeFocusForUser( self ):
         
         if len( self._selected_terms ) == 0 and len( self._terms ) > 0:
@@ -122,14 +140,62 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         self.setFocus( QC.Qt.OtherFocusReason )
         
     
-class RecentTagsPanel( QW.QWidget ):
+class FavouritesTagsPanel( QW.QWidget ):
     
-    def __init__( self, parent, service_key, activate_callable, canvas_key = None ):
+    def __init__( self, parent, service_key, media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
-        self._canvas_key = canvas_key
+        self._media = media
+        
+        vbox = QP.VBoxLayout()
+        
+        self._favourite_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = False )
+        
+        QP.AddToLayout( vbox, self._favourite_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
+        self._UpdateTagDisplay()
+        
+    
+    def _UpdateTagDisplay( self ):
+        
+        favourites = HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key )
+        
+        tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
+        
+        self._favourite_tags.SetTags( tags )
+        
+    
+    def MediaUpdated( self ):
+        
+        self._UpdateTagDisplay()
+        
+    
+    def SetMedia( self, media ):
+        
+        self._media = media
+        
+        self._UpdateTagDisplay()
+        
+    
+    def TakeFocusForUser( self ):
+        
+        self._favourite_tags.TakeFocusForUser()
+        
+    
+class RecentTagsPanel( QW.QWidget ):
+    
+    def __init__( self, parent, service_key, media, activate_callable ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._service_key = service_key
+        self._media = media
+        
+        self._last_fetched_tags = set()
         
         self._new_options = HG.client_controller.new_options
         
@@ -152,22 +218,31 @@ class RecentTagsPanel( QW.QWidget ):
         
         def do_it( service_key ):
             
-            def qt_code():
+            def qt_code( recent_tags ):
                 
                 if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._recent_tags.SetTags( recent_tags )
+                self._last_fetched_tags = recent_tags
+                
+                self._UpdateTagDisplay()
                 
             
             recent_tags = HG.client_controller.Read( 'recent_tags', service_key )
             
-            QP.CallAfter( qt_code )
+            QP.CallAfter( qt_code, recent_tags )
             
         
         HG.client_controller.CallToThread( do_it, self._service_key )
+        
+    
+    def _UpdateTagDisplay( self ):
+        
+        tags = FilterSuggestedTagsForMedia( self._last_fetched_tags, self._media, self._service_key )
+        
+        self._recent_tags.SetTags( tags )
         
     
     def EventClear( self ):
@@ -180,11 +255,27 @@ class RecentTagsPanel( QW.QWidget ):
             
             HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
             
-            self._RefreshRecentTags()
+            self._last_fetched_tags = set()
+            
+            self._UpdateTagDisplay()
             
         
     
     def RefreshRecentTags( self ):
+        
+        self._RefreshRecentTags()
+        
+    
+    def MediaUpdated( self ):
+        
+        self._UpdateTagDisplay()
+        
+    
+    def SetMedia( self, media ):
+        
+        self._media = media
+        
+        self._UpdateTagDisplay()
         
         self._RefreshRecentTags()
         
@@ -196,13 +287,14 @@ class RecentTagsPanel( QW.QWidget ):
     
 class RelatedTagsPanel( QW.QWidget ):
     
-    def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
+    def __init__( self, parent, service_key, media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
-        self._canvas_key = canvas_key
+        
+        self._last_fetched_predicates = []
         
         self._have_fetched = False
         
@@ -233,16 +325,18 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def _FetchRelatedTags( self, max_time_to_take ):
         
-        def do_it( service_key ):
+        def do_it( service_key, hash, search_tags, max_results, max_time_to_take ):
             
-            def qt_code():
+            def qt_code( predicates ):
                 
                 if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._related_tags.SetPredicates( predicates )
+                self._last_fetched_predicates = predicates
+                
+                self._UpdateTagDisplay()
                 
                 self._have_fetched = True
                 
@@ -251,7 +345,7 @@ class RelatedTagsPanel( QW.QWidget ):
             
             predicates = ClientSearch.SortPredicates( predicates )
             
-            QP.CallAfter( qt_code )
+            QP.CallAfter( qt_code, predicates )
             
         
         self._related_tags.SetPredicates( [] )
@@ -260,18 +354,11 @@ class RelatedTagsPanel( QW.QWidget ):
         
         hash = m.GetHash()
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
-        
-        tags_to_count = collections.Counter()
-        
-        tags_to_count.update( current_tags_to_count )
-        tags_to_count.update( pending_tags_to_count )
-        
-        search_tags = set( tags_to_count.keys() )
+        search_tags = ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
         
         max_results = 100
         
-        HG.client_controller.CallToThread( do_it, self._service_key )
+        HG.client_controller.CallToThread( do_it, self._service_key, hash, search_tags, max_results, max_time_to_take )
         
     
     def _QuickSuggestedRelatedTags( self ):
@@ -279,6 +366,13 @@ class RelatedTagsPanel( QW.QWidget ):
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) / 1000.0
         
         self._FetchRelatedTags( max_time_to_take )
+        
+    
+    def _UpdateTagDisplay( self ):
+        
+        predicates = FilterSuggestedPredicatesForMedia( self._last_fetched_predicates, self._media, self._service_key )
+        
+        self._related_tags.SetPredicates( predicates )
         
     
     def EventSuggestedRelatedTags2( self ):
@@ -295,6 +389,11 @@ class RelatedTagsPanel( QW.QWidget ):
         self._FetchRelatedTags( max_time_to_take )
         
     
+    def MediaUpdated( self ):
+        
+        self._UpdateTagDisplay()
+        
+    
     def SetMedia( self, media ):
         
         self._media = media
@@ -309,13 +408,13 @@ class RelatedTagsPanel( QW.QWidget ):
     
 class FileLookupScriptTagsPanel( QW.QWidget ):
     
-    def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
+    def __init__( self, parent, service_key, media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
-        self._canvas_key = canvas_key
+        self._last_fetched_tags = set()
         
         self._script_choice = ClientGUICommon.BetterChoice( self )
         
@@ -393,6 +492,15 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
     
     def _SetTags( self, tags ):
         
+        self._last_fetched_tags = tags
+        
+        self._UpdateTagDisplay()
+        
+    
+    def _UpdateTagDisplay( self ):
+        
+        tags = FilterSuggestedTagsForMedia( self._last_fetched_tags, self._media, self._service_key )
+        
         self._tags.SetTags( tags )
         
         if len( tags ) == 0:
@@ -441,9 +549,16 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier )
         
     
+    def MediaUpdated( self ):
+        
+        self._UpdateTagDisplay()
+        
+    
     def SetMedia( self, media ):
         
         self._media = media
+        
+        self._UpdateTagDisplay()
         
     
     def TakeFocusForUser( self ):
@@ -481,13 +596,12 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
     
 class SuggestedTagsPanel( QW.QWidget ):
     
-    def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
+    def __init__( self, parent, service_key, media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
-        self._canvas_key = canvas_key
         
         self._new_options = HG.client_controller.new_options
         
@@ -508,15 +622,13 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         panels = []
         
-        favourites = self._new_options.GetSuggestedTagsFavourites( service_key )
-        
         self._favourite_tags = None
+        
+        favourites = HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key )
         
         if len( favourites ) > 0:
             
-            self._favourite_tags = ListBoxTagsSuggestionsFavourites( panel_parent, activate_callable )
-            
-            self._favourite_tags.SetTags( favourites )
+            self._favourite_tags = FavouritesTagsPanel( panel_parent, service_key, media, activate_callable )
             
             panels.append( ( 'favourites', self._favourite_tags ) )
             
@@ -525,7 +637,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if self._new_options.GetBoolean( 'show_related_tags' ) and len( media ) == 1:
             
-            self._related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
+            self._related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable )
             
             panels.append( ( 'related', self._related_tags ) )
             
@@ -534,7 +646,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) and len( media ) == 1:
             
-            self._file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
+            self._file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable )
             
             panels.append( ( 'file lookup scripts', self._file_lookup_script_tags ) )
             
@@ -543,7 +655,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if self._new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
             
-            self._recent_tags = RecentTagsPanel( panel_parent, service_key, activate_callable, canvas_key = self._canvas_key )
+            self._recent_tags = RecentTagsPanel( panel_parent, service_key, media, activate_callable )
             
             panels.append( ( 'recent', self._recent_tags ) )
             
@@ -575,13 +687,41 @@ class SuggestedTagsPanel( QW.QWidget ):
             
         
     
+    def MediaUpdated( self ):
+        
+        if self._favourite_tags is not None:
+            
+            self._favourite_tags.MediaUpdated()
+            
+        
+        if self._recent_tags is not None:
+            
+            self._recent_tags.MediaUpdated()
+            
+        
+        if self._file_lookup_script_tags is not None:
+            
+            self._file_lookup_script_tags.MediaUpdated()
+            
+        
+        if self._related_tags is not None:
+            
+            self._related_tags.MediaUpdated()
+            
+        
+    
     def SetMedia( self, media ):
         
         self._media = media
         
+        if self._favourite_tags is not None:
+            
+            self._favourite_tags.SetMedia( media )
+            
+        
         if self._recent_tags is not None:
             
-            self._recent_tags.RefreshRecentTags()
+            self._recent_tags.SetMedia( media )
             
         
         if self._file_lookup_script_tags is not None:
