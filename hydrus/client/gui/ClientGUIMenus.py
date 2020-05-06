@@ -77,10 +77,20 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
+    elided_label = HydrusText.ElideText( label, 64, elide_center = True )
+    
+    menu_item.setText( elided_label )
+    
+    if elided_label != label:
+        
+        menu_item.setToolTip( label )
+        
+    else:
+        
+        menu_item.setToolTip( description )
+        
     
     menu_item.setStatusTip( description )
-    menu_item.setToolTip( description )
     menu_item.setWhatsThis( description )
 
     menu.addAction( menu_item )

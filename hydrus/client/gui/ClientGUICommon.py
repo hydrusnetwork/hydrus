@@ -526,11 +526,12 @@ class BufferedWindow( QW.QWidget ):
     
 class BufferedWindowIcon( BufferedWindow ):
     
-    def __init__( self, parent, bmp ):
+    def __init__( self, parent, bmp, click_callable = None ):
         
         BufferedWindow.__init__( self, parent, size = bmp.size() )
         
         self._bmp = bmp
+        self._click_callable = click_callable
         
     
     def _Draw( self, painter ):
@@ -548,6 +549,18 @@ class BufferedWindowIcon( BufferedWindow ):
         else:
             
             painter.drawPixmap( 0, 0, self._bmp )
+            
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if self._click_callable is None:
+            
+            return BufferedWindow.mousePressEvent( self, event )
+            
+        else:
+            
+            self._click_callable()
             
         
     
@@ -1179,11 +1192,9 @@ class MenuBitmapButton( BetterBitmapButton ):
         self._menu_items = menu_items
         
     
-    def DoMenu( self ):
+    def _PopulateMenu( self, menu, menu_items ):
         
-        menu = QW.QMenu()
-        
-        for ( item_type, title, description, data ) in self._menu_items:
+        for ( item_type, title, description, data ) in menu_items:
             
             if item_type == 'normal':
                 
@@ -1206,7 +1217,22 @@ class MenuBitmapButton( BetterBitmapButton ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
+            elif item_type == 'submenu':
+                
+                submenu = QW.QMenu( menu )
+                
+                self._PopulateMenu( submenu, data )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, title )
+                
             
+        
+    
+    def DoMenu( self ):
+        
+        menu = QW.QMenu()
+        
+        self._PopulateMenu( menu, self._menu_items )
         
         CGC.core().PopupMenu( self, menu )
         

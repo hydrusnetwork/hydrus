@@ -31,6 +31,7 @@ from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUIMPV
@@ -1782,6 +1783,221 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         return file_import_options
+        
+    
+class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ] ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_names = set()
+        
+        self._notebook = QW.QTabWidget( self )
+        
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._notebook, ( 80, 14 ) )
+        
+        self._notebook.setMinimumSize( min_width, min_height )
+        
+        self._add_button = ClientGUICommon.BetterButton( self, 'add', self._AddNote )
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit current name', self._EditName )
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete current note', self._DeleteNote )
+        
+        #
+        
+        if len( names_to_notes ) == 0:
+            
+            self._AddNotePanel( 'notes', '' )
+            
+        else:
+            
+            names = list( names_to_notes.keys() )
+            
+            names.sort()
+            
+            for name in names:
+                
+                note = names_to_notes[ name ]
+                
+                self._original_names.add( name )
+                
+                self._AddNotePanel( name, note )
+                
+            
+        
+        first_panel = self._notebook.widget( 0 )
+        
+        self._notebook.setCurrentIndex( 0 )
+        
+        HG.client_controller.CallAfterQtSafe( first_panel, first_panel.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( first_panel, first_panel.moveCursor, QG.QTextCursor.End )
+        
+        #
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._add_button )
+        QP.AddToLayout( button_hbox, self._edit_button )
+        QP.AddToLayout( button_hbox, self._delete_button )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.widget().setLayout( vbox )
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        
+    
+    def _AddNote( self ):
+        
+        ( names_to_notes, deletee_names ) = self.GetValue()
+        
+        existing_names = set( names_to_notes.keys() )
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the note.', allow_blank = False ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                name = dlg.GetValue()
+                
+                name = HydrusData.GetNonDupeName( name, existing_names )
+                
+                self._AddNotePanel( name, '' )
+                
+            
+        
+    
+    def _AddNotePanel( self, name, note ):
+        
+        control = QW.QPlainTextEdit( self._notebook )
+        
+        control.setPlainText( note )
+        
+        self._notebook.addTab( control, name )
+        
+        self._notebook.setCurrentWidget( control )
+        
+        HG.client_controller.CallAfterQtSafe( control, control.setFocus, QC.Qt.OtherFocusReason )
+        HG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.End )
+        
+        self._UpdateButtons()
+        
+    
+    def _DeleteNote( self ):
+        
+        text = 'Delete this note?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.Accepted:
+            
+            index = self._notebook.currentIndex()
+            
+            panel = self._notebook.currentWidget()
+            
+            self._notebook.removeTab( index )
+            
+            panel.deleteLater()
+            
+            self._UpdateButtons()
+            
+        
+    
+    def _EditName( self ):
+        
+        index = self._notebook.currentIndex()
+        
+        name = self._notebook.tabText( index )
+        
+        ( names_to_notes, deletee_names ) = self.GetValue()
+        
+        existing_names = set( names_to_notes.keys() )
+        
+        existing_names.discard( name )
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the note.', allow_blank = False, default = name ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                name = dlg.GetValue()
+                
+                name = HydrusData.GetNonDupeName( name, existing_names )
+                
+                self._notebook.setTabText( index, name )
+                
+            
+        
+    
+    def _UpdateButtons( self ):
+        
+        can_edit = self._notebook.count() > 0
+        
+        self._edit_button.setEnabled( can_edit )
+        self._delete_button.setEnabled( can_edit )
+        
+    
+    def GetValue( self ) -> typing.Tuple[ typing.Dict[ str, str ], typing.Set[ str ] ]:
+        
+        names_to_notes = { self._notebook.tabText( i ) : self._notebook.widget( i ).toPlainText() for i in range( self._notebook.count() ) }
+        
+        deletee_names = { name for name in self._original_names if name not in names_to_notes }
+        
+        return ( names_to_notes, deletee_names )
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_notes':
+                
+                self._OKParent()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    def UserIsOKToOK( self ):
+        
+        ( names_to_notes, deletee_names ) = self.GetValue()
+        
+        empty_note_names = [ name for ( name, note ) in names_to_notes.items() if note == '' ]
+        
+        empty_note_names.sort()
+        
+        if len( empty_note_names ) > 0:
+            
+            message = 'These notes are empty, and will not be saved--is this ok?'
+            message += os.linesep * 2
+            message += ', '.join( empty_note_names )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return False
+                
+            
+        
+        return True
         
     
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):

@@ -223,7 +223,7 @@ class LocalBooruCache( object ):
         
         if timeout is not None and HydrusData.TimeHasPassed( timeout ):
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'This share has expired.' )
+            raise HydrusExceptions.NotFoundException( 'This share has expired.' )
             
         
     
@@ -366,12 +366,16 @@ class MediaResultCache( object ):
         
         with self._lock:
             
-            if hash_id in self._hash_ids_to_media_results:
+            media_result = self._hash_ids_to_media_results.get( hash_id, None )
+            
+            if media_result is not None:
                 
                 del self._hash_ids_to_media_results[ hash_id ]
                 
             
-            if hash in self._hashes_to_media_results:
+            media_result = self._hashes_to_media_results.get( hash, None )
+            
+            if media_result is not None:
                 
                 del self._hashes_to_media_results[ hash ]
                 
@@ -387,13 +391,15 @@ class MediaResultCache( object ):
             
             for hash_id in hash_ids:
                 
-                if hash_id in self._hash_ids_to_media_results:
+                media_result = self._hash_ids_to_media_results.get( hash_id, None )
+                
+                if media_result is None:
                     
-                    media_results.append( self._hash_ids_to_media_results[ hash_id ] )
+                    missing_hash_ids.append( hash_id )
                     
                 else:
                     
-                    missing_hash_ids.append( hash_id )
+                    media_results.append( media_result )
                     
                 
             
@@ -428,9 +434,11 @@ class MediaResultCache( object ):
                     
                     for ( hash_id, tags_manager ) in hash_ids_to_tags_managers.items():
                         
-                        if hash_id in self._hash_ids_to_media_results:
+                        media_result = self._hash_ids_to_media_results.get( hash_id, None )
+                        
+                        if media_result is not None:
                             
-                            self._hash_ids_to_media_results[ hash_id ].SetTagsManager( tags_manager )
+                            media_result.SetTagsManager( tags_manager )
                             
                         
                     
@@ -472,9 +480,11 @@ class MediaResultCache( object ):
                     
                     for hash in hashes:
                         
-                        if hash in self._hashes_to_media_results:
+                        media_result = self._hashes_to_media_results.get( hash, None )
+                        
+                        if media_result is not None:
                             
-                            self._hashes_to_media_results[ hash ].ProcessContentUpdate( service_key, content_update )
+                            media_result.ProcessContentUpdate( service_key, content_update )
                             
                         
                     

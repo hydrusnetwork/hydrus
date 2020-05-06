@@ -2,6 +2,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
 from hydrus.client import ClientLocalServer
 from hydrus.client import ClientMedia
+from hydrus.client import ClientMediaManagers
 from hydrus.client import ClientRatings
 from hydrus.client import ClientServices
 from hydrus.client import ClientTags
@@ -289,11 +290,13 @@ class TestServer( unittest.TestCase ):
         info[ 'timeout' ] = 0
         info[ 'hashes' ] = hashes
         
-        file_info_manager = ClientMedia.FileInfoManager( 1, hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
         
-        file_viewing_stats_manager = ClientMedia.FileViewingStatsManager.STATICGenerateEmptyManager()
+        notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        media_results = [ ClientMedia.MediaResult( file_info_manager, ClientMedia.TagsManager( {} ), ClientMedia.LocationsManager( set(), set(), set(), set() ), ClientRatings.RatingsManager( {} ), file_viewing_stats_manager ) for hash in hashes ]
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        
+        media_results = [ ClientMedia.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {} ), ClientMediaManagers.LocationsManager( set(), set(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
         
         HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HG.test_controller.SetRead( 'local_booru_share', info )
@@ -303,7 +306,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        self._test_local_booru_requests( connection, share_key, hashes[0], 403 )
+        self._test_local_booru_requests( connection, share_key, hashes[0], 404 )
         
         #
         

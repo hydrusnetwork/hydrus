@@ -222,7 +222,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             
             if HydrusImageHandling.IsDecompressionBomb( path ):
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'File seemed to be a Decompression Bomb!' )
+                raise HydrusExceptions.InsufficientCredentialsException( 'File seemed to be a Decompression Bomb, which you cannot upload!' )
                 
             
         
@@ -632,6 +632,10 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
             
+        elif failure.type == HydrusExceptions.ConflictException:
+            
+            response_context = ResponseContext( 409, mime = default_mime, body = default_encoding( failure.value ) )
+            
         elif failure.type == HydrusExceptions.SessionException:
             
             response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
@@ -688,7 +692,7 @@ class HydrusResource( Resource ):
             
         except:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Could not parse the hydrus key!' )
+            raise HydrusExceptions.BadRequestException( 'Could not parse the hydrus key!' )
             
         
         return access_key

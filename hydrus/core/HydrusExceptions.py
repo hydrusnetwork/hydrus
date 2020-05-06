@@ -27,6 +27,7 @@ class DataMissing( HydrusException ): pass
 
 class DBException( HydrusException ): pass
 class DBAccessException( HydrusException ): pass
+class DBCredentialsException( HydrusException ): pass
 class FileMissingException( HydrusException ): pass
 class DirectoryMissingException( HydrusException ): pass
 class SerialisationException( HydrusException ): pass
@@ -63,6 +64,7 @@ class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
 class BadRequestException( NetworkException ): pass
+class ConflictException( NetworkException ): pass
 class MissingCredentialsException( NetworkException ): pass
 class DoesNotSupportCORSException( NetworkException ): pass
 class InsufficientCredentialsException( NetworkException ): pass

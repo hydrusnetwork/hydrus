@@ -7,10 +7,11 @@
 	<body>
 		<div class="content">
 			<p><a href="introduction.html"><---- Back to the introduction</a></p>
-			<h3>downloading</h3>
+			<p>If any of this is confusing, some users are building video guides for hydrus to help new users <a href="https://github.com/CuddleBear92/Hydrus-guides">here</a>!</p>
+			<h3 id="downloading">downloading</h3>
 			<p>You can get the latest release at <a href="https://github.com/hydrusnetwork/hydrus/releases">my github releases page</a>.</p>
 			<p>I try to release a new version every Wednesday by 8pm EST and write an accompanying post on <a href="http://hydrus.tumblr.com/">my tumblr</a> and a sticky on <a href="https://8ch.net/hydrus/index.html">my 8chan board</a>.</p>
-			<h3>installing</h3>
+			<h3 id="installing">installing</h3>
 			<p class="warning">The hydrus releases are 64-bit only. If you are a python expert, there is the slimmest chance you'll be able to get it running from source on a 32-bit machine, but it would be easier just to find a newer computer to run it on.</p>
 			<p>for Windows:</p>
 			<ul>
@@ -27,7 +28,7 @@
 			<ul>
 				<li>Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. I build on Ubuntu, so if you run something else, compatibility is hit and miss.</li>
 				<li>Or try <a href="wine.html">running the Windows version in wine</a>.</li>
-				<li>If you use Arch Linux, you can check out the AUR package a user maintains <a href="https://aur4.archlinux.org/packages/hydrus/">here</a>.</li>
+				<li>If you use Arch Linux, you can check out the AUR package a user maintains <a href="https://aur.archlinux.org/packages/hydrus/">here</a>.</li>
 			</ul>
 			<p>from source:</p>
 			<ul>
@@ -35,7 +36,7 @@
 			</ul>
 			<p>Hydrus stores all its data&#x2014;options, files, subscriptions, <i>everything</i>&#x2014;entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.</p>
 			<p><span class="warning">However, for macOS users:</span> the Hydrus App is <b>non-portable</b> and puts your database in ~/Library/Hydrus (i.e. /Users/[You]/Library/Hydrus). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at ~/Library/Hydrus, not the App itself.</p>
-			<h3>updating</h3>
+			<h3 id="updating">updating</h3>
 			<p class="warning">Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
 			<p><b>Hydrus does not auto-update. It will stay the same version unless you download and install a new one.</b></p>
 			<p>Although I put out an new version every week, you can update far less often if you want. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.</p>

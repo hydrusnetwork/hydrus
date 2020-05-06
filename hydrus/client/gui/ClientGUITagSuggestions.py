@@ -1,15 +1,13 @@
-import collections
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientSearch
@@ -21,9 +19,9 @@ from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import QtPorting as QP
 
-def FilterSuggestedPredicatesForMedia( predicates, media, service_key ):
+def FilterSuggestedPredicatesForMedia( predicates: typing.List[ ClientSearch.Predicate ], media: typing.Iterable[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
     
-    tags = { predicate.GetValue() for predicate in predicates }
+    tags = [ predicate.GetValue() for predicate in predicates ]
     
     filtered_tags = FilterSuggestedTagsForMedia( tags, media, service_key )
     
@@ -31,9 +29,9 @@ def FilterSuggestedPredicatesForMedia( predicates, media, service_key ):
     
     return predicates
     
-def FilterSuggestedTagsForMedia( tags, media, service_key ):
+def FilterSuggestedTagsForMedia( tags: typing.List[ str ], media: typing.Iterable[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
     
-    tags = set( tags )
+    tags_filtered_set = set( tags )
     
     ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, service_key, ClientTags.TAG_DISPLAY_STORAGE )
     
@@ -45,11 +43,13 @@ def FilterSuggestedTagsForMedia( tags, media, service_key ):
         
         if count == num_media:
             
-            tags.discard( tag )
+            tags_filtered_set.discard( tag )
             
         
     
-    return tags
+    tags_filtered = [ tag for tag in tags if tag in tags_filtered_set ]
+    
+    return tags_filtered
     
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
@@ -195,7 +195,7 @@ class RecentTagsPanel( QW.QWidget ):
         self._service_key = service_key
         self._media = media
         
-        self._last_fetched_tags = set()
+        self._last_fetched_tags = []
         
         self._new_options = HG.client_controller.new_options
         
@@ -255,7 +255,7 @@ class RecentTagsPanel( QW.QWidget ):
             
             HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
             
-            self._last_fetched_tags = set()
+            self._last_fetched_tags = []
             
             self._UpdateTagDisplay()
             
@@ -414,7 +414,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         self._service_key = service_key
         self._media = media
-        self._last_fetched_tags = set()
+        self._last_fetched_tags = []
         
         self._script_choice = ClientGUICommon.BetterChoice( self )
         
@@ -544,7 +544,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         self._script_management.SetJobKey( job_key )
         
-        self._SetTags( set() )
+        self._SetTags( [] )
         
         HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier )
         

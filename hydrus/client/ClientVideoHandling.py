@@ -32,6 +32,11 @@ def GetCVVideoProperties( path ):
     
     fps = capture.get( CAP_PROP_FPS )
     
+    if fps is None or fps == 0:
+        
+        fps = 1
+        
+    
     length_in_seconds = num_frames / fps
     
     length_in_ms = int( length_in_seconds * 1000 )

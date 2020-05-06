@@ -2706,7 +2706,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if total_current_storage + total_pending_storage + file_dict[ 'size' ] > max_storage:
                         
-                        raise HydrusExceptions.InsufficientCredentialsException( 'This repository is full up and cannot take any more files!' )
+                        raise HydrusExceptions.ConflictException( 'This repository is full up and cannot take any more files!' )
                         
                     
                 

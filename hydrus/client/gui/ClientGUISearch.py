@@ -36,7 +36,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientS
         
         ( predicate_type, value, inclusive ) = predicate.GetInfo()
         
-        if value is None and predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+        if value is None and predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
             
             from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             
@@ -558,6 +558,14 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 9, 16 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 1080 ) ) ), forced_label = '1080p' ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1280 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 720 ) ) ), forced_label = '720p' ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 3840 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 2160 ) ) ), forced_label = '4k' ) )
+            
             editable_pred_panel_classes.append( PanelPredicateSystemHeight )
             editable_pred_panel_classes.append( PanelPredicateSystemWidth )
             editable_pred_panel_classes.append( PanelPredicateSystemRatio )
@@ -616,6 +624,13 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemNumTags )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES:
+            
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ), ) ) )
+            
+            editable_pred_panel_classes.append( PanelPredicateSystemNumNotes )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
             
@@ -758,14 +773,22 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
     
 class StaticSystemPredicateButton( QW.QPushButton ):
     
-    def __init__( self, parent, predicates ):
+    def __init__( self, parent, predicates, forced_label = None ):
         
         QW.QPushButton.__init__( self, parent )
         
         self._parent = parent
         self._predicates = predicates
+        self._forced_label = forced_label
         
-        label = ', '.join( ( predicate.ToString() for predicate in self._predicates ) )
+        if forced_label is None:
+            
+            label = ', '.join( ( predicate.ToString() for predicate in self._predicates ) )
+            
+        else:
+            
+            label = forced_label
+            
         
         self.setText( label )
         
@@ -1766,7 +1789,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num_frames = QP.MakeQSpinBox( self, min = 1, max = 1000000, width = 80 )
+        self._num_frames = QP.MakeQSpinBox( self, min = 0, max = 1000000, width = 80 )
         
         self._sign.SetStringSelection( '>' )
         self._num_frames.setValue( 600 )
@@ -1811,7 +1834,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_tags'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of tags'), CC.FLAGS_VCENTER )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
         QP.AddToLayout( hbox, self._num_tags, CC.FLAGS_VCENTER )
         
@@ -1823,6 +1846,40 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     def GetInfo( self ):
         
         info = ( self._sign.GetStringSelection(), self._num_tags.value())
+        
+        return info
+        
+    
+class PanelPredicateSystemNumNotes( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._sign = QP.RadioBox( self, choices = [ '<', '=', '>' ] )
+        
+        self._num_notes = QP.MakeQSpinBox( self, max = 256, width = 60 )
+        
+        self._sign.SetStringSelection( '=' )
+        
+        self._num_notes.setValue( 1 )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of notes'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num_notes, CC.FLAGS_VCENTER )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        info = ( self._sign.GetStringSelection(), self._num_notes.value() )
         
         return info
         
@@ -1849,7 +1906,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_words'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of words'), CC.FLAGS_VCENTER )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
         QP.AddToLayout( hbox, self._num_words, CC.FLAGS_VCENTER )
         

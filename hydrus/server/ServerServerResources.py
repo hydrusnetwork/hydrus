@@ -218,7 +218,7 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
                 
             except:
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'Problem parsing cookies for Session Cookie!' )
+                raise HydrusExceptions.BadRequestException( 'Problem parsing cookies for Session Cookie!' )
                 
             
         

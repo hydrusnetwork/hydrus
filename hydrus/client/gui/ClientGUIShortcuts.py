@@ -171,6 +171,30 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
 
+shortcut_names_to_pretty_names = {}
+
+shortcut_names_to_pretty_names[ 'global' ] = 'global'
+shortcut_names_to_pretty_names[ 'main_gui' ] = 'the main window'
+shortcut_names_to_pretty_names[ 'media' ] = 'media actions, either thumbnails or the viewer'
+shortcut_names_to_pretty_names[ 'media_viewer' ] = 'media viewers - all (zoom and pan)'
+shortcut_names_to_pretty_names[ 'media_viewer_browser' ] = 'media viewer - \'normal\' browser'
+shortcut_names_to_pretty_names[ 'archive_delete_filter' ] = 'media viewer - archive/delete filter'
+shortcut_names_to_pretty_names[ 'duplicate_filter' ] = 'media viewer - duplicate filter'
+shortcut_names_to_pretty_names[ 'preview_media_window' ] = 'media viewer - the preview window'
+shortcut_names_to_pretty_names[ 'media_viewer_media_window' ] = 'the actual media in a media viewer'
+
+shortcut_names_to_sort_order = {}
+
+shortcut_names_to_sort_order[ 'global' ] = 0
+shortcut_names_to_sort_order[ 'main_gui' ] = 1
+shortcut_names_to_sort_order[ 'media' ] = 2
+shortcut_names_to_sort_order[ 'media_viewer' ] = 3
+shortcut_names_to_sort_order[ 'media_viewer_browser' ] = 4
+shortcut_names_to_sort_order[ 'archive_delete_filter' ] = 5
+shortcut_names_to_sort_order[ 'duplicate_filter' ] = 6
+shortcut_names_to_sort_order[ 'preview_media_window' ] = 7
+shortcut_names_to_sort_order[ 'media_viewer_media_window' ] = 8
+
 shortcut_names_to_descriptions = {}
 
 shortcut_names_to_descriptions[ 'global' ] = 'Actions for the whole program. Should work in the main gui or a media viewer.'

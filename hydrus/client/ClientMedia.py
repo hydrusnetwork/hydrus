@@ -1,25 +1,17 @@
-import bisect
 import collections
+import typing
+
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientFiles
-from hydrus.client import ClientRatings
-from hydrus.client import ClientSearch
+from hydrus.client import ClientMediaManagers
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-import os
 import random
-import time
-import threading
-import traceback
 from hydrus.core import HydrusData
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusSerialisable
-import itertools
 
 hashes_to_jpeg_quality = {}
 hashes_to_pixel_hashes = {}
@@ -503,469 +495,23 @@ def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
-class TagsManager( object ):
-    
-    def __init__( self, service_keys_to_statuses_to_tags ):
-        
-        self._tag_display_types_to_service_keys_to_statuses_to_tags = { ClientTags.TAG_DISPLAY_STORAGE : service_keys_to_statuses_to_tags }
-        
-        self._cache_is_dirty = True
-        
-        self._lock = threading.Lock()
-        
-    
-    def _GetServiceKeysToStatusesToTags( self, tag_display_type ):
-        
-        self._RecalcCaches()
-        
-        return self._tag_display_types_to_service_keys_to_statuses_to_tags[ tag_display_type ]
-        
-    
-    def _RecalcCaches( self ):
-        
-        if self._cache_is_dirty:
-            
-            # siblings (parents later)
-            
-            tag_siblings_manager = HG.client_controller.tag_siblings_manager
-            
-            # ultimately, we would like to just have these values pre-computed on the db so we can just read them in, but one step at a time
-            # and ultimately, this will make parents virtual, whether that is before or after we move this calc down to db cache level
-            # we'll want to keep this live updating capability though so we can keep up with content updates without needing a db refresh
-            # main difference is cache_dirty will default to False or similar
-            
-            source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_STORAGE ]
-            
-            destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-            
-            for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
-                
-                destination_statuses_to_tags = tag_siblings_manager.CollapseStatusesToTags( service_key, source_statuses_to_tags )
-                
-                destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
-                
-            
-            self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ] = destination_service_keys_to_statuses_to_tags
-            
-            # display filtering
-            
-            tag_display_manager = HG.client_controller.tag_display_manager
-            
-            cache_jobs = []
-            
-            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
-            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SELECTION_LIST ) )
-            
-            for ( source_tag_display_type, dest_tag_display_type ) in cache_jobs:
-                
-                source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ source_tag_display_type ]
-                
-                destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-                
-                for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
-                    
-                    if tag_display_manager.FiltersTags( dest_tag_display_type, service_key ):
-                        
-                        destination_statuses_to_tags = HydrusData.default_dict_set()
-                        
-                        for ( status, source_tags ) in source_statuses_to_tags.items():
-                            
-                            dest_tags = tag_display_manager.FilterTags( dest_tag_display_type, service_key, source_tags )
-                            
-                            if len( source_tags ) != len( dest_tags ):
-                                
-                                destination_statuses_to_tags[ status ] = dest_tags
-                                
-                            else:
-                                
-                                destination_statuses_to_tags[ status ] = source_tags
-                                
-                            
-                        
-                        destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
-                        
-                    else:
-                        
-                        destination_service_keys_to_statuses_to_tags[ service_key ] = source_statuses_to_tags
-                        
-                    
-                
-                self._tag_display_types_to_service_keys_to_statuses_to_tags[ dest_tag_display_type ] = destination_service_keys_to_statuses_to_tags
-                
-            
-            # combined service merge calculation
-            # would be great if this also could be db pre-computed
-            
-            for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
-                
-                combined_statuses_to_tags = HydrusData.default_dict_set()
-                
-                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                    
-                    if service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                        
-                        continue
-                        
-                    
-                    for ( status, tags ) in statuses_to_tags.items():
-                        
-                        combined_statuses_to_tags[ status ].update( tags )
-                        
-                    
-                
-                service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
-                
-            
-            #
-            
-            self._cache_is_dirty = False
-            
-        
-    
-    @staticmethod
-    def MergeTagsManagers( tags_managers ):
-        
-        def CurrentAndPendingFilter( items ):
-            
-            for ( service_key, statuses_to_tags ) in items:
-                
-                filtered = { status : tags for ( status, tags ) in list(statuses_to_tags.items()) if status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) }
-                
-                yield ( service_key, filtered )
-                
-            
-        
-        # [[( service_key, statuses_to_tags )]]
-        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE ).items() ) for tags_manager in tags_managers )
-        
-        # [(service_key, statuses_to_tags)]
-        flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
-        
-        # service_key : [ statuses_to_tags ]
-        s_k_s_t_t_dict = HydrusData.BuildKeyToListDict( flattened_s_k_s_t_t )
-        
-        # now let's merge so we have service_key : statuses_to_tags
-        
-        merged_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-        
-        for ( service_key, several_statuses_to_tags ) in list(s_k_s_t_t_dict.items()):
-            
-            # [[( status, tags )]]
-            s_t_t_tupled = ( list(s_t_t.items()) for s_t_t in several_statuses_to_tags )
-            
-            # [( status, tags )]
-            flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
-            
-            statuses_to_tags = HydrusData.default_dict_set()
-            
-            for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
-            
-            merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
-            
-        
-        return TagsManager( merged_service_keys_to_statuses_to_tags )
-        
-    
-    def DeletePending( self, service_key ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            if len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] ) + len( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] ) > 0:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] = set()
-                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] = set()
-                
-                self._cache_is_dirty = True
-                
-            
-        
-    
-    def Duplicate( self ):
-        
-        with self._lock:
-            
-            dupe_tags_manager = TagsManager( {} )
-            
-            dupe_tag_display_types_to_service_keys_to_statuses_to_tags = dict()
-            
-            for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
-                
-                dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-                
-                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                    
-                    dupe_statuses_to_tags = HydrusData.default_dict_set()
-                    
-                    for ( status, tags ) in statuses_to_tags.items():
-                        
-                        dupe_statuses_to_tags[ status ] = set( tags )
-                        
-                    
-                    dupe_service_keys_to_statuses_to_tags[ service_key ] = dupe_statuses_to_tags
-                    
-                
-                dupe_tag_display_types_to_service_keys_to_statuses_to_tags[ tag_display_type ] = dupe_service_keys_to_statuses_to_tags
-                
-            
-            dupe_tags_manager._tag_display_types_to_service_keys_to_statuses_to_tags = dupe_tag_display_types_to_service_keys_to_statuses_to_tags
-            dupe_tags_manager._cache_is_dirty = self._cache_is_dirty
-            
-            return dupe_tags_manager
-            
-        
-    
-    def GetComparableNamespaceSlice( self, namespaces, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
-            
-            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-            
-            combined = combined_current.union( combined_pending )
-            
-            pairs = [ HydrusTags.SplitTag( tag ) for tag in combined ]
-            
-            slice = []
-            
-            for desired_namespace in namespaces:
-                
-                subtags = [ HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ]
-                
-                subtags.sort()
-                
-                slice.append( tuple( subtags ) )
-                
-            
-            return tuple( slice )
-            
-        
-    
-    def GetCurrent( self, service_key, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            
-        
-    
-    def GetCurrentAndPending( self, service_key, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
-            
-        
-    
-    def GetDeleted( self, service_key, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            return statuses_to_tags[ HC.CONTENT_STATUS_DELETED ]
-            
-        
-    
-    def GetNamespaceSlice( self, namespaces, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
-            
-            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-            
-            combined = combined_current.union( combined_pending )
-            
-            slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
-            
-            slice = frozenset( slice )
-            
-            return slice
-            
-        
-    
-    def GetNumTags( self, tag_search_context: ClientSearch.TagSearchContext, tag_display_type ):
-        
-        with self._lock:
-            
-            num_tags = 0
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ tag_search_context.service_key ]
-            
-            if tag_search_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
-            if tag_search_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
-            
-            return num_tags
-            
-        
-    
-    def GetPending( self, service_key, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            return statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-            
-        
-    
-    def GetPetitioned( self, service_key, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            return statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ]
-            
-        
-    
-    def GetServiceKeysToStatusesToTags( self, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            return service_keys_to_statuses_to_tags
-            
-        
-    
-    def GetStatusesToTags( self, service_key, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            return service_keys_to_statuses_to_tags[ service_key ]
-            
-        
-    
-    def HasTag( self, tag, tag_display_type ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
-            
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
-            
-            return tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] or tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
-            
-        
-    
-    def NewTagDisplayRules( self ):
-        
-        with self._lock:
-            
-            self._cache_is_dirty = True
-            
-        
-    
-    def ProcessContentUpdate( self, service_key, content_update ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-            
-            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-            
-            ( data_type, action, row ) = content_update.ToTuple()
-            
-            ( tag, hashes ) = row
-            
-            if action == HC.CONTENT_UPDATE_ADD:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].add( tag )
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
-                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
-                
-            elif action == HC.CONTENT_UPDATE_DELETE:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].add( tag )
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].discard( tag )
-                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
-                
-            elif action == HC.CONTENT_UPDATE_PEND:
-                
-                if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].add( tag )
-                    
-                
-            elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
-                
-            elif action == HC.CONTENT_UPDATE_PETITION:
-                
-                if tag in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].add( tag )
-                    
-                
-            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
-                
-            elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
-                
-                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
-                
-            
-            self._cache_is_dirty = True
-            
-        
-    
-    def ResetService( self, service_key ):
-        
-        with self._lock:
-            
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-            
-            if service_key in service_keys_to_statuses_to_tags:
-                
-                del service_keys_to_statuses_to_tags[ service_key ]
-                
-                self._cache_is_dirty = True
-                
-            
-        
-    
 class MediaResult( object ):
     
-    def __init__( self, file_info_manager, tags_manager: TagsManager, locations_manager, ratings_manager, file_viewing_stats_manager ):
+    def __init__(
+        self,
+        file_info_manager: ClientMediaManagers.FileInfoManager,
+        tags_manager: ClientMediaManagers.TagsManager,
+        locations_manager: ClientMediaManagers.LocationsManager,
+        ratings_manager: ClientMediaManagers.RatingsManager,
+        notes_manager: ClientMediaManagers.NotesManager,
+        file_viewing_stats_manager: ClientMediaManagers.FileViewingStatsManager
+    ):
         
         self._file_info_manager = file_info_manager
         self._tags_manager = tags_manager
         self._locations_manager = locations_manager
         self._ratings_manager = ratings_manager
+        self._notes_manager = notes_manager
         self._file_viewing_stats_manager = file_viewing_stats_manager
         
     
@@ -998,9 +544,10 @@ class MediaResult( object ):
         tags_manager = self._tags_manager.Duplicate()
         locations_manager = self._locations_manager.Duplicate()
         ratings_manager = self._ratings_manager.Duplicate()
+        notes_manager = self._notes_manager.Duplicate()
         file_viewing_stats_manager = self._file_viewing_stats_manager.Duplicate()
         
-        return MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+        return MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
     
     def GetDuration( self ):
@@ -1043,6 +590,11 @@ class MediaResult( object ):
         return self._file_info_manager.mime
         
     
+    def GetNotesManager( self ):
+        
+        return self._notes_manager
+        
+    
     def GetNumFrames( self ):
         
         return self._file_info_manager.num_frames
@@ -1068,7 +620,7 @@ class MediaResult( object ):
         return self._file_info_manager.size
         
     
-    def GetTagsManager( self ) -> TagsManager:
+    def GetTagsManager( self ) -> ClientMediaManagers.TagsManager:
         
         return self._tags_manager
         
@@ -1076,6 +628,11 @@ class MediaResult( object ):
     def HasAudio( self ):
         
         return self._file_info_manager.has_audio is True
+        
+    
+    def HasNotes( self ):
+        
+        return self._notes_manager.GetNumNotes() > 0
         
     
     def IsStaticImage( self ):
@@ -1118,6 +675,10 @@ class MediaResult( object ):
             
             self._ratings_manager.ProcessContentUpdate( service_key, content_update )
             
+        elif service_type == HC.LOCAL_NOTES:
+            
+            self._notes_manager.ProcessContentUpdate( content_update )
+            
         
     
     def ResetService( self, service_key ):
@@ -1134,393 +695,6 @@ class MediaResult( object ):
     def ToTuple( self ):
         
         return ( self._file_info_manager, self._tags_manager, self._locations_manager, self._ratings_manager )
-        
-    
-class DuplicatesManager( object ):
-    
-    def __init__( self, service_keys_to_dupe_statuses_to_counts ):
-        
-        self._service_keys_to_dupe_statuses_to_counts = service_keys_to_dupe_statuses_to_counts
-        
-    
-    def Duplicate( self ):
-        
-        service_keys_to_dupe_statuses_to_counts = collections.defaultdict( collections.Counter )
-        
-        return DuplicatesManager( service_keys_to_dupe_statuses_to_counts )
-        
-    
-    def GetDupeStatusesToCounts( self, service_key ):
-        
-        return self._service_keys_to_dupe_statuses_to_counts[ service_key ]
-        
-    
-class FileInfoManager( object ):
-    
-    def __init__( self, hash_id, hash, size = None, mime = None, width = None, height = None, duration = None, num_frames = None, has_audio = None, num_words = None ):
-        
-        if mime is None:
-            
-            mime = HC.APPLICATION_UNKNOWN
-            
-        
-        self.hash_id = hash_id
-        self.hash = hash
-        self.size = size
-        self.mime = mime
-        self.width = width
-        self.height = height
-        self.duration = duration
-        self.num_frames = num_frames
-        self.has_audio = has_audio
-        self.num_words = num_words
-        
-    
-    def Duplicate( self ):
-        
-        return FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
-        
-    
-    def ToTuple( self ):
-        
-        return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
-        
-    
-class FileViewingStatsManager( object ):
-    
-    def __init__( self, preview_views, preview_viewtime, media_views, media_viewtime ):
-        
-        self.preview_views = preview_views
-        self.preview_viewtime = preview_viewtime
-        self.media_views = media_views
-        self.media_viewtime = media_viewtime
-        
-    
-    def Duplicate( self ):
-        
-        return FileViewingStatsManager( self.preview_views, self.preview_viewtime, self.media_views, self.media_viewtime )
-        
-    
-    def GetPrettyCombinedLine( self ):
-        
-        return 'viewed ' + HydrusData.ToHumanInt( self.media_views + self.preview_views ) + ' times, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime + self.preview_viewtime )
-        
-    
-    def GetPrettyMediaLine( self ):
-        
-        return 'viewed ' + HydrusData.ToHumanInt( self.media_views ) + ' times in media viewer, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime )
-        
-    
-    def GetPrettyPreviewLine( self ):
-        
-        return 'viewed ' + HydrusData.ToHumanInt( self.preview_views ) + ' times in preview window, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.preview_viewtime )
-        
-    
-    def ProcessContentUpdate( self, content_update ):
-        
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        if action == HC.CONTENT_UPDATE_ADD:
-            
-            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
-            
-            self.preview_views += preview_views_delta
-            self.preview_viewtime += preview_viewtime_delta
-            self.media_views += media_views_delta
-            self.media_viewtime += media_viewtime_delta
-            
-        
-    
-    @staticmethod
-    def STATICGenerateEmptyManager():
-        
-        return FileViewingStatsManager( 0, 0, 0, 0 )
-        
-    
-class LocationsManager( object ):
-    
-    LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }
-    
-    def __init__( self, current, deleted, pending, petitioned, inbox = False, urls = None, service_keys_to_filenames = None, current_to_timestamps = None, file_modified_timestamp = None ):
-        
-        self._current = current
-        self._deleted = deleted
-        self._pending = pending
-        self._petitioned = petitioned
-        
-        self.inbox = inbox
-        
-        if urls is None:
-            
-            urls = set()
-            
-        
-        self._urls = urls
-        
-        if service_keys_to_filenames is None:
-            
-            service_keys_to_filenames = {}
-            
-        
-        self._service_keys_to_filenames = service_keys_to_filenames
-        
-        if current_to_timestamps is None:
-            
-            current_to_timestamps = {}
-            
-        
-        self._current_to_timestamps = current_to_timestamps
-        
-        self._file_modified_timestamp = file_modified_timestamp
-        
-    
-    def DeletePending( self, service_key ):
-        
-        self._pending.discard( service_key )
-        self._petitioned.discard( service_key )
-        
-    
-    def Duplicate( self ):
-        
-        current = set( self._current )
-        deleted = set( self._deleted )
-        pending = set( self._pending )
-        petitioned = set( self._petitioned )
-        urls = set( self._urls )
-        service_keys_to_filenames = dict( self._service_keys_to_filenames )
-        current_to_timestamps = dict( self._current_to_timestamps )
-        
-        return LocationsManager( current, deleted, pending, petitioned, self.inbox, urls, service_keys_to_filenames, current_to_timestamps, self._file_modified_timestamp )
-        
-    
-    def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
-    
-    def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ):
-        
-        return self._current - self.LOCAL_LOCATIONS
-        
-    
-    def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ):
-        
-        return self._deleted - self.LOCAL_LOCATIONS
-        
-    
-    def GetFileModifiedTimestamp( self ):
-        
-        return self._file_modified_timestamp
-        
-    
-    def GetInbox( self ):
-        
-        return self.inbox
-        
-    
-    def GetPending( self ): return self._pending
-    def GetPendingRemote( self ):
-        
-        return self._pending - self.LOCAL_LOCATIONS
-        
-    
-    def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ):
-        
-        return self._petitioned - self.LOCAL_LOCATIONS
-        
-    
-    def GetRemoteLocationStrings( self ):
-    
-        current = self.GetCurrentRemote()
-        pending = self.GetPendingRemote()
-        petitioned = self.GetPetitionedRemote()
-        
-        remote_services = list( HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
-        
-        remote_services.sort( key = lambda s: s.GetName() )
-        
-        remote_service_strings = []
-        
-        for remote_service in remote_services:
-            
-            name = remote_service.GetName()
-            service_key = remote_service.GetServiceKey()
-            
-            if service_key in pending:
-                
-                remote_service_strings.append( name + ' (+)' )
-                
-            elif service_key in current:
-                
-                if service_key in petitioned:
-                    
-                    remote_service_strings.append( name + ' (-)' )
-                    
-                else:
-                    
-                    remote_service_strings.append( name )
-                    
-                
-            
-        
-        return remote_service_strings
-        
-    
-    def GetTimestamp( self, service_key ):
-        
-        if service_key in self._current_to_timestamps:
-            
-            return self._current_to_timestamps[ service_key ]
-            
-        else:
-            
-            return None
-            
-        
-    
-    def GetURLs( self ):
-        
-        return self._urls
-        
-    
-    def IsDownloading( self ):
-        
-        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._pending
-        
-    
-    def IsLocal( self ):
-        
-        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current
-        
-    
-    def IsRemote( self ):
-        
-        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current
-        
-    
-    def IsTrashed( self ):
-        
-        return CC.TRASH_SERVICE_KEY in self._current
-        
-    
-    def ProcessContentUpdate( self, service_key, content_update ):
-        
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        if data_type == HC.CONTENT_TYPE_FILES:
-            
-            if action == HC.CONTENT_UPDATE_ARCHIVE:
-                
-                self.inbox = False
-                
-            elif action == HC.CONTENT_UPDATE_INBOX:
-                
-                self.inbox = True
-                
-            elif action == HC.CONTENT_UPDATE_ADD:
-                
-                self._current.add( service_key )
-                
-                self._deleted.discard( service_key )
-                self._pending.discard( service_key )
-                
-                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
-                    
-                    self._current.discard( CC.TRASH_SERVICE_KEY )
-                    self._pending.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                    if CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current:
-                        
-                        self.inbox = True
-                        
-                        self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                        
-                        self._deleted.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                        
-                        self._current_to_timestamps[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = HydrusData.GetNow()
-                        
-                    
-                
-                self._current_to_timestamps[ service_key ] = HydrusData.GetNow()
-                
-            elif action == HC.CONTENT_UPDATE_DELETE:
-                
-                self._deleted.add( service_key )
-                
-                self._current.discard( service_key )
-                self._petitioned.discard( service_key )
-                
-                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
-                    
-                    self._current.add( CC.TRASH_SERVICE_KEY )
-                    
-                    self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = HydrusData.GetNow()
-                    
-                elif service_key == CC.TRASH_SERVICE_KEY:
-                    
-                    self.inbox = False
-                    
-                    self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    self._deleted.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                
-            elif action == HC.CONTENT_UPDATE_UNDELETE:
-                
-                self._current.discard( CC.TRASH_SERVICE_KEY )
-                
-                self._deleted.discard( CC.LOCAL_FILE_SERVICE_KEY )
-                self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
-                
-            elif action == HC.CONTENT_UPDATE_PEND:
-                
-                if service_key not in self._current: self._pending.add( service_key )
-                
-            elif action == HC.CONTENT_UPDATE_PETITION:
-                
-                if service_key not in self._deleted: self._petitioned.add( service_key )
-                
-            elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
-                
-                self._pending.discard( service_key )
-                
-            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                
-                self._petitioned.discard( service_key )
-                
-            elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
-                
-                self._deleted.discard( service_key )
-                
-            
-        elif data_type == HC.CONTENT_TYPE_URLS:
-            
-            if action == HC.CONTENT_UPDATE_ADD:
-                
-                ( urls, hashes ) = row
-                
-                self._urls.update( urls )
-                
-            elif action == HC.CONTENT_UPDATE_DELETE:
-                
-                ( urls, hashes ) = row
-                
-                self._urls.difference_update( urls )
-                
-                
-            
-        
-    
-    def ResetService( self, service_key ):
-        
-        self._current.discard( service_key )
-        self._pending.discard( service_key )
-        self._deleted.discard( service_key )
-        self._petitioned.discard( service_key )
-        
-    
-    def ShouldIdeallyHaveThumbnail( self ): # file repo or local
-        
-        return len( self._current ) > 0
         
     
 class Media( object ):
@@ -1546,7 +720,150 @@ class Media( object ):
         return self._id_hash
         
     
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    def __ne__( self, other ):
+        
+        return self.__hash__() != other.__hash__()
+        
+    
+    def GetDisplayMedia( self ) -> 'Media':
+        
+        raise NotImplementedError()
+        
+    
+    def GetDuration( self ) -> typing.Optional[ int ]:
+        
+        raise NotImplementedError()
+        
+    
+    def GetFileViewingStatsManager( self ) -> ClientMediaManagers.FileViewingStatsManager:
+        
+        raise NotImplementedError()
+        
+    
+    def GetHash( self ) -> bytes:
+        
+        raise NotImplementedError()
+        
+    
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+        
+        raise NotImplementedError()
+        
+    
+    def GetLocationsManager( self ) -> ClientMediaManagers.LocationsManager:
+        
+        raise NotImplementedError()
+        
+    
+    def GetMime( self ) -> int:
+        
+        raise NotImplementedError()
+        
+    
+    def GetNumFiles( self ) -> int:
+        
+        raise NotImplementedError()
+        
+    
+    def GetNumFrames( self ) -> typing.Optional[ int ]:
+        
+        raise NotImplementedError()
+        
+    
+    def GetNumInbox( self ) -> int:
+        
+        raise NotImplementedError()
+        
+    
+    def GetNumWords( self ) -> typing.Optional[ int ]:
+        
+        raise NotImplementedError()
+        
+    
+    def GetTimestamp( self, service_key: bytes ) -> int:
+        
+        raise NotImplementedError()
+        
+    
+    def GetPrettyInfoLines( self ) -> typing.List[ str ]:
+        
+        raise NotImplementedError()
+        
+    
+    def GetRatingsManager( self ) -> ClientMediaManagers.RatingsManager:
+        
+        raise NotImplementedError()
+        
+    
+    def GetResolution( self ) -> typing.Tuple[ int, int ]:
+        
+        raise NotImplementedError()
+        
+    
+    def GetSize( self ) -> int:
+        
+        raise NotImplementedError()
+        
+    
+    def GetTagsManager( self ) -> ClientMediaManagers.TagsManager:
+        
+        raise NotImplementedError()
+        
+    
+    def HasAnyOfTheseHashes( self, hashes ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def HasArchive( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def HasAudio( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def HasDuration( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def HasImages( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def HasInbox( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def HasNotes( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def IsCollection( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def IsImage( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def IsSizeDefinite( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def UpdateFileInfo( self, hashes_to_media_results ):
+        
+        raise NotImplementedError()
+        
     
 class MediaCollect( HydrusSerialisable.SerialisableBase ):
     
@@ -1665,8 +982,6 @@ class MediaList( object ):
         
         namespaces_to_collect_by = list( media_collect.namespaces )
         ratings_to_collect_by = list( media_collect.rating_service_keys )
-        
-        services_manager = HG.client_controller.services_manager
         
         for media in medias:
             
@@ -2419,7 +1734,7 @@ class MediaList( object ):
             m.ProcessContentUpdates( service_keys_to_content_updates )
             
         
-        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             for content_update in content_updates:
                 
@@ -2715,6 +2030,8 @@ class MediaCollection( MediaList, Media ):
     
     def __init__( self, file_service_key, media_results ):
         
+        # note for later: ideal here is to stop this multiple inheritance mess and instead have this be a media that *has* a list, not *is* a list
+        
         Media.__init__( self )
         MediaList.__init__( self, file_service_key, media_results )
         
@@ -2756,9 +2073,11 @@ class MediaCollection( MediaList, Media ):
         
         self._has_audio = True in ( media.HasAudio() for media in self._sorted_media )
         
+        self._has_notes = True in ( media.HasNotes() for media in self._sorted_media )
+        
         tags_managers = [ m.GetTagsManager() for m in self._sorted_media ]
         
-        self._tags_manager = TagsManager.MergeTagsManagers( tags_managers )
+        self._tags_manager = ClientMediaManagers.TagsManager.MergeTagsManagers( tags_managers )
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         
@@ -2767,7 +2086,7 @@ class MediaCollection( MediaList, Media ):
         pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
         petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
+        self._locations_manager = ClientMediaManagers.LocationsManager( current, deleted, pending, petitioned )
         
         self._RecalcRatings()
         self._RecalcFileViewingStats()
@@ -2782,7 +2101,7 @@ class MediaCollection( MediaList, Media ):
             
         else:
             
-            self._ratings_manager = ClientRatings.RatingsManager( {} )
+            self._ratings_manager = ClientMediaManagers.RatingsManager( {} )
             
         
     
@@ -2803,7 +2122,7 @@ class MediaCollection( MediaList, Media ):
             media_viewtime += fvsm.media_viewtime
             
         
-        self._file_viewing_stats_manager = FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
+        self._file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
         
     
     def AddMedia( self, new_media ):
@@ -2926,30 +2245,65 @@ class MediaCollection( MediaList, Media ):
         return tags_managers
         
     
-    def GetSize( self ): return self._size
+    def GetSize( self ):
+        
+        return self._size
+        
     
-    def GetTagsManager( self ): return self._tags_manager
+    def GetTagsManager( self ):
+        
+        return self._tags_manager
+        
     
-    def GetTimestamp( self, service_key ): return None
+    def GetTimestamp( self, service_key ):
+        
+        return None
+        
     
-    def HasArchive( self ): return self._archive
+    def HasArchive( self ):
+        
+        return self._archive
+        
     
     def HasAudio( self ):
         
         return self._has_audio
         
     
-    def HasDuration( self ): return self._duration is not None
+    def HasDuration( self ):
+        
+        return self._duration is not None
+        
     
-    def HasImages( self ): return True in ( media.HasImages() for media in self._sorted_media )
+    def HasImages( self ):
+        
+        return True in ( media.HasImages() for media in self._sorted_media )
+        
     
-    def HasInbox( self ): return self._inbox
+    def HasInbox( self ):
+        
+        return self._inbox
+        
     
-    def IsCollection( self ): return True
+    def HasNotes( self ):
+        
+        return self._has_notes
+        
     
-    def IsImage( self ): return False
+    def IsCollection( self ):
+        
+        return True
+        
     
-    def IsSizeDefinite( self ): return self._size_definite
+    def IsImage( self ):
+        
+        return False
+        
+    
+    def IsSizeDefinite( self ):
+        
+        return self._size_definite
+        
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
@@ -3083,6 +2437,11 @@ class MediaSingleton( Media ):
     def GetMediaResult( self ): return self._media_result
     
     def GetMime( self ): return self._media_result.GetMime()
+    
+    def GetNotesManager( self ):
+        
+        return self._media_result.GetNotesManager()
+        
     
     def GetNumFiles( self ): return 1
     
@@ -3275,6 +2634,11 @@ class MediaSingleton( Media ):
     def HasImages( self ): return self.IsImage()
     
     def HasInbox( self ): return self._media_result.GetInbox()
+    
+    def HasNotes( self ):
+        
+        return self._media_result.HasNotes()
+        
     
     def IsCollection( self ): return False
     

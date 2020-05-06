@@ -244,6 +244,11 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         ( fps, confident_fps ) = ( 24, True )
         
     
+    if fps is None or fps == 0:
+        
+        fps = 1
+        
+    
     if duration is None:
         
         force_count_frames_manually = True
@@ -539,6 +544,12 @@ def ParseFFMPEGFPS( first_second_lines ):
                 
             
             confident = sensible_first_second and fps_matches_with_first_second
+            
+        
+        if fps is None or fps == 0:
+            
+            fps = 1
+            confident = False
             
         
         return ( fps, confident )

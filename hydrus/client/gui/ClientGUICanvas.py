@@ -27,6 +27,7 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUICanvasHoverFrames
 from hydrus.client.gui import ClientGUIMedia
+from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -394,6 +395,7 @@ class Canvas( QW.QWidget ):
         HG.client_controller.sub( self, 'ZoomOut', 'canvas_zoom_out' )
         HG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         HG.client_controller.sub( self, 'OpenExternally', 'canvas_open_externally' )
+        HG.client_controller.sub( self, 'ManageNotes', 'canvas_manage_notes' )
         HG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         HG.client_controller.sub( self, 'ProcessApplicationCommand', 'canvas_application_command' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
@@ -753,65 +755,12 @@ class Canvas( QW.QWidget ):
     
     def _ManageNotes( self ):
         
-        def qt_do_it( media, notes ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            title = 'manage notes'
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
-                
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
-                
-                control = QW.QPlainTextEdit( panel )
-                
-                ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( control, ( 80, 14 ) )
-                
-                control.setMinimumWidth( min_width )
-                control.setMinimumHeight( min_height )
-                
-                control.setPlainText( notes )
-                
-                panel.SetControl( control )
-                
-                dlg.SetPanel( panel )
-                
-                HG.client_controller.CallAfterQtSafe( control, control.setFocus, QC.Qt.OtherFocusReason )
-                HG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.End )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    notes = control.toPlainText()
-                    
-                    hash = media.GetHash()
-                    
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( notes, hash ) ) ]
-                    
-                    service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
-                    
-                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                    
-                
-            
-        
-        def thread_wait( media ):
-            
-            # if it ultimately makes sense, I can load/cache notes in the media result
-            
-            notes = HG.client_controller.Read( 'file_notes', media.GetHash() )
-            
-            QP.CallAfter( qt_do_it, media, notes )
-            
-        
         if self._current_media is None:
             
             return
             
         
-        HG.client_controller.CallToThread( thread_wait, self._current_media )
+        ClientGUIMediaActions.EditFileNotes( self, self._current_media )
         
     
     def _ManageRatings( self ):
@@ -1401,6 +1350,14 @@ class Canvas( QW.QWidget ):
         pass
         
     
+    def ManageNotes( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._ManageNotes()
+            
+        
+    
     def ManageTags( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
@@ -1829,9 +1786,18 @@ class CanvasPanel( Canvas ):
                 ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'known urls', 'Manage this file\'s known URLs.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage this file\'s known URLs.', self._ManageURLs )
             
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
+            num_notes = self._current_media.GetNotesManager().GetNumNotes()
+            
+            notes_str = 'notes'
+            
+            if num_notes > 0:
+                
+                notes_str = '{} ({})'.format( notes_str, HydrusData.ToHumanInt( num_notes ) )
+                
+            
+            ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -1860,12 +1826,19 @@ class CanvasPanel( Canvas ):
             
             copy_hash_menu = QW.QMenu( copy_menu )
 
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Open this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Open this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Open this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Open this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
+            
+            if advanced_mode:
+                
+                hash_id_str = str( self._current_media.GetHashId() )
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
+                
             
             if self._current_media.GetMime() in HC.IMAGES:
                 
@@ -2071,6 +2044,11 @@ class CanvasWithDetails( Canvas ):
             
             icons_to_show = []
             
+            if self._current_media.HasNotes():
+                
+                icons_to_show.append( CC.global_pixmaps().notes )
+                
+            
             if CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent():
                 
                 icons_to_show.append( CC.global_pixmaps().trash )
@@ -2094,6 +2072,7 @@ class CanvasWithDetails( Canvas ):
                 
                 current_y += 18
                 
+            
             painter.setPen( QG.QPen( self._new_options.GetColour( CC.COLOUR_MEDIA_TEXT ) ) )
             
             # repo strings
@@ -4453,8 +4432,18 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'known urls', 'Manage this file\'s known urls.', self._ManageURLs )
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage this file\'s known urls.', self._ManageURLs )
+            
+            num_notes = self._current_media.GetNotesManager().GetNumNotes()
+            
+            notes_str = 'notes'
+            
+            if num_notes > 0:
+                
+                notes_str = '{} ({})'.format( notes_str, HydrusData.ToHumanInt( num_notes ) )
+                
+            
+            ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -4489,6 +4478,13 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard.', self._CopyHashToClipboard, 'sha512' )
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
+            
+            if advanced_mode:
+                
+                hash_id_str = str( self._current_media.GetHashId() )
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
+                
             
             if self._current_media.GetMime() in HC.IMAGES:
                 

@@ -48,6 +48,8 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders.AddDatas( export_folders )
         
+        self._export_folders.Sort( 0 )
+        
         vbox = QP.VBoxLayout()
         
         intro = 'Here you can set the client to regularly export a certain query to a particular location.'

@@ -8,6 +8,69 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 396</h3></li>
+				<ul>
+					<li>notes:</li>
+					<li>the file notes system is more mature. files now store multiple named notes</li>
+					<li>the edit notes ui is now a tabbed window with add/edit_name/delete buttons</li>
+					<li>media results now load with their notes, so note access is instant</li>
+					<li>thumbnails now show a notes icon when they have notes</li>
+					<li>the media viewer top-right area shows a notes icon when the current file has notes</li>
+					<li>clicking the media viewer top-right notes icon opens edit notes</li>
+					<li>the edit notes menu entry now lists the number of current notes if there are notes</li>
+					<li>added a 'system:number of notes' predicate. it has easy 'has/no notes' buttons for quick filtering</li>
+					<li>the file notes database table will be updated on update, it shouldn't take long. existing notes will get the default 'notes' name</li>
+					<li>duplicate notes now share the same storage space in the database</li>
+					<li>in prep for a future search expansion, notes are now cached in the database for fast text search</li>
+					<li>in prep for note parsing, wrote a 'note import options' object. it doesn't do anything in the program yet, but it supports multiple note conflict resolutions, note extension detection, and global and specific note renaming</li>
+					<li>wrote unit tests for the new note import options</li>
+					<li>.</li>
+					<li>some tag search stuff:</li>
+					<li>hydrus now maintains an internal mapping of direct 'searchable' versions of tags to the tags themselves, which allows it to now do fast exact-match (short search) and complicated wildcard lookups of tags with unusual characters. 'f' and '/f/' will now return '/f/' and 'board:/f/' quickly, 'board:f' and 'board:/f/' will return 'board:/f/' quickly, and 'te&ast;a&ast;' will correctly return 'test-tag'</li>
+					<li>it will take a few minutes to regenerate this new cache on update</li>
+					<li>complex wildcards like 's&ast;m&ast;' are now treated the same as simple ones like 'sam&ast;' and should match unusual subtag characters in all cases</li>
+					<li>wildcard tag file search predicates are now plugged into the new cache, so the search preds '/f/&ast;', 'board:/f/', 'board:/f/ast;', 'b&ast;d:/f/' and 'b&ast;d:/f/&ast;' now all match files with 'board:/f/', as do wildcards that include replacement characters, so the same should be true above for 'f' instead of /f/' in all cases</li>
+					<li>new wildcard search preds do not collapse their characters for their presentation string, so 'date:2&ast;-01-01' now renders like that, not 'date:2&ast; 01 01'</li>
+					<li>wildcard file search predicates are now faster for simple (just an asterisk on the end) subtag wildcards</li>
+					<li>the fts search cache is moved from 'master' to 'caches' db this week, it will take a few moments on update</li>
+					<li>the 'repopulate tag search cache' db regen job now repopulates the fts cache, the new 'searchable' cache, and the integer tag cache</li>
+					<li>the database repair code now checks for the fts cache and new 'searchable' cache on boot and, if they are missing, warns the user and creates empty tables</li>
+					<li>.</li>
+					<li>improvements:</li>
+					<li>fixed the unsorted tags in tag suggestion boxes</li>
+					<li>clicking the inbox icon in the top-right hover window now archives the file</li>
+					<li>system:dimensions now has quick buttons for 16:9, 9:16, 4:3, 1:1, 1080p, 720p, and 4k</li>
+					<li>system:known url searches are now better about fetching www and non-www urls for the domain or url class</li>
+					<li>the edit shortcut sets panel now has nicer english names for reserved shortcut sets, and also sorts them in a more logical way</li>
+					<li>you no longer have to be in advanced mode to copy file hashes from thumbnails</li>
+					<li>users in advanced mode can copy the internal file_id of files from the thumbnail/viewer copy menus (this is most useful for the client api)</li>
+					<li>system num_frames, num_words, and num_notes now display alternate 'has/no xxx' labels when they search for =0 or >0</li>
+					<li>you can now search for 0 with system:num_frames</li>
+					<li>.</li>
+					<li>fixes:</li>
+					<li>users who could restore from system tray using the menu but had trouble with clicking _should_ now have better luck with clicking</li>
+					<li>fixed some instances where fps could be calculated as 0, which would lead to other problems down the line. now a missing or 0 fps is remapped to 1</li>
+					<li>fixed system:framerate for '&lt;' queries</li>
+					<li>the status bar cells now get expanded tooltips to describe what they do</li>
+					<li>fixed some media result caching code that could in rare cases cause an error in content update processing when the result disappeared from the cache during processing</li>
+					<li>the 'hard-replace siblings and parents' button on 'manage tags' now makes a submenu so its actions' long labels show better</li>
+					<li>fixed a handful of tables that were not starting sorted</li>
+					<li>a variety of credential parse and other server failures that were formerly returning 403 now properly return 400 and 409</li>
+					<li>in order to improve default 'open externally' behaviour on Linux/macOS, if the environment variable XDG_DATA_DIRS is not preserved through a hydrus build launch env, hydrus now sets a simple 'default' value for this before running xdg-open</li>
+					<li>if the client is booted from a windows shortcut to a built release, the program restart command is slightly more reliable</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>cleaned up some db update error reporting code, it should now more reliably make an english-friendly popup text box before splurging technical info</li>
+					<li>refactored some media object code, cleaned some class definitions, and added typing hints</li>
+					<li>misc code cleanup</li>
+					<li>the 'getting started' help files now have anchor definitions, so their sections can now be #linked to</li>
+					<li>added several links in the 'getting started' help to the user-created video guides here: https://github.com/CuddleBear92/Hydrus-guides thank you for making these!</li>
+					<li>added a link to the help for the user-made 'other archiving software' guide here: https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software thank you for making this!</li>
+					<li>fixed link to AUR package in the help</li>
+					<li>updated cloudscraper in all builds to 1.2.36</li>
+					<li>updated windows mpv to a significantly newer dll, it now reports api version 1.108</li>
+					<li>included libgpg-error.so.0 in Linux build, which will improve some Linux situations (more reports from Ubuntu 20.04 or others about missing/conflicting .so files are welcome)</li>
+				</ul>
 				<li><h3>version 395</h3></li>
 				<ul>
 					<li>some more suggested tags fixes/qol:</li>

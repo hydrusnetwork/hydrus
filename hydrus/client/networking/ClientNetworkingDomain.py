@@ -53,22 +53,23 @@ def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
     
     domains = []
     
+    if discard_www:
+        
+        domain = RemoveWWWFromDomain( domain )
+        
+    
     while domain.count( '.' ) > 0:
         
-        # let's discard www.blah.com and www2.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
-        startswith_www = domain.count( '.' ) > 1 and domain.startswith( 'www' )
+        domains.append( domain )
         
-        should_be_discarded = startswith_www and discard_www
-        
-        if not should_be_discarded:
-            
-            domains.append( domain )
-            
-        
-        domain = '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
+        domain = ConvertDomainIntoNextLevelDomain( domain )
         
     
     return domains
+    
+def ConvertDomainIntoNextLevelDomain( domain ):
+    
+    return '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
     
 def ConvertDomainIntoSecondLevelDomain( domain ):
     
@@ -2681,6 +2682,15 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR ] = NestedGalleryURLGenerator
 
+def RemoveWWWFromDomain( domain ):
+    
+    if domain.count( '.' ) > 1 and domain.startswith( 'www' ):
+        
+        domain = ConvertDomainIntoNextLevelDomain( domain )
+        
+    
+    return domain
+    
 SEND_REFERRAL_URL_ONLY_IF_PROVIDED = 0
 SEND_REFERRAL_URL_NEVER = 1
 SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED = 2

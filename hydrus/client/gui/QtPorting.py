@@ -25,6 +25,7 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 import math
 from collections import defaultdict
+import typing
     
 if qtpy.PYQT5:
     
@@ -1491,7 +1492,7 @@ class StatusBar( QW.QStatusBar ):
         
         QW.QStatusBar.__init__( self )
         
-        self._labels = []
+        self._labels: typing.List[ QW.QLabel ] = []
         
         for w in status_widths:
             
@@ -1512,10 +1513,24 @@ class StatusBar( QW.QStatusBar ):
             
         
     
-    def SetStatusText( self, text, index ):
+    def SetStatusText( self, text, index, tooltip = None ):
         
-        self._labels[index].setText( text )
-        self._labels[index].setToolTip( text )
+        if tooltip is None:
+            
+            tooltip = text
+            
+        
+        cell = self._labels[ index ]
+        
+        if cell.text() != text:
+            
+            cell.setText( text )
+            
+        
+        if cell.toolTip() != tooltip:
+            
+            cell.setToolTip( tooltip )
+            
         
     
 class AboutDialogInfo:

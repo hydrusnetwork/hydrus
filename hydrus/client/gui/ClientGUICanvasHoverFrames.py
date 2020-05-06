@@ -1243,13 +1243,15 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         self._icon_panel = QW.QWidget( self )
         
         self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().trash )
-        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().inbox )
+        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().inbox, click_callable = self._Archive )
+        self._notes_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().notes, click_callable = self._EditNotes )
         
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
         QP.AddToLayout( icon_hbox, (16,16), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_VCENTER )
         QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_VCENTER )
+        QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_VCENTER )
+        QP.AddToLayout( icon_hbox, self._notes_icon, CC.FLAGS_VCENTER )
         
         self._icon_panel.setLayout( icon_hbox )
         
@@ -1314,6 +1316,25 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     
+    def _Archive( self ):
+        
+        if self._current_media.HasInbox():
+            
+            command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' )
+            
+        else:
+            
+            command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'inbox_file' )
+            
+        
+        HG.client_controller.pub( 'canvas_application_command', command, self._canvas_key )
+        
+    
+    def _EditNotes( self ):
+        
+        HG.client_controller.pub( 'canvas_manage_notes', self._canvas_key )
+        
+    
     def _GetIdealSizeAndPosition( self ):
         
         parent_window = self.parentWidget().window()
@@ -1345,8 +1366,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             has_inbox = self._current_media.HasInbox()
             has_trash = CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent()
+            has_notes = self._current_media.HasNotes()
             
-            if has_inbox or has_trash:
+            if has_inbox or has_trash or has_notes:
                 
                 self._icon_panel.show()
                 
@@ -1366,6 +1388,15 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                 else:
                     
                     self._trash_icon.hide()
+                    
+                
+                if has_notes:
+                    
+                    self._notes_icon.show()
+                    
+                else:
+                    
+                    self._notes_icon.hide()
                     
                 
             else:

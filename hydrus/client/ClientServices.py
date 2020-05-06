@@ -1023,7 +1023,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     HG.client_controller.network_engine.session_manager.ClearSession( self.network_context )
                     
-                elif isinstance( e, ( HydrusExceptions.MissingCredentialsException, HydrusExceptions.InsufficientCredentialsException ) ):
+                elif isinstance( e, ( HydrusExceptions.MissingCredentialsException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ConflictException ) ):
                     
                     self._DealWithAccountError()
                     
@@ -1189,12 +1189,12 @@ class ServiceRepository( ServiceRestricted ):
         
         if self._paused:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Repository is paused!' )
+            raise HydrusExceptions.ConflictException( 'Repository is paused!' )
             
         
         if HG.client_controller.options[ 'pause_repo_sync' ]:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'All repositories are paused!' )
+            raise HydrusExceptions.ConflictException( 'All repositories are paused!' )
             
         
         ServiceRestricted._CheckFunctional( self, including_external_communication = including_external_communication, including_bandwidth = including_bandwidth, including_account = including_account )

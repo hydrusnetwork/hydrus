@@ -39,9 +39,16 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         self.setIcon( QG.QIcon( png_path ) )
         
-        self.activated.connect( self._WasActivated )
+        self.activated.connect( self._ClickActivated )
         
         self._RegenerateMenu()
+        
+    
+    def _ClickActivated( self, activation_reason ):
+        
+        # if we click immediately, some users get frozen ui, I assume a mix-up with the icon being destroyed during the same click event or similar
+        
+        QP.CallAfter( self._WasActivated, activation_reason )
         
     
     def _RegenerateMenu( self ):

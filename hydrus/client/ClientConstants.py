@@ -510,6 +510,8 @@ class GlobalPixmaps( object ):
         self.sound = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'sound.png' ) )
         self.mute = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'mute.png' ) )
         
+        self.notes = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'notes.png' ) )
+        
         self.file_pause = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_pause.png' ) )
         self.file_play = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'file_play.png' ) )
         self.gallery_pause = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'gallery_pause.png' ) )

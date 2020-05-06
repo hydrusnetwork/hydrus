@@ -88,7 +88,7 @@ def GenerateServiceFromSerialisableTuple( serialisable_info ):
         
     except TypeError:
         
-        raise HydrusExceptions.InsufficientCredentialsException( 'Could not decode that service key!' )
+        raise HydrusExceptions.BadRequestException( 'Could not decode that service key!' )
         
     
     dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
@@ -361,7 +361,7 @@ class Account( object ):
         
         if self._created == 0:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'account is unsynced' )
+            raise HydrusExceptions.ConflictException( 'account is unsynced' )
             
         
         if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ):
@@ -919,7 +919,7 @@ class AccountType( object ):
             
         except TypeError:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Could not decode that account type key!' )
+            raise HydrusExceptions.BadRequestException( 'Could not decode that account type key!' )
             
         
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )

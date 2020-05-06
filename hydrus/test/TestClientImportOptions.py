@@ -2,6 +2,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client import ClientMedia
+from hydrus.client import ClientMediaManagers
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -396,7 +397,7 @@ class TestFileImportOptions( unittest.TestCase ):
         self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         
     
-def GetMediaResult( hash, in_inbox, service_key, deleted_tags ):
+def GetNotesMediaResult( hash, names_to_notes ):
     
     file_id = 123
     size = random.randint( 8192, 20 * 1048576 )
@@ -406,19 +407,153 @@ def GetMediaResult( hash, in_inbox, service_key, deleted_tags ):
     duration = random.choice( [ 220, 16.66667, None ] )
     has_audio = random.choice( [ True, False ] )
     
-    file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+    file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+    
+    service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+    
+    tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+    
+    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = True )
+    ratings_manager = ClientMediaManagers.RatingsManager( {} )
+    notes_manager = ClientMediaManagers.NotesManager( names_to_notes )
+    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
+    
+    media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+    
+    return media_result
+    
+class TestNoteImportOptions( unittest.TestCase ):
+    
+    def test_basics( self ):
+        
+        example_hash = HydrusData.GenerateKey()
+        existing_names_to_notes = { 'notes' : 'here is a note' }
+        
+        media_result = GetNotesMediaResult( example_hash, existing_names_to_notes )
+        
+        #
+        
+        note_import_options = ClientImportOptions.NoteImportOptions()
+        
+        note_import_options.SetGetNotes( True )
+        note_import_options.SetExtendExistingNoteIfPossible( True )
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_IGNORE )
+        
+        self.assertEqual( note_import_options.GetServiceKeysToContentUpdates( media_result, [] ), {} )
+        
+        #
+        
+        names_and_notes = [ ( 'test', 'yes' ) ]
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, names_and_notes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'test', 'yes' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        note_import_options.SetGetNotes( False )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, names_and_notes )
+        
+        self.assertEqual( result, {} )
+        
+        note_import_options.SetGetNotes( True )
+        
+        #
+        
+        extending_names_and_notes = [ ( 'notes', 'and here is a note that is more interesting' ) ]
+        
+        note_import_options.SetExtendExistingNoteIfPossible( True )
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_IGNORE )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, extending_names_and_notes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'notes', 'and here is a note that is more interesting' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        note_import_options.SetExtendExistingNoteIfPossible( False )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, extending_names_and_notes )
+        
+        self.assertEqual( result, {} )
+        
+        #
+        
+        conflict_names_and_notes = [ ( 'notes', 'other note' ) ]
+        
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_IGNORE )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, conflict_names_and_notes )
+        
+        self.assertEqual( result, {} )
+        
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_REPLACE )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, conflict_names_and_notes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'notes', 'other note' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, conflict_names_and_notes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'notes (1)', 'other note' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_APPEND )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, conflict_names_and_notes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'notes', 'here is a note' + os.linesep * 2 + 'other note' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        multinotes = [ ( 'notes', 'other note' ), ( 'b', 'bbb' ), ( 'c', 'ccc' ) ]
+        
+        note_import_options.SetConflictResolution( ClientImportOptions.NOTE_IMPORT_CONFLICT_IGNORE )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, multinotes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'b', 'bbb' ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'c', 'ccc' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        renames = [ ( 'a', 'aaa' ), ( 'wew', 'wew note' ) ]
+        
+        note_import_options.SetNameOverrides( 'override', { 'wew' : 'lad' } )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, renames )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'override', 'aaa' ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'lad', 'wew note' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+    
+def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
+    
+    file_id = 123
+    size = random.randint( 8192, 20 * 1048576 )
+    mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+    width = random.randint( 200, 4096 )
+    height = random.randint( 200, 4096 )
+    duration = random.choice( [ 220, 16.66667, None ] )
+    has_audio = random.choice( [ True, False ] )
+    
+    file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
     
     service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
     
     service_keys_to_statuses_to_tags[ service_key ] = { HC.CONTENT_STATUS_DELETED : deleted_tags }
     
-    tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+    tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
     
-    locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set(), inbox = in_inbox )
-    ratings_manager = ClientRatings.RatingsManager( {} )
-    file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
+    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = in_inbox )
+    ratings_manager = ClientMediaManagers.RatingsManager( {} )
+    notes_manager = ClientMediaManagers.NotesManager( {} )
+    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
     
-    media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+    media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
     
@@ -430,7 +565,7 @@ class TestTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -466,7 +601,7 @@ class TestTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -499,7 +634,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         external_service_keys_to_tags = { example_service_key : { 'bodysuit', 'character:samus aran', 'series:metroid' } }
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -527,7 +662,7 @@ class TestTagImportOptions( unittest.TestCase ):
         example_service_key_1 = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         example_service_key_2 = HG.test_controller.example_tag_repo_service_key
         
-        media_result = GetMediaResult( example_hash, True, example_service_key_1, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key_1, set() )
         
         #
         
@@ -556,7 +691,7 @@ class TestTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
         
         #
         
@@ -603,7 +738,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         external_service_keys_to_tags = { example_service_key : { 'bodysuit', 'character:samus aran', 'series:metroid' } }
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
         
         #
         
@@ -650,7 +785,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -672,7 +807,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -709,7 +844,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         
@@ -724,7 +859,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
         
         #
         
@@ -751,7 +886,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
         
         #
         
@@ -778,8 +913,8 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        inbox_media_result = GetMediaResult( example_hash, True, example_service_key, set() )
-        archive_media_result = GetMediaResult( example_hash, False, example_service_key, set() )
+        inbox_media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
+        archive_media_result = GetTagsMediaResult( example_hash, False, example_service_key, set() )
         
         #
         
@@ -813,7 +948,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetMediaResult( example_hash, True, example_service_key, set() )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
         #
         

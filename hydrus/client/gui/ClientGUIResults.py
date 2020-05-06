@@ -33,6 +33,7 @@ from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIExport
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
+from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -877,61 +878,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _ManageNotes( self ):
         
-        def qt_do_it( media, notes ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            title = 'manage notes'
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
-                
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
-                
-                control = QW.QPlainTextEdit( panel )
-                
-                ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( control, ( 80, 14 ) )
-                
-                control.setMinimumWidth( width )
-                control.setMinimumHeight( height )
-                
-                control.setPlainText( notes )
-                
-                panel.SetControl( control )
-                
-                dlg.SetPanel( panel )
-                
-                HG.client_controller.CallAfterQtSafe( control, control.setFocus, QC.Qt.OtherFocusReason )
-                HG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.End )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    notes = control.toPlainText()
-                    
-                    hash = media.GetHash()
-                    
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( notes, hash ) ) ]
-                    
-                    service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
-                    
-                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                    
-                
-            
-            self.setFocus( QC.Qt.OtherFocusReason )
-            
-        
-        def thread_wait( media ):
-            
-            # if it ultimately makes sense, I can load/cache notes in the media result
-            
-            notes = HG.client_controller.Read( 'file_notes', media.GetHash() )
-            
-            QP.CallAfter( qt_do_it, media, notes )
-            
-        
         if self._focused_media is None:
             
             return
@@ -944,7 +890,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             return
             
         
-        HG.client_controller.CallToThread( thread_wait, media )
+        ClientGUIMediaActions.EditFileNotes( self, media )
+        
+        self.setFocus( QC.Qt.OtherFocusReason )
         
     
     def _ManageRatings( self ):
@@ -3656,7 +3604,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage urls for the selected files.', self._ManageURLs )
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'notes', 'Manage notes for the focused file.', self._ManageNotes )
+            
+            num_notes = self._focused_media.GetDisplayMedia().GetNotesManager().GetNumNotes()
+            
+            notes_str = 'notes'
+            
+            if num_notes > 0:
+                
+                notes_str = '{} ({})'.format( notes_str, HydrusData.ToHumanInt( num_notes ) )
+                
+            
+            ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage notes for the focused file.', self._ManageNotes )
             
             len_interesting_remote_service_keys = 0
             
@@ -4012,41 +3970,43 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, copy_phrase, 'Copy the selected files to the clipboard.', self._CopyFilesToClipboard )
                 
-                if advanced_mode:
+                copy_hash_menu = QW.QMenu( copy_menu )
+                
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
+                
+                ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
+                
+                if multiple_selected:
                     
                     copy_hash_menu = QW.QMenu( copy_menu )
                     
-                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
-                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
-                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
-                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
                     
-                    ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
-                    
-                    if multiple_selected:
-                        
-                        copy_hash_menu = QW.QMenu( copy_menu )
-                        
-                        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
-                        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
-                        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
-                        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
-                        
-                        ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
-                        
+                    ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
                     
                 
             else:
                 
-                if advanced_mode:
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                
+                if multiple_selected:
                     
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
                     
-                    if multiple_selected:
-                        
-                        ClientGUIMenus.AppendMenuItem( copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
-                        
-                    
+                
+                
+            
+            if advanced_mode:
+                
+                hash_id_str = str( self._focused_media.GetDisplayMedia().GetHashId() )
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
             for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
@@ -4657,10 +4617,6 @@ class Thumbnail( Selectable ):
     
     def GetQtImage( self ):
         
-        inbox = self.HasInbox()
-        
-        local = self.GetLocationsManager().IsLocal()
-        
         thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
         thumbnail_border = HG.client_controller.new_options.GetInteger( 'thumbnail_border' )
@@ -4668,6 +4624,10 @@ class Thumbnail( Selectable ):
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
         
         qt_image = HG.client_controller.bitmap_manager.GetQtImage( width, height, 24 )
+        
+        inbox = self.HasInbox()
+        
+        local = self.GetLocationsManager().IsLocal()
         
         painter = QG.QPainter( qt_image )
         
@@ -4883,6 +4843,11 @@ class Thumbnail( Selectable ):
         if locations_manager.IsDownloading():
             
             icons_to_draw.append( CC.global_pixmaps().downloading )
+            
+        
+        if self.HasNotes():
+            
+            icons_to_draw.append( CC.global_pixmaps().notes )
             
         
         if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() or CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted():

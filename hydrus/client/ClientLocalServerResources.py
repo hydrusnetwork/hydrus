@@ -546,7 +546,7 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
         
         if not ClientAPI.api_request_dialog_open:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'The permission registration dialog is not open. Please open it under "review services" in the hydrus client.' )
+            raise HydrusExceptions.ConflictException( 'The permission registration dialog is not open. Please open it under "review services" in the hydrus client.' )
             
         
         name = request.parsed_request_args.GetValue( 'name', str )

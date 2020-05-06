@@ -186,7 +186,7 @@ with HydrusLogger.HydrusLogger( db_dir, 'server' ) as logger:
             controller.Run()
             
         
-    except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
+    except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
         
         error = str( e )
         

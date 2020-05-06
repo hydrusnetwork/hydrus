@@ -465,7 +465,7 @@ class ReviewServicePanel( QW.QWidget ):
             permissions_list_panel.AddButton( 'open client api base url', self._OpenBaseURL )
             permissions_list_panel.AddButton( 'copy api access key', self._CopyAPIAccessKey, enabled_only_on_single_selection = True )
             
-            self._permissions_list.Sort()
+            self._permissions_list.Sort( 0 )
             
             #
             

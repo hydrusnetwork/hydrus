@@ -3,6 +3,7 @@ from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
 from hydrus.client import ClientMedia
+from hydrus.client import ClientMediaManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
@@ -34,7 +35,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ third ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate', 'current_duplicate_1' }
         service_keys_to_statuses_to_tags[ third ][ HC.CONTENT_STATUS_PENDING ] = { 'volume:3' }
         
-        tags_manager_1 = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager_1 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
         
         #
         
@@ -48,7 +49,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         service_keys_to_statuses_to_tags[ third ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate' }
         
-        tags_manager_2 = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager_2 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
         
         #
         
@@ -57,13 +58,13 @@ class TestMergeTagsManagers( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ second ][ HC.CONTENT_STATUS_CURRENT ] = { 'page:4', 'page:5' }
         service_keys_to_statuses_to_tags[ second ][ HC.CONTENT_STATUS_PENDING ] = { 'title:double page spread' }
         
-        tags_manager_3 = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager_3 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
         
         #
         
         tags_managers = ( tags_manager_1, tags_manager_2, tags_manager_3 )
         
-        tags_manager = ClientMedia.TagsManager.MergeTagsManagers( tags_managers )
+        tags_manager = ClientMediaManagers.TagsManager.MergeTagsManagers( tags_managers )
         
         #
         
@@ -92,7 +93,7 @@ class TestTagsManager( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ cls._third_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'petitioned' }
         service_keys_to_statuses_to_tags[ cls._third_key ][ HC.CONTENT_STATUS_DELETED ] = { 'pending' }
         
-        cls._tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        cls._tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
         
         cls._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
         
@@ -112,7 +113,7 @@ class TestTagsManager( unittest.TestCase ):
         other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'reset_pending' }
         other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'reset_petitioned' }
         
-        cls._other_tags_manager = ClientMedia.TagsManager( other_service_keys_to_statuses_to_tags )
+        cls._other_tags_manager = ClientMediaManagers.TagsManager( other_service_keys_to_statuses_to_tags )
         
         cls._other_service_keys_to_statuses_to_tags = other_service_keys_to_statuses_to_tags
         

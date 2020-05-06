@@ -356,7 +356,7 @@ class Controller( object ):
                 
                 job_key.SetVariable( 'result', result )
                 
-            except (HydrusExceptions.QtDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException) as e:
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
                 job_key.SetErrorException( e )
                 

@@ -1353,6 +1353,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         self._login_steps.AddDatas( login_script.GetLoginSteps() )
         self._example_domains_info.SetData( login_script.GetExampleDomainsInfo() )
         
+        self._credential_definitions.Sort( 0 )
+        self._example_domains_info.Sort( 0 )
+        
         #
         
         credential_definitions_box_panel.Add( credential_definitions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1903,6 +1906,8 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._login_scripts.AddDatas( login_scripts )
+        
+        self._login_scripts.Sort( 0 )
         
         #
         

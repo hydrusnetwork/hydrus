@@ -670,38 +670,60 @@ def GetSubprocessEnv():
         
         changes_made = False
         
-        lp_key = 'LD_LIBRARY_PATH'
-        lp_orig_key = lp_key + '_ORIG'
+        swaperoo_strings = [ 'LD_LIBRARY_PATH', 'XDG_DATA_DIRS'  ]
+        ok_to_remove_absent_orig = [ 'LD_LIBRARY_PATH' ]
         
-        if lp_orig_key in env:
+        for key in swaperoo_strings:
             
-            env[ lp_key ] = env[ lp_orig_key ]
+            orig_key = '{}_ORIG'.format( key )
             
-            changes_made = True
-            
-        elif lp_key in env:
-            
-            del env[ lp_key ]
-            
-            changes_made = True
-            
-        
-        if ( HC.PLATFORM_LINUX or HC.PLATFORM_MACOS ) and 'PATH' in env:
-            
-            # fix for pyinstaller, which drops this stuff for some reason and hence breaks ffmpeg
-            
-            path = env[ 'PATH' ]
-            
-            path_locations = set( path.split( ':' ) )
-            desired_path_locations = [ '/usr/bin', '/usr/local/bin' ]
-            
-            for desired_path_location in desired_path_locations:
+            if orig_key in env:
                 
-                if desired_path_location not in path_locations:
+                env[ key ] = env[ orig_key ]
+                
+                changes_made = True
+                
+            elif key in env and key in ok_to_remove_absent_orig:
+                
+                del env[ key ]
+                
+                changes_made = True
+                
+            
+        
+        if ( HC.PLATFORM_LINUX or HC.PLATFORM_MACOS ):
+            
+            if 'PATH' in env:
+                
+                # fix for pyinstaller, which drops this stuff for some reason and hence breaks ffmpeg
+                
+                path = env[ 'PATH' ]
+                
+                path_locations = set( path.split( ':' ) )
+                desired_path_locations = [ '/usr/bin', '/usr/local/bin' ]
+                
+                for desired_path_location in desired_path_locations:
                     
-                    path = desired_path_location + ':' + path
+                    if desired_path_location not in path_locations:
+                        
+                        path = desired_path_location + ':' + path
+                        
+                        env[ 'PATH' ] = path
+                        
+                        changes_made = True
+                        
                     
-                    env[ 'PATH' ] = path
+                
+            
+            if 'XDG_DATA_DIRS' in env:
+                
+                xdg_data_dirs = env[ 'XDG_DATA_DIRS' ]
+                
+                # pyinstaller can just replace this nice usually long str with multiple paths with base_dir/share
+                # absent the _orig above to rescue this, we'll populate with basic
+                if ':' not in xdg_data_dirs and HC.BASE_DIR in xdg_data_dirs:
+                    
+                    xdg_data_dirs = '/usr/local/share:/usr/share'
                     
                     changes_made = True
                     
@@ -1137,9 +1159,14 @@ def RestartProcess():
     else:
         
         # we are running a frozen release--both exe and me are the built exe
-        # wrap it in quotes because pyinstaller passes it on as raw text, breaking any path with spaces :/
         
-        args = [ '"' + me + '"' ] + sys.argv[1:]
+        # wrap it in quotes because pyinstaller passes it on as raw text, breaking any path with spaces :/
+        if not me.startswith( '"' ):
+            
+            me = '"{}"'.format( me )
+            
+        
+        args = [ me ] + sys.argv[1:]
         
     
     os.execv( exe, args )
@@ -1519,6 +1546,8 @@ class ContentUpdate( object ):
     
     def GetHashes( self ):
         
+        hashes = set()
+        
         if self._data_type == HC.CONTENT_TYPE_FILES:
             
             if self._action == HC.CONTENT_UPDATE_ADVANCED:
@@ -1570,7 +1599,13 @@ class ContentUpdate( object ):
             
             if self._action == HC.CONTENT_UPDATE_SET:
                 
-                ( notes, hash ) = self._row
+                ( hash, name, note ) = self._row
+                
+                hashes = { hash }
+                
+            elif self._action == HC.CONTENT_UPDATE_DELETE:
+                
+                ( hash, name ) = self._row
                 
                 hashes = { hash }
                 

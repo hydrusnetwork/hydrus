@@ -285,6 +285,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._quick_namespaces_list.AddDatas( quick_namespaces )
             
+            self._quick_namespaces_list.Sort( 0 )
+            
             for regex in regexes:
                 
                 self._regexes.addItem( regex )
@@ -860,7 +862,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._import_folders.SetData( import_folders )
         
-        self._import_folders.Sort()
+        self._import_folders.Sort( 0 )
         
         #
         
@@ -1112,7 +1114,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._filename_tagging_options.AddDatas( list(good_tag_service_keys_to_filename_tagging_options.items()) )
         
-        self._filename_tagging_options.Sort()
+        self._filename_tagging_options.Sort( 0 )
         
         #
         

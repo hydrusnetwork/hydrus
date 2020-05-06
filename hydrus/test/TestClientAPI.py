@@ -5,6 +5,7 @@ from hydrus.client import ClientLocalServer
 from hydrus.client import ClientLocalServerResources
 from hydrus.client import ClientManagers
 from hydrus.client import ClientMedia
+from hydrus.client import ClientMediaManagers
 from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
@@ -101,7 +102,7 @@ class TestClientAPI( unittest.TestCase ):
             return '/request_new_permissions?name={}&basic_permissions={}'.format( urllib.parse.quote( name ), urllib.parse.quote( json.dumps( basic_permissions ) ) )
             
         
-        # fail
+        # fail as dialog not open
         
         ClientAPI.api_request_dialog_open = False
         
@@ -113,7 +114,7 @@ class TestClientAPI( unittest.TestCase ):
         
         text = str( data, 'utf-8' )
         
-        self.assertEqual( response.status, 403 )
+        self.assertEqual( response.status, 409 )
         
         self.assertIn( 'dialog', text )
         
@@ -1595,17 +1596,18 @@ class TestClientAPI( unittest.TestCase ):
             duration = random.choice( [ 220, 16.66667, None ] )
             has_audio = random.choice( [ True, False ] )
             
-            file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+            file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
             
             service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
             
-            tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+            tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
             
-            locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set(), urls = urls )
-            ratings_manager = ClientRatings.RatingsManager( {} )
-            file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
+            locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), urls = urls )
+            ratings_manager = ClientMediaManagers.RatingsManager( {} )
+            notes_manager = ClientMediaManagers.NotesManager( {} )
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
             
-            media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+            media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
             
             media_results.append( media_result )
             
@@ -1782,17 +1784,18 @@ class TestClientAPI( unittest.TestCase ):
         height = 20
         duration = None
         
-        file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+        file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
         
         service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
         
-        tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
         
-        locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set() )
-        ratings_manager = ClientRatings.RatingsManager( {} )
-        file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
+        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set() )
+        ratings_manager = ClientMediaManagers.RatingsManager( {} )
+        notes_manager = ClientMediaManagers.NotesManager( {} )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
@@ -1933,9 +1936,9 @@ class TestClientAPI( unittest.TestCase ):
         
         hash_404 = os.urandom( 32 )
         
-        file_info_manager = ClientMedia.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )

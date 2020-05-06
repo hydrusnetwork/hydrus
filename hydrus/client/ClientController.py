@@ -313,7 +313,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'result', result )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
                 job_key.SetErrorException( e )
                 
@@ -990,7 +990,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 while True:
                     
-                    with ClientGUIDialogs.DialogTextEntry( self._splash, 'Enter your password.', allow_blank = True, password_entry = True, min_char_width = 24 ) as dlg:
+                    with ClientGUIDialogs.DialogTextEntry( self._splash, 'Enter your password.', allow_blank = False, password_entry = True, min_char_width = 24 ) as dlg:
                         
                         if dlg.exec() == QW.QDialog.Accepted:
                             
@@ -1003,7 +1003,7 @@ class Controller( HydrusController.HydrusController ):
                             
                         else:
                             
-                            raise HydrusExceptions.InsufficientCredentialsException( 'Bad password check' )
+                            raise HydrusExceptions.DBCredentialsException( 'Bad password check' )
                             
                         
                     
@@ -1801,7 +1801,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._is_booted = True
             
-        except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
+        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
             
             HydrusData.Print( e )
             
@@ -1848,7 +1848,7 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.CleanRunningFile( self.db_dir, 'client' )
             
-        except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ):
+        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ):
             
             pass
             

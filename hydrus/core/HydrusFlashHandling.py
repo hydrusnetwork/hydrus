@@ -32,6 +32,11 @@ def GetFlashProperties( path ):
         num_frames = metadata[ 'frames' ]
         fps = metadata[ 'fps' ]
         
+        if fps is None or fps == 0:
+            
+            fps = 1
+            
+        
         duration = ( 1000 * num_frames ) // fps
         
         return ( ( width, height ), duration, num_frames )

@@ -1527,11 +1527,15 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             call = HydrusData.Call( self._DoSiblingsAndParents, self._tag_service_key )
             
-            menu_items.append( ( 'normal', 'Hard-replace all applicable tags with their siblings and add missing parents. (Just this service\'s siblings and parents)', 'Fix siblings and parents.', call ) )
+            sub_menu_items = []
+            
+            sub_menu_items.append( ( 'normal', 'Just this service\'s siblings and parents', 'Fix siblings and parents.', call ) )
             
             call = HydrusData.Call( self._DoSiblingsAndParents, CC.COMBINED_TAG_SERVICE_KEY )
             
-            menu_items.append( ( 'normal', 'Hard-replace all applicable tags with their siblings and add missing parents. (All service siblings and parents)', 'Fix siblings and parents.', call ) )
+            sub_menu_items.append( ( 'normal', 'All service siblings and parents', 'Fix siblings and parents.', call ) )
+            
+            menu_items.append( ( 'submenu', 'Hard-replace siblings and add parents', '', sub_menu_items ) )
             
             self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().family, menu_items )
             self._do_siblings_and_parents.setToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )

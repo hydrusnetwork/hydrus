@@ -1675,7 +1675,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         
         self._listctrl.AddDatas( list(initial_dict.items()) )
         
-        self._listctrl.Sort()
+        self._listctrl.Sort( 0 )
         
         #
         
@@ -1871,7 +1871,7 @@ class StringToStringDictControl( QW.QWidget ):
         
         self._listctrl.AddDatas( list(initial_dict.items()) )
         
-        self._listctrl.Sort()
+        self._listctrl.Sort( 0 )
         
         #
         
@@ -2012,7 +2012,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
         
         self._listctrl.AddDatas( list(initial_dict.items()) )
         
-        self._listctrl.Sort()
+        self._listctrl.Sort( 0 )
         
         #
         

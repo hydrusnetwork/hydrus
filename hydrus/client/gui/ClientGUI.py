@@ -2966,32 +2966,46 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         if self._controller.CurrentlyIdle():
             
             idle_status = 'idle'
+            idle_tooltip = 'client is idle, it can do maintenance work'
             
         else:
             
             idle_status = ''
+            idle_tooltip = None
             
         
         hydrus_busy_status = self._controller.GetThreadPoolBusyStatus()
+        hydrus_busy_tooltip = 'just a simple measure of how much hydrus wants to do atm'
         
         if self._controller.SystemBusy():
             
             busy_status = 'CPU busy'
+            busy_tooltip = 'this computer has been doing work recently, so some hydrus maintenance will not start'
             
         else:
             
             busy_status = ''
+            busy_tooltip = None
             
         
         ( db_status, job_name ) = HG.client_controller.GetDBStatus()
         
+        if job_name is not None and job_name != '':
+            
+            db_tooltip = 'current db job: {}'.format( job_name )
+            
+        else:
+            
+            db_tooltip = None
+            
+        
         self._statusbar.setToolTip( job_name )
         
         self._statusbar.SetStatusText( media_status, 0 )
-        self._statusbar.SetStatusText( idle_status, 2 )
-        self._statusbar.SetStatusText( hydrus_busy_status, 3 )
-        self._statusbar.SetStatusText( busy_status, 4 )
-        self._statusbar.SetStatusText( db_status, 5 )
+        self._statusbar.SetStatusText( idle_status, 2, tooltip = idle_tooltip )
+        self._statusbar.SetStatusText( hydrus_busy_status, 3, tooltip = hydrus_busy_tooltip )
+        self._statusbar.SetStatusText( busy_status, 4, tooltip = busy_tooltip )
+        self._statusbar.SetStatusText( db_status, 5, tooltip = db_tooltip )
         
     
     def _RegenerateTagMappingsCache( self ):
@@ -3010,7 +3024,23 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _RepopulateFTSCache( self ):
+    def _RegenerateSimilarFilesTree( self ):
+        
+        message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
+        message += os.linesep * 2
+        message += 'If you have a lot of files, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it', check_for_cancelled = True )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'regenerate_similar_files' )
+            
+        
+    
+    def _RepopulateTagSearchCache( self ):
         
         message = 'This will go through all the tag definitions in the database and make sure there is a correct fast-search record for it.'
         message += os.linesep * 2
@@ -3030,25 +3060,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             status_hook = lambda s: job_key.SetVariable( 'popup_text_1', s )
             
-            self._controller.Write( 'repopulate_fts_cache', status_hook = status_hook )
+            self._controller.Write( 'repopulate_tag_search_cache', status_hook = status_hook )
             
             job_key.Delete( 3 )
-            
-        
-    
-    def _RegenerateSimilarFilesTree( self ):
-        
-        message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
-        message += os.linesep * 2
-        message += 'If you have a lot of files, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
-        message += 'If you do not have a specific reason to run this, it is pointless.'
-        
-        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it', check_for_cancelled = True )
-        
-        if result == QW.QDialog.Accepted:
-            
-            self._controller.Write( 'regenerate_similar_files' )
             
         
     
@@ -3355,7 +3369,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
 
 Though not foolproof by any means, it will stop noobs from easily seeing your files if you leave your machine unattended.
 
-Do not ever forget your password! If you do, you'll have to manually insert a yaml-dumped python dictionary into a sqlite database or recompile from source to regain easy access. This is not trivial.
+Do not ever forget your password! If you do, you'll have to manually insert a yaml-dumped python dictionary into a sqlite database or run from edited source to regain easy access. This is not trivial.
 
 The password is cleartext here but obscured in the entry dialog. Enter a blank password to remove.'''
         
@@ -4303,7 +4317,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenuItem( submenu, 'tag mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'repopulate and correct tag text search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateFTSCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'repopulate and correct tag search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateTagSearchCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
@@ -5228,7 +5242,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HydrusData.PrintException( e )
             
-            raise HydrusExceptions.InsufficientCredentialsException( str( e ) )
+            if isinstance( e, HydrusExceptions.NetworkException ):
+                
+                raise e
+                
+            else:
+                
+                raise HydrusExceptions.ServerException( str( e ) )
+                
             
         
     
@@ -5734,7 +5755,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             bandwidth_status += ', network paused'
             
         
-        self._statusbar.SetStatusText( bandwidth_status, 1 )
+        tooltip = 'total bandwidth used this session, and current use'
+        
+        self._statusbar.SetStatusText( bandwidth_status, 1, tooltip = tooltip )
         
     
     def REPEATINGClipboardWatcher( self ):

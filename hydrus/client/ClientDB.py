@@ -4,6 +4,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
 from hydrus.client import ClientMedia
+from hydrus.client import ClientMediaManagers
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -142,6 +143,10 @@ YAML_DUMP_ID_LOCAL_BOORU = 8
 MIN_CACHED_INTEGER = -99999999
 MAX_CACHED_INTEGER = 99999999
 
+def BlockingSafeShowMessage( message ):
+    
+    HG.client_controller.CallBlockingToQt( HG.client_controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+    
 def CanCacheInteger( num ):
     
     return MIN_CACHED_INTEGER <= num and num <= MAX_CACHED_INTEGER
@@ -1682,7 +1687,8 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'files_info', [ 'duration' ] )
         self._CreateIndex( 'files_info', [ 'num_frames' ] )
         
-        self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER PRIMARY KEY, notes TEXT );' )
+        self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER, name_id INTEGER, note_id INTEGER, PRIMARY KEY ( hash_id, name_id ) );' )
+        self._CreateIndex( 'file_notes', [ 'note_id' ] )
         
         self._c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'file_transfers', [ 'hash_id' ] )
@@ -1753,6 +1759,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
         
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.labels ( label_id INTEGER PRIMARY KEY, label TEXT UNIQUE );' )
+        
         self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
         self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
         self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
@@ -1760,9 +1768,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT UNIQUE );' )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.subtags ( subtag_id INTEGER PRIMARY KEY, subtag TEXT UNIQUE );' )
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.notes ( note_id INTEGER PRIMARY KEY, note TEXT UNIQUE );' )
         
-        self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_master.subtags_fts4 USING fts4( subtag );' )
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.subtags ( subtag_id INTEGER PRIMARY KEY, subtag TEXT UNIQUE );' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );' )
         self._CreateIndex( 'external_master.tags', [ 'subtag_id', 'namespace_id' ] )
@@ -1923,7 +1931,14 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
         
+        self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.notes_fts4 USING fts4( note );' )
+        
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
+        
+        self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.subtags_fts4 USING fts4( subtag );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.subtags_searchable_map ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );' )
+        self._CreateIndex( 'external_caches.subtags_searchable_map', [ 'searchable_subtag_id' ] )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
         self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
@@ -4328,55 +4343,68 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAutocompleteTagIds( self, service_key, search_text, exact_match, job_key = None ):
         
+        ( namespace, half_complete_searchable_subtag ) = HydrusTags.SplitTag( search_text )
+        
+        predicates = []
         parameters = []
         
         if exact_match:
             
-            table_join = 'tags'
+            table_join = 'tags NATURAL JOIN subtags_searchable_map'
             
-            predicates = []
+            searchable_subtag = half_complete_searchable_subtag
             
-            if self._TagExists( search_text ):
+            if self._SubtagExists( searchable_subtag ):
                 
-                tag_id = self._GetTagId( search_text )
+                searchable_subtag_id = self._GetSubtagId( searchable_subtag )
                 
-                predicates.append( 'tag_id = ' + str( tag_id ) )
+                predicates.append( 'searchable_subtag_id = ?' )
+                parameters.append( searchable_subtag_id )
                 
-            
-            if self._SubtagExists( search_text ):
-                
-                subtag_id = self._GetSubtagId( search_text )
-                
-                predicates.append( 'subtag_id = ' + str( subtag_id ) )
-                
-            
-            if len( predicates ) == 0:
+            else:
                 
                 return set()
                 
             
-            predicates_phrase = ' OR '.join( predicates )
+            if namespace != '':
+                
+                if self._NamespaceExists( namespace ):
+                    
+                    namespace_id = self._GetNamespaceId( namespace )
+                    
+                    predicates.append( 'namespace_id = ?' )
+                    parameters.append( namespace_id )
+                    
+                else:
+                    
+                    return set()
+                    
+                
             
         else:
             
             # Note: you'll have trouble doing MATCH with other OR predicates. namespace LIKE "blah" OR subtag MATCH "blah" is trouble
             # AND is OK
             
-            def GetSubTagSearchInfo( half_complete_subtag ):
+            def GetSubTagSearchInfo( half_complete_searchable_subtag ):
                 
                 # complicated queries are passed to LIKE, because MATCH only supports appended wildcards 'gun*', and not complex stuff like '*gun*'
                 
-                if ClientSearch.IsComplexWildcard( half_complete_subtag ):
+                if ClientSearch.IsComplexWildcard( half_complete_searchable_subtag ):
                     
-                    like_param = ConvertWildcardToSQLiteLikeParameter( half_complete_subtag )
+                    # we search the 'searchable subtags', then link the various mappings back to real tags
                     
-                    t_j = ' NATURAL JOIN subtags'
+                    like_param = ConvertWildcardToSQLiteLikeParameter( half_complete_searchable_subtag )
+                    
+                    t_j = ', subtags_searchable_map, subtags ON ( tags.subtag_id = subtags_searchable_map.subtag_id AND subtags_searchable_map.searchable_subtag_id = subtags.subtag_id )'
                     pred = 'subtag LIKE ?'
                     param = like_param
                     
                 else:
                     
-                    subtags_fts4_param = '"' + half_complete_subtag + '"'
+                    # simple 'sam*' style subtag, so we can search fts4 no prob
+                    
+                    subtags_fts4_param = '"{}"'.format( half_complete_searchable_subtag )
                     
                     t_j = ', subtags_fts4 ON ( subtag_id = docid )'
                     pred = 'subtag MATCH ?'
@@ -4386,11 +4414,7 @@ class DB( HydrusDB.HydrusDB ):
                 return ( t_j, pred, param )
                 
             
-            ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
-            
             if namespace != '':
-                
-                predicates = []
                 
                 if '*' in namespace:
                     
@@ -4420,37 +4444,33 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                if half_complete_subtag not in ( '*', '' ):
+                if half_complete_searchable_subtag not in ( '*', '' ):
                     
-                    ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_subtag )
+                    ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_searchable_subtag )
                     
                     table_join += t_j
                     predicates.append( pred )
                     parameters.append( param )
                     
                 
-                predicates_phrase = ' AND '.join( predicates )
-                
             else:
                 
                 table_join = 'tags'
                 
-                predicates = []
-                
-                if ClientSearch.ConvertSubtagToSearchable( half_complete_subtag ) in ( '', '*' ):
+                if ClientSearch.ConvertSubtagToSearchable( half_complete_searchable_subtag ) in ( '', '*' ):
                     
                     return set()
                     
                 
-                ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_subtag )
+                ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_searchable_subtag )
                 
                 table_join += t_j
                 predicates.append( pred )
                 parameters.append( param )
                 
-                predicates_phrase = ' OR '.join( predicates )
-                
             
+        
+        predicates_phrase = ' AND '.join( predicates )
         
         tag_ids = set()
         
@@ -4787,18 +4807,9 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self._GetHashId( hash )
         
-        result = self._c.execute( 'SELECT notes FROM file_notes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        names_to_notes = { name : note for ( name, note ) in self._c.execute( 'SELECT label, note FROM file_notes, labels, notes ON ( file_notes.name_id = labels.label_id AND file_notes.note_id = notes.note_id ) WHERE hash_id = ?;', ( hash_id, ) ) }
         
-        if result is None:
-            
-            return ''
-            
-        else:
-            
-            ( notes, ) = result
-            
-            return notes
-            
+        return names_to_notes
         
     
     def _GetFileSystemPredicates( self, service_key, force_system_everything = False ):
@@ -4880,7 +4891,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             if have_ratings:
                 
@@ -5003,7 +5014,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in list(service_ids_to_tag_data.items()) } )
             
-            tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+            tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
             
             hash_ids_to_tag_managers[ hash_id ] = tags_manager
             
@@ -5245,6 +5256,49 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
+    def _GetHashIdsFromNumNotes( self, min_num_notes: typing.Optional[ int ], max_num_notes: typing.Optional[ int ], hash_ids_table_name: str ):
+        
+        has_notes = max_num_notes is None and min_num_notes == 1
+        not_has_notes = ( min_num_notes is None or min_num_notes == 0 ) and max_num_notes is not None and max_num_notes == 0
+        
+        if has_notes or not_has_notes:
+            
+            has_hash_ids = self._STS( self._c.execute( 'SELECT DISTINCT hash_id FROM file_notes NATURAL JOIN {};'.format( hash_ids_table_name ) ) )
+            
+            if has_notes:
+                
+                hash_ids = has_hash_ids
+                
+            else:
+                
+                all_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( hash_ids_table_name ) ) )
+                
+                hash_ids = all_hash_ids.difference( has_hash_ids )
+                
+            
+        else:
+            
+            if min_num_notes is None:
+                
+                filt = lambda c: c <= max_num_notes
+                
+            elif max_num_notes is None:
+                
+                filt = lambda c: min_num_notes <= c
+                
+            else:
+                
+                filt = lambda c: min_num_notes <= c <= max_num_notes
+                
+            
+            query = 'SELECT hash_id, COUNT( * ) FROM file_notes NATURAL JOIN {} GROUP BY hash_id;'.format( hash_ids_table_name )
+            
+            hash_ids = { hash_id for ( hash_id, count ) in self._c.execute( query ) if filt( count ) }
+            
+        
+        return hash_ids
+        
+    
     def _GetHashIdsFromQuery( self, file_search_context: ClientSearch.FileSearchContext, job_key = None, query_hash_ids = None, apply_implicit_limit = True, sort_by = None, limit_sort_by = None ):
         
         if job_key is None:
@@ -5417,9 +5471,9 @@ class DB( HydrusDB.HydrusDB ):
                 min_framerate_sql = simple_preds[ 'framerate' ] * 0.95
                 max_framerate_sql = simple_preds[ 'framerate' ] * 1.05
                 
-            if 'max_num_frames' in simple_preds:
+            if 'max_framerate' in simple_preds:
                 
-                max_framerate_sql = simple_preds[ 'max_num_frames' ] * 0.95
+                max_framerate_sql = simple_preds[ 'max_framerate' ] * 0.95
                 
             
             pred = '( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {})'
@@ -6092,6 +6146,38 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        min_num_notes = None
+        max_num_notes = None
+        
+        if 'num_notes' in simple_preds:
+            
+            min_num_notes = simple_preds[ 'num_notes' ]
+            max_num_notes = min_num_notes
+            
+        else:
+            
+            if 'min_num_notes' in simple_preds:
+                
+                min_num_notes = simple_preds[ 'min_num_notes' ] + 1
+                
+            if 'max_num_notes' in simple_preds:
+                
+                max_num_notes = simple_preds[ 'max_num_notes' ] - 1
+                
+            
+        
+        if min_num_notes is not None or max_num_notes is not None:
+            
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                num_notes_hash_ids = self._GetHashIdsFromNumNotes( min_num_notes, max_num_notes, temp_table_name )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, num_notes_hash_ids )
+                
+            
+        
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
             only_do_zero = ( operator in ( '=', '\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
@@ -6485,7 +6571,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                domain_ids = ( self._GetURLDomainId( domain ), )
+                domain_ids = self._GetURLDomainAndSubdomainIds( domain, only_www_subdomains = True )
                 
             
             table = 'url_map NATURAL JOIN urls'
@@ -7109,6 +7195,24 @@ class DB( HydrusDB.HydrusDB ):
         return value
         
     
+    def _GetLabelId( self, label ):
+        
+        result = self._c.execute( 'SELECT label_id FROM labels WHERE label = ?;', ( label, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO labels ( label ) VALUES ( ? );', ( label, ) )
+            
+            label_id = self._c.lastrowid
+            
+        else:
+            
+            ( label_id, ) = result
+            
+        
+        return label_id
+        
+    
     def _GetLastShutdownWorkTime( self ):
         
         result = self._c.execute( 'SELECT last_shutdown_work_time FROM last_shutdown_work_time;' ).fetchone()
@@ -7177,7 +7281,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._c.execute( 'SELECT * FROM files_info NATURAL JOIN {};'.format( temp_table_name ) ) }
+                hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._c.execute( 'SELECT * FROM files_info NATURAL JOIN {};'.format( temp_table_name ) ) }
                 
                 hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._c.execute( 'SELECT hash_id, service_id, timestamp FROM current_files NATURAL JOIN {};'.format( temp_table_name ) ) ) )
                 
@@ -7193,7 +7297,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings NATURAL JOIN {};'.format( temp_table_name ) ) ) )
                 
-                hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._c.execute( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats NATURAL JOIN {};'.format( temp_table_name ) ) }
+                hash_ids_to_names_and_notes = HydrusData.BuildKeyToListDict( ( ( hash_id, ( name, note ) ) for ( hash_id, name, note ) in self._c.execute( 'SELECT file_notes.hash_id, label, note FROM file_notes, labels, notes, {} ON ( file_notes.name_id = labels.label_id AND file_notes.note_id = notes.note_id AND file_notes.hash_id = {}.hash_id );'.format( temp_table_name, temp_table_name ) ) ) )
+                
+                hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMediaManagers.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._c.execute( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats NATURAL JOIN {};'.format( temp_table_name ) ) }
                 
                 hash_ids_to_file_modified_timestamps = dict( self._c.execute( 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps NATURAL JOIN {};'.format( temp_table_name ) ) )
                 
@@ -7241,13 +7347,26 @@ class DB( HydrusDB.HydrusDB ):
                     file_modified_timestamp = None
                     
                 
-                locations_manager = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps, file_modified_timestamp = file_modified_timestamp )
+                locations_manager = ClientMediaManagers.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps, file_modified_timestamp = file_modified_timestamp )
                 
                 #
                 
                 local_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
                 
-                ratings_manager = ClientRatings.RatingsManager( local_ratings )
+                ratings_manager = ClientMediaManagers.RatingsManager( local_ratings )
+                
+                #
+                
+                if hash_id in hash_ids_to_names_and_notes:
+                    
+                    names_to_notes = dict( hash_ids_to_names_and_notes[ hash_id ] )
+                    
+                else:
+                    
+                    names_to_notes = dict()
+                    
+                
+                notes_manager = ClientMediaManagers.NotesManager( names_to_notes )
                 
                 #
                 
@@ -7257,7 +7376,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    file_viewing_stats_manager = ClientMedia.FileViewingStatsManager.STATICGenerateEmptyManager()
+                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
                     
                 
                 #
@@ -7270,10 +7389,10 @@ class DB( HydrusDB.HydrusDB ):
                     
                     hash = self._hash_ids_to_hashes_cache[ hash_id ]
                     
-                    file_info_manager = ClientMedia.FileInfoManager( hash_id, hash )
+                    file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
                     
                 
-                missing_media_results.append( ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager ) )
+                missing_media_results.append( ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
             
             self._weakref_media_result_cache.AddMediaResults( missing_media_results )
@@ -7367,6 +7486,26 @@ class DB( HydrusDB.HydrusDB ):
                 return []
                 
             
+        
+    
+    def _GetNoteId( self, note ):
+        
+        result = self._c.execute( 'SELECT note_id FROM notes WHERE note = ?;', ( note, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO notes ( note ) VALUES ( ? );', ( note, ) )
+            
+            note_id = self._c.lastrowid
+            
+            self._c.execute( 'REPLACE INTO notes_fts4 ( docid, note ) VALUES ( ?, ? );', ( note_id, note ) )
+            
+        else:
+            
+            ( note_id, ) = result
+            
+        
+        return note_id
         
     
     def _GetNumsPending( self ):
@@ -8156,22 +8295,44 @@ class DB( HydrusDB.HydrusDB ):
             
             subtag_id = self._c.lastrowid
             
+            #
+            
             subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
+            
+            #
             
             self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
             
-            try:
+            #
+            
+            if subtag_searchable == subtag:
                 
-                integer_subtag = int( subtag )
+                searchable_subtag_id = subtag_id
                 
-                if CanCacheInteger( integer_subtag ):
+            else:
+                
+                searchable_subtag_id = self._GetSubtagId( subtag_searchable )
+                
+            
+            self._c.execute( 'REPLACE INTO subtags_searchable_map ( subtag_id, searchable_subtag_id ) VALUES ( ?, ? );', ( subtag_id, searchable_subtag_id ) )
+            
+            #
+            
+            if subtag.isdecimal():
+                
+                try:
                     
-                    self._c.execute( 'INSERT OR IGNORE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', ( subtag_id, integer_subtag ) )
+                    integer_subtag = int( subtag )
                     
-                
-            except ValueError:
-                
-                pass
+                    if CanCacheInteger( integer_subtag ):
+                        
+                        self._c.execute( 'REPLACE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', ( subtag_id, integer_subtag ) )
+                        
+                    
+                except ValueError:
+                    
+                    pass
+                    
                 
             
         else:
@@ -8186,17 +8347,28 @@ class DB( HydrusDB.HydrusDB ):
         
         if '*' in subtag_wildcard:
             
-            like_param = ConvertWildcardToSQLiteLikeParameter( subtag_wildcard )
-            
-            return self._STL( self._c.execute( 'SELECT subtag_id FROM subtags WHERE subtag LIKE ?;', ( like_param, ) ) )
+            if ClientSearch.IsComplexWildcard( subtag_wildcard ):
+                
+                # we search the 'searchable subtags', then link the various mappings back to real tags
+                
+                like_param = ConvertWildcardToSQLiteLikeParameter( subtag_wildcard )
+                
+                return self._STL( self._c.execute( 'SELECT subtags_searchable_map.subtag_id FROM subtags_searchable_map, subtags ON ( subtags_searchable_map.searchable_subtag_id = subtags.subtag_id ) WHERE subtag LIKE ?;', ( like_param, ) ) )
+                
+            else:
+                
+                # simple 'sam*' style subtag, so we can search fts4 no prob
+                
+                subtags_fts4_param = '"{}"'.format( subtag_wildcard )
+                
+                return self._STL( self._c.execute( 'SELECT docid FROM subtags_fts4 WHERE subtag MATCH ?;', ( subtags_fts4_param, ) ) )
+                
             
         else:
             
             if self._SubtagExists( subtag_wildcard ):
                 
-                subtag_id = self._GetSubtagId( subtag_wildcard )
-                
-                return [ subtag_id ]
+                return self._STL( self._c.execute( 'SELECT subtags_searchable_map.subtag_id FROM subtags_searchable_map, subtags ON ( subtags_searchable_map.searchable_subtag_id = subtags.subtag_id ) WHERE subtag = ?;', ( subtag_wildcard, ) ) )
                 
             else:
                 
@@ -8461,13 +8633,24 @@ class DB( HydrusDB.HydrusDB ):
         return domain_id
         
     
-    def _GetURLDomainAndSubdomainIds( self, domain ):
+    def _GetURLDomainAndSubdomainIds( self, domain, only_www_subdomains = False ):
+        
+        domain = ClientNetworkingDomain.RemoveWWWFromDomain( domain )
         
         domain_ids = set()
         
         domain_ids.add( self._GetURLDomainId( domain ) )
         
-        for ( domain_id, ) in self._c.execute( 'SELECT domain_id FROM url_domains WHERE domain LIKE ?;', ( '%.{}'.format( domain ), ) ):
+        if only_www_subdomains:
+            
+            search_phrase = 'www%.{}'.format( domain )
+            
+        else:
+            
+            search_phrase = '%.{}'.format( domain )
+            
+        
+        for ( domain_id, ) in self._c.execute( 'SELECT domain_id FROM url_domains WHERE domain LIKE ?;', ( search_phrase, ) ):
             
             domain_ids.add( domain_id )
             
@@ -8645,7 +8828,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._AddFiles( self._local_file_service_id, [ ( hash_id, timestamp ) ] )
             
-            file_info_manager = ClientMedia.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+            file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, timestamp ) )
             
@@ -10798,16 +10981,29 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if action == HC.CONTENT_UPDATE_SET:
                         
-                        ( notes, hash ) = row
+                        ( hash, name, note ) = row
                         
                         hash_id = self._GetHashId( hash )
+                        name_id = self._GetLabelId( name )
                         
-                        self._c.execute( 'DELETE FROM file_notes WHERE hash_id = ?;', ( hash_id, ) )
+                        self._c.execute( 'DELETE FROM file_notes WHERE hash_id = ? AND name_id = ?;', ( hash_id, name_id ) )
                         
-                        if len( notes ) > 0:
+                        if len( note ) > 0:
                             
-                            self._c.execute( 'INSERT OR IGNORE INTO file_notes ( hash_id, notes ) VALUES ( ?, ? );', ( hash_id, notes ) )
+                            note_id = self._GetNoteId( note )
                             
+                            self._c.execute( 'INSERT OR IGNORE INTO file_notes ( hash_id, name_id, note_id ) VALUES ( ?, ?, ? );', ( hash_id, name_id, note_id ) )
+                            
+                        
+                    elif action == HC.CONTENT_UPDATE_DELETE:
+                        
+                        ( hash, name ) = row
+                        
+                        hash_id = self._GetHashId( hash )
+                        name_id = self._GetLabelId( name )
+                        
+                        self._c.execute( 'DELETE FROM file_notes WHERE hash_id = ? AND name_id = ?;', ( hash_id, name_id ) )
+                        
                     
                 
             
@@ -11231,7 +11427,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
         elif action == 'file_maintenance_get_job': result = self._FileMaintenanceGetJob( *args, **kwargs )
         elif action == 'file_maintenance_get_job_counts': result = self._FileMaintenanceGetJobCounts( *args, **kwargs )
-        elif action == 'file_notes': result = self._GetFileNotes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'filter_existing_tags': result = self._FilterExistingTags( *args, **kwargs )
@@ -11448,6 +11643,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepairDB( self ):
         
+        ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
+        
         HydrusDB.HydrusDB._RepairDB( self )
         
         self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
@@ -11483,6 +11680,12 @@ class DB( HydrusDB.HydrusDB ):
         main_master_tables.add( 'tags' )
         main_master_tables.add( 'texts' )
         
+        if version >= 396:
+            
+            main_master_tables.add( 'labels' )
+            main_master_tables.add( 'notes' )
+            
+        
         missing_main_tables = main_master_tables.difference( existing_master_tables )
         
         if len( missing_main_tables ) > 0:
@@ -11502,19 +11705,17 @@ class DB( HydrusDB.HydrusDB ):
             
             message = 'On boot, the \'local_hashes\' tables was missing.'
             message += os.linesep * 2
-            message += 'If you wish, click ok on this message and the client will recreate it--empty, without data--which should at least let the client boot. The client may be able to repopulate the table in its own maintenance routines. But if you want to solve this problem otherwise, kill the hydrus process now.'
+            message += 'If you wish, click ok on this message and the client will recreate it--empty, without data--which should at least let the client boot. The client can repopulate the table in through the file maintenance jobs, the \'regenerate non-standard hashes\' job. But if you want to solve this problem otherwise, kill the hydrus process now.'
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+            BlockingSafeShowMessage( message )
             
             self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
             self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
             self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
             self._CreateIndex( 'external_master.local_hashes', [ 'sha512' ] )
             
-        
-        ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
         if version >= 392:
             
@@ -11552,7 +11753,7 @@ class DB( HydrusDB.HydrusDB ):
                 message += os.linesep * 2
                 message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
                 
-                self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+                BlockingSafeShowMessage( message )
                 
             
         
@@ -11583,7 +11784,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+            BlockingSafeShowMessage( message )
             
             for service_id in tag_service_ids:
                 
@@ -11602,6 +11803,13 @@ class DB( HydrusDB.HydrusDB ):
         main_cache_tables.add( 'shape_vptree' )
         main_cache_tables.add( 'shape_maintenance_branch_regen' )
         main_cache_tables.add( 'shape_search_cache' )
+        
+        if version >= 396:
+            
+            main_cache_tables.add( 'subtags_fts4' )
+            main_cache_tables.add( 'subtags_searchable_map' )
+            
+        
         main_cache_tables.add( 'integer_subtags' )
         
         missing_main_tables = main_cache_tables.difference( existing_cache_tables )
@@ -11620,7 +11828,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+            BlockingSafeShowMessage( message )
             
             self._CreateDBCaches()
             
@@ -11655,7 +11863,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+            BlockingSafeShowMessage( message )
             
             self._RegenerateTagMappingsCache()
             
@@ -11672,7 +11880,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
+            BlockingSafeShowMessage( message )
             
             new_options = ClientOptions.ClientOptions()
             
@@ -11682,7 +11890,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepopulateAndUpdateFTSTags( self, status_hook: typing.Optional[ typing.Callable[ [ str ], None ] ] = None ):
+    def _RepopulateAndUpdateTagSearchCache( self, status_hook: typing.Optional[ typing.Callable[ [ str ], None ] ] = None, do_fts = True, do_searchable = True, do_integers = True ):
         
         BLOCK_SIZE = 1000
         
@@ -11692,7 +11900,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if status_hook is not None:
                 
-                message = 'Regenerating tag text search cache\u2026 {}'.format( HydrusData.ToHumanInt( i * BLOCK_SIZE ) )
+                message = 'Regenerating tag search cache\u2026 {}'.format( HydrusData.ToHumanInt( i * BLOCK_SIZE ) )
                 
                 status_hook( message )
                 
@@ -11703,23 +11911,60 @@ class DB( HydrusDB.HydrusDB ):
                 
                 subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
                 
-                do_it = True
-                
-                result = self._c.execute( 'SELECT subtag FROM subtags_fts4 WHERE docid = ?;', ( subtag_id, ) ).fetchone()
-                
-                if result is not None:
+                if do_fts:
                     
-                    ( subtag_fts, ) = result
+                    do_it = True
                     
-                    if subtag_fts == subtag_searchable:
+                    result = self._c.execute( 'SELECT subtag FROM subtags_fts4 WHERE docid = ?;', ( subtag_id, ) ).fetchone()
+                    
+                    if result is not None:
                         
-                        do_it = False
+                        ( current_subtag_fts, ) = result
+                        
+                        if current_subtag_fts == subtag_searchable:
+                            
+                            do_it = False
+                            
+                        
+                    
+                    if do_it:
+                        
+                        self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
                         
                     
                 
-                if do_it:
+                if do_searchable:
                     
-                    self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
+                    if subtag_searchable == subtag:
+                        
+                        searchable_subtag_id = subtag_id
+                        
+                    else:
+                        
+                        searchable_subtag_id = self._GetSubtagId( subtag_searchable )
+                        
+                    
+                    self._c.execute( 'REPLACE INTO subtags_searchable_map ( subtag_id, searchable_subtag_id ) VALUES ( ?, ? );', ( subtag_id, searchable_subtag_id ) )
+                    
+                
+                if do_integers:
+                    
+                    if subtag.isdecimal():
+                        
+                        try:
+                            
+                            integer_subtag = int( subtag )
+                            
+                            if CanCacheInteger( integer_subtag ):
+                                
+                                self._c.execute( 'REPLACE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', ( subtag_id, integer_subtag ) )
+                                
+                            
+                        except ValueError:
+                            
+                            pass
+                            
+                        
                     
                 
             
@@ -11727,22 +11972,16 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ReportOverupdatedDB( self, version ):
         
-        def qt_code():
-            
-            QW.QMessageBox.warning( None, 'Warning', 'This client\'s database is version '+HydrusData.ToHumanInt(version)+', but the software is version '+HydrusData.ToHumanInt(HC.SOFTWARE_VERSION)+'! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
-            
+        message = 'This client\'s database is version {}, but the software is version {}! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusData.ToHumanInt( version ), HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) )
         
-        self._controller.CallBlockingToQt(None, qt_code)
+        BlockingSafeShowMessage( message )
         
     
     def _ReportUnderupdatedDB( self, version ):
         
-        def qt_code():
-            
-            QW.QMessageBox.warning( None, 'Warning', 'This client\'s database is version '+HydrusData.ToHumanInt(version)+', but the software is significantly later, '+HydrusData.ToHumanInt(HC.SOFTWARE_VERSION)+'! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
-            
+        message = 'This client\'s database is version {}, but the software is significantly later, {}! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusData.ToHumanInt( version ), HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) )
         
-        self._controller.CallBlockingToQt(None, qt_code)
+        BlockingSafeShowMessage( message )
         
     
     def _ReprocessRepository( self, service_key, update_mime_types ):
@@ -12454,18 +12693,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 344:
             
-            def qt_thumb_delete_warning():
-                
-                message = 'The client now only uses one thumbnail per file (previously it needed two). Your \'resized\' thumbnails will now be deleted. This is a significant step that could take some time to complete. It will also significantly impact your next backup run.'
-                message += os.linesep * 2
-                message += 'In order to keep your recycle bin sane, the thumbnails will be permanently deleted. Therefore, this operation cannot be undone. If you are not ready to do this yet (for instance if you do not have a recent backup), kill the hydrus process in Task Manager now.'
-                message += os.linesep * 2
-                message += 'BTW: If you previously put your resized thumbnails on an SSD but not your \'full-size\' ones, you should check the \'migrate database\' dialog once the client boots so you can move the remaining thumbnail directories to fast storage.'
-                
-                QW.QMessageBox.warning( None, 'Warning', message )
-                
+            message = 'The client now only uses one thumbnail per file (previously it needed two). Your \'resized\' thumbnails will now be deleted. This is a significant step that could take some time to complete. It will also significantly impact your next backup run.'
+            message += os.linesep * 2
+            message += 'In order to keep your recycle bin sane, the thumbnails will be permanently deleted. Therefore, this operation cannot be undone. If you are not ready to do this yet (for instance if you do not have a recent backup), kill the hydrus process in Task Manager now.'
+            message += os.linesep * 2
+            message += 'BTW: If you previously put your resized thumbnails on an SSD but not your \'full-size\' ones, you should check the \'migrate database\' dialog once the client boots so you can move the remaining thumbnail directories to fast storage.'
             
-            self._controller.CallBlockingToQt(None, qt_thumb_delete_warning)
+            BlockingSafeShowMessage( message )
             
             new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
             
@@ -12568,20 +12802,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_possible_resized_paths > 0:
                     
-                    def qt_thumb_delete_warning_reattempt():
-                        
-                        message = 'It appears that the update code from last week\'s release, 345, did not successfully delete all your old (and now unneeded) resized thumbnail directories.'
-                        message += os.linesep * 2
-                        message += 'I have found {} spare \'rxx\' directories (this number should be less than or equal to 256) in these current locations:'.format( num_possible_resized_paths )
-                        message += os.linesep * 2
-                        message += os.linesep.join( [ HydrusPaths.ConvertPortablePathToAbsPath( location ) for location in locations_where_r_folders_were_found ] )
-                        message += os.linesep * 2
-                        message += 'I will now attempt to delete these directories again, this time with fixed permissions. If you are not ready to do this, kill the hydrus process now.'
-                        
-                        QW.QMessageBox.warning( None, 'Warning', message )
-                        
+                    message = 'It appears that the update code from last week\'s release, 345, did not successfully delete all your old (and now unneeded) resized thumbnail directories.'
+                    message += os.linesep * 2
+                    message += 'I have found {} spare \'rxx\' directories (this number should be less than or equal to 256) in these current locations:'.format( num_possible_resized_paths )
+                    message += os.linesep * 2
+                    message += os.linesep.join( [ HydrusPaths.ConvertPortablePathToAbsPath( location ) for location in locations_where_r_folders_were_found ] )
+                    message += os.linesep * 2
+                    message += 'I will now attempt to delete these directories again, this time with fixed permissions. If you are not ready to do this, kill the hydrus process now.'
                     
-                    self._controller.CallBlockingToQt(None, qt_thumb_delete_warning_reattempt)
+                    BlockingSafeShowMessage( message )
                     
                     for ( i, full_path ) in enumerate( possible_resized_paths ):
                         
@@ -13975,7 +14204,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 status_hook = lambda s: self._controller.pub( 'splash_set_status_subtext', s )
                 
-                self._RepopulateAndUpdateFTSTags( status_hook = status_hook )
+                self._RepopulateAndUpdateTagSearchCache( status_hook = status_hook, do_searchable = False, do_integers = False )
                 
             except Exception as e:
                 
@@ -14375,6 +14604,114 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 395:
+            
+            result = self._c.execute( 'SELECT 1 FROM external_master.sqlite_master WHERE name = ?;', ( 'labels', ) ).fetchone()
+            
+            if result is None:
+                
+                try:
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'updating notes table' )
+                    
+                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.labels ( label_id INTEGER PRIMARY KEY, label TEXT UNIQUE );' )
+                    
+                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.notes ( note_id INTEGER PRIMARY KEY, note TEXT UNIQUE );' )
+                    self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.notes_fts4 USING fts4( note );' )
+                    
+                    self._c.execute( 'ALTER TABLE file_notes RENAME TO file_notes_old;' )
+                    
+                    self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER, name_id INTEGER, note_id INTEGER, PRIMARY KEY ( hash_id, name_id ) );' )
+                    self._CreateIndex( 'file_notes', [ 'note_id' ] )
+                    
+                    all_data = self._c.execute( 'SELECT hash_id, notes FROM file_notes_old;' ).fetchall()
+                    
+                    name_id = self._GetLabelId( 'notes' )
+                    
+                    for ( hash_id, note ) in all_data:
+                        
+                        note_id = self._GetNoteId( note )
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO file_notes ( hash_id, name_id, note_id ) VALUES ( ?, ?, ? );', ( hash_id, name_id, note_id ) )
+                        
+                    
+                    self._c.execute( 'DROP TABLE file_notes_old;' )
+                    
+                    self._AnalyzeTable( 'file_notes' )
+                    self._AnalyzeTable( 'notes' )
+                    self._AnalyzeTable( 'notes_fts4' )
+                    self._AnalyzeTable( 'labels' )
+                    
+                except Exception as e:
+                    
+                    message = 'Trying to update the notes table failed! Please let hydrus dev know!'
+                    
+                    HydrusData.Print( message )
+                    BlockingSafeShowMessage( message )
+                    HydrusData.PrintException( e )
+                    
+                    raise
+                    
+                
+            
+            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'subtags_fts4', ) ).fetchone()
+            
+            try:
+                
+                if result is None:
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'moving fts fast tag search cache' )
+                    
+                    self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.subtags_fts4 USING fts4( subtag );' )
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO external_caches.subtags_fts4 ( docid, subtag ) SELECT docid, subtag FROM external_master.subtags_fts4;' )
+                    
+                    self._c.execute( 'DROP TABLE external_master.subtags_fts4;' )
+                    
+                    self._AnalyzeTable( 'subtags_fts4' )
+                    
+                
+            except Exception as e:
+                
+                message = 'Trying to move tag fast search cache failed! Please let hydrus dev know!'
+                
+                HydrusData.Print( message )
+                BlockingSafeShowMessage( message )
+                HydrusData.PrintException( e )
+                
+                raise
+                
+            
+            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'subtags_searchable_map', ) ).fetchone()
+            
+            try:
+                
+                if result is None:
+                    
+                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.subtags_searchable_map ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );' )
+                    self._CreateIndex( 'external_caches.subtags_searchable_map', [ 'searchable_subtag_id' ] )
+                    
+                    status_hook = lambda s: self._controller.pub( 'splash_set_status_subtext', s )
+                    
+                    self._RepopulateAndUpdateTagSearchCache( status_hook = status_hook, do_fts = False, do_integers = False )
+                    
+                    self._AnalyzeTable( 'subtags_searchable_map' )
+                    
+                
+            except Exception as e:
+                
+                message = 'Trying to update tag search cache failed! Please let hydrus dev know!'
+                
+                HydrusData.Print( message )
+                BlockingSafeShowMessage( message )
+                HydrusData.PrintException( e )
+                
+                raise
+                
+            
+            
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
@@ -14953,7 +15290,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
         elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
-        elif action == 'repopulate_fts_cache': self._RepopulateAndUpdateFTSTags( *args, **kwargs )
+        elif action == 'repopulate_tag_search_cache': self._RepopulateAndUpdateTagSearchCache( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )

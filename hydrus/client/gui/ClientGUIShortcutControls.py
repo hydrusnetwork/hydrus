@@ -192,7 +192,24 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
             
             ( service_key, content_type, action, value ) = data
             
-            self._service = HG.client_controller.services_manager.GetService( service_key )
+            
+            if HG.client_controller.services_manager.ServiceExists( service_key ):
+                
+                self._service = HG.client_controller.services_manager.GetService( service_key )
+                
+            else:
+                
+                QW.QMessageBox.warning( self, 'Warning', 'The service that this command relies upon no longer exists! This command will reset to a default form.' )
+                
+                local_tag_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+                
+                self._service = local_tag_services[0]
+                
+                content_type = HC.CONTENT_TYPE_MAPPINGS
+                action = HC.CONTENT_UPDATE_SET
+                
+                value = 'tag'
+                
             
             service_name = self._service.GetName()
             service_type = self._service.GetServiceType()
@@ -839,6 +856,8 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._reserved_shortcuts.AddDatas( reserved_shortcuts )
         
+        self._reserved_shortcuts.Sort( 0 )
+        
         self._original_custom_names = set()
         
         for shortcuts in custom_shortcuts:
@@ -847,6 +866,8 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._original_custom_names.add( shortcuts.GetName() )
             
+        
+        self._custom_shortcuts.Sort( 0 )
         
         #
         
@@ -970,10 +991,22 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     def _GetTuples( self, shortcuts ):
         
         name = shortcuts.GetName()
+        
+        if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
+            
+            pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
+            sort_name = ClientGUIShortcuts.shortcut_names_to_sort_order[ name ]
+            
+        else:
+            
+            pretty_name = name
+            sort_name = name
+            
+        
         size = len( shortcuts )
         
-        display_tuple = ( name, HydrusData.ToHumanInt( size ) )
-        sort_tuple = ( name, size )
+        display_tuple = ( pretty_name, HydrusData.ToHumanInt( size ) )
+        sort_tuple = ( sort_name, size )
         
         return ( display_tuple, sort_tuple )
         
@@ -1075,7 +1108,7 @@ class ShortcutWidget( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, 'Mouse events only work for the duplicate and archive/delete filters atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, 'Mouse events only work for some windows, mostly media viewer stuff, atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         gridbox = QP.GridLayout( cols = 2 )
         

@@ -53,6 +53,7 @@ PREDICATE_TYPE_SYSTEM_HAS_AUDIO = 34
 PREDICATE_TYPE_SYSTEM_MODIFIED_TIME = 35
 PREDICATE_TYPE_SYSTEM_FRAMERATE = 36
 PREDICATE_TYPE_SYSTEM_NUM_FRAMES = 37
+PREDICATE_TYPE_SYSTEM_NUM_NOTES = 38
 
 SYSTEM_PREDICATE_TYPES = set()
 
@@ -79,6 +80,7 @@ SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_SIMILAR_TO )
 SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_LOCAL )
 SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NOT_LOCAL )
 SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_WORDS )
+SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_NOTES )
 SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_FILE_SERVICE )
 SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_NUM_PIXELS )
 SYSTEM_PREDICATE_TYPES.add( PREDICATE_TYPE_SYSTEM_DIMENSIONS )
@@ -100,11 +102,6 @@ def ConvertSubtagToSearchable( subtag ):
         
     
     subtag = CollapseWildcardCharacters( subtag )
-    
-    if IsComplexWildcard( subtag ):
-        
-        return subtag
-        
     
     subtag = subtag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
     
@@ -198,8 +195,6 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         return re.compile( beginning + s + end )
         
     
-    is_complex_wildcard = IsComplexWildcard( search_text )
-    
     re_predicate = compile_re( search_text )
     
     siblings_manager = HG.client_controller.tag_siblings_manager
@@ -217,10 +212,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
             possible_tags = { tag }
             
         
-        if not is_complex_wildcard:
-            
-            possible_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
-            
+        possible_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
         
         for possible_tag in possible_tags:
             
@@ -360,7 +352,8 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
         for predicate in wildcard_predicates:
             
-            wildcard = predicate.GetValue()
+            # this is an important convert. preds store nice looking text, but convert for the actual search
+            wildcard = ConvertTagToSearchable( predicate.GetValue() )
             
             if predicate.GetInclusive(): self._wildcards_to_include.append( wildcard )
             else: self._wildcards_to_exclude.append( wildcard )
@@ -972,6 +965,15 @@ class FileSystemPredicates( object ):
                     
                 
             
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
+                
+                ( operator, num_notes ) = value
+                
+                if operator == '<': self._common_info[ 'max_num_notes' ] = num_notes
+                elif operator == '>': self._common_info[ 'min_num_notes' ] = num_notes
+                elif operator == '=': self._common_info[ 'num_notes' ] = num_notes
+                
+            
             if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
                 
                 ( operator, num_words ) = value
@@ -1544,18 +1546,54 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
                 
-                if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH: base = 'width'
-                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT: base = 'height'
-                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = 'number of words'
-                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES: base = 'number of frames'
+                has_phrase = None
+                not_has_phrase = None
+                
+                if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
+                    
+                    base = 'width'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
+                    
+                    base = 'height'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
+                    
+                    base = 'number of notes'
+                    has_phrase = ': has notes'
+                    not_has_phrase = ': no notes'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
+                    
+                    base = 'number of words'
+                    has_phrase = ': has words'
+                    not_has_phrase = ': no words'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
+                    
+                    base = 'number of frames'
+                    has_phrase = ': has frames'
+                    not_has_phrase = ': no frames'
+                    
                 
                 if self._value is not None:
                     
                     ( operator, value ) = self._value
                     
-                    base += ' {} {}'.format( operator, HydrusData.ToHumanInt( value ) )
+                    if operator == '>' and value == 0 and has_phrase is not None:
+                        
+                        base += has_phrase
+                        
+                    elif ( ( operator == '=' and value == 0 ) or ( operator == '<' and value == 1 ) ) and not_has_phrase is not None:
+                        
+                        base += not_has_phrase
+                        
+                    else:
+                        
+                        base += ' {} {}'.format( operator, HydrusData.ToHumanInt( value ) )
+                        
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
@@ -2204,11 +2242,11 @@ class ParsedAutocompleteText( object ):
         return 'AC Tag Text: {}'.format( self.raw_input )
         
     
-    def _GetSearchText( self, always_autocompleting: bool ):
+    def _GetSearchText( self, always_autocompleting: bool, force_do_not_collapse: bool = False ):
         
         text = CollapseWildcardCharacters( self.raw_content )
         
-        if self._collapse_search_characters:
+        if self._collapse_search_characters and not force_do_not_collapse:
             
             text = ConvertTagToSearchable( text )
             
@@ -2266,7 +2304,7 @@ class ParsedAutocompleteText( object ):
             
         elif self.IsExplicitWildcard():
             
-            search_texts = [ self._GetSearchText( True ), self._GetSearchText( False ) ]
+            search_texts = [ self._GetSearchText( True, force_do_not_collapse = True ), self._GetSearchText( False, force_do_not_collapse = True ) ]
             
             search_texts = HydrusData.DedupeList( search_texts )
             
