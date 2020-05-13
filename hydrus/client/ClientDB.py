@@ -1622,11 +1622,7 @@ class DB( HydrusDB.HydrusDB ):
         
         existing_table_names = { name for name in existing_table_names if True in ( name.startswith( table_prefix ) for table_prefix in table_prefixes ) }
         
-        surplus_table_names = existing_table_names.difference( good_table_names )
-        
-        surplus_table_names = list( surplus_table_names )
-        
-        surplus_table_names.sort()
+        surplus_table_names = sorted( existing_table_names.difference( good_table_names ) )
         
         for table_name in surplus_table_names:
             
@@ -3369,9 +3365,7 @@ class DB( HydrusDB.HydrusDB ):
         
         distances_to_pairs = HydrusData.BuildKeyToListDict( ( ( distance, ( smaller_media_id, larger_media_id ) ) for ( smaller_media_id, larger_media_id, distance ) in result ) )
         
-        distances = list( distances_to_pairs.keys() )
-        
-        distances.sort()
+        distances = sorted( distances_to_pairs.keys() )
         
         # we want to preference pairs that have the smallest distance between them. deciding on more similar files first helps merge dupes before dealing with alts so reduces potentials more quickly
         for distance in distances:
@@ -4891,7 +4885,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             if have_ratings:
                 
@@ -5254,6 +5248,13 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return hash_ids
+        
+    
+    def _GetHashIdsFromNoteName( self, name: str, hash_ids_table_name: str ):
+        
+        label_id = self._GetLabelId( name )
+        
+        return self._STS( self._c.execute( 'SELECT hash_id FROM file_notes NATURAL JOIN {} WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ) ) )
         
     
     def _GetHashIdsFromNumNotes( self, min_num_notes: typing.Optional[ int ], max_num_notes: typing.Optional[ int ], hash_ids_table_name: str ):
@@ -6178,6 +6179,40 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if 'has_note_names' in simple_preds:
+            
+            inclusive_note_names = simple_preds[ 'has_note_names' ]
+            
+            for note_name in inclusive_note_names:
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self._GetHashIdsFromNoteName( note_name, temp_table_name )
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, notes_hash_ids )
+                    
+                
+            
+        
+        if 'not_has_note_names' in simple_preds:
+            
+            exclusive_note_names = simple_preds[ 'not_has_note_names' ]
+            
+            for note_name in exclusive_note_names:
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self._GetHashIdsFromNoteName( note_name, temp_table_name )
+                    
+                    query_hash_ids.difference_update( notes_hash_ids )
+                    
+                
+            
+        
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
             only_do_zero = ( operator in ( '=', '\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
@@ -7000,9 +7035,7 @@ class DB( HydrusDB.HydrusDB ):
                         possible_due_names.add( name )
                         
                     
-                    possible_due_names = list( possible_due_names )
-                    
-                    possible_due_names.sort()
+                    possible_due_names = sorted( possible_due_names )
                     
                     if len( possible_due_names ) > 0:
                         
@@ -7934,9 +7967,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_i_can_process = set()
         
-        update_indices = list( update_indices_to_unprocessed_hash_ids.keys() )
-        
-        update_indices.sort()
+        update_indices = sorted( update_indices_to_unprocessed_hash_ids.keys() )
         
         for update_index in update_indices:
             
@@ -8076,9 +8107,7 @@ class DB( HydrusDB.HydrusDB ):
         service_id = self._GetServiceId( service_key )
         hash_ids = self._GetHashIds( hashes )
         
-        result = [ filename for ( filename, ) in self._c.execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
-        
-        result.sort()
+        result = sorted( ( filename for ( filename, ) in self._c.execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
         
         return result
         
@@ -9672,9 +9701,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                children = [ ( HydrusData.Get64BitHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
-                
-                children.sort()
+                children = sorted( ( ( HydrusData.Get64BitHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ) )
                 
                 median_index = len( children ) // 2
                 
@@ -9885,9 +9912,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( v_id, v_phash ) in viewpoints:
             
-            views = [ HydrusData.Get64BitHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ]
-            
-            views.sort()
+            views = sorted( ( HydrusData.Get64BitHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ) )
             
             # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discrete integer score
             
@@ -11768,13 +11793,9 @@ class DB( HydrusDB.HydrusDB ):
             main_mappings_tables.update( ( name.split( '.' )[1] for name in GenerateMappingsTableNames( service_id ) ) )
             
         
-        missing_main_tables = main_mappings_tables.difference( existing_mapping_tables )
+        missing_main_tables = sorted( main_mappings_tables.difference( existing_mapping_tables ) )
         
         if len( missing_main_tables ) > 0:
-            
-            missing_main_tables = list( missing_main_tables )
-            
-            missing_main_tables.sort()
             
             message = 'On boot, some important mappings tables were missing! This could be due to the entire \'mappings\' database file being missing or some other problem. The tags in these tables are lost. The exact missing tables were:'
             message += os.linesep * 2
@@ -11812,13 +11833,9 @@ class DB( HydrusDB.HydrusDB ):
         
         main_cache_tables.add( 'integer_subtags' )
         
-        missing_main_tables = main_cache_tables.difference( existing_cache_tables )
+        missing_main_tables = sorted( main_cache_tables.difference( existing_cache_tables ) )
         
         if len( missing_main_tables ) > 0:
-            
-            missing_main_tables = list( missing_main_tables )
-            
-            missing_main_tables.sort()
             
             message = 'On boot, some important caches tables were missing! This could be due to the entire \'caches\' database file being missing or some other problem. Data related to duplicate file search may have been lost. The exact missing tables were:'
             message += os.linesep * 2
@@ -11847,13 +11864,9 @@ class DB( HydrusDB.HydrusDB ):
         
         mappings_cache_tables.add( 'local_tags_cache' )
         
-        missing_main_tables = mappings_cache_tables.difference( existing_cache_tables )
+        missing_main_tables = sorted( mappings_cache_tables.difference( existing_cache_tables ) )
         
         if len( missing_main_tables ) > 0:
-            
-            missing_main_tables = list( missing_main_tables )
-            
-            missing_main_tables.sort()
             
             message = 'On boot, some mapping caches tables were missing! This could be due to the entire \'caches\' database file being missing or due to some other problem. All of this data can be regenerated. The exact missing tables were:'
             message += os.linesep * 2
@@ -12164,9 +12177,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if store_backups:
                 
-                existing_timestamps = self._STL( self._c.execute( 'SELECT timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) )
-                
-                existing_timestamps.sort()
+                existing_timestamps = sorted( self._STI( self._c.execute( 'SELECT timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) ) )
                 
                 if len( existing_timestamps ) > 0:
                     

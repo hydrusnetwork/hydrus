@@ -14,7 +14,7 @@ The client can do quite a lot! Please check out the help inside the release or [
 * [endchan bunker](https://endchan.net/hydrus/)
 * [twitter](https://twitter.com/hydrusnetwork)
 * [tumblr](http://hydrus.tumblr.com/)
-* [discord](https://discord.gg/3H8UTpb)
+* [discord](https://discord.gg/wPHPCUZ)
 * [patreon](https://www.patreon.com/hydrus_dev)
 
 ## Attribution

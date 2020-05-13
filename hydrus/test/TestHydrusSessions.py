@@ -1,11 +1,8 @@
-from hydrus.client import ClientConstants as CC
-import collections
 import hashlib
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSessions
-import os
 import unittest
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG

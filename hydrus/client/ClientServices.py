@@ -2150,7 +2150,7 @@ class ServiceIPFS( ServiceRemote ):
         
         links_url = api_base_url + 'object/links/' + multihash
         
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', links_url )
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', links_url )
         
         if job_key is not None:
             
@@ -2158,8 +2158,6 @@ class ServiceIPFS( ServiceRemote ):
             
         
         try:
-            
-            network_job.OverrideBandwidth()
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2234,10 +2232,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'config?arg=Experimental.FilestoreEnabled&arg={}&bool=true'.format( arg_value )
         
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-        
-        network_job.OnlyTryConnectionOnce()
-        network_job.OverrideBandwidth()
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2259,10 +2254,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'version'
         
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-        
-        network_job.OnlyTryConnectionOnce()
-        network_job.OverrideBandwidth()
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2292,10 +2284,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'config?arg=Experimental.FilestoreEnabled'
         
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-        
-        network_job.OnlyTryConnectionOnce()
-        network_job.OverrideBandwidth()
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2423,21 +2412,40 @@ class ServiceIPFS( ServiceRemote ):
         
         # check if it is pinned. if we try to unpin something not pinned, the daemon 500s
         
-        url = api_base_url + '/pin/ls?arg={}'.format( multihash )
+        url = api_base_url + 'pin/ls?arg={}'.format( multihash )
         
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-        
-        network_job.OverrideBandwidth()
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
-        network_job.WaitUntilDone()
-        
-        parsing_text = network_job.GetContentText()
-        
-        j = json.loads( parsing_text )
-        
-        file_is_pinned = 'Keys' in j and multihash in j['Keys']
+        try:
+            
+            network_job.WaitUntilDone()
+            
+            parsing_text = network_job.GetContentText()
+            
+            j = json.loads( parsing_text )
+            
+            file_is_pinned = False
+            
+            if 'PinLsList' in j:
+                
+                file_is_pinned = 'Keys' in j[ 'PinLsList' ] and multihash in j[ 'PinLsList' ]['Keys']
+                
+            else:
+                
+                file_is_pinned = 'Keys' in j and multihash in j['Keys']
+                
+            
+        except HydrusExceptions.ServerException:
+            
+            if 'not pinned' in network_job.GetContentText():
+                
+                return False
+                
+            
+            raise
+            
         
         return file_is_pinned
         
@@ -2454,9 +2462,7 @@ class ServiceIPFS( ServiceRemote ):
             
             file_info = []
             
-            hashes = list( hashes )
-            
-            hashes.sort()
+            hashes = sorted( hashes )
             
             for ( i, hash ) in enumerate( hashes ):
                 
@@ -2506,9 +2512,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'object/new?arg=unixfs-dir'
             
-            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-            
-            network_job.OverrideBandwidth()
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2538,9 +2542,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
                 
-                network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-                
-                network_job.OverrideBandwidth()
+                network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
                 
                 HG.client_controller.network_engine.AddJob( network_job )
                 
@@ -2555,9 +2557,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/add?arg=' + directory_multihash
             
-            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-            
-            network_job.OverrideBandwidth()
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2650,11 +2650,9 @@ class ServiceIPFS( ServiceRemote ):
                 files = { 'path' : ( hash.hex(), f, mime_string ) }
                 
             
-            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
             
             network_job.SetFiles( files )
-            
-            network_job.OverrideBandwidth()
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2713,9 +2711,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/rm/' + multihash
             
-            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-            
-            network_job.OverrideBandwidth()
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2738,9 +2734,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/rm/' + multihash
             
-            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-            
-            network_job.OverrideBandwidth()
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             

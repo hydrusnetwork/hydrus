@@ -1622,9 +1622,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if len( self._additional_tags ) > 0:
             
-            pretty_additional_tags = list( self._additional_tags )
-            
-            pretty_additional_tags.sort()
+            pretty_additional_tags = sorted( self._additional_tags )
             
             statements.append( 'additional tags: ' + ', '.join( pretty_additional_tags ) )
             

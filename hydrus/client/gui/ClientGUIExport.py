@@ -732,9 +732,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                             tags.update( current_tags )
                             
                         
-                        tags = list( tags )
-                        
-                        tags.sort()
+                        tags = sorted( tags )
                         
                         txt_path = path + '.txt'
                         

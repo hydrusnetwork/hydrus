@@ -1,9 +1,5 @@
-from hydrus.client import ClientConstants as CC
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNATPunch
-import os
 import random
-import time
 import unittest
 
 class TestNATPunch( unittest.TestCase ):

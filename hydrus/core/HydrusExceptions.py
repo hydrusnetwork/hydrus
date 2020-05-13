@@ -1,5 +1,6 @@
 import os
 import traceback
+import collections.abc
 
 class HydrusException( Exception ):
     
@@ -7,16 +8,23 @@ class HydrusException( Exception ):
         
         s = []
         
-        for arg in self.args:
+        if isinstance( self.args, collections.abc.Iterable ):
             
-            try:
+            for arg in self.args:
                 
-                s.append( str( arg ) )
+                try:
+                    
+                    s.append( str( arg ) )
+                    
+                except:
+                    
+                    s.append( repr( arg ) )
+                    
                 
-            except:
-                
-                s.append( repr( arg ) )
-                
+            
+        else:
+            
+            s = [ repr( self.args ) ]
             
         
         return os.linesep.join( s )

@@ -22,6 +22,7 @@ from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
@@ -211,7 +212,7 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_match = credential_definition.GetStringMatch()
         
-        self._string_match = ClientGUIControls.StringMatchButton( self, string_match )
+        self._string_match = ClientGUIStringControls.StringMatchButton( self, string_match )
         
         #
         
@@ -334,9 +335,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         domains_in_use = { login_domain for ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) in self._domains_and_login_info.GetData() }
         
-        available_examples = list( example_domains.difference( domains_in_use ) )
-        
-        available_examples.sort()
+        available_examples = sorted( example_domains.difference( domains_in_use ) )
         
         if len( available_examples ) > 0:
             
@@ -1307,7 +1306,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         required_cookies_info_box_panel = ClientGUICommon.StaticBox( self, 'cookies required to consider session logged in' )
         
-        self._required_cookies_info = ClientGUIControls.StringMatchToStringMatchDictControl( required_cookies_info_box_panel, login_script.GetRequiredCookiesInfo(), min_height = 4, key_name = 'cookie name' )
+        self._required_cookies_info = ClientGUIStringControls.StringMatchToStringMatchDictControl( required_cookies_info_box_panel, login_script.GetRequiredCookiesInfo(), min_height = 4, key_name = 'cookie name' )
         
         #
         
@@ -1664,9 +1663,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._test_domain == '':
             
-            example_domains = list( login_script.GetExampleDomains() )
-            
-            example_domains.sort()
+            example_domains = sorted( login_script.GetExampleDomains() )
             
             if len( example_domains ) > 0:
                 
@@ -1952,8 +1949,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = login_script.GetName()
         
-        example_domains = list( login_script.GetExampleDomains() )
-        example_domains.sort()
+        example_domains = sorted( login_script.GetExampleDomains() )
         
         pretty_name = name
         pretty_example_domains = ', '.join( example_domains )
@@ -2040,25 +2036,25 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         
         required_credentials_panel = ClientGUICommon.StaticBox( self, 'credentials to send' )
         
-        self._required_credentials = ClientGUIControls.StringToStringDictControl( required_credentials_panel, required_credentials, min_height = 4, key_name = 'credential name', value_name = 'parameter name' )
+        self._required_credentials = ClientGUIStringControls.StringToStringDictControl( required_credentials_panel, required_credentials, min_height = 4, key_name = 'credential name', value_name = 'parameter name' )
         
         #
         
         static_args_panel = ClientGUICommon.StaticBox( self, 'static variables to send' )
         
-        self._static_args = ClientGUIControls.StringToStringDictControl( static_args_panel, static_args, min_height = 4, key_name = 'parameter name', value_name = 'value' )
+        self._static_args = ClientGUIStringControls.StringToStringDictControl( static_args_panel, static_args, min_height = 4, key_name = 'parameter name', value_name = 'value' )
         
         #
         
         temp_args_panel = ClientGUICommon.StaticBox( self, 'temporary variables to send' )
         
-        self._temp_args = ClientGUIControls.StringToStringDictControl( temp_args_panel, temp_args, min_height = 4, key_name = 'temp variable name', value_name = 'parameter name' )
+        self._temp_args = ClientGUIStringControls.StringToStringDictControl( temp_args_panel, temp_args, min_height = 4, key_name = 'temp variable name', value_name = 'parameter name' )
         
         #
         
         required_cookies_info_box_panel = ClientGUICommon.StaticBox( self, 'cookies required to consider step successful' )
         
-        self._required_cookies_info = ClientGUIControls.StringMatchToStringMatchDictControl( required_cookies_info_box_panel, required_cookies_info, min_height = 4, key_name = 'cookie name' )
+        self._required_cookies_info = ClientGUIStringControls.StringMatchToStringMatchDictControl( required_cookies_info_box_panel, required_cookies_info, min_height = 4, key_name = 'cookie name' )
         
         #
         

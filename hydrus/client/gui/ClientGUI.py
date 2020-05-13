@@ -518,9 +518,18 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         library_versions = []
         
-        library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
-        library_versions.append( ( 'OpenCV', cv2.__version__ ) )
+        # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
+        v = sys.version
+        
+        if ' ' in v:
+            
+            v = v.split( ' ' )[0]
+            
+        
+        library_versions.append( ( 'python', v ) )
         library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
+        
+        library_versions.append( ( 'OpenCV', cv2.__version__ ) )
         library_versions.append( ( 'Pillow', PIL.__version__ ) )
         
         if ClientGUIMPV.MPV_IS_AVAILABLE:
@@ -535,17 +544,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             library_versions.append( ( 'mpv', 'not available' ) )
             
         
-        # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
-        v = sys.version
-        
-        if ' ' in v:
-            
-            v = v.split( ' ' )[0]
-            
-        
-        library_versions.append( ( 'python', v ) )
+        library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
         
         library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
+        
+        library_versions.append( ( 'Qt', QC.__version__ ) )
         
         if qtpy.PYSIDE2:
             
@@ -562,15 +565,22 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
 
             library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
             library_versions.append( ( 'sip', SIP_VERSION_STR ) )
-        
-        library_versions.append( ( 'Qt', QC.__version__ ) )
-        
-        library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
-        library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
+            
         
         from hydrus.client.networking import ClientNetworkingJobs
         
-        library_versions.append( ( 'cloudscraper present: ', str( ClientNetworkingJobs.CLOUDSCRAPER_OK ) ) )
+        if ClientNetworkingJobs.CLOUDSCRAPER_OK:
+            
+            library_versions.append( ( 'cloudscraper', ClientNetworkingJobs.cloudscraper.__version__ ) )
+            
+        else:
+            
+            library_versions.append( ( 'cloudscraper present: ', 'False' ) )
+            
+        
+        library_versions.append( ( 'pyparsing present: ', str( ClientNetworkingJobs.PYPARSING_OK ) ) )
+        library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
+        library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
@@ -1712,23 +1722,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 
             
-            if not self._have_shown_once:
-                
-                self._have_shown_once = True
-                
-                for page in self._notebook.GetPages():
-                    
-                    if isinstance( page, ClientGUIPages.PagesNotebook ):
-                        
-                        page.LayoutPages()
-                        
-                    
-                
-                for page in self._notebook.GetMediaPages():
-                    
-                    page.SetupSplits()
-                    
-                
+            self._have_shown_once = True
             
             page = self.GetCurrentPage()
             
@@ -4590,7 +4584,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.global_pixmaps().twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_pixmaps().tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_pixmaps().discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_pixmaps().discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/wPHPCUZ' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_pixmaps().patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
             
             ClientGUIMenus.AppendMenu( menu, links, 'links' )
@@ -4880,9 +4874,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         sessions = QW.QMenu( menu )
         
-        gui_session_names = list( gui_session_names )
-        
-        gui_session_names.sort()
+        gui_session_names = sorted( gui_session_names )
         
         if len( gui_session_names ) > 0:
             
@@ -4908,9 +4900,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 append_backup = QW.QMenu( sessions )
                 
-                rows = list( gui_session_names_to_backup_timestamps.items() )
-                
-                rows.sort()
+                rows = sorted( gui_session_names_to_backup_timestamps.items() )
                 
                 for ( name, timestamps ) in rows:
                     

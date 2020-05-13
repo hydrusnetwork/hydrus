@@ -1,11 +1,7 @@
-import collections
 from hydrus.core import HydrusConstants as HC
-import os
 import random
-import time
 import unittest
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetworking
 from mock import patch
 

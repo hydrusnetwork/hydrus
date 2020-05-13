@@ -8,9 +8,11 @@ import numpy.core.multiarray # important this comes before cv!
 
 try:
     
-    import numpy.random.common # more hidden imports for pyinstaller
-    import numpy.random.bounded_integers # more hidden imports for pyinstaller
-    import numpy.random.entropy # more hidden imports for pyinstaller
+    # more hidden imports for pyinstaller
+    
+    import numpy.random.common  # pylint: disable=E0401
+    import numpy.random.bounded_integers  # pylint: disable=E0401
+    import numpy.random.entropy  # pylint: disable=E0401
     
 except:
     

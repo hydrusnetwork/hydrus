@@ -519,7 +519,8 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                     
                     skip_ors = True
                     
-                    skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' )
+                    some_preds_have_count = True in ( predicate.GetCount() > 0 for predicate in predicates )
+                    skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' ) and some_preds_have_count
                     
                     for ( index, predicate ) in enumerate( predicates ):
                         
@@ -1378,9 +1379,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def RefreshFavouriteTags( self ):
         
-        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
-        
-        favourite_tags.sort()
+        favourite_tags = sorted( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
         predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
         
@@ -1667,6 +1666,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 folder_names.insert( 0, None )
                 
+            else:
+                
+                folder_names.sort()
+                
             
             for folder_name in folder_names:
                 
@@ -1681,9 +1684,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     ClientGUIMenus.AppendMenu( menu, menu_to_use, folder_name )
                     
                 
-                names = list( folders_to_names[ folder_name ] )
-                
-                names.sort()
+                names = sorted( folders_to_names[ folder_name ] )
                 
                 for name in names:
                     
@@ -2384,9 +2385,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def RefreshFavouriteTags( self ):
         
-        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
-        
-        favourite_tags.sort()
+        favourite_tags = sorted( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
         predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
         

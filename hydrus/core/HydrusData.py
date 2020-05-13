@@ -432,9 +432,7 @@ def ConvertUglyNamespaceToPrettyString( namespace ):
     
 def ConvertUglyNamespacesToPrettyStrings( namespaces ):
     
-    namespaces = list( namespaces )
-    
-    namespaces.sort()
+    namespaces = sorted( namespaces )
     
     result = [ ConvertUglyNamespaceToPrettyString( namespace ) for namespace in namespaces ]
     

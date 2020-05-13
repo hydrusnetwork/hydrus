@@ -1,24 +1,13 @@
-from hydrus.client import ClientConstants as CC
+
 from hydrus.client import ClientDefaults
-from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-import collections
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusNetworking
-import os
 from hydrus.test import TestController
-import threading
-import time
 import unittest
-from hydrus.core import HydrusGlobals as HG
-from httmock import all_requests, urlmatch, HTTMock, response
-from mock import patch
+from httmock import all_requests
 
 MISSING_RESPONSE = '404, bad result'
 ERROR_RESPONSE = '500, it done broke'

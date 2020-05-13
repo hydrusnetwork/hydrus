@@ -286,9 +286,7 @@ class ClientFilesManager( object ):
         
         if len( correct_rows ) > 0:
             
-            summaries = [ '{} moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_location, correct_location ) for ( ( missing_location, correct_location ), count ) in fixes_counter.items() ]
-            
-            summaries.sort()
+            summaries = sorted( ( '{} moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_location, correct_location ) for ( ( missing_location, correct_location ), count ) in fixes_counter.items() ) )
             
             summary_message = 'Some client file folders were missing, but they seem to be in other known locations! The folders are:'
             summary_message += os.linesep * 2
@@ -638,17 +636,13 @@ class ClientFilesManager( object ):
                 
                 missing_dict = HydrusData.BuildKeyToListDict( self._missing_locations )
                 
-                missing_locations = list( missing_dict.keys() )
-                
-                missing_locations.sort()
+                missing_locations = sorted( missing_dict.keys() )
                 
                 missing_string = ''
                 
                 for missing_location in missing_locations:
                     
-                    missing_prefixes = list( missing_dict[ missing_location ] )
-                    
-                    missing_prefixes.sort()
+                    missing_prefixes = sorted( missing_dict[ missing_location ] )
                     
                     missing_prefixes_string = '    ' + os.linesep.join( ( ', '.join( block ) for block in HydrusData.SplitListIntoChunks( missing_prefixes, 32 ) ) )
                     

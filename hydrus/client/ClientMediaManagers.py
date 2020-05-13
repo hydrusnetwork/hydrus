@@ -442,9 +442,7 @@ class NotesManager( object ):
     
     def GetNames( self ):
         
-        names = list( self._names_to_notes.keys() )
-        
-        names.sort()
+        names = sorted( self._names_to_notes.keys() )
         
         return names
         
@@ -792,9 +790,7 @@ class TagsManager( object ):
             
             for desired_namespace in namespaces:
                 
-                subtags = [ HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ]
-                
-                subtags.sort()
+                subtags = sorted( ( HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ) )
                 
                 slice.append( tuple( subtags ) )
                 

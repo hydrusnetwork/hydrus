@@ -1121,7 +1121,16 @@ class DialogTextEntry( Dialog ):
         #
         
         self._text.setText( default )
-        if placeholder is not None: self._text.setPlaceholderText( placeholder )
+        
+        if placeholder is not None:
+            
+            self._text.setPlaceholderText( placeholder )
+            
+        
+        if len( default ) > 0:
+            
+            self._text.setSelection( 0, len( default ) )
+            
         
         self._CheckText()
         

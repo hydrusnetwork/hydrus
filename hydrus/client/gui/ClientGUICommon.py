@@ -1,5 +1,6 @@
 import os
 import re
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -128,17 +129,13 @@ class ShortcutAwareToolTipMixin( object ):
             
             if len( names_to_shortcuts ) > 0:
                 
-                names = list( names_to_shortcuts.keys() )
-                
-                names.sort()
+                names = sorted( names_to_shortcuts.keys() )
                 
                 for name in names:
                     
                     shortcuts = names_to_shortcuts[ name ]
                     
-                    shortcut_strings = [ shortcut.ToString() for shortcut in shortcuts ]
-                    
-                    shortcut_strings.sort()
+                    shortcut_strings = sorted( ( shortcut.ToString() for shortcut in shortcuts ) )
                     
                     tt += os.linesep * 2
                     
@@ -378,6 +375,18 @@ class BetterNotebook( QW.QTabWidget ):
                 
                 self.setCurrentIndex( new_selection )
                 
+            
+        
+    
+    def DeleteAllPages( self ):
+        
+        while self.count() > 0:
+            
+            page = self.widget( 0 )
+            
+            self.removeTab( 0 )
+            
+            page.deleteLater()
             
         
     

@@ -1,28 +1,20 @@
-from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientDownloading
 from hydrus.client import ClientDuplicates
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client import ClientMedia
 from hydrus.client import ClientMediaManagers
-from hydrus.client.networking import ClientNetworkingDomain
-from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSerialisable
 from hydrus.test import TestController as TC
-import os
 import unittest
-from qtpy import QtCore as QC
 
 class TestSerialisables( unittest.TestCase ):
     

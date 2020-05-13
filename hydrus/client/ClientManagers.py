@@ -101,9 +101,7 @@ def CollapseTagSiblingPairs( groups_of_pairs ):
     
     for pairs in groups_of_pairs:
         
-        pairs = list( pairs )
-        
-        pairs.sort()
+        pairs = sorted( pairs )
         
         for ( bad, good ) in pairs:
             

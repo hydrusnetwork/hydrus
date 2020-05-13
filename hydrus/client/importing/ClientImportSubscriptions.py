@@ -1,3 +1,4 @@
+import gc
 import os
 import random
 import threading
@@ -1504,6 +1505,8 @@ class SubscriptionsManager( object ):
     
     def _ClearFinishedSubscriptions( self ):
         
+        done_some = False
+        
         for ( name, ( thread, job, subscription ) ) in list( self._running_subscriptions.items() ):
             
             if job.IsDone():
@@ -1512,7 +1515,11 @@ class SubscriptionsManager( object ):
                 
                 del self._running_subscriptions[ name ]
                 
+                done_some = True
+                
             
+        
+        return done_some
         
     
     def _GetNameReadyToGo( self ):
@@ -1725,7 +1732,12 @@ class SubscriptionsManager( object ):
                 
                 with self._lock:
                     
-                    self._ClearFinishedSubscriptions()
+                    some_cleared = self._ClearFinishedSubscriptions()
+                    
+                    if some_cleared:
+                        
+                        gc.collect()
+                        
                     
                     wait_time = self._GetMainLoopWaitTime()
                     
@@ -1782,17 +1794,13 @@ class SubscriptionsManager( object ):
         
         with self._lock:
             
-            subs = list( self._current_subscription_names )
-            subs.sort()
+            subs = sorted( self._current_subscription_names )
             
-            running = list( self._running_subscriptions.keys() )
-            running.sort()
+            running = sorted( self._running_subscriptions.keys() )
             
-            cannot_run = list( self._names_that_cannot_run )
-            cannot_run.sort()
+            cannot_run = sorted( self._names_that_cannot_run )
             
-            next_times = list( self._names_to_next_work_time.items() )
-            next_times.sort( key = lambda n, nwt: nwt )
+            next_times = sorted( self._names_to_next_work_time.items(), key = lambda n, nwt: nwt )
             
             message = '{} subs: {}'.format( HydrusData.ToHumanInt( len( self._current_subscription_names ) ), ', '.join( subs ) )
             message += os.linesep * 2

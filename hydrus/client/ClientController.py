@@ -228,11 +228,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _ReportShutdownDaemonsStatus( self ):
         
-        names = { daemon.name for daemon in self._daemons if daemon.is_alive() }
-        
-        names = list( names )
-        
-        names.sort()
+        names = sorted( { daemon.name for daemon in self._daemons if daemon.is_alive() } )
         
         self.pub( 'splash_set_status_subtext', ', '.join( names ) )
         

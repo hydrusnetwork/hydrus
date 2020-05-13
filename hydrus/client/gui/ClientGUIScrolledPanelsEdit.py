@@ -35,6 +35,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUIMPV
+from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -1811,9 +1812,7 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            names = list( names_to_notes.keys() )
-            
-            names.sort()
+            names = sorted( names_to_notes.keys() )
             
             for name in names:
                 
@@ -1979,9 +1978,7 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( names_to_notes, deletee_names ) = self.GetValue()
         
-        empty_note_names = [ name for ( name, note ) in names_to_notes.items() if note == '' ]
-        
-        empty_note_names.sort()
+        empty_note_names = sorted( ( name for ( name, note ) in names_to_notes.items() if note == '' ) )
         
         if len( empty_note_names ) > 0:
             
@@ -4346,11 +4343,8 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
             current_query_texts = self._GetCurrentQueryTexts()
             
-            already_existing_query_texts = list( current_query_texts.intersection( query_texts ) )
-            new_query_texts = list( set( query_texts ).difference( current_query_texts ) )
-            
-            already_existing_query_texts.sort()
-            new_query_texts.sort()
+            already_existing_query_texts = sorted( current_query_texts.intersection( query_texts ) )
+            new_query_texts = sorted( set( query_texts ).difference( current_query_texts ) )
             
             if len( already_existing_query_texts ) > 0:
                 
@@ -5721,9 +5715,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_class_keys_to_url_classes = { url_class.GetMatchKey() : url_class for url_class in url_classes }
             
-            url_class_names_and_default_tag_import_options = [ ( url_class_keys_to_url_classes[ url_class_key ].GetName(), url_class_keys_to_default_tag_import_options[ url_class_key ] ) for url_class_key in list( url_class_keys_to_default_tag_import_options.keys() ) if url_class_key in url_class_keys_to_url_classes ]
-            
-            url_class_names_and_default_tag_import_options.sort()
+            url_class_names_and_default_tag_import_options = sorted( ( ( url_class_keys_to_url_classes[ url_class_key ].GetName(), url_class_keys_to_default_tag_import_options[ url_class_key ] ) for url_class_key in list( url_class_keys_to_default_tag_import_options.keys() ) if url_class_key in url_class_keys_to_url_classes ) )
             
             choice_tuples.extend( url_class_names_and_default_tag_import_options )
             
@@ -6148,9 +6140,9 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return service_tag_import_options
         
     
-    def SetValue( self, service_tag_import_options ):
+    def SetValue( self, service_tag_import_options: ClientImportOptions.ServiceTagImportOptions ):
         
-        ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter ) = service_tag_import_options.ToTuple()
+        ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = service_tag_import_options.ToTuple()
         
         self._get_tags_checkbox.setChecked( get_tags )
         
@@ -6505,7 +6497,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._send_referral_url.setToolTip( tt )
         
-        self._referral_url_converter = ClientGUIControls.StringConverterButton( self, referral_url_converter )
+        self._referral_url_converter = ClientGUIStringControls.StringConverterButton( self, referral_url_converter )
         
         tt = 'This will generate a referral URL from the original URL. If the URL needs a referral URL, and you can infer what that would be from just this URL, this will let hydrus download this URL without having to previously visit the referral URL (e.g. letting the user drag-and-drop import). It also lets you set up alternate referral URLs for perculiar situations.'
         
@@ -6514,7 +6506,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._referral_url = QW.QLineEdit()
         self._referral_url.setReadOnly( True )
         
-        self._api_lookup_converter = ClientGUIControls.StringConverterButton( self, api_lookup_converter )
+        self._api_lookup_converter = ClientGUIStringControls.StringConverterButton( self, api_lookup_converter )
         
         tt = 'This will let you generate an alternate URL for the client to use for the actual download whenever it encounters a URL in this class. You must have a separate URL class to match the API type (which will link to parsers).'
         
@@ -6675,7 +6667,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
             
-            panel = ClientGUIControls.EditStringMatchPanel( dlg, string_match )
+            from hydrus.client.gui import ClientGUIStringPanels
+            
+            panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, string_match )
             
             dlg.SetPanel( panel )
             
@@ -6805,7 +6799,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
                 
-                panel = ClientGUIControls.EditStringMatchPanel( dlg, original_string_match )
+                from hydrus.client.gui import ClientGUIStringPanels
+                
+                panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, original_string_match )
                 
                 dlg.SetPanel( panel )
                 
@@ -6865,7 +6861,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit path component' ) as dlg:
             
-            panel = ClientGUIControls.EditStringMatchPanel( dlg, string_match )
+            from hydrus.client.gui import ClientGUIStringPanels
+            
+            panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, string_match )
             
             dlg.SetPanel( panel )
             

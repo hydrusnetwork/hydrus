@@ -1,10 +1,5 @@
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-import os
-import threading
 import time
 import unittest
 

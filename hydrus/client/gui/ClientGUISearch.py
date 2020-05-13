@@ -24,6 +24,28 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
 
+FLESH_OUT_SYSTEM_PRED_TYPES = {
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_RATING,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+}
+
 def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
     
     window = widget.window()
@@ -36,7 +58,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientS
         
         ( predicate_type, value, inclusive ) = predicate.GetInfo()
         
-        if value is None and predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+        if value is None and predicate_type in FLESH_OUT_SYSTEM_PRED_TYPES:
             
             from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             
@@ -625,12 +647,13 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             editable_pred_panel_classes.append( PanelPredicateSystemNumTags )
             
-        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES:
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES:
             
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemNumNotes )
+            editable_pred_panel_classes.append( PanelPredicateSystemHasNoteName )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
             
@@ -1392,6 +1415,47 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         hash_type = self._hash_type.GetStringSelection()
         
         return ( hashes, hash_type )
+        
+    
+class PanelPredicateSystemHasNoteName( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._operator = ClientGUICommon.BetterChoice( self )
+        
+        self._operator.addItem( 'has note with name ', True )
+        self._operator.addItem( 'does not have note with name', False )
+        
+        self._name = QW.QLineEdit( self )
+        self._name.setFixedWidth( 250 )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:note name'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._name, CC.FLAGS_VCENTER )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        name = self._name.text()
+        
+        if name == '':
+            
+            name = 'notes'
+            
+        
+        info = ( self._operator.GetValue(), name )
+        
+        return info
         
     
 class PanelPredicateSystemHeight( PanelPredicateSystem ):

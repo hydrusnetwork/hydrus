@@ -12,7 +12,6 @@ import shlex
 import shutil
 import stat
 import subprocess
-import sys
 import tempfile
 import threading
 import traceback
@@ -727,8 +726,28 @@ def MirrorFile( source, dest ):
             
             MakeFileWritable( dest )
             
-            # this overwrites on conflict without hassle
-            shutil.copy2( source, dest )
+            copy_metadata = True
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                mtime = os.path.getmtime( source )
+                
+                # this is 1980-01-01 UTC, before which Windows can have trouble copying lmaoooooo
+                if mtime < 315532800:
+                    
+                    copy_metadata = False
+                    
+                
+            
+            if copy_metadata:
+                
+                # this overwrites on conflict without hassle
+                shutil.copy2( source, dest )
+                
+            else:
+                
+                shutil.copy( source, dest )
+                
             
         except Exception as e:
             

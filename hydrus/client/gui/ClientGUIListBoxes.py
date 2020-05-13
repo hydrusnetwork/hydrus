@@ -93,6 +93,8 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         self._AddData( data )
         
+        self.listBoxChanged.emit()
+        
     
     def _AddAllDefaults( self, defaults_callable ):
         
@@ -102,6 +104,8 @@ class AddEditDeleteListBox( QW.QWidget ):
             
             self._AddData( default )
             
+        
+        self.listBoxChanged.emit()
         
     
     def _AddData( self, data ):
@@ -143,6 +147,8 @@ class AddEditDeleteListBox( QW.QWidget ):
                     
                 
             
+        
+        self.listBoxChanged.emit()
         
     
     def _Delete( self ):
@@ -401,6 +407,8 @@ class AddEditDeleteListBox( QW.QWidget ):
             QW.QMessageBox.critical( self, 'Error', message )
             
         
+        self.listBoxChanged.emit()
+        
     
     def _SetNoneDupeName( self, obj ):
         
@@ -619,6 +627,8 @@ class QueueListBox( QW.QWidget ):
         
         self._AddData( data )
         
+        self.listBoxChanged.emit()
+        
     
     def _AddData( self, data ):
         
@@ -653,6 +663,7 @@ class QueueListBox( QW.QWidget ):
                 
             
             self.listBoxChanged.emit()
+            
         
     
     def _Down( self ):
@@ -704,7 +715,7 @@ class QueueListBox( QW.QWidget ):
             new_item.setData( QC.Qt.UserRole, new_data )
             
             self._listbox.insertItem( i, new_item )
-        
+            
         
         self.listBoxChanged.emit()
         
@@ -1814,9 +1825,7 @@ class ListBoxTags( ListBox ):
         
         if len( predicates ) > 0:
             
-            s = [ predicate.ToString() for predicate in predicates ]
-            
-            s.sort()
+            s = sorted( ( predicate.ToString() for predicate in predicates ) )
             
             page_name = ', '.join( s )
             

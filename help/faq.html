@@ -12,12 +12,13 @@
 			<p><a href="https://en.wikipedia.org/wiki/Tag_(metadata)">wiki</a></p>
 			<p>A <i>tag</i> is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. [ 'tiger woods', 'sports illustrated', '2008' ] or [ 'cosplay', 'the legend of zelda' ] ), a huge image collection is reduced to a tiny and easy-to-digest sample.</p>
 			<p>A good word for the connection of a particular tag to a particular file is <i>mapping</i>.</p>
-			<p>In the hydrus network, all tags are automatically converted to lower case. 'Sunset Drive' becomes 'sunset drive'. Why?</p>
+			<p>Hydrus is designed with the intention that tags are for <i>searching</i>, not <i>describing</i>. Workflows and UI are tuned for finding files and other similar files (e.g. by the same artist), and while it is possible to have nice metadata overlays around files, this is not considered their chief purpose. Trying to have 'perfect' descriptions for files is often a rabbit-hole that can consume hours of work with relatively little demonstrable benefit.</p>
+			<p>All tags are automatically converted to lower case. 'Sunset Drive' becomes 'sunset drive'. Why?</p>
 			<ol>
-				<li>Although it may seem preferable to have 'The Lord of the Rings' rather than 'the lord of the rings', there are many, many special cases where style guides differ on which words to capitalise.</li>
-				<li>Searches become far easier when case is not matched. And When case does not matter, what point is there in recording it?</li>
+				<li>Although it is more beautiful to have 'The Lord of the Rings' rather than 'the lord of the rings', there are many, many special cases where style guides differ on which words to capitalise.</li>
+				<li>As 'The Lord of the Rings' and 'the lord of the rings' are semantically identical, it is natural to search in a case insensitive way. When case does not matter, what point is there in recording it?</li>
 			</ol>
-			<p>Secondly, leading and trailing whitespace is removed, and multiple whitespace is collapsed to a single character. <pre>'  yellow   dress '</pre> becomes <pre>'yellow dress'</pre></p>
+			<p>Furthermore, leading and trailing whitespace is removed, and multiple whitespace is collapsed to a single character. <pre>'  yellow   dress '</pre> becomes <pre>'yellow dress'</pre></p>
 			<a id="namespaces"><h3>what is a namespace?</h3></a>
 			<p>A <i>namespace</i> is a category that in hydrus prefixes a tag. An example is 'person' in the tag 'person:ron paul'--it lets people and software know that 'ron paul' is a name. You can create any namespace you like; just type one or more words and then a colon, and then the next string of text will have that namespace.</p>
 			<p>The hydrus client gives namespaces different colours so you can pick out important tags more easily in a large list, and you can also search by a particular namespace, even creating complicated predicates like 'give all files that do not have any character tags', for instance.</p>
@@ -30,7 +31,7 @@
 				<li>A filename is often--for <i>ridiculous</i> reasons--limited to a certain prohibitive character set. Even when utf-8 is supported, some arbitrary ascii characters are usually not, and different localisations, operating systems and formatting conventions only make it worse.</p>
 				<li>Folders can offer context, but they are clunky and time-consuming to change. If you put each chapter of a comic in a different folder, for instance, reading several volumes in one sitting can be a pain. Nesting many folders adds navigation-latency and tends to induce less informative "04.jpg"-type filenames.</li>
 			</ul>
-			<p>So, the client tracks files by their <i>hash</i>.</p>
+			<p>So, the client tracks files by their <i>hash</i>. This technical identifier easily eliminates duplicates and permits the database to robustly attach other metadata like tags and ratings and known urls and notes and everything else, even across multiple clients and even if a file is deleted and later imported.</p>
 			<p>As a general rule, I suggest you not set up hydrus to parse and display all your imported files' filenames as tags. 'image.jpg' is useless as a tag. <a href="https://www.youtube.com/watch?v=_yYS0ZZdsnA">Shed the concept of filenames as you would chains.</a></p>
 			<a id="external_files"><h3>can the client manage files from their original locations?</h3></a>
 			<p>When the client imports a file, it makes a quickly accessible but human-ugly copy in its internal database, by default under <i>install_dir/db/client_files</i>. When it needs to access that file again, it always knows where it is, and it can be confident it is what it expects it to be. It never accesses the original again.</p>

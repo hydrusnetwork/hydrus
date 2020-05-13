@@ -1808,9 +1808,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            data = list( self._metadata.items() )
-            
-            data.sort()
+            data = sorted( self._metadata.items() )
             
             for ( update_index, ( update_hashes, begin, end ) ) in data:
                 

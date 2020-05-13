@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 397</h3></li>
+				<ul>
+					<li>regular changelog:</li>
+					<li>added 'system:has/has no note with name xxx' to search for specific note names</li>
+					<li>in the normal system predicate list, the notes pred is now the generic 'system:notes' to launch a combined dialog for both num notes and named notes</li>
+					<li>favourite tag suggestions are now sorted in manage tags dialog according to the default tag sort</li>
+					<li>page names will now middle...elide when there are too many to fit into a row (and normally left/right buttons would be added). if the elided tabs still do not fit, the buttons will pop up as before. added a checkbox to options->gui pages to turn this text eliding off</li>
+					<li>pulled the 'page name' options on that panel into their own box and added some text regarding the 'my big row of import page tabs keeps scrolling weird' issue</li>
+					<li>when files are pixel duplicates, the filesize and age comparison statements will now have 0 score and thus be coloured neutral blue</li>
+					<li>the standard text entry dialog now always selects any default text it starts with, so you can now type to immediately overwrite. see how you like it and if there are some places where you think an exception should be made</li>
+					<li>updated the IPFS interface to work with the new IPFS 5.0. all api requests are now POST so it doesn't 405, and the User-Agent is overridden to one that IPFS will not 403 at, and I fixed a typo the new api is more strict about</li>
+					<li>a hack to get page splitters to lay out correctly on session load is rewritten from a hammer to a scalpel. pages now set their splitter positions on their first individual visible selection. this both reduces some minor ui lag on session/page load and improves splitter positions for clients that open minimised to the system tray</li>
+					<li>a long-time odd issue where loaded sessions would initially select the top-left-most non-page of pages is fixed. now the bottom-left-most page of any kind is selected</li>
+					<li>fixed tag autocomplete selecting the bottom-most pre-loading result. it now correctly selects at the top</li>
+					<li>fixed an issue setting certain values (typically loading a default) to a tag import options panel</li>
+					<li>the client is now more aggressive about clearing subscriptions from memory when they are finished running</li>
+					<li>in windows, the main method that copies files now checks for modified time of the source file. if it is before 1980-01-01 UTC, it does not copy the file metadata, as some Windows has trouble with this lmaoooo</li>
+					<li>cleaned up how some thumbnail 'current focus' media determination code works. should have fixed some weird errors when hitting certain shortcuts on collections</li>
+					<li>cleaned up basic list/sort code across the program</li>
+					<li>the 'queue' and add/edit/delete listboxes now emit change signals when new items are added or imported</li>
+					<li>pyparsing, a helper for cloudscraper, is now correctly bundled in the built releases. a new line in help->about displays this</li>
+					<li>help->about now lists cloudscraper version</li>
+					<li>updated the discord link to the new https://discord.gg/wPHPCUZ</li>
+					<li>.</li>
+					<li>upcoming string processing changes for advanced users:</li>
+					<li>I extended string parsing code this week, but I am not yet ready to turn it on. when it does come on, it will change all formulae from the fixed string match/converter pair a combined general string processing 'script' of n steps</li>
+					<li>wrote a new 'string splitter' object that takes one strings and splits it into up to n strings based on a separator phrase (such as ' ,')</li>
+					<li>wrote an edit panel for string splitters</li>
+					<li>wrote a new 'string processor' object that holds n ordered string match/converter/splitter objects and filters/converts/splits x strings into y strings based on those steps</li>
+					<li>wrote an edit panel for string processors. it has a notebook that live updates with test results for each step on every update</li>
+					<li>wrote unit tests for string match</li>
+					<li>wrote unit tests for string converter</li>
+					<li>wrote unit tests for string splitter</li>
+					<li>wrote unit tests for string processor</li>
+					<li>refactored string conversion edit panels to their own file</li>
+					<li>refactored string conversion controls to their own file</li>
+					<li>misc string processing cleanup and labelling improvements</li>
+					<li>.</li>
+					<li>technical url parsing stuff:</li>
+					<li>urls are now stripped of leading and trailing whitespace during normalisation, just in case a paste contains some extra whitespace. previously, it would sometimes throw a 'doesn't start with http' error</li>
+					<li>the hydrus url normalisation process now normalises the hostname according to the NKFC unicode format, meaning unusual characters like ？and e◌́ are now replaced with their normalised visual equivalent ? and é, and hence these urls will no longer throw errors when they are added</li>
+					<li>if '?' or '#' end up in a hostname (which are invalid characters), it is now converted to _, just to stop complete parse mangling when weird urls are submitted. this character replacement may become more sophisticated in future</li>
+					<li>the hydrus downloader should now support search terms that include '#'</li>
+					<li>download query parameters that contain '%23' ('#', encoded) are now not unquoted in url normalisation</li>
+				</ul>
 				<li><h3>version 396</h3></li>
 				<ul>
 					<li>notes:</li>

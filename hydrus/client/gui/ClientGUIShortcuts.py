@@ -534,7 +534,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             shortcut_key += 32 # convert A to a
             
         
-        modifiers.sort()
+        modifiers = sorted( modifiers )
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -1173,9 +1173,7 @@ class ShortcutsHandler( QC.QObject ):
     
     def GetCustomShortcutNames( self ):
         
-        custom_names = [ name for name in self._shortcuts_names if name not in SHORTCUTS_RESERVED_NAMES ]
-        
-        custom_names.sort()
+        custom_names = sorted( ( name for name in self._shortcuts_names if name not in SHORTCUTS_RESERVED_NAMES ) )
         
         return custom_names
         

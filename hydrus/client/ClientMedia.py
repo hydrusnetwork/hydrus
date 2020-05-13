@@ -89,6 +89,56 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_size = shown_media.GetSize()
     c_size = comparison_media.GetSize()
     
+    is_a_pixel_dupe = False
+    
+    if shown_media.IsStaticImage() and comparison_media.IsStaticImage() and shown_media.GetResolution() == comparison_media.GetResolution():
+        
+        global hashes_to_pixel_hashes
+        
+        if s_hash not in hashes_to_pixel_hashes:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+            
+            hashes_to_pixel_hashes[ s_hash ] = HydrusImageHandling.GetImagePixelHash( path, s_mime )
+            
+        
+        if c_hash not in hashes_to_pixel_hashes:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+            
+            hashes_to_pixel_hashes[ c_hash ] = HydrusImageHandling.GetImagePixelHash( path, c_mime )
+            
+        
+        s_pixel_hash = hashes_to_pixel_hashes[ s_hash ]
+        c_pixel_hash = hashes_to_pixel_hashes[ c_hash ]
+        
+        if s_pixel_hash == c_pixel_hash:
+            
+            is_a_pixel_dupe = True
+            
+            if s_mime == HC.IMAGE_PNG and c_mime != HC.IMAGE_PNG:
+                
+                statement = 'this is a pixel-for-pixel duplicate png!'
+                
+                score = -100
+                
+            elif s_mime != HC.IMAGE_PNG and c_mime == HC.IMAGE_PNG:
+                
+                statement = 'other file is a pixel-for-pixel duplicate png!'
+                
+                score = 100
+                
+            else:
+                
+                statement = 'images are pixel-for-pixel duplicates!'
+                
+                score = 0
+                
+            
+            statements_and_scores[ 'pixel_duplicates' ] = ( statement, score )
+            
+        
+    
     if s_size != c_size:
         
         size_ratio = s_size / c_size
@@ -116,6 +166,11 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         else:
             
             operator = '\u2248'
+            score = 0
+            
+        
+        if is_a_pixel_dupe:
+            
             score = 0
             
         
@@ -321,6 +376,11 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = -duplicate_comparison_score_older
             
         
+        if is_a_pixel_dupe:
+            
+            score = 0
+            
+        
         statement = '{} {} {}'.format( HydrusData.TimestampToPrettyTimeDelta( s_ts ), operator, HydrusData.TimestampToPrettyTimeDelta( c_ts ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
@@ -381,52 +441,6 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             statement = '{} vs {} jpeg quality'.format( s_label, c_label )
             
             statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
-            
-        
-    
-    if shown_media.IsStaticImage() and comparison_media.IsStaticImage() and shown_media.GetResolution() == comparison_media.GetResolution():
-        
-        global hashes_to_pixel_hashes
-        
-        if s_hash not in hashes_to_pixel_hashes:
-            
-            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
-            
-            hashes_to_pixel_hashes[ s_hash ] = HydrusImageHandling.GetImagePixelHash( path, s_mime )
-            
-        
-        if c_hash not in hashes_to_pixel_hashes:
-            
-            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
-            
-            hashes_to_pixel_hashes[ c_hash ] = HydrusImageHandling.GetImagePixelHash( path, c_mime )
-            
-        
-        s_pixel_hash = hashes_to_pixel_hashes[ s_hash ]
-        c_pixel_hash = hashes_to_pixel_hashes[ c_hash ]
-        
-        if s_pixel_hash == c_pixel_hash:
-            
-            if s_mime == HC.IMAGE_PNG and c_mime != HC.IMAGE_PNG:
-                
-                statement = 'this is a pixel-for-pixel duplicate png!'
-                
-                score = -100
-                
-            elif s_mime != HC.IMAGE_PNG and c_mime == HC.IMAGE_PNG:
-                
-                statement = 'other file is a pixel-for-pixel duplicate png!'
-                
-                score = 100
-                
-            else:
-                
-                statement = 'images are pixel-for-pixel duplicates!'
-                
-                score = 0
-                
-            
-            statements_and_scores[ 'pixel_duplicates' ] = ( statement, score )
             
         
     

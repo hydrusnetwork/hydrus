@@ -22,9 +22,22 @@ try:
     
     CLOUDSCRAPER_OK = True
     
+    try:
+        
+        # help pyinstaller
+        import pyparsing
+        
+        PYPARSING_OK = True
+        
+    except:
+        
+        PYPARSING_OK = False
+        
+    
 except:
     
     CLOUDSCRAPER_OK = False
+    PYPARSING_OK = False
     
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
@@ -121,6 +134,7 @@ class NetworkJob( object ):
     
     WILLING_TO_WAIT_ON_INVALID_LOGIN = True
     IS_HYDRUS_SERVICE = False
+    IS_IPFS_SERVICE = False
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
         
@@ -256,7 +270,7 @@ class NetworkJob( object ):
             data = self._body
             files = self._files
             
-            if self.IS_HYDRUS_SERVICE:
+            if self.IS_HYDRUS_SERVICE or self.IS_IPFS_SERVICE:
                 
                 headers[ 'User-Agent' ] = 'hydrus client/' + str( HC.NETWORK_VERSION )
                 
@@ -1587,6 +1601,18 @@ class NetworkJobHydrus( NetworkJob ):
             return True
             
         
+    
+class NetworkJobIPFS( NetworkJob ):
+    
+    def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
+        
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+        
+        self.OnlyTryConnectionOnce()
+        self.OverrideBandwidth()
+        
+    
+    IS_IPFS_SERVICE = True
     
 class NetworkJobWatcherPage( NetworkJob ):
     

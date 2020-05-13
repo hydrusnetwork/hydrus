@@ -144,6 +144,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
         
+        self._dictionary[ 'booleans' ][ 'elide_page_tab_names' ] = True
+        
         self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True

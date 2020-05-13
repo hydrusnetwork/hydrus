@@ -383,6 +383,11 @@ class TabBar( QW.QTabBar ):
         self._last_clicked_global_pos = None
         
     
+    def event( self, event ):
+        
+        return QW.QTabBar.event( self, event )
+        
+    
     def mouseMoveEvent( self, e ):
         
         e.ignore()
@@ -465,7 +470,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
     def _LayoutPagesHelper( self ):
-
+        
         current_index = self.currentIndex()
 
         for i in range( self.count() ):
@@ -482,7 +487,10 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
     def LayoutPages( self ):
-
+        
+        # hydev adds: I no longer call this, as I moved splitter setting to a thing called per page when page is first visibly shown
+        # leaving it here for now in case I need it again
+        
         # Momentarily switch to each page, then back, forcing a layout update.
         # If this is not done, the splitters on the hidden pages won't resize their widgets properly when we restore
         # splitter sizes after this, since they would never became visible.
@@ -2550,10 +2558,8 @@ class CollectComboCtrl( QW.QComboBox ):
             text_and_data_tuples.update( namespaces )
             
 
-        text_and_data_tuples = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ] )
+        text_and_data_tuples = sorted( ( ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ) )
         
-        text_and_data_tuples.sort()
-
         ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
 
         for ratings_service in ratings_services:

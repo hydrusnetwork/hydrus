@@ -1477,9 +1477,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 metadata_row[ 'num_words' ] = file_info_manager.num_words
                 metadata_row[ 'has_audio' ] = file_info_manager.has_audio
                 
-                known_urls = list( media_result.GetLocationsManager().GetURLs() )
-                
-                known_urls.sort()
+                known_urls = sorted( media_result.GetLocationsManager().GetURLs() )
                 
                 metadata_row[ 'known_urls' ] = known_urls
                 
@@ -1656,11 +1654,8 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
         
         if HG.client_controller.new_options.GetBoolean( 'notify_client_api_cookies' ) and len( domains_cleared ) + len( domains_set ) > 0:
             
-            domains_cleared = list( domains_cleared )
-            domains_set = list( domains_set )
-            
-            domains_cleared.sort()
-            domains_set.sort()
+            domains_cleared = sorted( domains_cleared )
+            domains_set = sorted( domains_set )
             
             message = 'Cookies sent from API:'
             

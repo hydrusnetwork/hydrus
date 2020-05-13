@@ -1,37 +1,14 @@
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientDB
-from hydrus.client import ClientDefaults
-from hydrus.client import ClientDownloading
-from hydrus.client import ClientExporting
-from hydrus.client import ClientFiles
-from hydrus.client.gui import ClientGUIManagement
-from hydrus.client.gui import ClientGUIPages
-from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
-from hydrus.client import ClientServices
-from hydrus.client import ClientTags
-import collections
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusVideoHandling
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusSerialisable
-import itertools
 import os
-from hydrus.server import ServerDB
-import shutil
-import sqlite3
-import stat
 from hydrus.test import TestController
 import time
-import threading
 import unittest
 
 class TestClientDBDuplicates( unittest.TestCase ):

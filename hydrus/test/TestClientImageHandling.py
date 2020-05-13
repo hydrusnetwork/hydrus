@@ -1,6 +1,5 @@
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
-import collections
 from hydrus.core import HydrusConstants as HC
 import os
 import unittest

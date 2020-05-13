@@ -673,11 +673,8 @@ class TestClientAPI( unittest.TestCase ):
             
             expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
             
-            c_u_tuples = [ c_u.ToTuple() for c_u in content_updates ]
-            e_c_u_tuples = [ e_c_u.ToTuple() for e_c_u in expected_content_updates ]
-            
-            c_u_tuples.sort()
-            e_c_u_tuples.sort()
+            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
+            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
             
             self.assertEqual( c_u_tuples, e_c_u_tuples )
             
@@ -712,11 +709,8 @@ class TestClientAPI( unittest.TestCase ):
             
             expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
             
-            c_u_tuples = [ c_u.ToTuple() for c_u in content_updates ]
-            e_c_u_tuples = [ e_c_u.ToTuple() for e_c_u in expected_content_updates ]
-            
-            c_u_tuples.sort()
-            e_c_u_tuples.sort()
+            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
+            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
             
             self.assertEqual( c_u_tuples, e_c_u_tuples )
             
@@ -781,11 +775,8 @@ class TestClientAPI( unittest.TestCase ):
             
             expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
             
-            c_u_tuples = [ c_u.ToTuple() for c_u in content_updates ]
-            e_c_u_tuples = [ e_c_u.ToTuple() for e_c_u in expected_content_updates ]
-            
-            c_u_tuples.sort()
-            e_c_u_tuples.sort()
+            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
+            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
             
             self.assertEqual( c_u_tuples, e_c_u_tuples )
             
@@ -820,11 +811,8 @@ class TestClientAPI( unittest.TestCase ):
             
             expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
             
-            c_u_tuples = [ c_u.ToTuple() for c_u in content_updates ]
-            e_c_u_tuples = [ e_c_u.ToTuple() for e_c_u in expected_content_updates ]
-            
-            c_u_tuples.sort()
-            e_c_u_tuples.sort()
+            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
+            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
             
             self.assertEqual( c_u_tuples, e_c_u_tuples )
             
@@ -1584,8 +1572,7 @@ class TestClientAPI( unittest.TestCase ):
         
         urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
         
-        sorted_urls = list( urls )
-        sorted_urls.sort()
+        sorted_urls = sorted( urls )
         
         for ( file_id, hash ) in file_ids_to_hashes.items():
             

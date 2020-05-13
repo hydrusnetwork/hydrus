@@ -166,9 +166,7 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def _RecalculateIndicesAfterDelete( self ):
         
-        indices_and_data_info = list( self._indices_to_data_info.items() )
-        
-        indices_and_data_info.sort()
+        indices_and_data_info = sorted( self._indices_to_data_info.items() )
         
         self._indices_to_data_info = {}
         self._data_to_indices = {}
@@ -537,9 +535,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             # keep it sorted here, which is sometimes useful
             
-            indices_and_datas = [ ( index, data ) for ( data, index ) in self._data_to_indices.items() ]
-            
-            indices_and_datas.sort()
+            indices_and_datas = sorted( ( ( index, data ) for ( data, index ) in self._data_to_indices.items() ) )
             
             datas = [ data for ( index, data ) in indices_and_datas ]
             

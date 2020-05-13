@@ -32,6 +32,8 @@ from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISerialisable
+from hydrus.client.gui import ClientGUIStringControls
+from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -304,9 +306,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        gug_names = list( gug_names )
-        
-        gug_names.sort()
+        gug_names = sorted( gug_names )
         
         num_gugs = len( gug_names )
         
@@ -392,9 +392,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         domains = domains.difference( existing_domains )
         
-        domains = list( domains )
-        
-        domains.sort()
+        domains = sorted( domains )
         
         domain_metadatas = []
         
@@ -556,9 +554,9 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( formulae, sub_phrase, string_match, string_converter ) = formula.ToTuple()
         
-        self._string_match_button = ClientGUIControls.StringMatchButton( edit_panel, string_match )
+        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
         
-        self._string_converter_button = ClientGUIControls.StringConverterButton( edit_panel, string_converter )
+        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
         
         #
         
@@ -777,9 +775,9 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( variable_name, string_match, string_converter ) = formula.ToTuple()
         
-        self._string_match_button = ClientGUIControls.StringMatchButton( edit_panel, string_match )
+        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
         
-        self._string_converter_button = ClientGUIControls.StringConverterButton( edit_panel, string_converter )
+        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
         
         #
         
@@ -1045,7 +1043,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._tag_name = QW.QLineEdit( self )
         
-        self._tag_attributes = ClientGUIControls.StringToStringDictControl( self, tag_attributes, min_height = 4 )
+        self._tag_attributes = ClientGUIStringControls.StringToStringDictControl( self, tag_attributes, min_height = 4 )
         
         self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = 0, max = 255 )
         
@@ -1053,7 +1051,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._should_test_tag_string = QW.QCheckBox( self )
         
-        self._tag_string_string_match = ClientGUIControls.StringMatchButton( self, tag_string_string_match )
+        self._tag_string_string_match = ClientGUIStringControls.StringMatchButton( self, tag_string_string_match )
         
         #
         
@@ -1250,9 +1248,9 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( tag_rules, content_to_fetch, attribute_to_fetch, string_match, string_converter ) = formula.ToTuple()
         
-        self._string_match_button = ClientGUIControls.StringMatchButton( edit_panel, string_match )
+        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
         
-        self._string_converter_button = ClientGUIControls.StringConverterButton( edit_panel, string_converter )
+        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
         
         #
         
@@ -1478,7 +1476,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
         self._parse_rule_type.addItem( 'indexed list item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
         
-        self._string_match = ClientGUIControls.EditStringMatchPanel( self, string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
+        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
         
         self._index = QP.MakeQSpinBox( self, min=0, max=65535 )
         
@@ -1601,9 +1599,9 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( parse_rules, content_to_fetch, string_match, string_converter ) = formula.ToTuple()
         
-        self._string_match_button = ClientGUIControls.StringMatchButton( edit_panel, string_match )
+        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
         
-        self._string_converter_button = ClientGUIControls.StringConverterButton( edit_panel, string_converter )
+        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
         
         #
         
@@ -1883,7 +1881,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._veto_panel = QW.QWidget( self._content_panel )
         
         self._veto_if_matches_found = QW.QCheckBox( self._veto_panel )
-        self._string_match = ClientGUIControls.EditStringMatchPanel( self._veto_panel )
+        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self._veto_panel )
         
         self._temp_variable_panel = QW.QWidget( self._content_panel )
         
@@ -2903,7 +2901,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_converter = parser.GetStringConverter()
         
-        self._string_converter = ClientGUIControls.StringConverterButton( conversion_panel, string_converter )
+        self._string_converter = ClientGUIStringControls.StringConverterButton( conversion_panel, string_converter )
         
         #
         
@@ -3135,9 +3133,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         produces = page_parser.GetParsableContent()
         
-        produces = list( produces )
-        
-        produces.sort()
+        produces = sorted( produces )
         
         pretty_name = name
         pretty_formula = formula.ToPrettyString()
@@ -3358,10 +3354,9 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = parser.GetName()
         
-        example_urls = list( parser.GetExampleURLs() )
-        example_urls.sort()
+        example_urls = sorted( parser.GetExampleURLs() )
         
-        produces = list( parser.GetParsableContent() )
+        produces = sorted( parser.GetParsableContent() )
         
         pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
         
@@ -3456,13 +3451,13 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
             self._file_identifier_type.addItem( ClientParsing.file_identifier_string_lookup[ t], t )
             
         
-        self._file_identifier_string_converter = ClientGUIControls.StringConverterButton( query_panel, file_identifier_string_converter )
+        self._file_identifier_string_converter = ClientGUIStringControls.StringConverterButton( query_panel, file_identifier_string_converter )
         
         self._file_identifier_arg_name = QW.QLineEdit( query_panel )
         
         static_args_panel = ClientGUICommon.StaticBox( query_panel, 'static arguments' )
         
-        self._static_args = ClientGUIControls.StringToStringDictControl( static_args_panel, static_args, min_height = 4 )
+        self._static_args = ClientGUIStringControls.StringToStringDictControl( static_args_panel, static_args, min_height = 4 )
         
         children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
         
@@ -4250,7 +4245,7 @@ class TestPanel( QW.QWidget ):
         
         self._object_callable = object_callable
         
-        self._example_parsing_context = ClientGUIControls.StringToStringDictButton( self, 'edit example parsing context' )
+        self._example_parsing_context = ClientGUIStringControls.StringToStringDictButton( self, 'edit example parsing context' )
         
         self._data_preview_notebook = QW.QTabWidget( self )
         

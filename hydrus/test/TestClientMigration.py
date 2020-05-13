@@ -8,13 +8,10 @@ from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
 from hydrus.client import ClientTags
 import collections
-import hashlib
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTagArchive
 import os
 import random
-import shutil
 import time
 import unittest
 from hydrus.core import HydrusData

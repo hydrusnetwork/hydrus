@@ -372,9 +372,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
-            l = [ basic_permission_to_str_lookup[ p ] for p in self._basic_permissions ]
-            
-            l.sort()
+            l = sorted( ( basic_permission_to_str_lookup[ p ] for p in self._basic_permissions ) )
             
             return ', '.join( l )
             

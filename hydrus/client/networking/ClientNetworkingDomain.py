@@ -14,6 +14,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 import urllib.parse
 
 def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
@@ -123,9 +124,7 @@ def ConvertQueryDictToText( query_dict, param_order = None ):
     
     if param_order is None:
         
-        param_pairs = list( query_dict.items() )
-        
-        param_pairs.sort()
+        param_pairs = sorted( query_dict.items() )
         
     else:
         
@@ -147,7 +146,7 @@ def ConvertQueryTextToDict( query_text ):
     # so if there are a mix of encoded and non-encoded, we won't touch it here m8
     
     # except these chars, which screw with GET arg syntax when unquoted
-    bad_chars = [ '&', '=', '/', '?' ]
+    bad_chars = [ '&', '=', '/', '?', '#' ]
     
     param_order = []
     
@@ -248,7 +247,7 @@ def ConvertURLClassesIntoAPIPairs( url_classes ):
     
 def ConvertURLIntoDomain( url ):
     
-    parser_result = urllib.parse.urlparse( url )
+    parser_result = ParseURL( url )
     
     if parser_result.scheme == '':
         
@@ -335,7 +334,7 @@ def GetSearchURLs( url ):
     
     for url in list( search_urls ):
         
-        p = urllib.parse.urlparse( url )
+        p = ParseURL( url )
         
         scheme = p.scheme
         netloc = p.netloc
@@ -378,6 +377,62 @@ def GetSearchURLs( url ):
         
     
     return search_urls
+    
+def ParseURL( url: str ) -> urllib.parse.ParseResult:
+    
+    url = url.strip()
+    
+    url = UnicodeNormaliseURL( url )
+    
+    return urllib.parse.urlparse( url )
+    
+OH_NO_NO_NETLOC_CHARACTERS = '?#'
+OH_NO_NO_NETLOC_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : '_' for char in OH_NO_NO_NETLOC_CHARACTERS }
+
+def UnicodeNormaliseURL( url: str ):
+    
+    if url.startswith( 'file:' ):
+        
+        return url
+        
+    
+    # the issue is netloc, blah.com, cannot have certain unicode characters that look like others, or double ( e + accent ) characters that can be one accented-e, so we normalise
+    # urllib.urlparse throws a valueerror if these are in, so let's switch out
+    
+    scheme_splitter = '://'
+    netloc_splitter = '/'
+    
+    if scheme_splitter in url:
+        
+        ( scheme, netloc_and_path_and_rest ) = url.split( scheme_splitter, 1 )
+        
+        if netloc_splitter in netloc_and_path_and_rest:
+            
+            ( netloc, path_and_rest ) = netloc_and_path_and_rest.split( netloc_splitter, 1 )
+            
+        else:
+            
+            netloc = netloc_and_path_and_rest
+            path_and_rest = None
+            
+        
+        netloc = unicodedata.normalize( 'NFKC', netloc )
+        
+        netloc = netloc.translate( OH_NO_NO_NETLOC_CHARACTERS_UNICODE_TRANSLATE )
+        
+        scheme_and_netlock = scheme_splitter.join( ( scheme, netloc ) )
+        
+        if path_and_rest is None:
+            
+            url = scheme_and_netlock
+            
+        else:
+            
+            url = netloc_splitter.join( ( scheme_and_netlock, path_and_rest ) )
+            
+        
+    
+    return url
     
 VALID_DENIED = 0
 VALID_APPROVED = 1
@@ -692,9 +747,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             namespaces.update( parser.GetNamespaces() )
             
         
-        self._parser_namespaces = list( namespaces )
-        
-        self._parser_namespaces.sort()
+        self._parser_namespaces = sorted( namespaces )
         
     
     def _SetDirty( self ):
@@ -1602,7 +1655,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if url_class is None:
                 
-                p = urllib.parse.urlparse( url )
+                p = ParseURL( url )
                 
                 scheme = p.scheme
                 netloc = p.netloc
@@ -2410,7 +2463,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 # when the tags separator is '+' but the tags include '6+girls', we run into fun internet land
                 
-                bad_chars = [ self._search_terms_separator, '&', '=', '/', '?' ]
+                bad_chars = [ self._search_terms_separator, '&', '=', '/', '?', '#' ]
                 
                 if True in ( bad_char in search_term for bad_char in bad_chars ):
                     
@@ -3078,7 +3131,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         url = self.Normalise( url )
         
-        p = urllib.parse.urlparse( url )
+        p = ParseURL( url )
         
         scheme = p.scheme
         netloc = p.netloc
@@ -3254,7 +3307,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Normalise( self, url ):
         
-        p = urllib.parse.urlparse( url )
+        p = ParseURL( url )
         
         scheme = self._preferred_scheme
         params = ''
@@ -3318,7 +3371,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Test( self, url ):
         
-        p = urllib.parse.urlparse( url )
+        p = ParseURL( url )
         
         if self._match_subdomains:
             

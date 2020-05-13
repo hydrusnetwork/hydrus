@@ -168,7 +168,7 @@ def DumpToPng( width, payload_bytes, title, payload_description, text, path ):
         
         cv2.imwrite( temp_path, finished_image, [ cv2.IMWRITE_PNG_COMPRESSION, 9 ] )
         
-        shutil.copy2( temp_path, path )
+        HydrusPaths.MirrorFile( temp_path, path )
         
     except Exception as e:
         
@@ -243,7 +243,7 @@ def LoadFromPng( path ):
     
     try:
         
-        shutil.copy2( path, temp_path )
+        HydrusPaths.MirrorFile( path, temp_path )
         
         numpy_image = cv2.imread( temp_path, flags = IMREAD_UNCHANGED )
         

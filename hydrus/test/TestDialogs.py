@@ -1,13 +1,6 @@
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDefaults
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-from hydrus.client import ClientThreading
-import collections
-from hydrus.core import HydrusConstants as HC
-import os
 import unittest
 from hydrus.core import HydrusGlobals as HG
 from qtpy import QtCore as QC

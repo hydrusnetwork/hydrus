@@ -1578,9 +1578,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tags.update( self._filename_tagging_panel.GetTags( index, path ) )
             
-            tags = list( tags )
-            
-            tags.sort()
+            tags = sorted( tags )
             
             return tags
             

@@ -1,9 +1,7 @@
-import collections
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientData
 from hydrus.client import ClientTags
-import os
 import unittest
 from hydrus.core import HydrusData
 from hydrus.client import ClientConstants as CC

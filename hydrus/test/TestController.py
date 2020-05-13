@@ -1,10 +1,7 @@
 import collections
 import os
-import random
 import threading
 import collections
-import shutil
-import sys
 import tempfile
 import time
 import traceback
@@ -24,11 +21,9 @@ from hydrus.client.networking import ClientNetworkingSessions
 from hydrus.client import ClientServices
 from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
-from hydrus.core import HydrusDB
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
 from hydrus.test import TestClientAPI
 from hydrus.test import TestClientConstants
@@ -42,19 +37,17 @@ from hydrus.test import TestClientImportSubscriptions
 from hydrus.test import TestClientListBoxes
 from hydrus.test import TestClientMigration
 from hydrus.test import TestClientNetworking
+from hydrus.test import TestClientParsing
 from hydrus.test import TestClientTags
 from hydrus.test import TestClientThreading
 from hydrus.test import TestDialogs
 from hydrus.test import TestFunctions
-from hydrus.test import TestHydrusNATPunch
 from hydrus.test import TestHydrusNetworking
 from hydrus.test import TestHydrusSerialisable
 from hydrus.test import TestHydrusServer
 from hydrus.test import TestHydrusSessions
 from hydrus.test import TestServerDB
-from twisted.internet import reactor
 from hydrus.client import ClientCaches
-from hydrus.client import ClientData
 from hydrus.client import ClientOptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
@@ -671,6 +664,7 @@ class Controller( object ):
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientData ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportOptions ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientParsing ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientTags ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientThreading ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )

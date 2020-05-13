@@ -1170,8 +1170,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( missing_givens ) > 0:
             
-            missing_givens = list( missing_givens )
-            missing_givens.sort()
+            missing_givens = sorted( missing_givens )
             
             raise HydrusExceptions.ValidationException( 'Missing required credentials: ' + ', '.join( missing_givens ) )
             
@@ -1202,8 +1201,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( missing_definitions ) > 0:
             
-            missing_definitions = list( missing_definitions )
-            missing_definitions.sort()
+            missing_definitions = sorted( missing_definitions )
             
             raise HydrusExceptions.ValidationException( 'Missing required credential definitions: ' + ', '.join( missing_definitions ) )
             
@@ -1220,8 +1218,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             
             if len( missing_vars ) > 0:
                 
-                missing_vars = list( missing_vars )
-                missing_vars.sort()
+                missing_vars = sorted( missing_vars )
                 
                 raise HydrusExceptions.ValidationException( 'Missing temp variables for login step "' + login_step.GetName() + '": ' + ', '.join( missing_vars ) )
                 
@@ -1673,7 +1670,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
             
             if self._method == 'POST' and referral_url is not None:
                 
-                p = urllib.parse.urlparse( referral_url )
+                p = ClientNetworkingDomain.ParseURL( url )
                 
                 r = urllib.parse.ParseResult( p.scheme, p.netloc, '', '', '', '' )
                 

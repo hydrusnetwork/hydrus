@@ -424,6 +424,8 @@ class Page( QW.QSplitter ):
         
         self._search_preview_split = QW.QSplitter( self )
         
+        self._done_split_setups = False
+        
         self._management_panel = ClientGUIManagement.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
@@ -441,8 +443,6 @@ class Page( QW.QSplitter ):
         QP.AddToLayout( vbox, self._preview_canvas, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._preview_panel.setLayout( vbox )
-        
-        self.SetupSplits()
         
         self.widget( 0 ).setMinimumWidth( 120 )
         self.widget( 1 ).setMinimumWidth( 120 )
@@ -740,6 +740,13 @@ class Page( QW.QSplitter ):
     
     def PageShown( self ):
         
+        if self.isVisible() and not self._done_split_setups:
+            
+            self.SetupSplits()
+            
+            self._done_split_setups = True
+            
+        
         self._management_panel.PageShown()
         self._media_panel.PageShown()
         self._preview_canvas.PageShown()
@@ -931,6 +938,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         QP.TabWidgetWithDnD.__init__( self, parent )
         
+        if HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
+            
+            self.tabBar().setElideMode( QC.Qt.ElideMiddle )
+            
+        
         self._parent_notebook = parent
         
         # this is disabled for now because it seems borked in Qt
@@ -963,7 +975,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
         self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
         
-        self.currentChanged.connect( self.EventPageChanged )
+        self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
         
         self._previous_page_index = -1
@@ -1373,11 +1385,13 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         safe_page_name = ClientGUIFunctions.EscapeMnemonics( page_name )
         
-        existing_page_name = self.tabText( index )
+        tab_bar = self.tabBar()
+        
+        existing_page_name = tab_bar.tabText( index )
         
         if existing_page_name not in ( safe_page_name, page_name ):
             
-            self.setTabText( index, safe_page_name )
+            tab_bar.setTabText( index, safe_page_name )
             
         
     
@@ -1890,28 +1904,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         notebook._ChooseNewPage()
         
     
-    def EventPageChanged( self, index ):
-        
-        old_selection = self._previous_page_index
-        selection = index
-            
-        if old_selection != -1 and old_selection < self.count():
-            
-            self.widget( old_selection ).PageHidden()
-                
-        
-        if selection != -1:
-            
-            self.widget( selection ).PageShown()
-                
-            
-        self._controller.gui.RefreshStatusBar()
-            
-        self._previous_page_index = index
-        
-        self._controller.pub( 'notify_page_change' )
-        
-    
     def GetAPIInfoDict( self, simple ):
         
         return {}
@@ -2296,6 +2288,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for page_tuple in page_tuples:
             
+            select_page = not done_first_page
+            
             ( page_type, page_data ) = page_tuple
             
             if page_type == 'pages':
@@ -2304,7 +2298,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 try:
                     
-                    page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False, select_page = False )
+                    page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False, select_page = select_page )
                     
                     page.AppendSessionPageTuples( subpage_tuples )
                     
@@ -2319,11 +2313,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 try:
                     
-                    select_page = not done_first_page
-                    
                     self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
-                    
-                    done_first_page = True
                     
                 except Exception as e:
                     
@@ -2332,6 +2322,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
             
             forced_insertion_index += 1
+            
+            done_first_page = True
             
         
     
@@ -2552,10 +2544,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self.setCurrentIndex( insertion_index )
             
         
-        self.LayoutPages()
-        
-        page.SetupSplits()
-        
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         self._controller.pub( 'notify_new_pages' )
         
@@ -2699,9 +2687,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         page_name = page.GetName()
         
         self.insertTab( insertion_index, page, page_name )
-        if select_page: self.setCurrentIndex( insertion_index )
         
-        self.LayoutPages()
+        if select_page:
+            
+            self.setCurrentIndex( insertion_index )
+            
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         
@@ -2747,6 +2737,30 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             result.PageHidden()
             
+        
+    
+    def pageJustChanged( self, index ):
+        
+        old_selection = self._previous_page_index
+        selection = index
+        
+        if old_selection != -1 and old_selection < self.count():
+            
+            self.widget( old_selection ).PageHidden()
+            
+        
+        if selection != -1:
+            
+            new_page = self.widget( selection )
+            
+            new_page.PageShown()
+            
+        
+        self._controller.gui.RefreshStatusBar()
+        
+        self._previous_page_index = index
+        
+        self._controller.pub( 'notify_page_change' )
         
     
     def PageShown( self ):

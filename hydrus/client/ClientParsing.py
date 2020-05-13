@@ -2,6 +2,7 @@ import base64
 import bs4
 import calendar
 import codecs
+import typing
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 import collections
@@ -173,9 +174,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
             else:
                 
-                hash_types = list( additional_infos )
-                
-                hash_types.sort()
+                hash_types = sorted( additional_infos )
                 
                 pretty_strings.append( 'hashes: ' + ', '.join( hash_types ) )
                 
@@ -1404,9 +1403,7 @@ class ParseFormulaJSON( ParseFormula ):
                         
                     elif isinstance( root, dict ):
                         
-                        pairs = list( root.items() )
-                        
-                        pairs.sort()
+                        pairs = sorted( root.items() )
                         
                         for ( key, value ) in pairs:
                             
@@ -1443,9 +1440,7 @@ class ParseFormulaJSON( ParseFormula ):
                     
                     string_match = parse_rule
                     
-                    pairs = list( root.items() )
-                    
-                    pairs.sort()
+                    pairs = sorted( root.items() )
                     
                     for ( key, value ) in pairs:
                         
@@ -1485,9 +1480,7 @@ class ParseFormulaJSON( ParseFormula ):
                 
                 if isinstance( root, dict ):
                     
-                    pairs = list( root.items() )
-                    
-                    pairs.sort()
+                    pairs = sorted( root.items() )
                     
                     for ( key, value ) in pairs:
                         
@@ -2131,9 +2124,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetSafeSummary( self ):
         
-        domains = list( { ClientNetworkingDomain.ConvertURLIntoDomain( url ) for url in self._example_urls } )
-        
-        domains.sort()
+        domains = sorted( { ClientNetworkingDomain.ConvertURLIntoDomain( url ) for url in self._example_urls } )
         
         return 'Parser "' + self._name + '" - ' + ', '.join( domains )
         
@@ -2821,7 +2812,14 @@ transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_DECODE ] = 'datestrin
 transformation_type_str_lookup[ STRING_TRANSFORMATION_INTEGER_ADDITION ] = 'integer addition'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_ENCODE ] = 'timestamp to datestring'
 
-class StringConverter( HydrusSerialisable.SerialisableBase ):
+class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
+    
+    def ToString( self, simple = False ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+class StringConverter( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER
     SERIALISABLE_NAME = 'String Converter'
@@ -2839,7 +2837,7 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
             example_string = 'example string'
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        StringProcessingStep.__init__( self )
         
         self.transformations = transformations
         
@@ -3068,6 +3066,36 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         return len( self.transformations ) > 0
         
     
+    def ToString( self, simple = False ) -> str:
+        
+        num_rules = len( self.transformations )
+        
+        if num_rules == 0:
+            
+            if simple:
+                
+                label = 'no changes'
+                
+            else:
+                
+                label = 'no string transformations'
+                
+            
+        else:
+            
+            if simple:
+                
+                label = '{} changes'.format( HydrusData.ToHumanInt( num_rules ) )
+                
+            else:
+                
+                label = '{} string transformations'.format( HydrusData.ToHumanInt( num_rules ) )
+                
+            
+        
+        return label
+        
+    
     @staticmethod
     def TransformationToString( transformation ):
         
@@ -3142,7 +3170,7 @@ ALPHA = 0
 ALPHANUMERIC = 1
 NUMERIC = 2
 
-class StringMatch( HydrusSerialisable.SerialisableBase ):
+class StringMatch( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
     SERIALISABLE_NAME = 'String Match'
@@ -3150,9 +3178,7 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, match_type = STRING_MATCH_ANY, match_value = '', min_chars = None, max_chars = None, example_string = 'example string' ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        # make a gui control that accepts one of these. displays expected input on the right and colours red/green (and does isvalid) based on current input
-        # think about replacing the veto stuff above with this.
+        StringProcessingStep.__init__( self )
         
         self._match_type = match_type
         self._match_value = match_value
@@ -3272,7 +3298,12 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
         return ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string )
         
     
-    def ToString( self ):
+    def ToString( self, simple = False ):
+        
+        if simple:
+            
+            return 'filter'
+            
         
         result = ''
         
@@ -3342,3 +3373,199 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH ] = StringMatch
+
+class StringSplitter( StringProcessingStep ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER
+    SERIALISABLE_NAME = 'String Splitter'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, separator: str = ',', max_splits: typing.Optional[ int ] = None ):
+        
+        StringProcessingStep.__init__( self )
+        
+        self._separator = separator
+        self._max_splits = max_splits
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._separator, self._max_splits )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._separator, self._max_splits ) = serialisable_info
+        
+    
+    def GetMaxSplits( self ):
+        
+        return self._max_splits
+        
+    
+    def GetSeparator( self ):
+        
+        return self._separator
+        
+    
+    def Split( self, text: str ) -> typing.List[ str ]:
+        
+        if self._max_splits is None:
+            
+            results = text.split( self._separator )
+            
+        else:
+            
+            results = text.split( self._separator, self._max_splits )
+            
+        
+        return [ result for result in results if result != '' ]
+        
+    
+    def ToString( self, simple = False ):
+        
+        if simple:
+            
+            return 'splitter'
+            
+        
+        result = 'splitting by "{}"'.format( self._separator )
+        
+        if self._max_splits is not None:
+            
+            result = '{}, at most {} times'.format( result, HydrusData.ToHumanInt( self._max_splits ) )
+            
+        
+        return result
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER ] = StringSplitter
+
+class StringProcessor( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR
+    SERIALISABLE_NAME = 'String Processor'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        StringProcessingStep.__init__( self )
+        
+        self._processing_steps: typing.List[ StringProcessingStep ] = []
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return HydrusSerialisable.SerialisableList( self._processing_steps ).GetSerialisableTuple()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_processing_steps = serialisable_info
+        
+        self._processing_steps = list( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_processing_steps ) )
+        
+    
+    def GetProcessingSteps( self ):
+        
+        return list( self._processing_steps )
+        
+    
+    def ProcessStrings( self, starting_strings: typing.Iterable[ str ], max_steps_allowed = None ) -> typing.List[ str ]:
+        
+        final_strings = []
+        
+        for starting_string in starting_strings:
+            
+            current_strings = [ starting_string ]
+            
+            for ( i, processing_step ) in enumerate( self._processing_steps ):
+                
+                if max_steps_allowed is not None and i >= max_steps_allowed:
+                    
+                    break
+                    
+                
+                next_strings = []
+                
+                for current_string in current_strings:
+                    
+                    if isinstance( processing_step, StringConverter ):
+                        
+                        try:
+                            
+                            next_string = processing_step.Convert( current_string )
+                            
+                            next_strings.append( next_string )
+                            
+                        except HydrusExceptions.StringConvertException:
+                            
+                            continue
+                            
+                        
+                    elif isinstance( processing_step, StringMatch ):
+                        
+                        try:
+                            
+                            if processing_step.Matches( current_string ):
+                                
+                                next_strings.append( current_string )
+                                
+                            
+                        except HydrusExceptions.StringMatchException:
+                            
+                            continue
+                            
+                        
+                    elif isinstance( processing_step, StringSplitter ):
+                        
+                        split_strings = processing_step.Split( current_string )
+                        
+                        next_strings.extend( split_strings )
+                        
+                    
+                
+                current_strings = next_strings
+                
+            
+            final_strings.extend( current_strings )
+            
+        
+        return final_strings
+        
+    
+    def SetProcessingSteps( self, processing_steps: typing.List[ StringProcessingStep ] ):
+        
+        self._processing_steps = list( processing_steps )
+        
+    
+    def ToString( self ) -> str:
+        
+        if len( self._processing_steps ) == 0:
+            
+            return 'no string processing'
+            
+        else:
+            
+            components = []
+            
+            if True in ( isinstance( ps, StringConverter ) for ps in self._processing_steps ):
+                
+                components = 'conversion'
+                
+            
+            if True in ( isinstance( ps, StringMatch ) for ps in self._processing_steps ):
+                
+                components = 'filtering'
+                
+            
+            if True in ( isinstance( ps, StringSplitter ) for ps in self._processing_steps ):
+                
+                components = 'splitting'
+                
+            
+            return 'some {}'.format( ', '.join( components ) )
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER ] = StringSplitter

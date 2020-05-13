@@ -162,7 +162,9 @@ class FavouritesTagsPanel( QW.QWidget ):
     
     def _UpdateTagDisplay( self ):
         
-        favourites = HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key )
+        favourites = list( HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
+        
+        ClientTags.SortTags( HC.options[ 'default_tag_sort' ], favourites )
         
         tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
         

@@ -38,6 +38,7 @@ from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -539,9 +540,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     hta = HydrusTagArchive.HydrusTagArchive( hta_path )
                     
-                    archive_namespaces = list( hta.GetNamespaces() )
-                    
-                    archive_namespaces.sort()
+                    archive_namespaces = sorted( hta.GetNamespaces() )
                     
                     choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in archive_namespaces ]
                     
@@ -587,9 +586,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hta = HydrusTagArchive.HydrusTagArchive( hta_path )
                 
-                archive_namespaces = list( hta.GetNamespaces() )
-                
-                archive_namespaces.sort()
+                archive_namespaces = sorted( hta.GetNamespaces() )
                 
                 choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, namespace in existing_namespaces ) for namespace in archive_namespaces ]
                 
@@ -1405,7 +1402,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this path remapping control -->', QG.QColor( 0, 0, 255 ) )
                 
-                self._nocopy_abs_path_translations = ClientGUIControls.StringToStringDictControl( self, abs_initial_dict, key_name = 'hydrus path', value_name = 'ipfs path', allow_add_delete = False, edit_keys = False )
+                self._nocopy_abs_path_translations = ClientGUIStringControls.StringToStringDictControl( self, abs_initial_dict, key_name = 'hydrus path', value_name = 'ipfs path', allow_add_delete = False, edit_keys = False )
                 
                 self._multihash_prefix = QW.QLineEdit( self )
                 
@@ -2862,23 +2859,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._notebook_tabs_on_left = QW.QCheckBox( self )
             
-            self._max_page_name_chars = QP.MakeQSpinBox( self, min=1, max=256 )
-            
-            self._page_file_count_display = ClientGUICommon.BetterChoice( self )
-            
-            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE ):
-                
-                self._page_file_count_display.addItem( CC.page_file_count_display_string_lookup[ display_type], display_type )
-                
-            
-            self._import_page_progress_display = QW.QCheckBox( self )
-            
             self._total_pages_warning = QP.MakeQSpinBox( self, min=5, max=200 )
             
             self._reverse_page_shift_drag_behaviour = QW.QCheckBox( self )
             self._reverse_page_shift_drag_behaviour.setToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
             self._set_search_focus_on_page_change = QW.QCheckBox( self )
+            
+            #
+            
+            self._page_names_panel = ClientGUICommon.StaticBox( self, 'page tab names' )
+            
+            self._max_page_name_chars = QP.MakeQSpinBox( self._page_names_panel, min=1, max=256 )
+            self._elide_page_tab_names = QW.QCheckBox( self._page_names_panel )
+            
+            self._page_file_count_display = ClientGUICommon.BetterChoice( self._page_names_panel )
+            
+            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE ):
+                
+                self._page_file_count_display.addItem( CC.page_file_count_display_string_lookup[ display_type], display_type )
+                
+            
+            self._import_page_progress_display = QW.QCheckBox( self._page_names_panel )
             
             #
             
@@ -2919,6 +2921,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._max_page_name_chars.setValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
             
+            self._elide_page_tab_names.setChecked( self._new_options.GetBoolean( 'elide_page_tab_names' ) )
+            
             self._page_file_count_display.SetValue( self._new_options.GetInteger( 'page_file_count_display' ) )
             
             self._import_page_progress_display.setChecked( self._new_options.GetBoolean( 'import_page_progress_display' ) )
@@ -2941,17 +2945,41 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When switching to a page, focus its input field (if any): ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Switch to main window when opening tag search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
             rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
-            rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
-            rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
-            rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
+            rows = []
+            
+            rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
+            rows.append( ( 'When there are too many tabs to fit, \'...\' elide their names so they fit: ', self._elide_page_tab_names ) )
+            rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
+            rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
+            
+            page_names_gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            label = 'If you have enough pages in a row, left/right arrows will appear to navigate them back and forth.'
+            label += os.linesep
+            label += 'Due to an unfortunate Qt issue, the tab bar will scroll so the current tab is right-most visible whenever a page is renamed.'
+            label += os.linesep
+            label += 'Therefore, if you set pages to have current file count or import progress in their name (which will update from time to time), do not put import pages in a long row of tabs, as it will reset scroll position on every progress update.'
+            label += os.linesep
+            label += 'Just make some nested \'page of pages\' so they are not all in the same row.'
+            
+            st = ClientGUICommon.BetterStaticText( self._page_names_panel, label )
+            
+            st.setWordWrap( True )
+            
+            self._page_names_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._page_names_panel.Add( page_names_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._page_names_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -2973,6 +3001,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetValue() )
             
             self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.value() )
+            
+            self._new_options.SetBoolean( 'elide_page_tab_names', self._elide_page_tab_names.isChecked() )
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetValue() )
             self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.isChecked() )
@@ -4661,9 +4691,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._favourite_file_lookup_script = ClientGUICommon.BetterChoice( suggested_tags_file_lookup_script_panel )
             
-            script_names = list( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ) )
-            
-            script_names.sort()
+            script_names = sorted( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ) )
             
             for name in script_names:
                 
@@ -5265,9 +5293,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Copy( self ):
         
-        urls = list( self._current_urls_count.keys() )
-        
-        urls.sort()
+        urls = sorted( self._current_urls_count.keys() )
         
         text = os.linesep.join( urls )
         
@@ -5294,7 +5320,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             addee_hashes = { m.GetHash() for m in addee_media }
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( url, ), addee_hashes ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( normalised_url, ), addee_hashes ) )
             
             for m in addee_media:
                 

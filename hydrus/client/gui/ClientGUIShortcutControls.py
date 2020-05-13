@@ -88,9 +88,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
             choices = ClientGUIShortcuts.simple_shortcut_name_to_action_lookup[ 'custom' ]
             
         
-        choices = list( choices )
-        
-        choices.sort()
+        choices = sorted( choices )
         
         self._simple_actions = QW.QComboBox( self )
         self._simple_actions.addItems( choices )

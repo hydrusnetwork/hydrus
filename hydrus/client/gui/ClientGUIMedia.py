@@ -29,9 +29,7 @@ def CopyMediaURLs( medias ):
         urls.update( media_urls )
         
     
-    urls = list( urls )
-    
-    urls.sort()
+    urls = sorted( urls )
     
     urls_string = os.linesep.join( urls )
     
@@ -54,9 +52,7 @@ def CopyMediaURLClassURLs( medias, url_class ):
             
         
     
-    urls = list( urls )
-    
-    urls.sort()
+    urls = sorted( urls )
     
     urls_string = os.linesep.join( urls )
     
@@ -139,9 +135,7 @@ def OpenExternally( media ):
     
 def OpenURLs( urls ):
     
-    urls = list( urls )
-    
-    urls.sort()
+    urls = sorted( urls )
     
     if len( urls ) > 1:
         

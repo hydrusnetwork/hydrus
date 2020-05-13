@@ -3213,9 +3213,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 del self._current_path_data[ path ]
                 
             
-            flat_path_data = [ ( index, path, mime, size ) for ( path, ( index, mime, size ) ) in self._current_path_data.items() ]
-            
-            flat_path_data.sort()
+            flat_path_data = sorted( ( ( index, path, mime, size ) for ( path, ( index, mime, size ) ) in self._current_path_data.items() ) )
             
             new_index = 1
             

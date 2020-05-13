@@ -148,20 +148,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if self._focused_media is not None:
             
-            display_media = self._focused_media.GetDisplayMedia()
-            
-            if display_media is None:
+            if self._HasFocusSingleton():
                 
-                return
+                media = self._GetFocusSingleton()
                 
-            
-            if display_media.GetMime() in HC.IMAGES:
-                
-                HG.client_controller.pub( 'clipboard', 'bmp', display_media )
-                
-            else:
-                
-                QW.QMessageBox.critical( self, 'Error', 'Sorry, cannot take bmps of anything but static images right now!' )
+                if media.GetMime() in HC.IMAGES:
+                    
+                    HG.client_controller.pub( 'clipboard', 'bmp', media )
+                    
+                else:
+                    
+                    QW.QMessageBox.critical( self, 'Error', 'Sorry, cannot take bmps of anything but static images right now!' )
+                    
                 
             
         
@@ -184,41 +182,42 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             paths.append( path )
             
         
-        HG.client_controller.pub( 'clipboard', 'paths', paths )
+        if len( paths ) > 0:
+            
+            HG.client_controller.pub( 'clipboard', 'paths', paths )
+            
         
     
     def _CopyHashToClipboard( self, hash_type ):
         
-        display_media = self._focused_media.GetDisplayMedia()
-        
-        if display_media is None:
+        if self._HasFocusSingleton():
             
-            return
+            media = self._GetFocusSingleton()
             
-        
-        sha256_hash = display_media.GetHash()
-        
-        if hash_type == 'sha256':
+            sha256_hash = media.GetHash()
             
-            hex_hash = sha256_hash.hex()
-            
-        else:
-            
-            if display_media.GetLocationsManager().IsLocal():
+            if hash_type == 'sha256':
                 
-                ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
-                
-                hex_hash = other_hash.hex()
+                hex_hash = sha256_hash.hex()
                 
             else:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
-                
-                return
+                if media.GetLocationsManager().IsLocal():
+                    
+                    ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                    
+                    hex_hash = other_hash.hex()
+                    
+                else:
+                    
+                    QW.QMessageBox.critical( self, 'Error', 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
+                    
+                    return
+                    
                 
             
-        
-        HG.client_controller.pub( 'clipboard', 'text', hex_hash )
+            HG.client_controller.pub( 'clipboard', 'text', hex_hash )
+            
         
     
     def _CopyHashesToClipboard( self, hash_type ):
@@ -250,18 +249,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _CopyPathToClipboard( self ):
         
-        display_media = self._focused_media.GetDisplayMedia()
-        
-        if display_media is None:
+        if self._HasFocusSingleton():
             
-            return
+            media = self._GetFocusSingleton()
             
-        
-        client_files_manager = HG.client_controller.client_files_manager
-        
-        path = client_files_manager.GetFilePath( display_media.GetHash(), display_media.GetMime() )
-        
-        HG.client_controller.pub( 'clipboard', 'text', path )
+            client_files_manager = HG.client_controller.client_files_manager
+            
+            path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
+            
+            HG.client_controller.pub( 'clipboard', 'text', path )
+            
         
     
     def _CopyPathsToClipboard( self ):
@@ -277,34 +274,35 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             paths.append( client_files_manager.GetFilePath( media_result.GetHash(), media_result.GetMime(), check_file_exists = False ) )
             
         
-        text = os.linesep.join( paths )
-        
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        if len( paths ) > 0:
+            
+            text = os.linesep.join( paths )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
         
     
     def _CopyServiceFilenameToClipboard( self, service_key ):
         
-        display_media = self._focused_media.GetDisplayMedia()
-        
-        if display_media is None:
+        if self._HasFocusSingleton():
             
-            return
+            media = self._GetFocusSingleton()
             
-        
-        hash = display_media.GetHash()
-        
-        ( filename, ) = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
-        
-        service = HG.client_controller.services_manager.GetService( service_key )
-        
-        if service.GetServiceType() == HC.IPFS:
+            hash = media.GetHash()
             
-            multihash_prefix = service.GetMultihashPrefix()
+            ( filename, ) = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
             
-            filename = multihash_prefix + filename
+            service = HG.client_controller.services_manager.GetService( service_key )
             
-        
-        HG.client_controller.pub( 'clipboard', 'text', filename )
+            if service.GetServiceType() == HC.IPFS:
+                
+                multihash_prefix = service.GetMultihashPrefix()
+                
+                filename = multihash_prefix + filename
+                
+            
+            HG.client_controller.pub( 'clipboard', 'text', filename )
+            
         
     
     def _CopyServiceFilenamesToClipboard( self, service_key ):
@@ -464,23 +462,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _LaunchMediaViewer( self, first_media = None ):
         
-        if self._focused_media is not None:
+        if self._HasFocusSingleton():
             
-            display_media = self._focused_media.GetDisplayMedia()
-            
-            if display_media is None:
-                
-                return
-                
+            media = self._GetFocusSingleton()
             
             new_options = HG.client_controller.new_options
             
-            ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( display_media.GetMime() )
+            ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( media.GetMime() )
             
             if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                hash = display_media.GetHash()
-                mime = display_media.GetMime()
+                hash = media.GetHash()
+                mime = media.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -533,6 +526,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
+        
+    
+    def _GetFocusSingleton( self ) -> ClientMedia.MediaSingleton:
+        
+        if self._focused_media is not None:
+            
+            media_singleton = self._focused_media.GetDisplayMedia()
+            
+            if media_singleton is not None:
+                
+                return media_singleton
+                
+            
+        
+        raise HydrusExceptions.DataMissing( 'No media singleton!' )
         
     
     def _GetNumSelected( self ):
@@ -784,6 +792,20 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         return ( sorted_mime_descriptor, selected_mime_descriptor )
         
     
+    def _HasFocusSingleton( self ) -> bool:
+        
+        try:
+            
+            media = self._GetFocusSingleton()
+            
+            return True
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
+        
+    
     def _HitMedia( self, media, ctrl, shift ):
         
         if media is None:
@@ -878,21 +900,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _ManageNotes( self ):
         
-        if self._focused_media is None:
+        if self._HasFocusSingleton():
             
-            return
+            media = self._GetFocusSingleton()
             
-        
-        media = self._focused_media.GetDisplayMedia()
-        
-        if media is None:
+            ClientGUIMediaActions.EditFileNotes( self, media )
             
-            return
+            self.setFocus( QC.Qt.OtherFocusReason )
             
-        
-        ClientGUIMediaActions.EditFileNotes( self, media )
-        
-        self.setFocus( QC.Qt.OtherFocusReason )
         
     
     def _ManageRatings( self ):
@@ -983,21 +998,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _OpenExternally( self ):
         
-        if self._focused_media is not None:
+        if self._HasFocusSingleton():
             
-            open_externally_media = self._focused_media.GetDisplayMedia()
+            media = self._GetFocusSingleton()
             
-            if open_externally_media is None:
-                
-                return
-                
-            
-            if open_externally_media.GetLocationsManager().IsLocal():
+            if media.GetLocationsManager().IsLocal():
                 
                 self.SetFocusedMedia( None )
                 
-                hash = open_externally_media.GetHash()
-                mime = open_externally_media.GetMime()
+                hash = media.GetHash()
+                mime = media.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -1014,12 +1024,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _OpenFileInWebBrowser( self ):
         
-        if self._focused_media is not None:
+        if self._HasFocusSingleton():
             
-            if self._focused_media.GetLocationsManager().IsLocal():
+            focused_singleton = self._GetFocusSingleton()
+            
+            if focused_singleton.GetLocationsManager().IsLocal():
                 
-                hash = self._focused_media.GetHash()
-                mime = self._focused_media.GetMime()
+                hash = focused_singleton.GetHash()
+                mime = focused_singleton.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -1034,12 +1046,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _OpenFileLocation( self ):
         
-        if self._focused_media is not None:
+        if self._HasFocusSingleton():
             
-            if self._focused_media.GetLocationsManager().IsLocal():
+            focused_singleton = self._GetFocusSingleton()
+            
+            if focused_singleton.GetLocationsManager().IsLocal():
                 
-                hash = self._focused_media.GetHash()
-                mime = self._focused_media.GetMime()
+                hash = focused_singleton.GetHash()
+                mime = focused_singleton.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -1054,9 +1068,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _OpenKnownURL( self ):
         
-        if self._focused_media is not None:
+        if self._HasFocusSingleton():
             
-            ClientGUIMedia.DoOpenKnownURLFromShortcut( self, self._focused_media )
+            focused_singleton = self._GetFocusSingleton()
+            
+            ClientGUIMedia.DoOpenKnownURLFromShortcut( self, focused_singleton )
             
         
     
@@ -1533,38 +1549,46 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _SetDuplicatesFocusedBetter( self, duplicate_action_options = None ):
         
-        flat_media = self._GetSelectedFlatMedia()
-        
-        if self._focused_media is None or self._focused_media.GetDisplayMedia() is None:
+        if self._HasFocusSingleton():
+            
+            focused_singleton = self._GetFocusSingleton()
+            
+            focused_hash = focused_singleton.GetHash()
+            
+            flat_media = self._GetSelectedFlatMedia()
+            
+            ( better_media, ) = [ media for media in flat_media if media.GetHash() == focused_hash ]
+            
+            worse_flat_media = [ media for media in flat_media if media.GetHash() != focused_hash ]
+            
+            media_pairs = [ ( better_media, worse_media ) for worse_media in worse_flat_media ]
+            
+            self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs )
+            
+        else:
             
             QW.QMessageBox.warning( self, 'Warning', 'No file is focused, so cannot set the focused file as better!' )
             
             return
             
         
-        focused_hash = self._focused_media.GetDisplayMedia().GetHash()
-        
-        ( better_media, ) = [ media for media in flat_media if media.GetHash() == focused_hash ]
-        
-        worse_flat_media = [ media for media in flat_media if media.GetHash() != focused_hash ]
-        
-        media_pairs = [ ( better_media, worse_media ) for worse_media in worse_flat_media ]
-        
-        self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs )
-        
     
     def _SetDuplicatesFocusedKing( self ):
         
-        if self._focused_media is None or self._focused_media.GetDisplayMedia() is None:
+        if self._HasFocusSingleton():
+            
+            media = self._GetFocusSingleton()
+            
+            focused_hash = media.GetHash()
+            
+            HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
+            
+        else:
             
             QW.QMessageBox.warning( self, 'Warning', 'No file is focused, so cannot set the focused file as king!' )
             
             return
             
-        
-        focused_hash = self._focused_media.GetDisplayMedia().GetHash()
-        
-        HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
         
     
     def _SetDuplicatesPotential( self ):
@@ -1842,16 +1866,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             elif action == 'duplicate_media_clear_focused_false_positives':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_clear_false_positives':
@@ -1865,16 +1886,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             elif action == 'duplicate_media_dissolve_focused_alternate_group':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_dissolve_alternate_group':
@@ -1888,16 +1906,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             elif action == 'duplicate_media_dissolve_focused_duplicate_group':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_dissolve_duplicate_group':
@@ -1911,44 +1926,35 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             elif action == 'duplicate_media_remove_focused_from_alternate_group':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_remove_focused_from_duplicate_group':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_reset_focused_potential_search':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_reset_potential_search':
@@ -1962,16 +1968,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             elif action == 'duplicate_media_remove_focused_potentials':
                 
-                if self._focused_media is not None:
+                if self._HasFocusSingleton():
                     
-                    media =  self._focused_media.GetDisplayMedia()
+                    media = self._GetFocusSingleton()
                     
-                    if media is not None:
-                        
-                        hash = media.GetHash()
-                        
-                        ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
-                        
+                    hash = media.GetHash()
+                    
+                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_remove_potentials':
@@ -2392,6 +2395,11 @@ class MediaPanelThumbnails( MediaPanel ):
             
             display_media = thumbnail.GetDisplayMedia()
             
+            if display_media is None:
+                
+                continue
+                
+            
             hash = display_media.GetHash()
             
             if hash in self._hashes_faded and thumbnail_cache.HasThumbnailCached( thumbnail ):
@@ -2438,6 +2446,13 @@ class MediaPanelThumbnails( MediaPanel ):
         
         for thumbnail in thumbnails:
             
+            display_media = thumbnail.GetDisplayMedia()
+            
+            if display_media is None:
+                
+                continue
+                
+            
             try:
                 
                 thumbnail_index = self._sorted_media.index( thumbnail )
@@ -2454,22 +2469,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 continue
                 
             
-            display_media = thumbnail.GetDisplayMedia()
+            hash = display_media.GetHash()
             
-            if display_media is not None:
-                
-                hash = display_media.GetHash()
-                
-                self._hashes_faded.add( hash )
-                
-                self._StopFading( hash )
-                
-                bmp = thumbnail.GetQtImage()
-                
-                alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
-                
-                self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
-                
+            self._hashes_faded.add( hash )
+            
+            self._StopFading( hash )
+            
+            bmp = thumbnail.GetQtImage()
+            
+            alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
+            
+            self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
             
         
         HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
@@ -3231,7 +3241,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         menu = QW.QMenu( self.window() )
         
-        if self._focused_media is not None and self._focused_media.GetDisplayMedia() is not None:
+        if self._HasFocusSingleton():
+            
+            focus_singleton = self._GetFocusSingleton()
             
             # variables
             
@@ -3437,7 +3449,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
-                pretty_info_lines = self._focused_media.GetPrettyInfoLines()
+                pretty_info_lines = focus_singleton.GetPrettyInfoLines()
                 
                 top_line = pretty_info_lines.pop( 0 )
                 
@@ -3565,7 +3577,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        if self._focused_media is not None and self._focused_media.GetDisplayMedia() is not None:
+        if self._HasFocusSingleton():
+            
+            focus_singleton = self._GetFocusSingleton()
             
             if selection_has_inbox:
                 
@@ -3605,7 +3619,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage urls for the selected files.', self._ManageURLs )
             
-            num_notes = self._focused_media.GetDisplayMedia().GetNotesManager().GetNumNotes()
+            num_notes = focus_singleton.GetNotesManager().GetNumNotes()
             
             notes_str = 'notes'
             
@@ -3707,7 +3721,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             duplicates_menu = QW.QMenu( manage_menu )
             
-            focused_hash = self._focused_media.GetDisplayMedia().GetHash()
+            focused_hash = focus_singleton.GetHash()
             
             if HG.client_controller.DBCurrentlyDoingJob():
                 
@@ -3722,7 +3736,7 @@ class MediaPanelThumbnails( MediaPanel ):
             focus_is_in_alternate_group = False
             focus_has_fps = False
             focus_has_potentials = False
-            focus_can_be_searched = self._focused_media.GetDisplayMedia().GetMime() in HC.MIMES_WE_CAN_PHASH
+            focus_can_be_searched = focus_singleton.GetMime() in HC.MIMES_WE_CAN_PHASH
             
             if file_duplicate_info is None:
                 
@@ -4004,7 +4018,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if advanced_mode:
                 
-                hash_id_str = str( self._focused_media.GetDisplayMedia().GetHashId() )
+                hash_id_str = str( focus_singleton.GetHashId() )
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
