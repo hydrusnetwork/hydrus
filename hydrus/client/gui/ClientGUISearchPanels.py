@@ -4,9 +4,7 @@ import typing
 
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
@@ -37,7 +35,6 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         page_key = HydrusData.GenerateKey()
         
         from hydrus.client.gui import ClientGUIACDropdown
-        from hydrus.client.gui import ClientGUIListBoxes
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, synchronised = synchronised, hide_favourites_edit_actions = True )
         

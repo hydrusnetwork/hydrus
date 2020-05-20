@@ -1,8 +1,9 @@
+from qtpy import QtCore as QC
+from qtpy import QtGui as QG
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from qtpy import QtCore as QC
-from qtpy import QtGui as QG
 
 LIKE = 0
 DISLIKE = 1

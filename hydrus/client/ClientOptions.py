@@ -1,3 +1,8 @@
+import os
+import threading
+
+from qtpy import QtGui as QG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDownloading
@@ -9,10 +14,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-import os
-import threading
-from qtpy import QtGui as QG
-from hydrus.client.gui import QtPorting as QP
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -592,7 +593,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        from hydrus.client import ClientMedia
+        from hydrus.client.media import ClientMedia
         
         self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )

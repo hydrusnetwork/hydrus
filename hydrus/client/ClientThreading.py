@@ -1,15 +1,16 @@
-from hydrus.core import HydrusExceptions
+import os
 import queue
 import threading
 import time
 import traceback
+import typing
+
+from hydrus.client.gui import QtPorting as QP
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
-import os
-import typing
-from hydrus.client.gui import QtPorting as QP
 
 class JobKey( object ):
     

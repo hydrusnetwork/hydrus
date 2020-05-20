@@ -8,7 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientSearch
 from hydrus.client import ClientTags

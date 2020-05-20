@@ -99,8 +99,6 @@ class mpvWidget( QW.QWidget ):
         
         self.UpdateConf()
         
-        #self._player.osc = True #Set to enable the mpv UI. Requires that mpv captures mouse/key events, otherwise it won't work.
-        
         self._player.loop = True
         
         # this makes black screen for audio (rather than transparent)
@@ -109,11 +107,8 @@ class mpvWidget( QW.QWidget ):
         # this actually propagates up to the OS-level sound mixer lmao, otherwise defaults to ugly hydrus filename
         self._player.title = 'hydrus mpv player'
         
-        # this is telling ffmpeg to do audio normalization. play with it more and put it in default mpv.conf
-        # it doesn't seem to apply at all for some files--maybe a vp9 issue or something?
-        #self._player.af = 'lavfi=[dynaudnorm=p=0.9]'
-        
-        self.setMouseTracking( True )#Needed to get mouse move events
+        # pass up un-button-pressed mouse moves to parent, which wants to do cursor show/hide
+        self.setMouseTracking( True )
         #self.setFocusPolicy(QC.Qt.StrongFocus)#Needed to get key events
         self._player.input_cursor = False#Disable mpv mouse move/click event capture
         self._player.input_vo_keyboard = False#Disable mpv key event capture, might also need to set input_x11_keyboard
@@ -124,37 +119,7 @@ class mpvWidget( QW.QWidget ):
         
         self._current_seek_to_start_count = 0
         
-        player = self._player
-        
-        def qt_seek_event():
-            
-            if not QP.isValid( self ):
-                
-                return
-                
-            
-            if self._media is not None and self._player.time_pos <= 1.0:
-                
-                self._current_seek_to_start_count += 1
-                
-                if self._stop_for_slideshow:
-                    
-                    self.Pause()
-                    
-                
-                if self._times_to_play_gif != 0 and self._current_seek_to_start_count >= self._times_to_play_gif:
-                    
-                    self.Pause()
-                    
-                
-            
-            
-        
-        @player.event_callback( mpv.MpvEventID.SEEK )
-        def seek_event( event ):
-            
-            QP.CallAfter( qt_seek_event )
-            
+        self._InitialiseMPVCallbacks()
         
         self.destroyed.connect( self._player.terminate )
         
@@ -223,6 +188,41 @@ class mpvWidget( QW.QWidget ):
             
         
         return HG.client_controller.new_options.GetInteger( volume_option_name )
+        
+    
+    def _InitialiseMPVCallbacks( self ):
+        
+        def qt_seek_event():
+            
+            if not QP.isValid( self ):
+                
+                return
+                
+            
+            if self._media is not None and self._player.time_pos <= 1.0:
+                
+                self._current_seek_to_start_count += 1
+                
+                if self._stop_for_slideshow:
+                    
+                    self.Pause()
+                    
+                
+                if self._times_to_play_gif != 0 and self._current_seek_to_start_count >= self._times_to_play_gif:
+                    
+                    self.Pause()
+                    
+                
+            
+            
+        
+        player = self._player
+        
+        @player.event_callback( mpv.MpvEventID.SEEK )
+        def seek_event( event ):
+            
+            QP.CallAfter( qt_seek_event )
+            
         
     
     def GetAnimationBarStatus( self ):

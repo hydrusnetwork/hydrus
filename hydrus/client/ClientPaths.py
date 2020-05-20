@@ -1,9 +1,10 @@
+import os
+import webbrowser
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
-import os
-import webbrowser
 
 def DeletePath( path, always_delete_fully = False ):
     

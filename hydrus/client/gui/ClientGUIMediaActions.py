@@ -1,7 +1,7 @@
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.core import HydrusConstants as HC

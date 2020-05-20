@@ -1,5 +1,7 @@
 import numpy.core.multiarray # important this comes before cv!
+
 import cv2
+
 from hydrus.client import ClientImageHandling
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions

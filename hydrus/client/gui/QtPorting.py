@@ -1769,14 +1769,15 @@ class CheckListBox( QW.QListWidget ):
     def SetCheckedData( self, datas ):
 
         for index in range( self.count() ):
-
-                data = self.item( index ).data( QC.Qt.UserRole )
-
-                check_it = data in datas
-
-                self.Check( index, check_it )
-
-
+            
+            data = self.item( index ).data( QC.Qt.UserRole )
+            
+            check_it = data in datas
+            
+            self.Check( index, check_it )
+            
+        
+    
     def mousePressEvent( self, event ):
 
         if event.button() == QC.Qt.RightButton:
@@ -1786,8 +1787,9 @@ class CheckListBox( QW.QListWidget ):
         else:
 
             QW.QListWidget.mousePressEvent( self, event )
-
-
+            
+        
+    
 class RadioBox( QW.QFrame ):
     
     radioBoxChanged = QC.Signal()
@@ -2305,7 +2307,7 @@ def ListsToTuples( l ): # Since lists are not hashable, we need to (recursively)
 
 class WidgetEventFilter ( QC.QObject ):
     
-    _mouse_tracking_required = { 'EVT_MOTION', 'EVT_MOUSE_EVENTS' }
+    _mouse_tracking_required = { 'EVT_MOUSE_EVENTS' }
 
     _strong_focus_required = { 'EVT_KEY_DOWN' }
 
@@ -2362,8 +2364,6 @@ class WidgetEventFilter ( QC.QObject ):
         
         elif type == QC.QEvent.MouseMove:
             
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOTION', event )
-
             event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
             
         elif type == QC.QEvent.MouseButtonDblClick:
@@ -2487,10 +2487,6 @@ class WidgetEventFilter ( QC.QObject ):
     def EVT_MIDDLE_DOWN( self, callback ):
         
         self._AddCallback( 'EVT_MIDDLE_DOWN', callback )
-
-    def EVT_MOTION( self, callback ):
-        
-        self._AddCallback( 'EVT_MOTION', callback )
 
     def EVT_MOUSE_EVENTS( self, callback ):
         

@@ -1,26 +1,42 @@
+import collections
+import gc
+import hashlib
+import itertools    
+import json
+import os
+import psutil
+import random
+import re
+import sqlite3
+import stat
+import time
+import traceback
+import typing
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+
 from hydrus.client import ClientAPI
-from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
-from hydrus.client import ClientMedia
-from hydrus.client import ClientMediaManagers
-from hydrus.client.networking import ClientNetworkingBandwidth
-from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
-from hydrus.client.networking import ClientNetworkingLogin
-from hydrus.client.networking import ClientNetworkingSessions
 from hydrus.client import ClientOptions
 from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
-import collections
-import gc
-import hashlib
-import itertools    
-import json
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaResultCache
+from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingSessions
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
@@ -31,19 +47,6 @@ from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.client import ClientConstants as CC
-import os
-import psutil
-import random
-import re
-import sqlite3
-import stat
-import time
-import traceback
-import typing
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-from hydrus.client.gui import QtPorting as QP
 
 #
 #                                𝓑𝓵𝓮𝓼𝓼𝓲𝓷𝓰𝓼 𝓸𝓯 𝓽𝓱𝓮 𝓢𝓱𝓻𝓲𝓷𝓮 𝓸𝓷 𝓽𝓱𝓲𝓼 𝓗𝓮𝓵𝓵 𝓒𝓸𝓭𝓮
@@ -4339,6 +4342,12 @@ class DB( HydrusDB.HydrusDB ):
         
         ( namespace, half_complete_searchable_subtag ) = HydrusTags.SplitTag( search_text )
         
+        if half_complete_searchable_subtag == '':
+            
+            return set()
+            
+        
+        table_join = 'tags'
         predicates = []
         parameters = []
         
@@ -4410,7 +4419,20 @@ class DB( HydrusDB.HydrusDB ):
             
             if namespace != '':
                 
-                if '*' in namespace:
+                if namespace == '*':
+                    
+                    if service_key != CC.COMBINED_TAG_SERVICE_KEY:
+                        
+                        service_id = self._GetServiceId( service_key )
+                        
+                        ac_cache_table_name = GenerateCombinedFilesMappingsCacheTableName( service_id )
+                        
+                        table_join = 'tags NATURAL JOIN {}'.format( ac_cache_table_name )
+                        
+                    
+                    predicates.append( '1=1' )
+                    
+                elif '*' in namespace:
                     
                     table_join = 'tags NATURAL JOIN namespaces'
                     
@@ -4421,8 +4443,6 @@ class DB( HydrusDB.HydrusDB ):
                     parameters.append( like_param )
                     
                 else:
-                    
-                    table_join = 'tags'
                     
                     result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
                     
@@ -4438,23 +4458,21 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                if half_complete_searchable_subtag not in ( '*', '' ):
+            
+            if half_complete_searchable_subtag == '*':
+                
+                if service_key != CC.COMBINED_TAG_SERVICE_KEY:
                     
-                    ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_searchable_subtag )
+                    service_id = self._GetServiceId( service_key )
                     
-                    table_join += t_j
-                    predicates.append( pred )
-                    parameters.append( param )
+                    ac_cache_table_name = GenerateCombinedFilesMappingsCacheTableName( service_id )
                     
+                    table_join += ' NATURAL JOIN {}'.format( ac_cache_table_name )
+                    
+                
+                predicates.append( '1=1' )
                 
             else:
-                
-                table_join = 'tags'
-                
-                if ClientSearch.ConvertSubtagToSearchable( half_complete_searchable_subtag ) in ( '', '*' ):
-                    
-                    return set()
-                    
                 
                 ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_searchable_subtag )
                 
@@ -4511,7 +4529,18 @@ class DB( HydrusDB.HydrusDB ):
         return tag_ids
         
     
-    def _GetAutocompletePredicates( self, tag_search_context = None, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, add_namespaceless = False, collapse_siblings = False, job_key = None ):
+    def _GetAutocompletePredicates(
+        self,
+        tag_search_context = None,
+        file_service_key = CC.COMBINED_FILE_SERVICE_KEY,
+        search_text = '',
+        exact_match = False,
+        inclusive = True,
+        add_namespaceless = False,
+        search_namespaces_into_full_tags = False,
+        collapse_siblings = False,
+        job_key = None
+    ):
         
         if tag_search_context is None:
             
@@ -4523,6 +4552,13 @@ class DB( HydrusDB.HydrusDB ):
         include_pending = tag_search_context.include_pending_tags
         
         tag_ids = self._GetAutocompleteTagIds( tag_service_key, search_text, exact_match, job_key = job_key )
+        
+        if ':' not in search_text and search_namespaces_into_full_tags and not exact_match:
+            
+            special_search_text = '{}*:*'.format( search_text )
+            
+            tag_ids.update( self._GetAutocompleteTagIds( tag_service_key, special_search_text, exact_match, job_key = job_key ) )
+            
         
         if job_key is not None and job_key.IsCancelled():
             
@@ -7425,7 +7461,7 @@ class DB( HydrusDB.HydrusDB ):
                     file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
                     
                 
-                missing_media_results.append( ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
+                missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
             
             self._weakref_media_result_cache.AddMediaResults( missing_media_results )
@@ -7438,14 +7474,14 @@ class DB( HydrusDB.HydrusDB ):
         return media_results
         
     
-    def _GetMediaResultFromHash( self, hash ) -> ClientMedia.MediaResult:
+    def _GetMediaResultFromHash( self, hash ) -> ClientMediaResult.MediaResult:
         
         media_results = self._GetMediaResultsFromHashes( [ hash ] )
         
         return media_results[0]
         
     
-    def _GetMediaResultsFromHashes( self, hashes: typing.Iterable[ bytes ], sorted: bytes = False ) -> typing.List[ ClientMedia.MediaResult ]:
+    def _GetMediaResultsFromHashes( self, hashes: typing.Iterable[ bytes ], sorted: bytes = False ) -> typing.List[ ClientMediaResult.MediaResult ]:
         
         query_hash_ids = set( self._GetHashIds( hashes ) )
         
@@ -8979,7 +9015,7 @@ class DB( HydrusDB.HydrusDB ):
         self._subscriptions_cache = {}
         self._service_cache = {}
         
-        self._weakref_media_result_cache = ClientCaches.MediaResultCache()
+        self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
         self._hash_ids_to_hashes_cache = {}
         self._tag_ids_to_tags_cache = {}
         
@@ -9786,7 +9822,7 @@ class DB( HydrusDB.HydrusDB ):
         return phash_id
         
     
-    def _PHashesMaintainTree( self, job_key = None, stop_time = None ):
+    def _PHashesMaintainTree( self, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None ):
         
         time_started = HydrusData.GetNow()
         pub_job_key = False
@@ -9818,7 +9854,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                 
-                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
                 
                 if should_quit or should_stop:
                     
@@ -10084,7 +10120,7 @@ class DB( HydrusDB.HydrusDB ):
         self._PHashesResetSearch( hash_ids )
         
     
-    def _PHashesSearchForPotentialDuplicates( self, search_distance, job_key = None, stop_time = None ):
+    def _PHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None ):
         
         time_started = HydrusData.GetNow()
         pub_job_key = False
@@ -10118,7 +10154,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                 
-                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
                 
                 if should_quit or should_stop:
                     
@@ -11682,7 +11718,7 @@ class DB( HydrusDB.HydrusDB ):
         self._subscriptions_cache = {}
         self._service_cache = {}
         
-        self._weakref_media_result_cache = ClientCaches.MediaResultCache()
+        self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
         self._hash_ids_to_hashes_cache = {}
         self._tag_ids_to_tags_cache = {}
         
@@ -14725,6 +14761,44 @@ class DB( HydrusDB.HydrusDB ):
             
             
         
+        if version == 397:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'newgrounds artist art lookup', 'newgrounds artist games lookup', 'newgrounds artist movies lookup', 'newgrounds artist lookup' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'newgrounds movies gallery page', 'newgrounds games gallery page', 'newgrounds file page', 'newgrounds art', 'newgrounds art gallery page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'gelbooru 0.2.x gallery page parser', 'newgrounds art parser', 'newgrounds file page parser', 'newgrounds gallery page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -15121,15 +15195,6 @@ class DB( HydrusDB.HydrusDB ):
         
         new_options = self._controller.new_options
         
-        maintenance_vacuum_period_days = new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
-        
-        if maintenance_vacuum_period_days is None:
-            
-            return
-            
-        
-        stale_time_delta = maintenance_vacuum_period_days * 86400
-        
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
         
         db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
@@ -15139,6 +15204,15 @@ class DB( HydrusDB.HydrusDB ):
             due_names = db_names
             
         else:
+            
+            maintenance_vacuum_period_days = new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+            
+            if maintenance_vacuum_period_days is None:
+                
+                return
+                
+            
+            stale_time_delta = maintenance_vacuum_period_days * 86400
             
             due_names = [ name for name in db_names if name in self._db_filenames ]
             

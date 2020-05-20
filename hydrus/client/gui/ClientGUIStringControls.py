@@ -1,9 +1,9 @@
+import os
 import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUICommon
@@ -13,10 +13,11 @@ from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.core import HydrusText
 
 class StringConverterButton( ClientGUICommon.BetterButton ):
     
-    stringConverterUpdate = QC.Signal()
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, string_converter: ClientParsing.StringConverter ):
         
@@ -43,35 +44,44 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
                 
                 self._UpdateLabel()
                 
+                self.valueChanged.emit()
+                
             
-        self.stringConverterUpdate.emit()
         
     
     def _UpdateLabel( self ):
         
         label = self._string_converter.ToString()
         
-        self.setText( label )
+        self.setToolTip( label )
+        
+        elided_label = HydrusText.ElideText( label, 64 )
+        
+        self.setText( elided_label )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientParsing.StringConverter:
         
         return self._string_converter
         
     
-    def SetExampleString( self, example_string ):
+    def SetExampleString( self, example_string: str ):
         
         self._example_string_override = example_string
         
     
-    def SetValue( self, string_converter ):
+    def SetValue( self, string_converter: ClientParsing.StringConverter ):
         
         self._string_converter = string_converter
         
         self._UpdateLabel()
         
+        self.valueChanged.emit()
+        
     
 class StringMatchButton( ClientGUICommon.BetterButton ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, string_match: ClientParsing.StringMatch ):
         
@@ -106,14 +116,75 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         self.setText( label )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientParsing.StringMatch:
         
         return self._string_match
         
     
-    def SetValue( self, string_match ):
+    def SetValue( self, string_match: ClientParsing.StringMatch ):
         
         self._string_match = string_match
+        
+        self._UpdateLabel()
+        
+    
+class StringProcessorButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, string_processor: ClientParsing.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string processor', self._Edit )
+        
+        self._string_processor = string_processor
+        self._test_data_callable = test_data_callable
+        
+        self._UpdateLabel()
+        
+    
+    def _Edit( self ):
+        
+        test_data = self._test_data_callable()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit string processor', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = ClientGUIStringPanels.EditStringProcessorPanel( dlg, self._string_processor, test_data )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                self._string_processor = panel.GetValue()
+                
+                self._UpdateLabel()
+                
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        statements = self._string_processor.GetProcessingStrings()
+        
+        if len( statements ) == 0:
+            
+            label = self._string_processor.ToString()
+            
+        else:
+            
+            statements = [ HydrusText.ElideText( statement, 64 ) for statement in statements ]
+            
+            label = os.linesep.join( statements )
+            
+        
+        self.setText( label )
+        
+    
+    def GetValue( self ) -> ClientParsing.StringProcessor:
+        
+        return self._string_processor
+        
+    
+    def SetValue( self, string_processor: ClientParsing.StringProcessor ):
+        
+        self._string_processor = string_processor
         
         self._UpdateLabel()
         

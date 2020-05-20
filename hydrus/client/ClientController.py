@@ -1,10 +1,17 @@
+import gc
+import hashlib
 import os
+import psutil
+import signal
 import sys
+import threading
+import time
+import traceback
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-from hydrus.client.gui import QtPorting as QP
-   
+
 from hydrus.client import ClientAPI
 from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
@@ -13,24 +20,23 @@ from hydrus.client import ClientDaemons
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDownloading
 from hydrus.client import ClientFiles
+from hydrus.client import ClientManagers
+from hydrus.client import ClientOptions
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUI
 from hydrus.client.gui import ClientGUIDialogs
-from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImportSubscriptions
-from hydrus.client import ClientManagers
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.client import ClientOptions
-from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
-from hydrus.client import ClientThreading
-import hashlib
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusController
 from hydrus.core import HydrusData
@@ -41,12 +47,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusVideoHandling
-import gc
-import psutil
-import signal
-import threading
-import time
-import traceback
 
 if not HG.twisted_is_broke:
     
@@ -423,6 +423,8 @@ class Controller( HydrusController.HydrusController ):
             self.pub( 'splash_set_status_text', 'client already running' )
             
             def qt_code():
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
                 
                 message = 'It looks like another instance of this client is already running, so this instance cannot start.'
                 message += os.linesep * 2
@@ -1140,7 +1142,7 @@ class Controller( HydrusController.HydrusController ):
             tree_stop_time = HydrusData.GetNow() + 30
             
         
-        self.WriteSynchronous( 'maintain_similar_files_tree', stop_time = tree_stop_time )
+        self.WriteSynchronous( 'maintain_similar_files_tree', maintenance_mode = maintenance_mode, stop_time = tree_stop_time )
         
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
             
@@ -1158,7 +1160,7 @@ class Controller( HydrusController.HydrusController ):
                 search_stop_time = HydrusData.GetNow() + 60
                 
             
-            self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, stop_time = search_stop_time )
+            self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = maintenance_mode, stop_time = search_stop_time )
             
         
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):

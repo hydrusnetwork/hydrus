@@ -1,9 +1,11 @@
-from hydrus.client import ClientConstants as CC
 import collections
+import threading
+import typing
+
+from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-import threading
 
 def ConvertTagSliceToString( tag_slice ):
     
@@ -229,11 +231,159 @@ TAG_DISPLAY_SIBLINGS_AND_PARENTS = 1
 TAG_DISPLAY_SINGLE_MEDIA = 2
 TAG_DISPLAY_SELECTION_LIST = 3
 
+class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS
+    SERIALISABLE_NAME = 'Tag Autocomplete Options'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, service_key: typing.Optional[ bytes ] = None ):
+        
+        if service_key is None:
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._service_key = service_key
+        
+        self._write_autocomplete_tag_domain = self._service_key
+        
+        self._override_write_autocomplete_file_domain = True
+        
+        if service_key == CC.DEFAULT_LOCAL_TAG_SERVICE_KEY:
+            
+            self._write_autocomplete_file_domain = CC.LOCAL_FILE_SERVICE_KEY
+            
+        else:
+            
+            self._write_autocomplete_file_domain = CC.COMBINED_FILE_SERVICE_KEY
+            
+        
+        self._search_namespaces_into_full_tags = False
+        self._namespace_fetch_all_allowed = False
+        self._fetch_all_allowed = False
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_service_key = self._service_key.hex()
+        
+        serialisable_write_autocomplete_tag_domain = self._write_autocomplete_tag_domain.hex()
+        serialisable_write_autocomplete_file_domain = self._write_autocomplete_file_domain.hex()
+        
+        serialisable_info = [
+            serialisable_service_key,
+            serialisable_write_autocomplete_tag_domain,
+            self._override_write_autocomplete_file_domain,
+            serialisable_write_autocomplete_file_domain,
+            self._search_namespaces_into_full_tags,
+            self._namespace_fetch_all_allowed,
+            self._fetch_all_allowed
+        ]
+        
+        return serialisable_info
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        [
+            serialisable_service_key,
+            serialisable_write_autocomplete_tag_domain,
+            self._override_write_autocomplete_file_domain,
+            serialisable_write_autocomplete_file_domain,
+            self._search_namespaces_into_full_tags,
+            self._namespace_fetch_all_allowed,
+            self._fetch_all_allowed
+        ] = serialisable_info
+        
+        self._service_key = bytes.fromhex( serialisable_service_key )
+        self._write_autocomplete_tag_domain = bytes.fromhex( serialisable_write_autocomplete_tag_domain )
+        self._write_autocomplete_file_domain = bytes.fromhex( serialisable_write_autocomplete_file_domain )
+        
+    
+    def FetchAllAllowed( self ):
+        
+        return self._fetch_all_allowed
+        
+    
+    def GetServiceKey( self ):
+        
+        return self._service_key
+        
+    
+    def GetWriteAutocompleteFileDomain( self ):
+        
+        return self._write_autocomplete_file_domain
+        
+    
+    def GetWriteAutocompleteServiceKeys( self, file_service_key: bytes ):
+        
+        tag_service_key = self._service_key
+        
+        if self._service_key != CC.COMBINED_TAG_SERVICE_KEY:
+            
+            if self._override_write_autocomplete_file_domain:
+                
+                file_service_key = self._write_autocomplete_file_domain
+                
+            
+            tag_service_key = self._write_autocomplete_tag_domain
+            
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: # ruh roh
+            
+            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            
+        
+        return ( file_service_key, tag_service_key )
+        
+    
+    def GetWriteAutocompleteTagDomain( self ):
+        
+        return self._write_autocomplete_tag_domain
+        
+    
+    def NamespaceFetchAllAllowed( self ):
+        
+        return self._namespace_fetch_all_allowed
+        
+    
+    def OverridesWriteAutocompleteFileDomain( self ):
+        
+        return self._override_write_autocomplete_file_domain
+        
+    
+    def SearchNamespacesIntoFullTags( self ):
+        
+        return self._search_namespaces_into_full_tags
+        
+    
+    def SetTuple( self,
+        write_autocomplete_tag_domain: bytes,
+        override_write_autocomplete_file_domain: bool,
+        write_autocomplete_file_domain: bytes,
+        search_namespaces_into_full_tags: bool,
+        namespace_fetch_all_allowed: bool,
+        fetch_all_allowed: bool
+    ):
+        
+        self._write_autocomplete_tag_domain = write_autocomplete_tag_domain
+        self._override_write_autocomplete_file_domain = override_write_autocomplete_file_domain
+        self._write_autocomplete_file_domain = write_autocomplete_file_domain
+        self._search_namespaces_into_full_tags = search_namespaces_into_full_tags
+        self._namespace_fetch_all_allowed = namespace_fetch_all_allowed
+        self._fetch_all_allowed = fetch_all_allowed
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS ] = TagAutocompleteOptions
+
 class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER
     SERIALISABLE_NAME = 'Tag Display Manager'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -242,6 +392,8 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( TagFilter )
         
         self._tag_display_types_to_service_keys_to_tag_filters = collections.defaultdict( service_keys_to_tag_filters_defaultdict )
+        
+        self._tag_service_keys_to_tag_autocomplete_options = dict()
         
         self._lock = threading.Lock()
         self._dirty = False
@@ -258,12 +410,24 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             serialisable_tag_display_types_to_service_keys_to_tag_filters.append( ( tag_display_type, serialisable_service_keys_to_tag_filters ) )
             
         
-        return serialisable_tag_display_types_to_service_keys_to_tag_filters
+        serialisable_tag_autocomplete_options = HydrusSerialisable.SerialisableList( self._tag_service_keys_to_tag_autocomplete_options.values() ).GetSerialisableTuple()
+        
+        serialisable_info = [
+            serialisable_tag_display_types_to_service_keys_to_tag_filters,
+            serialisable_tag_autocomplete_options
+        ]
+        
+        return serialisable_info
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        for ( tag_display_type, serialisable_service_keys_to_tag_filters ) in serialisable_info:
+        [
+            serialisable_tag_display_types_to_service_keys_to_tag_filters,
+            serialisable_tag_autocomplete_options
+        ] = serialisable_info
+        
+        for ( tag_display_type, serialisable_service_keys_to_tag_filters ) in serialisable_tag_display_types_to_service_keys_to_tag_filters:
             
             for ( serialisable_service_key, serialisable_tag_filter ) in serialisable_service_keys_to_tag_filters:
                 
@@ -272,6 +436,25 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
                 
                 self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ] = tag_filter
                 
+            
+        
+        self._tag_service_keys_to_tag_autocomplete_options = { tag_autocomplete_options.GetServiceKey() : tag_autocomplete_options for tag_autocomplete_options in HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_autocomplete_options ) }
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            serialisable_tag_display_types_to_service_keys_to_tag_filters = old_serialisable_info
+            
+            tag_autocomplete_options_list = HydrusSerialisable.SerialisableList()
+            
+            new_serialisable_info = [
+                serialisable_tag_display_types_to_service_keys_to_tag_filters,
+                tag_autocomplete_options_list.GetSerialisableTuple()
+            ]
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -331,6 +514,21 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetTagAutocompleteOptions( self, service_key: bytes ):
+        
+        with self._lock:
+            
+            if service_key not in self._tag_service_keys_to_tag_autocomplete_options:
+                
+                tag_autocomplete_options = TagAutocompleteOptions( service_key )
+                
+                self._tag_service_keys_to_tag_autocomplete_options[ service_key ] = tag_autocomplete_options
+                
+            
+            return self._tag_service_keys_to_tag_autocomplete_options[ service_key ]
+            
+        
+    
     def GetTagFilter( self, tag_display_type, service_key ):
         
         with self._lock:
@@ -356,6 +554,14 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dirty
+            
+        
+    
+    def SetTagAutocompleteOptions( self, tag_autocomplete_options: TagAutocompleteOptions ):
+        
+        with self._lock:
+            
+            self._tag_service_keys_to_tag_autocomplete_options[ tag_autocomplete_options.GetServiceKey() ] = tag_autocomplete_options
             
         
     
@@ -387,6 +593,11 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER ] = TagDisplayManager
+
+TAG_DISPLAY_STORAGE = 0
+TAG_DISPLAY_SIBLINGS_AND_PARENTS = 1
+TAG_DISPLAY_SINGLE_MEDIA = 2
+TAG_DISPLAY_SELECTION_LIST = 3
 
 class TagFilter( HydrusSerialisable.SerialisableBase ):
     

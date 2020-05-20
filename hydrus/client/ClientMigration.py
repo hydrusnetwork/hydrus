@@ -1,10 +1,11 @@
+import os
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTagArchive
-import os
 
 pair_types_to_content_types = {}
 

@@ -33,7 +33,7 @@ from hydrus.core import HydrusVideoHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientExporting
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
@@ -134,7 +134,7 @@ def THREADUploadPending( service_key ):
                 
                 if service_type in HC.REPOSITORIES:
                     
-                    if isinstance( result, ClientMedia.MediaResult ):
+                    if isinstance( result, ClientMediaResult.MediaResult ):
                         
                         media_result = result
                         
@@ -173,7 +173,7 @@ def THREADUploadPending( service_key ):
                     
                 elif service_type == HC.IPFS:
                     
-                    if isinstance( result, ClientMedia.MediaResult ):
+                    if isinstance( result, ClientMediaResult.MediaResult ):
                         
                         media_result = result
                         
@@ -4564,7 +4564,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( menu, 'manage tag display', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage tag display and search', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
             
@@ -6213,15 +6213,10 @@ class FrameSplashPanel( QW.QWidget ):
         
         self.setLayout( vbox )
         
-        self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_MOTION( self.EventDrag )
-        self._widget_event_filter.EVT_LEFT_DOWN( self.EventDragBegin )
-        self._widget_event_filter.EVT_LEFT_UP( self.EventDragEnd )
-        
     
-    def EventDrag( self, event ):
+    def mouseMoveEvent( self, event ):
         
-        if event.type() == QC.QEvent.MouseMove and ( event.buttons() & QC.Qt.LeftButton ) and self._drag_last_pos is not None:
+        if ( event.buttons() & QC.Qt.LeftButton ) and self._drag_last_pos is not None:
             
             mouse_pos = QG.QCursor.pos()
             
@@ -6233,20 +6228,40 @@ class FrameSplashPanel( QW.QWidget ):
             
             self._drag_last_pos = QC.QPoint( mouse_pos )
             
+            event.accept()
+            
+            return
+            
+        
+        QW.QWidget.mouseMoveEvent( self, event )
         
     
-    def EventDragBegin( self, event ):
+    def mousePressEvent( self, event ):
         
-        self._drag_last_pos = QG.QCursor.pos()
+        if event.button() == QC.Qt.LeftButton:
+            
+            self._drag_last_pos = QG.QCursor.pos()
+            
+            event.accept()
+            
+            return
+            
         
-        return True # was: event.ignore()
+        QW.QWidget.mousePressEvent( self, event )
         
     
-    def EventDragEnd( self, event ):
+    def mouseReleaseEvent( self, event ):
         
-        self._drag_last_pos = None
+        if event.button() == QC.Qt.LeftButton:
+            
+            self._drag_last_pos = None
+            
+            event.accept()
+            
+            return
+            
         
-        return True # was: event.ignore()
+        QW.QWidget.mouseReleaseEvent( self, event )
         
     
     def SetDirty( self ):

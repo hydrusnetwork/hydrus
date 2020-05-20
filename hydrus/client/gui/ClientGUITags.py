@@ -16,7 +16,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
@@ -35,6 +35,129 @@ from hydrus.client.gui import ClientGUITagSuggestions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 
+class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, tag_autocomplete_options: ClientTags.TagAutocompleteOptions ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_tag_autocomplete_options = tag_autocomplete_options
+        services_manager = HG.client_controller.services_manager
+        
+        all_real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+        all_real_file_service_keys = services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.FILE_REPOSITORY ) )
+        
+        #
+        
+        self._write_autocomplete_tag_domain = ClientGUICommon.BetterChoice( self )
+        self._write_autocomplete_tag_domain.setToolTip( 'A manage tags autocomplete will start with this domain. Typically only useful with this service or "all known tags".' )
+        
+        self._write_autocomplete_tag_domain.addItem( services_manager.GetName( CC.COMBINED_TAG_SERVICE_KEY ), CC.COMBINED_TAG_SERVICE_KEY )
+        
+        for service_key in all_real_tag_service_keys:
+            
+            self._write_autocomplete_tag_domain.addItem( services_manager.GetName( service_key ), service_key )
+            
+        
+        self._override_write_autocomplete_file_domain = QW.QCheckBox( self )
+        self._override_write_autocomplete_file_domain.setToolTip( 'If set, a manage tags dialog autocomplete will start with a different file domain than the one that launched the dialog.' )
+        
+        self._write_autocomplete_file_domain = ClientGUICommon.BetterChoice( self )
+        self._write_autocomplete_file_domain.setToolTip( 'A manage tags autocomplete will start with this domain. Normally only useful for "all known files" or "my files".' )
+        
+        self._write_autocomplete_file_domain.addItem( services_manager.GetName( CC.COMBINED_FILE_SERVICE_KEY ), CC.COMBINED_FILE_SERVICE_KEY )
+        
+        for service_key in all_real_file_service_keys:
+            
+            self._write_autocomplete_file_domain.addItem( services_manager.GetName( service_key ), service_key )
+            
+        
+        self._search_namespaces_into_full_tags = QW.QCheckBox( self )
+        self._search_namespaces_into_full_tags.setToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metrod". On large tag services, these searches are extremely slow.' )
+        
+        self._namespace_fetch_all_allowed = QW.QCheckBox( self )
+        self._namespace_fetch_all_allowed.setToolTip( 'If on, a search for "series:*" will return all "series:" results. On large tag services, these searches are extremely slow.' )
+        
+        self._fetch_all_allowed = QW.QCheckBox( self )
+        self._fetch_all_allowed.setToolTip( 'If on, a search for "*" will return all tags. On large tag services, these searches are extremely slow.' )
+        
+        #
+        
+        self._write_autocomplete_tag_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteTagDomain() )
+        self._override_write_autocomplete_file_domain.setChecked( tag_autocomplete_options.OverridesWriteAutocompleteFileDomain() )
+        self._write_autocomplete_file_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteFileDomain() )
+        self._search_namespaces_into_full_tags.setChecked( tag_autocomplete_options.SearchNamespacesIntoFullTags() )
+        self._namespace_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceFetchAllAllowed() )
+        self._fetch_all_allowed.setChecked( tag_autocomplete_options.FetchAllAllowed() )
+        
+        #
+        
+        rows = []
+        
+        if tag_autocomplete_options.GetServiceKey() == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._write_autocomplete_tag_domain.setVisible( False )
+            self._override_write_autocomplete_file_domain.setVisible( False )
+            self._write_autocomplete_file_domain.setVisible( False )
+            
+        else:
+            
+            rows.append( ( 'Set manage tags default autocomplete file domain: ', self._override_write_autocomplete_file_domain ) )
+            rows.append( ( 'Manage tags default autocomplete file domain: ', self._write_autocomplete_file_domain ) )
+            rows.append( ( 'Manage tags default autocomplete tag domain: ', self._write_autocomplete_tag_domain ) )
+            
+        
+        rows.append( ( 'Search namespaces into full tags: ', self._search_namespaces_into_full_tags ) )
+        rows.append( ( 'Search "namespace:*": ', self._namespace_fetch_all_allowed ) )
+        rows.append( ( 'Search "*": ', self._fetch_all_allowed ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'The settings that permit searching namespaces and expansive "*" queries can be very expensive on a large client and may cause problems!'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        self._UpdateControls()
+        
+        self._override_write_autocomplete_file_domain.stateChanged.connect( self._UpdateControls )
+        
+    
+    def _UpdateControls( self ):
+        
+        self._write_autocomplete_file_domain.setEnabled( self._override_write_autocomplete_file_domain.isChecked() )
+        
+    
+    def GetValue( self ):
+        
+        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( self._original_tag_autocomplete_options.GetServiceKey() )
+        
+        write_autocomplete_tag_domain = self._write_autocomplete_tag_domain.GetValue()
+        override_write_autocomplete_file_domain = self._override_write_autocomplete_file_domain.isChecked()
+        write_autocomplete_file_domain = self._write_autocomplete_file_domain.GetValue()
+        search_namespaces_into_full_tags = self._search_namespaces_into_full_tags.isChecked()
+        namespace_fetch_all_allowed = self._namespace_fetch_all_allowed.isChecked()
+        fetch_all_allowed = self._fetch_all_allowed.isChecked()
+        
+        tag_autocomplete_options.SetTuple(
+            write_autocomplete_tag_domain,
+            override_write_autocomplete_file_domain,
+            write_autocomplete_file_domain,
+            search_namespaces_into_full_tags,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        return tag_autocomplete_options
+        
+    
 class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, tag_display_manager ):
@@ -85,12 +208,14 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for page in self._tag_services.GetPages():
             
-            ( service_key, tag_display_types_to_tag_filters ) = page.GetValue()
+            ( service_key, tag_display_types_to_tag_filters, tag_autocomplete_options ) = page.GetValue()
             
             for ( tag_display_type, tag_filter ) in tag_display_types_to_tag_filters.items():
                 
                 tag_display_manager.SetTagFilter( tag_display_type, service_key, tag_filter )
                 
+            
+            tag_display_manager.SetTagAutocompleteOptions( tag_autocomplete_options )
             
         
         return tag_display_manager
@@ -98,24 +223,34 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
     class _Panel( QW.QWidget ):
         
-        def __init__( self, parent, tag_display_manager, service_key ):
+        def __init__( self, parent: QW.QWidget, tag_display_manager: ClientTags.TagDisplayManager, service_key: bytes ):
             
             QW.QWidget.__init__( self, parent )
             
             single_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key )
             selection_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, service_key )
             
+            tag_autocomplete_options = tag_display_manager.GetTagAutocompleteOptions( service_key )
+            
             self._service_key = service_key
             
             #
             
+            self._display_box = ClientGUICommon.StaticBox( self, 'display' )
+            
             message = 'This filters which tags will show on \'single\' file views such as the media viewer and thumbnail banners.'
             
-            self._single_tag_filter_button = TagFilterButton( self, message, single_tag_filter, label_prefix = 'tags shown: ' )
+            self._single_tag_filter_button = TagFilterButton( self._display_box, message, single_tag_filter, label_prefix = 'tags shown: ' )
             
             message = 'This filters which tags will show on \'selection\' file views such as the \'selection tags\' list on regular search pages.'
             
-            self._selection_tag_filter_button = TagFilterButton( self, message, selection_tag_filter, label_prefix = 'tags shown: ' )
+            self._selection_tag_filter_button = TagFilterButton( self._display_box, message, selection_tag_filter, label_prefix = 'tags shown: ' )
+            
+            #
+            
+            self._tao_box = ClientGUICommon.StaticBox( self, 'autocomplete' )
+            
+            self._tag_autocomplete_options_panel = EditTagAutocompleteOptionsPanel( self._tao_box, tag_autocomplete_options )
             
             #
             
@@ -124,18 +259,29 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( 'Tag filter for single file views: ', self._single_tag_filter_button ) )
             rows.append( ( 'Tag filter for multiple file views: ', self._selection_tag_filter_button ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            gridbox = ClientGUICommon.WrapInGrid( self._display_box, rows )
+            
+            self._display_box.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            self._tao_box.Add( self._tag_autocomplete_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
             
             vbox = QP.VBoxLayout()
             
             if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
-                message = 'These filters apply to all tag services.'
+                message = 'These filters apply to all tag services, or to where the tag domain is "all known tags".'
                 
                 QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            QP.AddToLayout( vbox, gridbox )
+            QP.AddToLayout( vbox, self._display_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._tao_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -147,7 +293,9 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             tag_display_types_to_tag_filters[ ClientTags.TAG_DISPLAY_SINGLE_MEDIA ] = self._single_tag_filter_button.GetValue()
             tag_display_types_to_tag_filters[ ClientTags.TAG_DISPLAY_SELECTION_LIST ] = self._selection_tag_filter_button.GetValue()
             
-            return ( self._service_key, tag_display_types_to_tag_filters )
+            tag_autocomplete_options = self._tag_autocomplete_options_panel.GetValue()
+            
+            return ( self._service_key, tag_display_types_to_tag_filters, tag_autocomplete_options )
             
         
     

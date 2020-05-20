@@ -1580,7 +1580,9 @@ class NoneableTextCtrl( QW.QWidget ):
     
 class OnOffButton( QW.QPushButton ):
     
-    def __init__( self, parent, page_key, topic, on_label, off_label = None, start_on = True ):
+    valueChanged = QC.Signal( bool )
+    
+    def __init__( self, parent, on_label, off_label = None, start_on = True ):
         
         if start_on: label = on_label
         else: label = off_label
@@ -1590,8 +1592,6 @@ class OnOffButton( QW.QPushButton ):
         
         self.setObjectName( 'HydrusOnOffButton' )
         
-        self._page_key = page_key
-        self._topic = topic
         self._on_label = on_label
         
         if off_label is None:
@@ -1621,7 +1621,7 @@ class OnOffButton( QW.QPushButton ):
             self.setText( self._off_label )
             
         
-        HG.client_controller.pub( self._topic, self._page_key, value )
+        self.valueChanged.emit( value )
         
         self.style().polish( self )
         

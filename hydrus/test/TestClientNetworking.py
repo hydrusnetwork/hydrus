@@ -298,11 +298,11 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         converted_referral_url = good_url.replace( 'testbooru.cx', 'replace.com' )
         
-        transformations = []
+        conversions = []
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( 'testbooru.cx', 'replace.com' ) ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_REGEX_SUB, ( 'testbooru.cx', 'replace.com' ) ) )
         
-        referral_url_converter = ClientParsing.StringConverter( transformations, good_url )
+        referral_url_converter = ClientParsing.StringConverter( conversions, good_url )
         
         send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED
         

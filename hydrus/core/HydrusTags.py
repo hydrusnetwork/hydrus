@@ -1,14 +1,8 @@
 import collections
 from hydrus.core import HydrusConstants as HC
-import itertools
 import os
-import threading
-import time
-import traceback
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 import re
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
 def CensorshipMatch( tag, censorships ):

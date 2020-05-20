@@ -1,13 +1,20 @@
+import collections
+import os
+import threading
+import time
+import traceback
+import typing
+import urllib.parse
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientImageHandling
-from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportOptions
-from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientTags
-import collections
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -17,12 +24,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-import os
-import threading
-import time
-import traceback
-import typing
-import urllib.parse
 
 class FileImportJob( object ):
     

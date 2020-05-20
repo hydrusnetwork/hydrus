@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -39,7 +40,6 @@ from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 
-from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import QtPorting as QP
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -516,7 +516,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, formula, test_context ):
+    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormulaCompound, test_data: ClientParsing.ParsingTestData ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -531,6 +531,12 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        
+        #
+        
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
         
         #
         
@@ -552,17 +558,11 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._sub_phrase = QW.QLineEdit( edit_panel )
         
-        ( formulae, sub_phrase, string_match, string_converter ) = formula.ToTuple()
+        formulae = formula.GetFormulae()
+        sub_phrase = formula.GetSubstitutionPhrase()
+        string_processor = formula.GetStringProcessor()
         
-        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
-        
-        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
-        
-        #
-        
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -607,9 +607,8 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -636,7 +635,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestContextForChild )
+            panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestDataForChild )
             
             dlg.SetPanel( panel )
             
@@ -681,7 +680,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestContextForChild )
+                panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestDataForChild )
                 
                 dlg.SetPanel( panel )
                 
@@ -704,11 +703,9 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sub_phrase = self._sub_phrase.text()
         
-        string_match = self._string_match_button.GetValue()
+        string_processor = self._string_processor_button.GetValue()
         
-        string_converter = self._string_converter_button.GetValue()
-        
-        formula = ClientParsing.ParseFormulaCompound( formulae, sub_phrase, string_match, string_converter )
+        formula = ClientParsing.ParseFormulaCompound( formulae, sub_phrase, string_processor )
         
         return formula
         
@@ -751,7 +748,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, formula, test_context ):
+    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormulaContextVariable, test_data: ClientParsing.ParsingTestData ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -769,21 +766,20 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
+        
+        #
+        
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
         self._variable_name = QW.QLineEdit( edit_panel )
         
-        ( variable_name, string_match, string_converter ) = formula.ToTuple()
+        variable_name = formula.GetVariableName()
+        string_processor = formula.GetStringProcessor()
         
-        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
-        
-        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
-        
-        #
-        
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -798,9 +794,8 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -825,23 +820,21 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         variable_name = self._variable_name.text()
         
-        string_match = self._string_match_button.GetValue()
+        string_processor = self._string_processor_button.GetValue()
         
-        string_converter = self._string_converter_button.GetValue()
-        
-        formula = ClientParsing.ParseFormulaContextVariable( variable_name, string_match, string_converter )
+        formula = ClientParsing.ParseFormulaContextVariable( variable_name, string_processor )
         
         return formula
         
     
 class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, formula, test_context_callable ):
+    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormula, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._current_formula = formula
-        self._test_context_callable = test_context_callable
+        self._test_data_callable = test_data_callable
         
         #
         
@@ -969,13 +962,13 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             panel_class = EditContextVariableFormulaPanel
             
         
-        test_context = self._test_context_callable()
+        test_data = self._test_data_callable()
         
         dlg_title = 'edit formula'
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = panel_class( dlg, self._current_formula, test_context )
+            panel = panel_class( dlg, self._current_formula, test_data )
             
             dlg.SetPanel( panel )
             
@@ -1201,7 +1194,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, formula, test_context ):
+    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormulaHTML, test_data: ClientParsing.ParsingTestData ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1216,6 +1209,12 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        
+        #
+        
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
         
         #
         
@@ -1246,17 +1245,12 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._attribute_to_fetch = QW.QLineEdit( edit_panel )
         
-        ( tag_rules, content_to_fetch, attribute_to_fetch, string_match, string_converter ) = formula.ToTuple()
+        tag_rules = formula.GetTagRules()
+        content_to_fetch = formula.GetContentToFetch()
+        attribute_to_fetch = formula.GetAttributeToFetch()
+        string_processor = formula.GetStringProcessor()
         
-        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
-        
-        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
-        
-        #
-        
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -1306,9 +1300,8 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1419,11 +1412,9 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             raise HydrusExceptions.VetoException( 'Please enter an attribute to fetch!' )
             
         
-        string_match = self._string_match_button.GetValue()
+        string_processor = self._string_processor_button.GetValue()
         
-        string_converter = self._string_converter_button.GetValue()
-        
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_to_fetch, attribute_to_fetch, string_match, string_converter )
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_to_fetch, attribute_to_fetch, string_processor )
         
         return formula
         
@@ -1466,7 +1457,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, rule ):
+    def __init__( self, parent: QW.QWidget, rule: ClientParsing.ParseRuleHTML ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1476,7 +1467,9 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
         self._parse_rule_type.addItem( 'indexed list item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
         
-        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
+        string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' )
+        
+        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
         
         self._index = QP.MakeQSpinBox( self, min=0, max=65535 )
         
@@ -1557,7 +1550,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, formula, test_context ):
+    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormulaJSON, test_data: ClientParsing.ParsingTestData ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1572,6 +1565,12 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        
+        #
+        
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
         
         #
         
@@ -1597,17 +1596,11 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_to_fetch.addItem( 'dictionary keys', ClientParsing.JSON_CONTENT_DICT_KEYS )
         self._content_to_fetch.addItem( 'json', ClientParsing.JSON_CONTENT_JSON )
         
-        ( parse_rules, content_to_fetch, string_match, string_converter ) = formula.ToTuple()
+        parse_rules = formula.GetParseRules()
+        content_to_fetch = formula.GetContentToFetch()
+        string_processor = formula.GetStringProcessor()
         
-        self._string_match_button = ClientGUIStringControls.StringMatchButton( edit_panel, string_match )
-        
-        self._string_converter_button = ClientGUIStringControls.StringConverterButton( edit_panel, string_converter )
-        
-        #
-        
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -1652,9 +1645,8 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1746,11 +1738,9 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
-        string_match = self._string_match_button.GetValue()
+        string_processor = self._string_processor_button.GetValue()
         
-        string_converter = self._string_converter_button.GetValue()
-        
-        formula = ClientParsing.ParseFormulaJSON( parse_rules, content_to_fetch, string_match, string_converter )
+        formula = ClientParsing.ParseFormulaJSON( parse_rules, content_to_fetch, string_processor )
         
         return formula
         
@@ -1793,7 +1783,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, content_parser, test_context, permitted_content_types ):
+    def __init__( self, parent: QW.QWidget, content_parser: ClientParsing.ContentParser, test_data: ClientParsing.ParsingTestData, permitted_content_types ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1813,7 +1803,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        self._test_panel = TestPanel( test_panel, self.GetValue, test_data = test_data )
         
         #
         
@@ -1881,7 +1871,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._veto_panel = QW.QWidget( self._content_panel )
         
         self._veto_if_matches_found = QW.QCheckBox( self._veto_panel )
-        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self._veto_panel )
+        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self._veto_panel, ClientParsing.StringMatch() )
         
         self._temp_variable_panel = QW.QWidget( self._content_panel )
         
@@ -1902,7 +1892,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( name, content_type, formula, sort_type, sort_asc, additional_info ) = content_parser.ToTuple()
         
-        self._formula = EditFormulaPanel( self._edit_panel, formula, self._test_panel.GetTestContextForChild )
+        self._formula = EditFormulaPanel( self._edit_panel, formula, self._test_panel.GetTestDataForChild )
         
         #
         
@@ -2212,11 +2202,11 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, test_context_callable, permitted_content_types ):
+    def __init__( self, parent: QW.QWidget, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ], permitted_content_types ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, 'content parsers' )
         
-        self._test_context_callable = test_context_callable
+        self._test_data_callable = test_data_callable
         self._permitted_content_types = permitted_content_types
         
         content_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
@@ -2242,11 +2232,9 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         dlg_title = 'edit content node'
         
-        test_context = self._test_context_callable()
+        test_data = self._test_data_callable()
         
-        ( example_parsing_context, example_data ) = test_context
-        
-        if len( example_data ) > 0 and HydrusText.LooksLikeJSON( example_data ):
+        if test_data.LooksLikeJSON():
             
             formula = ClientParsing.ParseFormulaJSON()
             
@@ -2259,7 +2247,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
-            panel = EditContentParserPanel( dlg_edit, content_parser, test_context, self._permitted_content_types )
+            panel = EditContentParserPanel( dlg_edit, content_parser, test_data, self._permitted_content_types )
             
             dlg_edit.SetPanel( panel )
             
@@ -2305,9 +2293,9 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                test_context = self._test_context_callable()
+                test_data = self._test_data_callable()
                 
-                panel = EditContentParserPanel( dlg, content_parser, test_context, self._permitted_content_types )
+                panel = EditContentParserPanel( dlg, content_parser, test_data, self._permitted_content_types )
                 
                 dlg.SetPanel( panel )
                 
@@ -2486,7 +2474,7 @@ class EditNodes( QW.QWidget ):
             
             if isinstance( empty_node, ClientParsing.ContentParser ):
                 
-                panel = panel_class( dlg_edit, empty_node, ( {}, example_data ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
+                panel = panel_class( dlg_edit, empty_node, ClientParsing.ParsingTestData( {}, ( example_data, ) ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
                 
             else:
                 
@@ -2551,7 +2539,7 @@ class EditNodes( QW.QWidget ):
                 
                 if isinstance( node, ClientParsing.ContentParser ):
                     
-                    panel = EditContentParserPanel( dlg, node, ( {}, example_data ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
+                    panel = EditContentParserPanel( dlg, node, ClientParsing.ParsingTestData( {}, ( example_data, ) ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
                     
                 elif isinstance( node, ClientParsing.ParseNodeContentLink ):
                     
@@ -2631,9 +2619,7 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = QW.QLineEdit( edit_panel )
         
-        get_example_parsing_context = lambda: {}
-        
-        self._formula = EditFormulaPanel( edit_panel, formula, self.GetTestContext )
+        self._formula = EditFormulaPanel( edit_panel, formula, self.GetTestData )
         
         children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
         
@@ -2837,9 +2823,9 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
         
     
-    def GetTestContext( self ):
+    def GetTestData( self ):
         
-        return ( {}, self._example_data.toPlainText() )
+        return ClientParsing.ParsingTestData( {}, ( self._example_data.toPlainText(), ) )
         
     
     def GetValue( self ):
@@ -2857,18 +2843,18 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
 class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, parser, formula = None, test_context = None ):
+    def __init__( self, parent, parser, formula = None, test_data = None ):
         
         self._original_parser = parser
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        if test_context is None:
+        if test_data is None:
             
             example_parsing_context = parser.GetExampleParsingContext()
             example_data = ''
             
-            test_context = ( example_parsing_context, example_data )
+            test_data = ClientParsing.ParsingTestData( example_parsing_context, ( example_data, ) )
             
         
         #
@@ -2905,6 +2891,26 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        test_url_fetch_panel = ClientGUICommon.StaticBox( test_panel, 'fetch test data from url' )
+        
+        self._test_url = QW.QLineEdit( test_url_fetch_panel )
+        self._test_referral_url = QW.QLineEdit( test_url_fetch_panel )
+        self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
+        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_url_fetch_panel )
+        
+        if formula is None:
+            
+            self._test_panel = TestPanelPageParser( test_panel, self.GetValue, self._string_converter.GetValue, test_data = test_data )
+            
+        else:
+            
+            self._test_panel = TestPanelPageParserSubsidiary( test_panel, self.GetValue, self._string_converter.GetValue, self.GetFormula, test_data = test_data )
+            
+        
+        #
+        
         example_urls_panel = ClientGUICommon.StaticBox( main_panel, 'example urls' )
         
         self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, str, self._AddExampleURL, self._EditExampleURL )
@@ -2913,9 +2919,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         formula_panel = QW.QWidget( edit_notebook )
         
-        formula_test_callable = lambda: test_context
-        
-        self._formula = EditFormulaPanel( formula_panel, formula, formula_test_callable )
+        self._formula = EditFormulaPanel( formula_panel, formula, self._test_panel.GetTestData )
         
         #
         
@@ -2937,33 +2941,13 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        test_url_fetch_panel = ClientGUICommon.StaticBox( test_panel, 'fetch test data from url' )
-        
-        self._test_url = QW.QLineEdit( test_url_fetch_panel )
-        self._test_referral_url = QW.QLineEdit( test_url_fetch_panel )
-        self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
-        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_url_fetch_panel )
-        
-        if formula is None:
-            
-            self._test_panel = TestPanelPageParser( test_panel, self.GetValue, self._string_converter.GetValue, test_context = test_context )
-            
-        else:
-            
-            self._test_panel = TestPanelPageParserSubsidiary( test_panel, self.GetValue, self._string_converter.GetValue, self.GetFormula, test_context = test_context )
-            
-        
-        #
-        
         content_parsers_panel = QW.QWidget( edit_notebook )
         
         #
         
         permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_VETO ]
         
-        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestContextForChild, permitted_content_types )
+        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestDataForChild, permitted_content_types )
         
         #
         
@@ -3106,7 +3090,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContextForChild() )
+            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_data = self._test_panel.GetTestDataForChild() )
             
             dlg.SetPanel( panel )
             
@@ -3172,7 +3156,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContextForChild() )
+                panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_data = self._test_panel.GetTestDataForChild() )
                 
                 dlg.SetPanel( panel )
                 
@@ -3356,7 +3340,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_urls = sorted( parser.GetExampleURLs() )
         
-        produces = sorted( parser.GetParsableContent() )
+        produces = parser.GetParsableContent()
         
         pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
         
@@ -3864,7 +3848,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         url = ''
         query_type = HC.GET
         file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
-        file_identifier_string_converter = ClientParsing.StringConverter( ( ( ClientParsing.STRING_TRANSFORMATION_ENCODE, 'hex' ), ), 'some hash bytes' )
+        file_identifier_string_converter = ClientParsing.StringConverter( ( ( ClientParsing.STRING_CONVERSION_ENCODE, 'hex' ), ), 'some hash bytes' )
         file_identifier_arg_name = 'md5'
         static_args = {}
         children = []
@@ -4234,13 +4218,13 @@ class ScriptManagementControl( QW.QWidget ):
     
 class TestPanel( QW.QWidget ):
     
-    def __init__( self, parent, object_callable, test_context = None ):
+    def __init__( self, parent, object_callable, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
         
         QW.QWidget.__init__( self, parent )
         
-        if test_context is None:
+        if test_data is None:
             
-            test_context = ( {}, '' )
+            test_data = ClientParsing.ParsingTestData( {}, ( '', ) )
             
         
         self._object_callable = object_callable
@@ -4281,9 +4265,7 @@ class TestPanel( QW.QWidget ):
         
         #
         
-        ( example_parsing_context, example_data ) = test_context
-        
-        self._example_parsing_context.SetValue( example_parsing_context )
+        self._example_parsing_context.SetValue( test_data.parsing_context )
         
         self._example_data_raw = ''
         
@@ -4319,7 +4301,10 @@ class TestPanel( QW.QWidget ):
         
         self.setLayout( vbox )
         
-        QP.CallAfter( self._SetExampleData, example_data )
+        if len( test_data.texts ) > 0:
+            
+            QP.CallAfter( self._SetExampleData, test_data.texts[0] )
+            
         
     
     def _Copy( self ):
@@ -4452,16 +4437,16 @@ class TestPanel( QW.QWidget ):
         return self._example_parsing_context.GetValue()
         
     
-    def GetTestContext( self ):
+    def GetTestData( self ):
         
         example_parsing_context = self._example_parsing_context.GetValue()
         
-        return ( example_parsing_context, self._example_data_raw )
+        return ClientParsing.ParsingTestData( example_parsing_context, ( self._example_data_raw, ) )
         
     
-    def GetTestContextForChild( self ):
+    def GetTestDataForChild( self ):
         
-        return self.GetTestContext()
+        return self.GetTestData()
         
     
     def SetExampleData( self, example_data ):
@@ -4478,11 +4463,20 @@ class TestPanel( QW.QWidget ):
         
         obj = self._object_callable()
         
-        ( example_parsing_context, example_data ) = self.GetTestContext()
+        test_data = self.GetTestData()
+        
+        test_text = ''
+        
+        # change this to be for every text, do a diff panel, whatever
+        
+        if len( test_data.texts ) > 0:
+            
+            test_text = test_data.texts[0]
+            
         
         try:
             
-            results_text = obj.ParsePretty( example_parsing_context, example_data )
+            results_text = obj.ParsePretty( test_data.parsing_context, test_data.texts[0] )
             
             self._results.setPlainText( results_text )
             
@@ -4499,14 +4493,37 @@ class TestPanel( QW.QWidget ):
             self._results.setPlainText( message )
             
         
+        
+    
+class TestPanelFormula( TestPanel ):
+    
+    def GetTestDataForStringProcessor( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        formula = self._object_callable()
+        
+        try:
+            
+            formula.SetStringProcessor( ClientParsing.StringProcessor() )
+            
+            texts = formula.Parse( example_parsing_context, self._example_data_raw )
+            
+        except:
+            
+            texts = [ '' ]
+            
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, texts )
+        
     
 class TestPanelPageParser( TestPanel ):
     
-    def __init__( self, parent, object_callable, pre_parsing_conversion_callable, test_context = None ):
+    def __init__( self, parent, object_callable, pre_parsing_converter_callable, test_data = None ):
         
-        self._pre_parsing_conversion_callable = pre_parsing_conversion_callable
+        self._pre_parsing_converter_callable = pre_parsing_converter_callable
         
-        TestPanel.__init__( self, parent, object_callable, test_context = test_context )
+        TestPanel.__init__( self, parent, object_callable, test_data = test_data )
         
         post_conversion_panel = QW.QWidget( self._data_preview_notebook )
         
@@ -4557,13 +4574,13 @@ class TestPanelPageParser( TestPanel ):
         
         TestPanel._SetExampleData( self, example_data )
         
-        pre_parsing_conversion = self._pre_parsing_conversion_callable()
+        pre_parsing_converter = self._pre_parsing_converter_callable()
         
-        if pre_parsing_conversion.MakesChanges():
+        if pre_parsing_converter.MakesChanges():
             
             try:
                 
-                post_conversion_example_data = ClientParsing.MakeParsedTextPretty( pre_parsing_conversion.Convert( self._example_data_raw ) )
+                post_conversion_example_data = ClientParsing.MakeParsedTextPretty( pre_parsing_converter.Convert( self._example_data_raw ) )
                 
                 if len( post_conversion_example_data ) > 1024:
                     
@@ -4623,18 +4640,18 @@ class TestPanelPageParser( TestPanel ):
         self._example_data_post_conversion_preview.setPlainText( preview )
         
     
-    def GetTestContextForChild( self ):
+    def GetTestDataForChild( self ):
         
         example_parsing_context = self._example_parsing_context.GetValue()
         
-        return ( example_parsing_context, self._example_data_post_conversion )
+        return ClientParsing.ParsingTestData( example_parsing_context, ( self._example_data_post_conversion, ) )
         
     
 class TestPanelPageParserSubsidiary( TestPanelPageParser ):
     
-    def __init__( self, parent, object_callable, pre_parsing_conversion_callable, formula_callable, test_context = None ):
+    def __init__( self, parent, object_callable, pre_parsing_converter_callable, formula_callable, test_data = None ):
         
-        TestPanelPageParser.__init__( self, parent, object_callable, pre_parsing_conversion_callable, test_context = test_context )
+        TestPanelPageParser.__init__( self, parent, object_callable, pre_parsing_converter_callable, test_data = test_data )
         
         self._formula_callable = formula_callable
         
@@ -4670,7 +4687,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         #
         
-        self._data_preview_notebook.addTab( post_separation_panel, 'post separation conversion' )
+        self._data_preview_notebook.addTab( post_separation_panel, 'post separation' )
         
     
     def _CopyPostSeparation( self ):
@@ -4736,22 +4753,11 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         self._example_data_post_separation_preview.setPlainText( preview )
         
     
-    def GetTestContextForChild( self ):
+    def GetTestDataForChild( self ):
         
         example_parsing_context = self._example_parsing_context.GetValue()
         
-        if len( self._example_data_post_separation ) == 0:
-            
-            example_data = ''
-            
-        else:
-            
-            # I had ideas on making this some clever random stuff, but screw it, let's just KISS and send up the first
-            
-            example_data = self._example_data_post_separation[0]
-            
-        
-        return ( example_parsing_context, example_data )
+        return ClientParsing.ParsingTestData( example_parsing_context, list( self._example_data_post_separation ) )
         
     
     def TestParse( self ):
@@ -4762,22 +4768,27 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         try:
             
-            ( example_parsing_context, example_data ) = self.GetTestContext()
+            test_data = self.GetTestData()
             
             if formula is None:
                 
-                posts = [ example_data ]
+                posts = test_data.texts
                 
             else:
                 
-                posts = formula.Parse( example_parsing_context, example_data )
+                posts = []
+                
+                for test_text in test_data.texts:
+                    
+                    posts.extend( formula.Parse( test_data.parsing_context, test_text ) )
+                    
                 
             
             pretty_texts = []
             
             for post in posts:
                 
-                pretty_text = page_parser.ParsePretty( example_parsing_context, post )
+                pretty_text = page_parser.ParsePretty( test_data.parsing_context, post )
                 
                 pretty_texts.append( pretty_text )
                 

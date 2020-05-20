@@ -633,8 +633,6 @@ class Controller( object ):
         # we are in Qt thread here, we can do this
         self._SetupQt()
         
-        suites = []
-        
         if self.only_run is None:
             
             run_all = True
@@ -646,66 +644,104 @@ class Controller( object ):
         
         # the gui stuff runs fine on its own but crashes in the full test if it is not early, wew
         # something to do with the delayed button clicking stuff
-        if run_all or self.only_run == 'gui':
+        
+        module_lookup = collections.defaultdict( list )
+        
+        module_lookup[ 'all' ] = [
+            TestDialogs,
+            TestClientListBoxes,
+            TestClientAPI,
+            TestClientDaemons,
+            TestClientConstants,
+            TestClientData,
+            TestClientImportOptions,
+            TestClientParsing,
+            TestClientTags,
+            TestClientThreading,
+            TestFunctions,
+            TestHydrusSerialisable,
+            TestHydrusSessions,
+            TestClientDB,
+            TestServerDB,
+            TestClientDBDuplicates,
+            TestClientNetworking,
+            TestHydrusNetworking,
+            TestClientImportSubscriptions,
+            TestClientImageHandling,
+            TestClientMigration,
+            TestHydrusServer
+        ]
+        
+        module_lookup[ 'gui' ] = [
+            TestDialogs,
+            TestClientListBoxes
+        ]
+         
+        module_lookup[ 'client_api' ] = [
+            TestClientAPI
+        ]
+        
+        module_lookup[ 'daemons' ] = [
+            TestClientDaemons
+        ]
+        
+        module_lookup[ 'data' ] = [
+            TestClientConstants,
+            TestClientData,
+            TestClientImportOptions,
+            TestClientParsing,
+            TestClientTags,
+            TestClientThreading,
+            TestFunctions,
+            TestHydrusSerialisable,
+            TestHydrusSessions
+        ]
             
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )
+        module_lookup[ 'tags' ] = [
+            TestClientTags
+        ]
+        
+        module_lookup[ 'db' ] = [
+            TestClientDB,
+            TestClientDBDuplicates,
+            TestServerDB
+        ]
+        
+        module_lookup[ 'db_duplicates' ] = [
+            TestClientDBDuplicates
+        ]
+        
+        module_lookup[ 'networking' ] = [
+            TestClientNetworking,
+            TestHydrusNetworking
+        ]
+        
+        module_lookup[ 'import' ] = [
+            TestClientImportSubscriptions
+        ]
+        
+        module_lookup[ 'image' ] = [
+            TestClientImageHandling
+        ]
+        
+        module_lookup[ 'migration' ] = [
+            TestClientMigration
+        ]
+        
+        module_lookup[ 'server' ] = [
+            TestHydrusServer
+        ]
+        
+        if run_all:
             
-        if run_all or self.only_run == 'client_api':
+            modules = module_lookup[ 'all' ]
             
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientAPI ) )
+        else:
             
-        if run_all or self.only_run == 'daemons':
+            modules = module_lookup[ self.only_run ]
             
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
-            
-        if run_all or self.only_run == 'data':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientData ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportOptions ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientParsing ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientTags ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientThreading ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
-            
-        if run_all or self.only_run == 'db':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDB ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestServerDB ) )
-            
-        if run_all or self.only_run in ( 'db', 'db_duplicates' ):
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDBDuplicates ) )
-            
-        if run_all or self.only_run == 'networking':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientNetworking ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNetworking ) )
-            
-        if run_all or self.only_run == 'import':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportSubscriptions ) )
-            
-        if run_all or self.only_run == 'image':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
-            
-        if run_all or self.only_run == 'migration':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientMigration ) )
-            
-        if run_all or self.only_run == 'nat':
-            
-            pass
-            #suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
-            
-        if run_all or self.only_run == 'server':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
-            
+        
+        suites = [ unittest.TestLoader().loadTestsFromModule( module ) for module in modules ]
         
         suite = unittest.TestSuite( suites )
         

@@ -1,18 +1,18 @@
+import collections
+import os
+import sqlite3
+import sys
+import time
+import traceback
+import yaml
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
-import collections
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-import traceback
-import os
-import sqlite3
-import sys
-import time
-import yaml
-from qtpy import QtGui as QG
 
 def AddPaddingToDimensions( dimensions, padding ):
     
@@ -79,18 +79,6 @@ def CatchExceptionClient( etype, value, tb ):
         
     
     time.sleep( 1 )
-    
-def ColourIsBright( colour: QG.QColor ):
-    
-    it_is_bright = colour.valueF() > 0.75
-    
-    return it_is_bright
-    
-def ColourIsGreyish( colour: QG.QColor ):
-    
-    it_is_greyish = colour.hsvSaturationF() < 0.12
-    
-    return it_is_greyish
     
 def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
@@ -188,56 +176,6 @@ def ConvertZoomToPercentage( zoom ):
         
     
     return pretty_zoom
-    
-def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
-    
-    new_hue = colour.hsvHueF()
-    
-    if new_hue == -1: # completely achromatic
-        
-        new_hue = 0.5
-        
-    else:
-        
-        new_hue = ( new_hue + 0.33 ) % 1.0
-        
-    
-    new_saturation = colour.hsvSaturationF()
-    
-    if ColourIsGreyish( colour ):
-        
-        new_saturation = 0.2
-        
-    
-    new_colour = QG.QColor.fromHsvF( new_hue, new_saturation, colour.valueF(), colour.alphaF() )
-    
-    return GetLighterDarkerColour( new_colour, intensity )
-    
-def GetLighterDarkerColour( colour, intensity = 3 ):
-    
-    if intensity is None or intensity == 0:
-        
-        return colour
-        
-    
-    # darker/lighter works by multiplying value, so when it is closer to 0, lmao
-    breddy_darg_made = 0.25
-    
-    if colour.value() < breddy_darg_made:
-        
-        colour = QG.QColor.fromHslF( colour.hsvHueF(), colour.hsvSaturationF(), breddy_darg_made, colour.alphaF() )
-        
-    
-    qt_intensity = 100 + ( 20 * intensity )
-    
-    if ColourIsBright( colour ):
-        
-        return colour.darker( qt_intensity )
-        
-    else:
-        
-        return colour.lighter( qt_intensity )
-        
     
 def MergeCounts( min_a, max_a, min_b, max_b ):
     

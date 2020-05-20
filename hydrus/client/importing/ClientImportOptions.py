@@ -1,10 +1,11 @@
+import os
+import re
 import typing
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientTags
-import collections
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -12,10 +13,8 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-import os
-import re
 
-def FilterDeletedTags( service_key: bytes, media_result: ClientMedia.MediaResult, tags: typing.Iterable[ str ] ):
+def FilterDeletedTags( service_key: bytes, media_result: ClientMediaResult.MediaResult, tags: typing.Iterable[ str ] ):
     
     tags_manager = media_result.GetTagsManager()
     
@@ -628,7 +627,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._names_to_name_overrides = dict( names_and_name_overrides )
         
     
-    def GetServiceKeysToContentUpdates( self, media_result: ClientMedia.MediaResult, names_and_notes: typing.Iterable[ typing.Tuple[ str, str ] ] ):
+    def GetServiceKeysToContentUpdates( self, media_result: ClientMediaResult.MediaResult, names_and_notes: typing.Iterable[ typing.Tuple[ str, str ] ] ):
         
         content_updates = []
         
@@ -1329,7 +1328,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetServiceKeysToContentUpdates( self, status: int, media_result: ClientMedia.MediaResult, parsed_tags: typing.Iterable[ str ], external_service_keys_to_tags = None ):
+    def GetServiceKeysToContentUpdates( self, status: int, media_result: ClientMediaResult.MediaResult, parsed_tags: typing.Iterable[ str ], external_service_keys_to_tags = None ):
         
         if external_service_keys_to_tags is None:
             
@@ -1630,7 +1629,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         return statements
         
     
-    def GetTags( self, service_key: bytes, status: int, media_result: ClientMedia.MediaResult, parsed_tags: typing.Iterable[ str ] ):
+    def GetTags( self, service_key: bytes, status: int, media_result: ClientMediaResult.MediaResult, parsed_tags: typing.Iterable[ str ] ):
         
         tags = set()
         

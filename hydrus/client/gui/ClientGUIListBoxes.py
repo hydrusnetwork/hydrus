@@ -12,10 +12,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTags
@@ -1947,7 +1945,6 @@ class ListBoxTags( ListBox ):
                 
             
             from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-            from hydrus.client.gui import ClientGUISerialisable
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 

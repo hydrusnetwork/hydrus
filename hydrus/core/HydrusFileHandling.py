@@ -1,4 +1,3 @@
-import gc
 import hashlib
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
@@ -13,8 +12,6 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
 import os
-import threading
-import traceback
 
 # Mime
 

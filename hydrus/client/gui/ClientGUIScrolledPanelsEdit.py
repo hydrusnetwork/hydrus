@@ -18,7 +18,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientTags
@@ -6480,7 +6480,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'The same url can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-samus_aran" can be altered at a later date, say to "/123456/bodysuit-green_eyes-samus_aran". In order to collapse all the different expressions of a url down to a single comparable form, the client will \'normalise\' them based on the essential definitions in their url class. Parameters will be alphebatised and non-defined elements will be removed.'
         tt += os.linesep * 2
-        tt += 'All normalisation will switch to the preferred scheme (http/https). The alphabetisation of parameters and stripping out of non-defined elements will occur for all URLs except Gallery URLs or Watchable URLs that do not use an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex transformation into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
+        tt += 'All normalisation will switch to the preferred scheme (http/https). The alphabetisation of parameters and stripping out of non-defined elements will occur for all URLs except Gallery URLs or Watchable URLs that do not use an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex conversion into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
         
         self._normalised_url.setToolTip( tt )
         
@@ -6634,8 +6634,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._path_components.listBoxChanged.connect( self._UpdateControls )
         self._url_type.currentIndexChanged.connect( self.EventURLTypeUpdate )
         self._send_referral_url.currentIndexChanged.connect( self._UpdateControls )
-        self._referral_url_converter.stringConverterUpdate.connect( self._UpdateControls )
-        self._api_lookup_converter.stringConverterUpdate.connect( self._UpdateControls )
+        self._referral_url_converter.valueChanged.connect( self._UpdateControls )
+        self._api_lookup_converter.valueChanged.connect( self._UpdateControls )
         
         self._should_be_associated_with_files.clicked.connect( self.EventAssociationUpdate )
         

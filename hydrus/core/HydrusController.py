@@ -1,20 +1,19 @@
 import collections
 import gc
+import os
+import random
+import sys
+import threading
+import time
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNATPunch
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusThreading
-import os
-import random
-import sys
-import threading
-import time
-import traceback
 
 class HydrusController( object ):
     

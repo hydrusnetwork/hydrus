@@ -1,8 +1,6 @@
-from hydrus.core import HydrusConstants as HC
 import OpenSSL
 import os
 import stat
-import traceback
 
 def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
     

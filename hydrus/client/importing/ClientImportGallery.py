@@ -1,3 +1,6 @@
+import threading
+import time
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDownloading
 from hydrus.client.importing import ClientImportFileSeeds
@@ -5,17 +8,11 @@ from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.networking import ClientNetworkingJobs
-from hydrus.client import ClientPaths
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-import itertools
-import threading
-import time
-import traceback
 
 class GalleryImport( HydrusSerialisable.SerialisableBase ):
     

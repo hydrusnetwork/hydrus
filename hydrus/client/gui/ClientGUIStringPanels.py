@@ -1,6 +1,5 @@
 import typing
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -19,32 +18,32 @@ from hydrus.client.gui import QtPorting as QP
 
 class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_converter, example_string_override = None ):
+    def __init__( self, parent: QW.QWidget, string_converter: ClientParsing.StringConverter, example_string_override = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        transformations_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        conversions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( '#', 3 ), ( 'transformation', 30 ), ( 'result', -1 ) ]
+        columns = [ ( '#', 3 ), ( 'conversion', 30 ), ( 'result', -1 ) ]
         
-        self._transformations = ClientGUIListCtrl.BetterListCtrl( transformations_panel, 'string_converter_transformations', 7, 35, columns, self._ConvertTransformationToListCtrlTuples, delete_key_callback = self._DeleteTransformation, activation_callback = self._EditTransformation )
+        self._conversions = ClientGUIListCtrl.BetterListCtrl( conversions_panel, 'string_converter_conversions', 7, 35, columns, self._ConvertConversionToListCtrlTuples, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
         
-        transformations_panel.SetListCtrl( self._transformations )
+        conversions_panel.SetListCtrl( self._conversions )
         
-        transformations_panel.AddButton( 'add', self._AddTransformation )
-        transformations_panel.AddButton( 'edit', self._EditTransformation, enabled_only_on_selection = True )
-        transformations_panel.AddDeleteButton()
+        conversions_panel.AddButton( 'add', self._AddConversion )
+        conversions_panel.AddButton( 'edit', self._EditConversion, enabled_only_on_selection = True )
+        conversions_panel.AddDeleteButton()
         
-        transformations_panel.AddSeparator()
+        conversions_panel.AddSeparator()
         
-        transformations_panel.AddButton( 'move up', self._MoveUp, enabled_check_func = self._CanMoveUp )
-        transformations_panel.AddButton( 'move down', self._MoveDown, enabled_check_func = self._CanMoveDown )
+        conversions_panel.AddButton( 'move up', self._MoveUp, enabled_check_func = self._CanMoveUp )
+        conversions_panel.AddButton( 'move down', self._MoveDown, enabled_check_func = self._CanMoveDown )
         
         self._example_string = QW.QLineEdit( self )
         
         #
         
-        self._transformations.AddDatas( [ ( i + 1, transformation_type, data ) for ( i, ( transformation_type, data ) ) in enumerate( string_converter.transformations ) ] )
+        self._conversions.AddDatas( [ ( i + 1, conversion_type, data ) for ( i, ( conversion_type, data ) ) in enumerate( string_converter.conversions ) ] )
         
         if example_string_override is None:
             
@@ -55,9 +54,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._example_string.setText( example_string_override )
             
         
-        self._transformations.UpdateDatas() # to refresh, now they are all in the list
+        self._conversions.UpdateDatas() # to refresh, now they are all in the list
         
-        self._transformations.Sort( 0 )
+        self._conversions.Sort( 0 )
         
         #
         
@@ -69,7 +68,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, conversions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
@@ -79,9 +78,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_string.textChanged.connect( self.EventUpdate )
         
     
-    def _AddTransformation( self ):
+    def _AddConversion( self ):
         
-        transformation_type = ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT
+        conversion_type = ClientParsing.STRING_CONVERSION_APPEND_TEXT
         data = 'extra text'
         
         try:
@@ -95,38 +94,38 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             example_string_at_this_point = self._example_string.text()
             
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit conversion', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = self._TransformationPanel( dlg, transformation_type, data, example_string_at_this_point )
+            panel = self._ConversionPanel( dlg, conversion_type, data, example_string_at_this_point )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                number = self._transformations.topLevelItemCount() + 1
+                number = self._conversions.topLevelItemCount() + 1
                 
-                ( transformation_type, data ) = panel.GetValue()
+                ( conversion_type, data ) = panel.GetValue()
                 
-                enumerated_transformation = ( number, transformation_type, data )
+                enumerated_conversion = ( number, conversion_type, data )
                 
-                self._transformations.AddDatas( ( enumerated_transformation, ) )
+                self._conversions.AddDatas( ( enumerated_conversion, ) )
                 
             
         
-        self._transformations.UpdateDatas() # need to refresh string after the insertion, so the new row can be included in the parsing calcs
+        self._conversions.UpdateDatas() # need to refresh string after the insertion, so the new row can be included in the parsing calcs
         
-        self._transformations.Sort()
+        self._conversions.Sort()
         
     
     def _CanMoveDown( self ):
         
-        selected_data = self._transformations.GetData( only_selected = True )
+        selected_data = self._conversions.GetData( only_selected = True )
         
         if len( selected_data ) == 1:
             
-            ( number, transformation_type, data ) = selected_data[0]
+            ( number, conversion_type, data ) = selected_data[0]
             
-            if number < self._transformations.topLevelItemCount():
+            if number < self._conversions.topLevelItemCount():
                 
                 return True
                 
@@ -137,11 +136,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _CanMoveUp( self ):
         
-        selected_data = self._transformations.GetData( only_selected = True )
+        selected_data = self._conversions.GetData( only_selected = True )
         
         if len( selected_data ) == 1:
             
-            ( number, transformation_type, data ) = selected_data[0]
+            ( number, conversion_type, data ) = selected_data[0]
             
             if number > 1:
                 
@@ -152,12 +151,12 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
-    def _ConvertTransformationToListCtrlTuples( self, transformation ):
+    def _ConvertConversionToListCtrlTuples( self, conversion ):
         
-        ( number, transformation_type, data ) = transformation
+        ( number, conversion_type, data ) = conversion
         
         pretty_number = HydrusData.ToHumanInt( number )
-        pretty_transformation = ClientParsing.StringConverter.TransformationToString( ( transformation_type, data ) )
+        pretty_conversion = ClientParsing.StringConverter.ConversionToString( ( conversion_type, data ) )
         
         string_converter = self._GetValue()
         
@@ -170,15 +169,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_result = str( e )
             
         
-        display_tuple = ( pretty_number, pretty_transformation, pretty_result )
+        display_tuple = ( pretty_number, pretty_conversion, pretty_result )
         sort_tuple = ( number, number, number )
         
         return ( display_tuple, sort_tuple )
         
     
-    def _DeleteTransformation( self ):
+    def _DeleteConversion( self ):
         
-        if len( self._transformations.GetData( only_selected = True ) ) > 0:
+        if len( self._conversions.GetData( only_selected = True ) ) > 0:
             
             text = 'Delete all selected?'
             
@@ -188,13 +187,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if result == QW.QDialog.Accepted:
                 
-                self._transformations.DeleteSelected()
+                self._conversions.DeleteSelected()
                 
             
         
         # now we need to shuffle up any missing numbers
         
-        num_rows = self._transformations.topLevelItemCount()
+        num_rows = self._conversions.topLevelItemCount()
         
         i = 1
         search_i = i
@@ -203,17 +202,17 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                transformation = self._GetTransformation( search_i )
+                conversion = self._GetConversion( search_i )
                 
                 if search_i != i:
                     
-                    self._transformations.DeleteDatas( ( transformation, ) )
+                    self._conversions.DeleteDatas( ( conversion, ) )
                     
-                    ( search_i, transformation_type, data ) = transformation
+                    ( search_i, conversion_type, data ) = conversion
                     
-                    transformation = ( i, transformation_type, data )
+                    conversion = ( i, conversion_type, data )
                     
-                    self._transformations.AddDatas( ( transformation, ) )
+                    self._conversions.AddDatas( ( conversion, ) )
                     
                 
                 i += 1
@@ -225,18 +224,18 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._transformations.UpdateDatas()
+        self._conversions.UpdateDatas()
         
-        self._transformations.Sort()
+        self._conversions.Sort()
         
     
-    def _EditTransformation( self ):
+    def _EditConversion( self ):
         
-        selected_data = self._transformations.GetData( only_selected = True )
+        selected_data = self._conversions.GetData( only_selected = True )
         
-        for enumerated_transformation in selected_data:
+        for enumerated_conversion in selected_data:
             
-            ( number, transformation_type, data ) = enumerated_transformation
+            ( number, conversion_type, data ) = enumerated_conversion
             
             try:
                 
@@ -249,21 +248,21 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 example_string_at_this_point = self._example_string.text()
                 
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit conversion', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                panel = self._TransformationPanel( dlg, transformation_type, data, example_string_at_this_point )
+                panel = self._ConversionPanel( dlg, conversion_type, data, example_string_at_this_point )
                 
                 dlg.SetPanel( panel )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    self._transformations.DeleteDatas( ( enumerated_transformation, ) )
+                    self._conversions.DeleteDatas( ( enumerated_conversion, ) )
                     
-                    ( transformation_type, data ) = panel.GetValue()
+                    ( conversion_type, data ) = panel.GetValue()
                     
-                    enumerated_transformation = ( number, transformation_type, data )
+                    enumerated_conversion = ( number, conversion_type, data )
                     
-                    self._transformations.AddDatas( ( enumerated_transformation, ) )
+                    self._conversions.AddDatas( ( enumerated_conversion, ) )
                     
                 else:
                     
@@ -272,20 +271,20 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._transformations.UpdateDatas()
+        self._conversions.UpdateDatas()
         
-        self._transformations.Sort()
+        self._conversions.Sort()
         
     
-    def _GetTransformation( self, desired_number ):
+    def _GetConversion( self, desired_number ):
         
-        for transformation in self._transformations.GetData():
+        for conversion in self._conversions.GetData():
             
-            ( number, transformation_type, data ) = transformation
+            ( number, conversion_type, data ) = conversion
             
             if number == desired_number:
                 
-                return transformation
+                return conversion
                 
             
         
@@ -294,78 +293,78 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetValue( self ):
         
-        enumerated_transformations = sorted( self._transformations.GetData() )
+        enumerated_conversions = sorted( self._conversions.GetData() )
         
-        transformations = [ ( transformation_type, data ) for ( number, transformation_type, data ) in enumerated_transformations ]
+        conversions = [ ( conversion_type, data ) for ( number, conversion_type, data ) in enumerated_conversions ]
         
         example_string = self._example_string.text()
         
-        string_converter = ClientParsing.StringConverter( transformations, example_string )
+        string_converter = ClientParsing.StringConverter( conversions, example_string )
         
         return string_converter
         
     
     def _MoveDown( self ):
         
-        selected_transformation = self._transformations.GetData( only_selected = True )[0]
+        selected_conversion = self._conversions.GetData( only_selected = True )[0]
         
-        ( number, transformation_type, data ) = selected_transformation
+        ( number, conversion_type, data ) = selected_conversion
         
-        swap_transformation = self._GetTransformation( number + 1 )
+        swap_conversion = self._GetConversion( number + 1 )
         
-        self._SwapTransformations( selected_transformation, swap_transformation )
+        self._SwapConversions( selected_conversion, swap_conversion )
         
-        self._transformations.UpdateDatas()
+        self._conversions.UpdateDatas()
         
-        self._transformations.Sort()
+        self._conversions.Sort()
         
     
     def _MoveUp( self ):
         
-        selected_transformation = self._transformations.GetData( only_selected = True )[0]
+        selected_conversion = self._conversions.GetData( only_selected = True )[0]
         
-        ( number, transformation_type, data ) = selected_transformation
+        ( number, conversion_type, data ) = selected_conversion
         
-        swap_transformation = self._GetTransformation( number - 1 )
+        swap_conversion = self._GetConversion( number - 1 )
         
-        self._SwapTransformations( selected_transformation, swap_transformation )
+        self._SwapConversions( selected_conversion, swap_conversion )
         
-        self._transformations.UpdateDatas()
+        self._conversions.UpdateDatas()
         
-        self._transformations.Sort()
+        self._conversions.Sort()
         
     
-    def _SwapTransformations( self, one, two ):
+    def _SwapConversions( self, one, two ):
         
-        selected_data = self._transformations.GetData( only_selected = True )
+        selected_data = self._conversions.GetData( only_selected = True )
         
         one_selected = one in selected_data
         two_selected = two in selected_data
         
-        self._transformations.DeleteDatas( ( one, two ) )
+        self._conversions.DeleteDatas( ( one, two ) )
         
-        ( number_1, transformation_type_1, data_1 ) = one
-        ( number_2, transformation_type_2, data_2 ) = two
+        ( number_1, conversion_type_1, data_1 ) = one
+        ( number_2, conversion_type_2, data_2 ) = two
         
-        one = ( number_2, transformation_type_1, data_1 )
-        two = ( number_1, transformation_type_2, data_2 )
+        one = ( number_2, conversion_type_1, data_1 )
+        two = ( number_1, conversion_type_2, data_2 )
         
-        self._transformations.AddDatas( ( one, two ) )
+        self._conversions.AddDatas( ( one, two ) )
         
         if one_selected:
             
-            self._transformations.SelectDatas( ( one, ) )
+            self._conversions.SelectDatas( ( one, ) )
             
         
         if two_selected:
             
-            self._transformations.SelectDatas( ( two, ) )
+            self._conversions.SelectDatas( ( two, ) )
             
         
     
     def EventUpdate( self, text ):
         
-        self._transformations.UpdateDatas()
+        self._conversions.UpdateDatas()
         
     
     def GetValue( self ):
@@ -384,20 +383,47 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         return string_converter
         
     
-    class _TransformationPanel( ClientGUIScrolledPanels.EditPanel ):
+    class _ConversionPanel( ClientGUIScrolledPanels.EditPanel ):
         
-        def __init__( self, parent, transformation_type, data, example_text ):
+        def __init__( self, parent, conversion_type, data, example_text ):
             
             ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
             
-            self._transformation_type = ClientGUICommon.BetterChoice( self )
+            self._control_panel = ClientGUICommon.StaticBox( self, 'string conversion step' )
             
-            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+            self._conversion_type = ClientGUICommon.BetterChoice( self._control_panel )
+            
+            for t_type in ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_END, ClientParsing.STRING_CONVERSION_PREPEND_TEXT, ClientParsing.STRING_CONVERSION_APPEND_TEXT, ClientParsing.STRING_CONVERSION_ENCODE, ClientParsing.STRING_CONVERSION_DECODE, ClientParsing.STRING_CONVERSION_REVERSE, ClientParsing.STRING_CONVERSION_REGEX_SUB, ClientParsing.STRING_CONVERSION_DATE_DECODE, ClientParsing.STRING_CONVERSION_DATE_ENCODE, ClientParsing.STRING_CONVERSION_INTEGER_ADDITION ):
                 
-                self._transformation_type.addItem( ClientParsing.transformation_type_str_lookup[ t_type ], t_type )
+                self._conversion_type.addItem( ClientParsing.conversion_type_str_lookup[ t_type ], t_type )
                 
             
-            self._example_string = QW.QLineEdit( self )
+            self._data_text = QW.QLineEdit( self._control_panel )
+            self._data_number = QP.MakeQSpinBox( self._control_panel, min=0, max=65535 )
+            self._data_encoding = ClientGUICommon.BetterChoice( self._control_panel )
+            self._data_regex_repl = QW.QLineEdit( self._control_panel )
+            self._data_date_link = ClientGUICommon.BetterHyperLink( self._control_panel, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
+            self._data_timezone_decode = ClientGUICommon.BetterChoice( self._control_panel )
+            self._data_timezone_encode = ClientGUICommon.BetterChoice( self._control_panel )
+            self._data_timezone_offset = QP.MakeQSpinBox( self._control_panel, min=-86400, max=86400 )
+            
+            for e in ( 'hex', 'base64', 'url percent encoding' ):
+                
+                self._data_encoding.addItem( e, e )
+                
+            
+            self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_GMT )
+            self._data_timezone_decode.addItem( 'Local', HC.TIMEZONE_LOCAL )
+            self._data_timezone_decode.addItem( 'Offset', HC.TIMEZONE_OFFSET )
+            
+            self._data_timezone_encode.addItem( 'UTC', HC.TIMEZONE_GMT )
+            self._data_timezone_encode.addItem( 'Local', HC.TIMEZONE_LOCAL )
+            
+            #
+            
+            self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
+            
+            self._example_string = QW.QLineEdit( self._example_panel )
             
             min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._example_string, 96 )
             
@@ -414,54 +440,31 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._example_string.setText( self._example_text )
                 
             
-            self._example_transformation = QW.QLineEdit( self )
-            
-            #
+            self._example_conversion = QW.QLineEdit( self._example_panel )
             
             self._example_string.setReadOnly( True )
-            self._example_transformation.setReadOnly( True )
-            
-            self._data_text = QW.QLineEdit( self )
-            self._data_number = QP.MakeQSpinBox( self, min=0, max=65535 )
-            self._data_encoding = ClientGUICommon.BetterChoice( self )
-            self._data_regex_repl = QW.QLineEdit( self )
-            self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
-            self._data_timezone_decode = ClientGUICommon.BetterChoice( self )
-            self._data_timezone_encode = ClientGUICommon.BetterChoice( self )
-            self._data_timezone_offset = QP.MakeQSpinBox( self, min=-86400, max=86400 )
-            
-            for e in ( 'hex', 'base64', 'url percent encoding' ):
-                
-                self._data_encoding.addItem( e, e )
-                
-            
-            self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_GMT )
-            self._data_timezone_decode.addItem( 'Local', HC.TIMEZONE_LOCAL )
-            self._data_timezone_decode.addItem( 'Offset', HC.TIMEZONE_OFFSET )
-            
-            self._data_timezone_encode.addItem( 'UTC', HC.TIMEZONE_GMT )
-            self._data_timezone_encode.addItem( 'Local', HC.TIMEZONE_LOCAL )
+            self._example_conversion.setReadOnly( True )
             
             #
             
-            self._transformation_type.SetValue( transformation_type )
+            self._conversion_type.SetValue( conversion_type )
             
             self._data_number.setValue( 1 )
             
             #
             
-            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_ENCODE ):
+            if conversion_type in ( ClientParsing.STRING_CONVERSION_DECODE, ClientParsing.STRING_CONVERSION_ENCODE ):
                 
                 self._data_encoding.SetValue( data )
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+            elif conversion_type == ClientParsing.STRING_CONVERSION_REGEX_SUB:
                 
                 ( pattern, repl ) = data
                 
                 self._data_text.setText( pattern )
                 self._data_regex_repl.setText( repl )
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DATE_DECODE:
                 
                 ( phrase, timezone_type, timezone_offset ) = data
                 
@@ -469,7 +472,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._data_timezone_decode.SetValue( timezone_type )
                 self._data_timezone_offset.setValue( timezone_offset )
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DATE_ENCODE:
                 
                 ( phrase, timezone_type ) = data
                 
@@ -493,7 +496,6 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows = []
             
             # This mess needs to be all replaced with a nice QFormLayout subclass that can do row hide/show
-            # or just a whole separate panel for each transformation type, but w/e
             
             self._data_text_label = ClientGUICommon.BetterStaticText( self, 'string data: ' )
             self._data_number_label = ClientGUICommon.BetterStaticText( self, 'number data: ' )
@@ -504,9 +506,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_offset_label = ClientGUICommon.BetterStaticText( self, 'timezone offset: ' )
             self._data_timezone_encode_label = ClientGUICommon.BetterStaticText( self, 'date encode timezone: ' )
             
-            rows.append( ( 'example string: ', self._example_string ) )
-            rows.append( ( 'transformed string: ', self._example_transformation ) )
-            rows.append( ( 'transformation type: ', self._transformation_type ) )
+            rows.append( ( 'conversion type: ', self._conversion_type ) )
             rows.append( ( self._data_text_label, self._data_text ) )
             rows.append( ( self._data_number_label, self._data_number ) )
             rows.append( ( self._data_encoding_label, self._data_encoding ) )
@@ -516,11 +516,27 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( self._data_timezone_offset_label, self._data_timezone_offset ) )
             rows.append( ( self._data_timezone_encode_label, self._data_timezone_encode ) )
             
-            self._control_gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            self._control_gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
+            
+            self._control_panel.Add( self._control_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'example string: ', self._example_string ) )
+            rows.append( ( 'converted string: ', self._example_conversion ) )
+            
+            self._example_gridbox = ClientGUICommon.WrapInGrid( self._example_panel, rows )
+            
+            self._example_panel.Add( self._example_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, self._control_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._example_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.widget().setLayout( vbox )
@@ -529,8 +545,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            self._transformation_type.currentIndexChanged.connect( self._UpdateDataControls )
-            self._transformation_type.currentIndexChanged.connect( self._UpdateExampleText )
+            self._conversion_type.currentIndexChanged.connect( self._UpdateDataControls )
+            self._conversion_type.currentIndexChanged.connect( self._UpdateExampleText )
             
             self._data_text.textEdited.connect( self._UpdateExampleText )
             self._data_number.valueChanged.connect( self._UpdateExampleText )
@@ -566,34 +582,34 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_offset.setVisible( False )
             self._data_timezone_encode.setVisible( False )
             
-            transformation_type = self._transformation_type.GetValue()
+            conversion_type = self._conversion_type.GetValue()
             
-            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
+            if conversion_type in ( ClientParsing.STRING_CONVERSION_ENCODE, ClientParsing.STRING_CONVERSION_DECODE ):
                 
                 self._data_encoding_label.setVisible( True )
                 self._data_encoding.setVisible( True )
                 
-            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB ):
+            elif conversion_type in ( ClientParsing.STRING_CONVERSION_PREPEND_TEXT, ClientParsing.STRING_CONVERSION_APPEND_TEXT, ClientParsing.STRING_CONVERSION_DATE_DECODE, ClientParsing.STRING_CONVERSION_DATE_ENCODE, ClientParsing.STRING_CONVERSION_REGEX_SUB ):
                 
                 self._data_text_label.setVisible( True )
                 self._data_text.setVisible( True )
                 
                 data_text_label = 'string data: '
                 
-                if transformation_type == ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT:
+                if conversion_type == ClientParsing.STRING_CONVERSION_PREPEND_TEXT:
                     
                     data_text_label = 'text to prepend: '
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT:
+                elif conversion_type == ClientParsing.STRING_CONVERSION_APPEND_TEXT:
                     
                     data_text_label = 'text to append: '
                     
-                elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE ):
+                elif conversion_type in ( ClientParsing.STRING_CONVERSION_DATE_DECODE, ClientParsing.STRING_CONVERSION_DATE_ENCODE ):
                     
                     self._data_date_link_label.setVisible( True )
                     self._data_date_link.setVisible( True )
                     
-                    if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+                    if conversion_type == ClientParsing.STRING_CONVERSION_DATE_DECODE:
                         
                         data_text_label = 'date decode phrase: '
                         
@@ -606,7 +622,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                             self._data_timezone_offset.setVisible( True )
                             
                         
-                    elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+                    elif conversion_type == ClientParsing.STRING_CONVERSION_DATE_ENCODE:
                         
                         data_text_label = 'date encode phrase: '
                         
@@ -614,7 +630,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                         self._data_timezone_encode.setVisible( True )
                         
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                elif conversion_type == ClientParsing.STRING_CONVERSION_REGEX_SUB:
                     
                     data_text_label = 'regex pattern: '
                     
@@ -624,12 +640,12 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_text_label.setText( data_text_label )
                 
-            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+            elif conversion_type in ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_END, ClientParsing.STRING_CONVERSION_INTEGER_ADDITION ):
                 
                 self._data_number_label.setVisible( True )
                 self._data_number.setVisible( True )
                 
-                if transformation_type == ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION:
+                if conversion_type == ClientParsing.STRING_CONVERSION_INTEGER_ADDITION:
                     
                     self._data_number.setMinimum( -65535 )
                     
@@ -640,23 +656,23 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 data_number_label = 'number data: '
                 
-                if transformation_type == ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
+                if conversion_type == ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING:
                     
                     data_number_label = 'characters to remove: '
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
+                elif conversion_type == ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_END:
                     
                     data_number_label = 'characters to remove: '
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
+                elif conversion_type == ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING:
                     
                     data_number_label = 'characters to take: '
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
+                elif conversion_type == ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_END:
                     
                     data_number_label = 'characters to take: '
                     
-                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION:
+                elif conversion_type == ClientParsing.STRING_CONVERSION_INTEGER_ADDITION:
                     
                     data_number_label = 'number to add: '
                     
@@ -669,51 +685,51 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                transformations = [ self.GetValue() ]
+                conversions = [ self.GetValue() ]
                 
-                string_converter = ClientParsing.StringConverter( transformations, self._example_text )
+                string_converter = ClientParsing.StringConverter( conversions, self._example_text )
                 
-                example_transformation = string_converter.Convert( self._example_text )
+                example_conversion = string_converter.Convert( self._example_text )
                 
                 try:
                     
-                    self._example_transformation.setText( str( example_transformation ) )
+                    self._example_conversion.setText( str( example_conversion ) )
                     
                 except:
                     
-                    self._example_transformation.setText( repr( example_transformation ) )
+                    self._example_conversion.setText( repr( example_conversion ) )
                     
                 
             except Exception as e:
                 
-                self._example_transformation.setText( str( e ) )
+                self._example_conversion.setText( str( e ) )
                 
             
         
         def GetValue( self ):
             
-            transformation_type = self._transformation_type.GetValue()
+            conversion_type = self._conversion_type.GetValue()
             
-            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
+            if conversion_type in ( ClientParsing.STRING_CONVERSION_ENCODE, ClientParsing.STRING_CONVERSION_DECODE ):
                 
                 data = self._data_encoding.GetValue()
                 
-            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT ):
+            elif conversion_type in ( ClientParsing.STRING_CONVERSION_PREPEND_TEXT, ClientParsing.STRING_CONVERSION_APPEND_TEXT ):
                 
                 data = self._data_text.text()
                 
-            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+            elif conversion_type in ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_END, ClientParsing.STRING_CONVERSION_INTEGER_ADDITION ):
                 
                 data = self._data_number.value()
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+            elif conversion_type == ClientParsing.STRING_CONVERSION_REGEX_SUB:
                 
                 pattern = self._data_text.text()
                 repl = self._data_regex_repl.text()
                 
                 data = ( pattern, repl )
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DATE_DECODE:
                 
                 phrase = self._data_text.text()
                 timezone_time = self._data_timezone_decode.GetValue()
@@ -721,7 +737,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 data = ( phrase, timezone_time, timezone_offset )
                 
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DATE_ENCODE:
                 
                 phrase = self._data_text.text()
                 timezone_time = self._data_timezone_encode.GetValue()
@@ -733,20 +749,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 data = None
                 
             
-            return ( transformation_type, data )
+            return ( conversion_type, data )
             
         
     
 class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_match = None ):
+    def __init__( self, parent: QW.QWidget, string_match: ClientParsing.StringMatch, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        if string_match is None:
-            
-            string_match = ClientParsing.StringMatch()
-            
         
         self._match_type = ClientGUICommon.BetterChoice( self )
         
@@ -755,7 +766,8 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._match_type.addItem( 'character set', ClientParsing.STRING_MATCH_FLEXIBLE )
         self._match_type.addItem( 'regex', ClientParsing.STRING_MATCH_REGEX )
         
-        self._match_value_text_input = QW.QLineEdit( self )
+        self._match_value_fixed_input = QW.QLineEdit( self )
+        self._match_value_regex_input = QW.QLineEdit( self )
         
         self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
         
@@ -770,6 +782,13 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_string_matches = ClientGUICommon.BetterStaticText( self )
         
+        self._match_value_fixed_input_label = ClientGUICommon.BetterStaticText( self, 'fixed text: ' )
+        self._match_value_regex_input_label = ClientGUICommon.BetterStaticText( self, 'regex: ' )
+        self._match_value_flexible_input_label = ClientGUICommon.BetterStaticText( self, 'character set: ' )
+        self._min_chars_label = ClientGUICommon.BetterStaticText( self, 'minimum allowed number of characters: ' )
+        self._max_chars_label = ClientGUICommon.BetterStaticText( self, 'maximum allowed number of characters: ' )
+        self._example_string_label = ClientGUICommon.BetterStaticText( self, 'example string: ' )
+        
         #
         
         self.SetValue( string_match )
@@ -779,11 +798,12 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'match type: ', self._match_type ) )
-        rows.append( ( 'match text: ', self._match_value_text_input ) )
-        rows.append( ( 'match value (character set): ', self._match_value_flexible_input ) )
-        rows.append( ( 'minimum allowed number of characters: ', self._min_chars ) )
-        rows.append( ( 'maximum allowed number of characters: ', self._max_chars ) )
-        rows.append( ( 'example string: ', self._example_string ) )
+        rows.append( ( self._match_value_fixed_input_label, self._match_value_fixed_input ) )
+        rows.append( ( self._match_value_regex_input_label, self._match_value_regex_input ) )
+        rows.append( ( self._match_value_flexible_input_label, self._match_value_flexible_input ) )
+        rows.append( ( self._min_chars_label, self._min_chars ) )
+        rows.append( ( self._max_chars_label, self._max_chars ) )
+        rows.append( ( self._example_string_label, self._example_string ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -796,12 +816,13 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._match_type.currentIndexChanged.connect( self._UpdateControls )
-        self._match_value_text_input.textChanged.connect( self._UpdateControls )
-        self._match_value_flexible_input.currentIndexChanged.connect( self._UpdateControls )
-        self._min_chars.valueChanged.connect( self._UpdateControls )
-        self._max_chars.valueChanged.connect( self._UpdateControls )
-        self._example_string.textChanged.connect( self._UpdateControls )
+        self._match_type.currentIndexChanged.connect( self._UpdateControlVisibility )
+        self._match_value_fixed_input.textChanged.connect( self._UpdateTestResult )
+        self._match_value_regex_input.textChanged.connect( self._UpdateTestResult )
+        self._match_value_flexible_input.currentIndexChanged.connect( self._UpdateTestResult )
+        self._min_chars.valueChanged.connect( self._UpdateTestResult )
+        self._max_chars.valueChanged.connect( self._UpdateTestResult )
+        self._example_string.textChanged.connect( self._UpdateTestResult )
         
     
     def _GetValue( self ):
@@ -816,59 +837,90 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             match_value = self._match_value_flexible_input.GetValue()
             
+        elif match_type == ClientParsing.STRING_MATCH_FIXED:
+            
+            match_value = self._match_value_fixed_input.text()
+            
+        elif match_type == ClientParsing.STRING_MATCH_REGEX:
+            
+            match_value = self._match_value_regex_input.text()
+            
+        
+        if match_type == ClientParsing.STRING_MATCH_FIXED:
+            
+            min_chars = None
+            max_chars = None
+            example_string = match_value
+            
         else:
             
-            match_value = self._match_value_text_input.text()
+            min_chars = self._min_chars.GetValue()
+            max_chars = self._max_chars.GetValue()
+            example_string = self._example_string.text()
             
-        
-        min_chars = self._min_chars.GetValue()
-        max_chars = self._max_chars.GetValue()
-        
-        example_string = self._example_string.text()
         
         string_match = ClientParsing.StringMatch( match_type = match_type, match_value = match_value, min_chars = min_chars, max_chars = max_chars, example_string = example_string )
         
         return string_match
         
     
-    def _UpdateControls( self ):
+    def _UpdateControlVisibility( self ):
         
         match_type = self._match_type.GetValue()
         
-        if match_type == ClientParsing.STRING_MATCH_ANY:
-            
-            self._match_value_text_input.setEnabled( False )
-            self._match_value_flexible_input.setEnabled( False )
-            
-        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
-            
-            self._match_value_text_input.setEnabled( False )
-            self._match_value_flexible_input.setEnabled( True )
-            
-        else:
-            
-            self._match_value_text_input.setEnabled( True )
-            self._match_value_flexible_input.setEnabled( False )
-            
+        self._match_value_fixed_input_label.setVisible( False )
+        self._match_value_regex_input_label.setVisible( False )
+        self._match_value_flexible_input_label.setVisible( False )
+        self._min_chars_label.setVisible( False )
+        self._max_chars_label.setVisible( False )
+        self._example_string_label.setVisible( False )
+        
+        self._match_value_fixed_input.setVisible( False )
+        self._match_value_regex_input.setVisible( False )
+        self._match_value_flexible_input.setVisible( False )
+        self._min_chars.setVisible( False )
+        self._max_chars.setVisible( False )
+        self._example_string.setVisible( False )
         
         if match_type == ClientParsing.STRING_MATCH_FIXED:
             
-            self._min_chars.SetValue( None )
-            self._max_chars.SetValue( None )
+            self._match_value_fixed_input_label.setVisible( True )
+            self._match_value_fixed_input.setVisible( True )
             
-            self._min_chars.setEnabled( False )
-            self._max_chars.setEnabled( False )
+        else:
             
-            self._example_string.blockSignals( True ) # Temporarily block the text changed signal here so we won't end up in infinite recursion
-            self._example_string.setText( self._match_value_text_input.text() )
-            self._example_string.blockSignals( False )
+            self._min_chars_label.setVisible( True )
+            self._max_chars_label.setVisible( True )
+            self._example_string_label.setVisible( True )
+            
+            self._min_chars.setVisible( True )
+            self._max_chars.setVisible( True )
+            self._example_string.setVisible( True )
+            
+            if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+                
+                self._match_value_flexible_input_label.setVisible( True )
+                self._match_value_flexible_input.setVisible( True )
+                
+            elif match_type == ClientParsing.STRING_MATCH_REGEX:
+                
+                self._match_value_regex_input_label.setVisible( True )
+                self._match_value_regex_input.setVisible( True )
+                
+            
+        
+        self._UpdateTestResult()
+        
+    
+    def _UpdateTestResult( self ):
+        
+        match_type = self._match_type.GetValue()
+        
+        if match_type == ClientParsing.STRING_MATCH_FIXED:
             
             self._example_string_matches.setText( '' )
             
         else:
-            
-            self._min_chars.setEnabled( True )
-            self._max_chars.setEnabled( True )
             
             string_match = self._GetValue()
             
@@ -913,15 +965,19 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_type.SetValue( match_type )
         
-        if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+        self._match_value_flexible_input.SetValue( ClientParsing.ALPHA )
+        
+        if match_type == ClientParsing.STRING_MATCH_FIXED:
+            
+            self._match_value_fixed_input.setText( match_value )
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
             
             self._match_value_flexible_input.SetValue( match_value )
             
-        else:
+        elif match_type == ClientParsing.STRING_MATCH_REGEX:
             
-            self._match_value_flexible_input.SetValue( ClientParsing.ALPHA )
-            
-            self._match_value_text_input.setText( match_value )
+            self._match_value_regex_input.setText( match_value )
             
         
         self._min_chars.SetValue( min_chars )
@@ -929,7 +985,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_string.setText( example_string )
         
-        self._UpdateControls()
+        self._UpdateControlVisibility()
         
     
 class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1041,7 +1097,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     NO_RESULTS_TEXT = 'no results'
     
-    def __init__( self, parent, string_processor: ClientParsing.StringProcessor, example_string: str = '' ):
+    def __init__( self, parent, string_processor: ClientParsing.StringProcessor, test_data: ClientParsing.ParsingTestData ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1064,6 +1120,14 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_panel.setMinimumSize( w, h )
         
         #
+        
+        if len( test_data.texts ) > 0:
+            
+            example_string = test_data.texts[0]
+            
+        else:
+            example_string = ''
+            
         
         self._example_string.setText( example_string )
         
@@ -1100,7 +1164,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         choice_tuples = [
             ( 'String Match', ClientParsing.StringMatch, 'An object that filters strings.' ),
-            ( 'String Transformer', ClientParsing.StringConverter, 'An object that converts strings from one thing to another.' ),
+            ( 'String Converter', ClientParsing.StringConverter, 'An object that converts strings from one thing to another.' ),
             ( 'String Splitter', ClientParsing.StringSplitter, 'An object that breaks strings into smaller strings.' )
         ]
         
@@ -1117,6 +1181,10 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             
             string_processing_step = ClientParsing.StringMatch( example_string = self._example_string.text() )
             
+            example_text = self._GetExampleTextForStringProcessingStep( string_processing_step )
+            
+            string_processing_step = ClientParsing.StringMatch( example_string = example_text )
+            
         else:
             
             string_processing_step = string_processing_step_type()
@@ -1126,6 +1194,49 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def _Edit( self, string_processing_step: ClientParsing.StringProcessingStep ):
+        
+        example_text = self._GetExampleTextForStringProcessingStep( string_processing_step )
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit processing step' ) as dlg:
+            
+            if isinstance( string_processing_step, ClientParsing.StringMatch ):
+                
+                test_data = ClientParsing.ParsingTestData( {}, ( example_text, ) )
+                
+                panel = EditStringMatchPanel( dlg, string_processing_step, test_data = test_data )
+                
+            elif isinstance( string_processing_step, ClientParsing.StringConverter ):
+                
+                panel = EditStringConverterPanel( dlg, string_processing_step, example_string_override = example_text )
+                
+            elif isinstance( string_processing_step, ClientParsing.StringSplitter ):
+                
+                panel = EditStringSplitterPanel( dlg, string_processing_step, example_string = example_text )
+                
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                string_processing_step = panel.GetValue()
+                
+                return string_processing_step
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def _ConvertDataToListBoxString( self, string_processing_step: ClientParsing.StringProcessingStep ):
+        
+        return string_processing_step.ToString( with_type = True )
+        
+    
+    def _GetExampleTextForStringProcessingStep( self, string_processing_step: ClientParsing.StringProcessingStep ):
+        
+        # ultimately rework this to multiline test_data m8
         
         current_string_processor = self._GetValue()
         
@@ -1159,39 +1270,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit processing step' ) as dlg:
-            
-            if isinstance( string_processing_step, ClientParsing.StringMatch ):
-                
-                panel = EditStringMatchPanel( dlg, string_processing_step )
-                
-            elif isinstance( string_processing_step, ClientParsing.StringConverter ):
-                
-                panel = EditStringConverterPanel( dlg, string_processing_step, example_string_override = example_text )
-                
-            elif isinstance( string_processing_step, ClientParsing.StringSplitter ):
-                
-                panel = EditStringSplitterPanel( dlg, string_processing_step, example_string = example_text )
-                
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                string_processing_step = panel.GetValue()
-                
-                return string_processing_step
-                
-            else:
-                
-                raise HydrusExceptions.VetoException()
-                
-            
-        
-    
-    def _ConvertDataToListBoxString( self, string_processing_step: ClientParsing.StringProcessingStep ):
-        
-        return string_processing_step.ToString()
+        return example_text
         
     
     def _GetValue( self ):
@@ -1244,6 +1323,11 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             else:
                 
                 for result in results:
+                    
+                    if not isinstance( result, str ):
+                        
+                        result = repr( result )
+                        
                     
                     results_list.addItem( result )
                     

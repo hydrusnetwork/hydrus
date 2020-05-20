@@ -1,8 +1,8 @@
-from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDB
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
+from hydrus.client.media import ClientMediaResultCache
 from hydrus.client import ClientManagers
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
@@ -589,7 +589,7 @@ class TestMigration( unittest.TestCase ):
             
             job.Run()
             
-            self._db._weakref_media_result_cache = ClientCaches.MediaResultCache()
+            self._db._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in self.Read( 'media_results', list( self._hashes_to_current_tags.keys() ) ) }
             

@@ -1,6 +1,7 @@
+import collections
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientTags
-import collections
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions

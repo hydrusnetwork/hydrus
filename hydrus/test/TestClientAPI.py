@@ -1,12 +1,10 @@
-from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
 from hydrus.client import ClientLocalServer
 from hydrus.client import ClientLocalServerResources
 from hydrus.client import ClientManagers
-from hydrus.client import ClientMedia
-from hydrus.client import ClientMediaManagers
-from hydrus.client import ClientRatings
+from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientTags
@@ -1594,7 +1592,7 @@ class TestClientAPI( unittest.TestCase ):
             notes_manager = ClientMediaManagers.NotesManager( {} )
             file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
             
-            media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
             
             media_results.append( media_result )
             
@@ -1782,7 +1780,7 @@ class TestClientAPI( unittest.TestCase ):
         notes_manager = ClientMediaManagers.NotesManager( {} )
         file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
@@ -1925,7 +1923,7 @@ class TestClientAPI( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )

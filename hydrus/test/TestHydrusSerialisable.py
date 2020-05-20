@@ -6,8 +6,9 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
-from hydrus.client import ClientMedia
-from hydrus.client import ClientMediaManagers
+from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientSearch
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
@@ -193,7 +194,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         local_media_has_values = ClientMedia.MediaSingleton( media_result )
         
@@ -203,7 +204,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 2, other_local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         other_local_media_has_values = ClientMedia.MediaSingleton( media_result )
         
@@ -213,7 +214,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 3, local_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, local_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, local_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         local_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -223,7 +224,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 4, trashed_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, trash_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, trash_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         trashed_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -233,7 +234,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 5, deleted_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, deleted_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         deleted_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -243,7 +244,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 6, one_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, one_tags_manager, local_locations_manager, one_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, one_tags_manager, local_locations_manager, one_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         one_media = ClientMedia.MediaSingleton( media_result )
         
@@ -253,7 +254,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 7, two_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, two_tags_manager, local_locations_manager, two_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, two_tags_manager, local_locations_manager, two_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         two_media = ClientMedia.MediaSingleton( media_result )
         

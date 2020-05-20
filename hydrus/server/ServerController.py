@@ -10,7 +10,6 @@ import os
 from hydrus.server import ServerDB
 from hydrus.server import ServerServer
 import requests
-import sys
 import time
 import traceback
 import twisted.internet.ssl
@@ -496,9 +495,6 @@ class Controller( HydrusController.HydrusController ):
         self.CallToThread( self.services_upnp_manager.SetServices, self._services )
         
         [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
-        
-        current_service_keys = set( self._service_keys_to_connected_ports.keys() )
-        future_service_keys = set( [ service.GetServiceKey() for service in self._services ] )
         
         self.SetRunningTwistedServices( self._services )
         

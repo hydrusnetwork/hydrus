@@ -1,6 +1,7 @@
+from twisted.web.resource import NoResource
+
 from hydrus.client import ClientLocalServerResources
 from hydrus.core import HydrusServer
-from twisted.web.resource import NoResource
 
 class HydrusClientService( HydrusServer.HydrusService ):
     
