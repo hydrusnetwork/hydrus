@@ -1,24 +1,11 @@
-from hydrus.client import ClientConstants as CC
 import collections
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
-import itertools
-import os
-import random
-import requests
-import urllib3
 import threading
 import time
 import traceback
-import urllib.parse
-import yaml
 
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 
 JOB_STATUS_AWAITING_VALIDITY = 0
 JOB_STATUS_AWAITING_BANDWIDTH = 1

@@ -1,8 +1,13 @@
+import collections
+import datetime
+import re
+import threading
+import time
+import typing
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientTags
-import collections
-import datetime
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -10,10 +15,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-import re
-import threading
-import time
-import typing
 
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
@@ -128,6 +129,13 @@ def CollapseWildcardCharacters( text ):
     while '**' in text:
         
         text = text.replace( '**', '*' )
+        
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( text )
+    
+    if namespace == '*':
+        
+        text = subtag
         
     
     return text
@@ -2253,12 +2261,40 @@ SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM_LOCAL, None )
 
 SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None )
 
+def SearchTextIsFetchAll( search_text: str ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    if namespace in ( '', '*' ) and subtag == '*':
+        
+        return True
+        
+    
+    return False
+    
+def SearchTextIsNamespaceFetchAll( search_text: str ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    if namespace not in ( '', '*' ) and subtag in ( '', '*' ):
+        
+        return True
+        
+    
+    return False
+    
+def SubtagIsEmpty( search_text: str ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    return subtag == ''
+    
 class ParsedAutocompleteText( object ):
     
-    def __init__( self, raw_input: str, collapse_search_characters: bool ):
+    def __init__( self, raw_input: str, tag_autocomplete_options: ClientTags.TagAutocompleteOptions, collapse_search_characters: bool ):
         
         self.raw_input = raw_input
-        
+        self._tag_autocomplete_options = tag_autocomplete_options
         self._collapse_search_characters = collapse_search_characters
         
         self.inclusive = not self.raw_input.startswith( '-' )
@@ -2327,47 +2363,62 @@ class ParsedAutocompleteText( object ):
         return tag_search_predicate
         
     
-    def GetSearchText( self, always_autocompleting: bool ):
-        
-        return self._GetSearchText( always_autocompleting )
-        
-    
     def GetNonTagFileSearchPredicates( self ):
         
         predicates = []
         
-        if self.IsNamespaceSearch():
+        if self.IsAcceptableForFileSearches():
             
-            search_text = self._GetSearchText( False )
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
-            
-            predicate = Predicate( PREDICATE_TYPE_NAMESPACE, namespace, self.inclusive )
-            
-            predicates.append( predicate )
-            
-        elif self.IsExplicitWildcard():
-            
-            search_texts = [ self._GetSearchText( True, force_do_not_collapse = True ), self._GetSearchText( False, force_do_not_collapse = True ) ]
-            
-            search_texts = HydrusData.DedupeList( search_texts )
-            
-            predicates.extend( ( Predicate( PREDICATE_TYPE_WILDCARD, search_text, self.inclusive ) for search_text in search_texts ) )
+            if self.IsNamespaceSearch():
+                
+                search_text = self._GetSearchText( False )
+                
+                ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+                
+                predicate = Predicate( PREDICATE_TYPE_NAMESPACE, namespace, self.inclusive )
+                
+                predicates.append( predicate )
+                
+            elif self.IsExplicitWildcard():
+                
+                search_texts = [ self._GetSearchText( True, force_do_not_collapse = True ), self._GetSearchText( False, force_do_not_collapse = True ) ]
+                
+                search_texts = HydrusData.DedupeList( search_texts )
+                
+                predicates.extend( ( Predicate( PREDICATE_TYPE_WILDCARD, search_text, self.inclusive ) for search_text in search_texts ) )
+                
             
         
         return predicates
         
     
-    def IsAcceptableForTags( self ):
+    def GetSearchText( self, always_autocompleting: bool ):
+        
+        return self._GetSearchText( always_autocompleting )
+        
+    
+    def GetTagAutocompleteOptions( self ):
+        
+        return self._tag_autocomplete_options
+        
+    
+    def IsAcceptableForTagSearches( self ):
         
         search_text = self._GetSearchText( False )
         
+        if SubtagIsEmpty( search_text ):
+            
+            return False
+            
+        
         ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
         
-        bad_namespace = namespace == '*'
-        bad_subtag = subtag in ( '', '*' )
+        if not self._tag_autocomplete_options.NamespaceFetchAllAllowed() and SearchTextIsNamespaceFetchAll( search_text ):
+            
+            return False
+            
         
-        if bad_namespace or bad_subtag:
+        if not self._tag_autocomplete_options.FetchAllAllowed() and SearchTextIsFetchAll( search_text ):
             
             return False
             
@@ -2375,16 +2426,21 @@ class ParsedAutocompleteText( object ):
         return True
         
     
-    def IsAcceptableForFiles( self ):
+    def IsAcceptableForFileSearches( self ):
         
         search_text = self._GetSearchText( False )
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        if len( search_text ) == 0:
+            
+            return False
+            
         
-        bad_namespace = namespace == '*'
-        bad_subtag = namespace == '' and subtag in ( '', '*' )
+        if self.IsExplicitWildcard() and SubtagIsEmpty( search_text ):
+            
+            return False
+            
         
-        if bad_namespace or bad_subtag:
+        if SearchTextIsFetchAll( search_text ):
             
             return False
             
@@ -2399,34 +2455,32 @@ class ParsedAutocompleteText( object ):
     
     def IsExplicitWildcard( self ):
         
-        if not self.IsAcceptableForFiles():
-            
-            return False
-            
-        
         # user has intentionally put a '*' in
         return '*' in self.raw_content
         
     
     def IsNamespaceSearch( self ):
         
-        if not self.IsAcceptableForFiles():
+        search_text = self._GetSearchText( False )
+        
+        return SearchTextIsNamespaceFetchAll( search_text )
+        
+    
+    def IsTagSearch( self ):
+        
+        if self.IsEmpty() or self.IsExplicitWildcard() or self.IsNamespaceSearch():
             
             return False
             
         
         search_text = self._GetSearchText( False )
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        if SubtagIsEmpty( search_text ):
+            
+            return False
+            
         
-        is_namespace_search = namespace != '' and subtag in ( '', '*' )
-        
-        return is_namespace_search
-        
-    
-    def IsTagSearch( self ):
-        
-        return not ( self.IsEmpty() or self.IsExplicitWildcard() or self.IsNamespaceSearch() ) and self.IsAcceptableForFiles()
+        return True
         
     
     def SetInclusive( self, inclusive: bool ):

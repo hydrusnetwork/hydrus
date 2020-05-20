@@ -10,7 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientRatings
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICommon

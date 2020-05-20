@@ -1,12 +1,10 @@
 import os
 import random
 import time
-import traceback
 import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -17,7 +15,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
@@ -35,7 +33,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIListCtrl
-from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIResults
@@ -1100,7 +1097,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self.widget().setLayout( vbox )
         
         self._controller.sub( self, 'RefreshAllNumbers', 'refresh_dupe_page_numbers' )
-        self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
         
         self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
         
@@ -1266,7 +1262,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         search_distance = self._search_distance_spinctrl.value()
         
-        self._controller.Write( 'maintain_similar_files_search_for_potential_duplicates', search_distance, job_key = job_key )
+        self._controller.Write( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key )
         
         self._controller.pub( 'modal_message', job_key )
         
@@ -1481,14 +1477,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     def SearchChanged( self, file_search_context: ClientSearch.FileSearchContext ):
         
         self._SearchDomainUpdated()
-        
-    
-    def SearchImmediately( self, page_key, value ):
-        
-        if page_key == self._page_key:
-            
-            self._SearchDomainUpdated()
-            
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_DUPLICATE_FILTER ] = ManagementPanelDuplicateFilter
@@ -3227,7 +3215,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 
                 formula = simple_downloader_formula.GetFormula()
                 
-                control = ClientGUIParsing.EditFormulaPanel( panel, formula, lambda: ( {}, '' ) )
+                control = ClientGUIParsing.EditFormulaPanel( panel, formula, lambda: ClientParsing.ParsingTestData( {}, ( '', ) ) )
                 
                 panel.SetControl( control )
                 
@@ -4453,8 +4441,6 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self.widget().setLayout( vbox )
         
-        self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        
         if self._search_enabled:
             
             self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
@@ -4637,16 +4623,6 @@ class ManagementPanelQuery( ManagementPanel ):
     def RefreshQuery( self ):
         
         self._RefreshQuery()
-        
-    
-    def SearchImmediately( self, page_key, value ):
-        
-        if page_key == self._page_key:
-            
-            self._management_controller.SetVariable( 'synchronised', value )
-            
-            self._RefreshQuery()
-            
         
     
     def SearchChanged( self, file_search_context: ClientSearch.FileSearchContext ):

@@ -1,10 +1,7 @@
 import threading
-import traceback
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import QtPorting as QP
 
 class AsyncQtUpdater( object ):

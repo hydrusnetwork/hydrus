@@ -9,9 +9,7 @@ from hydrus.core import HydrusSerialisable
 import json
 import psutil
 import socket
-import ssl
 import threading
-import time
 import urllib
 
 import urllib3

@@ -21,7 +21,7 @@ from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientRatings
 from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIACDropdown
@@ -4387,8 +4387,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page = ClientGUICommon.BetterChoice( general_panel )
             
-            self._show_all_tags_in_autocomplete = QW.QCheckBox( general_panel )
-            
             self._ac_select_first_with_count = QW.QCheckBox( general_panel )
             
             self._apply_all_parents_to_all_services = QW.QCheckBox( general_panel )
@@ -4432,7 +4430,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page.SetValue( new_options.GetKey( 'default_tag_service_search_page' ) )
             
-            self._show_all_tags_in_autocomplete.setChecked( HC.options[ 'show_all_tags_in_autocomplete' ] )
             self._ac_select_first_with_count.setChecked( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
             
             self._apply_all_parents_to_all_services.setChecked( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
@@ -4451,7 +4448,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_repository ) )
             rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
-            rows.append( ( 'By default, search \'all known files\' in \'write\' tag autocomplete inputs: ', self._show_all_tags_in_autocomplete ) )
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
             rows.append( ( 'Apply all parents for all services: ', self._apply_all_parents_to_all_services ) )
             rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
@@ -4479,7 +4475,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetValue()
             HC.options[ 'default_tag_sort' ] = QP.GetClientData( self._default_tag_sort, self._default_tag_sort.currentIndex() )
-            HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.isChecked()
             
             self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
             

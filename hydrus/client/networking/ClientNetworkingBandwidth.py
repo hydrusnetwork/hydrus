@@ -1,13 +1,13 @@
 import collections
+import threading
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetworking
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusSerialisable
-import threading
 
 class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     

@@ -1,6 +1,5 @@
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusThreading
 import hashlib
 import io
 import numpy
@@ -19,15 +18,10 @@ except:
     pass # old version of numpy, screw it
     
 
-import os
 from PIL import _imaging
 from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
-import shutil
 import struct
-import threading
-import time
-import traceback
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths

@@ -1,13 +1,8 @@
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusVideoHandling
-import os
 import re
 import subprocess
-import threading
-import time
-import traceback
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusVideoHandling
 
 def ParseFFMPEGAudio( lines ):
     

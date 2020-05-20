@@ -4,7 +4,6 @@ from hydrus.core import HydrusData
 import os
 import subprocess
 import time
-import traceback
 
 if HC.PLATFORM_LINUX:
     

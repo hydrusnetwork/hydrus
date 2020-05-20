@@ -1,8 +1,5 @@
-from hydrus.core import HydrusConstants as HC
 #import PyPDF2
 import re
-import time
-import traceback
 
 def GetNumWordsFromString( s ):
     

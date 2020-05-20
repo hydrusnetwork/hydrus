@@ -1,14 +1,4 @@
-from hydrus.client import ClientConstants as CC
-from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client import ClientParsing
-from hydrus.client import ClientThreading
 import collections
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusNetworking
-from hydrus.core import HydrusSerialisable
 import http.cookiejar
 import os
 import re
@@ -16,6 +6,17 @@ import threading
 import time
 import unicodedata
 import urllib.parse
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientParsing
+from hydrus.client import ClientThreading
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusSerialisable
 
 def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
     
@@ -1198,16 +1199,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     continue
                     
                 
-                if url_class is None:
-                    
-                    if False:
-                        
-                        domain = ConvertURLIntoDomain( url )
-                        
-                        url_tuples.append( ( domain, url ) )
-                        
-                    
-                else:
+                if url_class is not None:
                     
                     url_class_key = url_class.GetMatchKey()
                     
@@ -2447,6 +2439,10 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         search_phrase_seems_to_go_in_path = '?' not in first_part
         
         search_terms = query_text.split( ' ' )
+        
+        # if a user enters "%20" in a query, or any other percent-encoded char, we turn it into human here, lest it be re-quoted in a moment
+        # if a user enters "%25", i.e. "%", followed by some characters, then all bets are off
+        search_terms = [ urllib.parse.unquote( search_term ) for search_term in search_terms ]
         
         if search_phrase_seems_to_go_in_path:
             

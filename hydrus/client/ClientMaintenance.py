@@ -1,3 +1,8 @@
+import os
+import random
+import threading
+import time
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
 from hydrus.core import HydrusConstants as HC
@@ -9,10 +14,6 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
-import os
-import random
-import threading
-import time
 
 class GlobalMaintenanceJobInterface( object ):
     

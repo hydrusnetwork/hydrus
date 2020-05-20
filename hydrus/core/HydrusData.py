@@ -1,18 +1,11 @@
-import bs4
 import collections
 import cProfile
 import io
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusText
-import locale
 import os
 import pstats
 import psutil
 import random
 import re
-import shutil
 import sqlite3
 import struct
 import subprocess
@@ -22,6 +15,11 @@ import time
 import traceback
 import yaml
 import itertools
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusText
 
 def default_dict_list(): return collections.defaultdict( list )
 
@@ -852,11 +850,6 @@ def HumanTextSort( texts ):
 def IntelligentMassIntersect( sets_to_reduce ):
     
     answer = None
-    
-    def get_len( item ):
-        
-        return len( item )
-        
     
     for set_to_reduce in sets_to_reduce:
         

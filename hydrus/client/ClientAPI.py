@@ -1,9 +1,10 @@
+import threading
+
 from hydrus.client import ClientTags
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-import threading
 
 CLIENT_API_PERMISSION_ADD_URLS = 0
 CLIENT_API_PERMISSION_ADD_FILES = 1

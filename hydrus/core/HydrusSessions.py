@@ -1,15 +1,7 @@
 import collections
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 import hashlib
-import os
-import queue
-import re
-import sqlite3
-import sys
 import threading
-import time
-import traceback
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 

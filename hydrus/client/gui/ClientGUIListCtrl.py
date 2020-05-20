@@ -214,15 +214,6 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         selected_data_quick = set( self.GetData( only_selected = True ) )
         
-        # The lack of clearSelection below caused erroneous behavior when using the move up/down buttons in the string transformations dialog, so added it.
-        # The commented out code should be a no-op after the Qt port, leaving it just in case.
-        """
-        selected_indices = self._GetSelected()
-        
-        for selected_index in selected_indices:
-            
-            self.topLevelItem( selected_index ).setSelected( True )
-        """
         self.clearSelection()
         
         sorted_data_info = self._SortDataInfo()

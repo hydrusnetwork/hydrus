@@ -1,11 +1,16 @@
 import base64
 import bs4
 import calendar
-import codecs
+import collections
+import json
+import os
+import re
 import typing
+import time
+import urllib.parse
+
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
-import collections
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -13,12 +18,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-import json
-import os
-import re
-import threading
-import time
-import urllib.parse
 
 try:
     
@@ -493,22 +492,34 @@ def RenderJSONParseRule( rule ):
     
     return s
     
+class ParsingTestData( object ):
+    
+    def __init__( self, parsing_context, texts ):
+        
+        self.parsing_context = parsing_context
+        self.texts = texts
+        
+    
+    def LooksLikeHTML( self ):
+        
+        return True in ( HydrusText.LooksLikeHTML( text ) for text in self.texts )
+        
+    
+    def LooksLikeJSON( self ):
+        
+        return True in ( HydrusText.LooksLikeJSON( text ) for text in self.texts )
+        
+    
 class ParseFormula( HydrusSerialisable.SerialisableBase ):
     
-    def __init__( self, string_match = None, string_converter = None ):
+    def __init__( self, string_processor = None ):
         
-        if string_match is None:
+        if string_processor is None:
             
-            string_match = StringMatch()
-            
-        
-        if string_converter is None:
-            
-            string_converter = StringConverter( example_string = 'parsed information' )
+            string_processor = StringProcessor()
             
         
-        self._string_match = string_match
-        self._string_converter = string_converter
+        self._string_processor = string_processor
         
     
     def _GetParsePrettySeparator( self ):
@@ -519,6 +530,11 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
     def _ParseRawTexts( self, parsing_context, parsing_text ):
         
         raise NotImplementedError()
+        
+    
+    def GetStringProcessor( self ):
+        
+        return self._string_processor
         
     
     def Parse( self, parsing_context, parsing_text ):
@@ -533,11 +549,9 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                self._string_match.Test( raw_text )
+                processed_texts = self._string_processor.ProcessStrings( [ raw_text ] )
                 
-                text = self._string_converter.Convert( raw_text )
-                
-                texts.append( text )
+                texts.extend( processed_texts )
                 
             except HydrusExceptions.ParseException:
                 
@@ -568,6 +582,11 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         return False
         
     
+    def SetStringProcessor( self, string_processor: "StringProcessor" ):
+        
+        self._string_processor = string_processor
+        
+    
     def ToPrettyString( self ):
         
         raise NotImplementedError()
@@ -582,11 +601,11 @@ class ParseFormulaCompound( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND
     SERIALISABLE_NAME = 'Compound Parsing Formula'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, formulae = None, sub_phrase = None, string_match = None, string_converter = None ):
+    def __init__( self, formulae = None, sub_phrase = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_match, string_converter )
+        ParseFormula.__init__( self, string_processor )
         
         if formulae is None:
             
@@ -608,19 +627,17 @@ class ParseFormulaCompound( ParseFormula ):
     def _GetSerialisableInfo( self ):
         
         serialisable_formulae = HydrusSerialisable.SerialisableList( self._formulae ).GetSerialisableTuple()
-        serialisable_string_match = self._string_match.GetSerialisableTuple()
-        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         
-        return ( serialisable_formulae, self._sub_phrase, serialisable_string_match, serialisable_string_converter )
+        return ( serialisable_formulae, self._sub_phrase, serialisable_string_processor )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_formulae, self._sub_phrase, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( serialisable_formulae, self._sub_phrase, serialisable_string_processor ) = serialisable_info
         
         self._formulae = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formulae )
-        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
-        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text ):
@@ -679,6 +696,39 @@ class ParseFormulaCompound( ParseFormula ):
         return raw_texts
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( serialisable_formulae, sub_phrase, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+            
+            processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
+            
+            string_processor = StringProcessor()
+            
+            string_processor.SetProcessingSteps( processing_steps )
+            
+            serialisable_string_processor = string_processor.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_formulae, sub_phrase, serialisable_string_processor )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
+    def GetFormulae( self ):
+        
+        return self._formulae
+        
+    
+    def GetSubstitutionPhrase( self ):
+        
+        return self._sub_phrase
+        
+    
     def ToPrettyString( self ):
         
         return 'COMPOUND with ' + HydrusData.ToHumanInt( len( self._formulae ) ) + ' formulae.'
@@ -702,22 +752,17 @@ class ParseFormulaCompound( ParseFormula ):
         return text
         
     
-    def ToTuple( self ):
-        
-        return ( self._formulae, self._sub_phrase, self._string_match, self._string_converter )
-        
-    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND ] = ParseFormulaCompound
 
 class ParseFormulaContextVariable( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE
     SERIALISABLE_NAME = 'Context Variable Formula'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, variable_name = None, string_match = None, string_converter = None ):
+    def __init__( self, variable_name = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_match, string_converter )
+        ParseFormula.__init__( self, string_processor )
         
         if variable_name is None:
             
@@ -729,18 +774,16 @@ class ParseFormulaContextVariable( ParseFormula ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_string_match = self._string_match.GetSerialisableTuple()
-        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         
-        return ( self._variable_name, serialisable_string_match, serialisable_string_converter )
+        return ( self._variable_name, serialisable_string_processor )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._variable_name, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( self._variable_name, serialisable_string_processor ) = serialisable_info
         
-        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
-        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text ):
@@ -753,6 +796,34 @@ class ParseFormulaContextVariable( ParseFormula ):
             
         
         return raw_texts
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( variable_name, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+            
+            processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
+            
+            string_processor = StringProcessor()
+            
+            string_processor.SetProcessingSteps( processing_steps )
+            
+            serialisable_string_processor = string_processor.GetSerialisableTuple()
+            
+            new_serialisable_info = ( variable_name, serialisable_string_processor )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
+    def GetVariableName( self ):
+        
+        return self._variable_name
         
     
     def ToPrettyString( self ):
@@ -773,11 +844,6 @@ class ParseFormulaContextVariable( ParseFormula ):
         return text
         
     
-    def ToTuple( self ):
-        
-        return ( self._variable_name, self._string_match, self._string_converter )
-        
-    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE ] = ParseFormulaContextVariable
 
 HTML_CONTENT_ATTRIBUTE = 0
@@ -788,11 +854,11 @@ class ParseFormulaHTML( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
     SERIALISABLE_NAME = 'HTML Parsing Formula'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
-    def __init__( self, tag_rules = None, content_to_fetch = None, attribute_to_fetch = None, string_match = None, string_converter = None ):
+    def __init__( self, tag_rules = None, content_to_fetch = None, attribute_to_fetch = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_match, string_converter )
+        ParseFormula.__init__( self, string_processor )
         
         if tag_rules is None:
             
@@ -918,20 +984,18 @@ class ParseFormulaHTML( ParseFormula ):
         
         serialisable_tag_rules = self._tag_rules.GetSerialisableTuple()
         
-        serialisable_string_match = self._string_match.GetSerialisableTuple()
-        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         
-        return ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
+        return ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_processor )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_processor ) = serialisable_info
         
         self._tag_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_rules )
         
-        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
-        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text ):
@@ -971,37 +1035,37 @@ class ParseFormulaHTML( ParseFormula ):
             
             ( cull_front, cull_back, prepend, append ) = culling_and_adding
             
-            transformations = []
+            conversions = []
             
             if cull_front > 0:
                 
-                transformations.append( ( STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, cull_front ) )
+                conversions.append( ( STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, cull_front ) )
                 
             elif cull_front < 0:
                 
-                transformations.append( ( STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, cull_front ) )
+                conversions.append( ( STRING_CONVERSION_REMOVE_TEXT_FROM_END, cull_front ) )
                 
             
             if cull_back > 0:
                 
-                transformations.append( ( STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, cull_back ) )
+                conversions.append( ( STRING_CONVERSION_CLIP_TEXT_FROM_END, cull_back ) )
                 
             elif cull_back < 0:
                 
-                transformations.append( ( STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, cull_back ) )
+                conversions.append( ( STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, cull_back ) )
                 
             
             if prepend != '':
                 
-                transformations.append( ( STRING_TRANSFORMATION_PREPEND_TEXT, prepend ) )
+                conversions.append( ( STRING_CONVERSION_PREPEND_TEXT, prepend ) )
                 
             
             if append != '':
                 
-                transformations.append( ( STRING_TRANSFORMATION_APPEND_TEXT, append ) )
+                conversions.append( ( STRING_CONVERSION_APPEND_TEXT, append ) )
                 
             
-            string_converter = StringConverter( transformations, 'parsed information' )
+            string_converter = StringConverter( conversions, 'parsed information' )
             
             serialisable_string_converter = string_converter.GetSerialisableTuple()
             
@@ -1062,6 +1126,41 @@ class ParseFormulaHTML( ParseFormula ):
             return ( 6, new_serialisable_info )
             
         
+        if version == 6:
+            
+            ( serialisable_new_tag_rules, content_to_fetch, attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+            
+            processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
+            
+            string_processor = StringProcessor()
+            
+            string_processor.SetProcessingSteps( processing_steps )
+            
+            serialisable_string_processor = string_processor.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_new_tag_rules, content_to_fetch, attribute_to_fetch, serialisable_string_processor )
+            
+            return ( 7, new_serialisable_info )
+            
+        
+    
+    def GetAttributeToFetch( self ):
+        
+        return self._attribute_to_fetch
+        
+    
+    def GetContentToFetch( self ):
+        
+        return self._content_to_fetch
+        
+    
+    def GetTagRules( self ):
+        
+        return self._tag_rules
+        
     
     def ParsesSeparatedContent( self ):
         
@@ -1090,18 +1189,13 @@ class ParseFormulaHTML( ParseFormula ):
             pretty_strings.append( 'get the html of those tags' )
             
         
-        pretty_strings.extend( self._string_converter.GetTransformationStrings() )
+        pretty_strings.extend( self._string_processor.GetProcessingStrings() )
         
         separator = os.linesep + 'and then '
         
         pretty_multiline_string = '--HTML--' + os.linesep + separator.join( pretty_strings )
         
         return pretty_multiline_string
-        
-    
-    def ToTuple( self ):
-        
-        return ( self._tag_rules, self._content_to_fetch, self._attribute_to_fetch, self._string_match, self._string_converter )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
@@ -1352,11 +1446,11 @@ class ParseFormulaJSON( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON
     SERIALISABLE_NAME = 'JSON Parsing Formula'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, parse_rules = None, content_to_fetch = None, string_match = None, string_converter = None ):
+    def __init__( self, parse_rules = None, content_to_fetch = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_match, string_converter )
+        ParseFormula.__init__( self, string_processor )
         
         if parse_rules is None:
             
@@ -1498,19 +1592,17 @@ class ParseFormulaJSON( ParseFormula ):
     def _GetSerialisableInfo( self ):
         
         serialisable_parse_rules = [ ( parse_rule_type, parse_rule.GetSerialisableTuple() ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, parse_rule ) for ( parse_rule_type, parse_rule ) in self._parse_rules ]
-        serialisable_string_match = self._string_match.GetSerialisableTuple()
-        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         
-        return ( serialisable_parse_rules, self._content_to_fetch, serialisable_string_match, serialisable_string_converter )
+        return ( serialisable_parse_rules, self._content_to_fetch, serialisable_string_processor )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_parse_rules, self._content_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( serialisable_parse_rules, self._content_to_fetch, serialisable_string_processor ) = serialisable_info
         
         self._parse_rules = [ ( parse_rule_type, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parse_rule ) ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, serialisable_parse_rule ) for ( parse_rule_type, serialisable_parse_rule ) in serialisable_parse_rules ]
-        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
-        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text ):
@@ -1564,6 +1656,36 @@ class ParseFormulaJSON( ParseFormula ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( serialisable_parse_rules, content_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+            
+            processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
+            
+            string_processor = StringProcessor()
+            
+            string_processor.SetProcessingSteps( processing_steps )
+            
+            serialisable_string_processor = string_processor.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_parse_rules, content_to_fetch, serialisable_string_processor )
+            
+            return ( 3, new_serialisable_info )
+            
+        
+    
+    def GetContentToFetch( self ):
+        
+        return self._content_to_fetch
+        
+    
+    def GetParseRules( self ):
+        
+        return self._parse_rules
+        
     
     def ParsesSeparatedContent( self ):
         
@@ -1592,18 +1714,13 @@ class ParseFormulaJSON( ParseFormula ):
             pretty_strings.append( 'get the dictionary keys' )
             
         
-        pretty_strings.extend( self._string_converter.GetTransformationStrings() )
+        pretty_strings.extend( self._string_processor.GetProcessingStrings() )
         
         separator = os.linesep + 'and then '
         
         pretty_multiline_string = '--JSON--' + os.linesep + separator.join( pretty_strings )
         
         return pretty_multiline_string
-        
-    
-    def ToTuple( self ):
-        
-        return ( self._parse_rules, self._content_to_fetch, self._string_match, self._string_converter )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON ] = ParseFormulaJSON
@@ -2499,7 +2616,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( url, query_type, file_identifier_type, file_identifier_encoding, file_identifier_arg_name, static_args, serialisable_children ) = old_serialisable_info
             
-            transformations = []
+            conversions = []
             
             if file_identifier_encoding == HC.ENCODING_RAW:
                 
@@ -2507,14 +2624,14 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
             elif file_identifier_encoding == HC.ENCODING_HEX:
                 
-                transformations.append( ( STRING_TRANSFORMATION_ENCODE, 'hex' ) )
+                conversions.append( ( STRING_CONVERSION_ENCODE, 'hex' ) )
                 
             elif file_identifier_encoding == HC.ENCODING_BASE64:
                 
-                transformations.append( ( STRING_TRANSFORMATION_ENCODE, 'base64' ) )
+                conversions.append( ( STRING_CONVERSION_ENCODE, 'base64' ) )
                 
             
-            file_identifier_string_converter = StringConverter( transformations, 'some hash bytes' )
+            file_identifier_string_converter = StringConverter( conversions, 'some hash bytes' )
             
             serialisable_file_identifier_string_converter = file_identifier_string_converter.GetSerialisableTuple()
             
@@ -2782,39 +2899,44 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ] = ParseRootFileLookup
 
-STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING = 0
-STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END = 1
-STRING_TRANSFORMATION_PREPEND_TEXT = 2
-STRING_TRANSFORMATION_APPEND_TEXT = 3
-STRING_TRANSFORMATION_ENCODE = 4
-STRING_TRANSFORMATION_DECODE = 5
-STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING = 6
-STRING_TRANSFORMATION_CLIP_TEXT_FROM_END = 7
-STRING_TRANSFORMATION_REVERSE = 8
-STRING_TRANSFORMATION_REGEX_SUB = 9
-STRING_TRANSFORMATION_DATE_DECODE = 10
-STRING_TRANSFORMATION_INTEGER_ADDITION = 11
-STRING_TRANSFORMATION_DATE_ENCODE = 12
+STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING = 0
+STRING_CONVERSION_REMOVE_TEXT_FROM_END = 1
+STRING_CONVERSION_PREPEND_TEXT = 2
+STRING_CONVERSION_APPEND_TEXT = 3
+STRING_CONVERSION_ENCODE = 4
+STRING_CONVERSION_DECODE = 5
+STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING = 6
+STRING_CONVERSION_CLIP_TEXT_FROM_END = 7
+STRING_CONVERSION_REVERSE = 8
+STRING_CONVERSION_REGEX_SUB = 9
+STRING_CONVERSION_DATE_DECODE = 10
+STRING_CONVERSION_INTEGER_ADDITION = 11
+STRING_CONVERSION_DATE_ENCODE = 12
 
-transformation_type_str_lookup = {}
+conversion_type_str_lookup = {}
 
-transformation_type_str_lookup[ STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING ] = 'remove text from beginning of string'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END ] = 'remove text from end of string'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_PREPEND_TEXT ] = 'prepend text'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_APPEND_TEXT ] = 'append text'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_ENCODE ] = 'encode'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_DECODE ] = 'decode'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING ] = 'take the start of the string'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_REGEX_SUB ] = 'regex substitution'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_DECODE ] = 'datestring to timestamp'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_INTEGER_ADDITION ] = 'integer addition'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_ENCODE ] = 'timestamp to datestring'
+conversion_type_str_lookup[ STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING ] = 'remove text from beginning of string'
+conversion_type_str_lookup[ STRING_CONVERSION_REMOVE_TEXT_FROM_END ] = 'remove text from end of string'
+conversion_type_str_lookup[ STRING_CONVERSION_PREPEND_TEXT ] = 'prepend text'
+conversion_type_str_lookup[ STRING_CONVERSION_APPEND_TEXT ] = 'append text'
+conversion_type_str_lookup[ STRING_CONVERSION_ENCODE ] = 'encode'
+conversion_type_str_lookup[ STRING_CONVERSION_DECODE ] = 'decode'
+conversion_type_str_lookup[ STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING ] = 'take the start of the string'
+conversion_type_str_lookup[ STRING_CONVERSION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
+conversion_type_str_lookup[ STRING_CONVERSION_REVERSE ] = 'reverse text'
+conversion_type_str_lookup[ STRING_CONVERSION_REGEX_SUB ] = 'regex substitution'
+conversion_type_str_lookup[ STRING_CONVERSION_DATE_DECODE ] = 'datestring to timestamp'
+conversion_type_str_lookup[ STRING_CONVERSION_INTEGER_ADDITION ] = 'integer addition'
+conversion_type_str_lookup[ STRING_CONVERSION_DATE_ENCODE ] = 'timestamp to datestring'
 
 class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
     
-    def ToString( self, simple = False ) -> str:
+    def MakesChanges( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def ToString( self, simple = False, with_type = False ) -> str:
         
         raise NotImplementedError()
         
@@ -2825,11 +2947,11 @@ class StringConverter( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Converter'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, transformations = None, example_string = None ):
+    def __init__( self, conversions = None, example_string = None ):
         
-        if transformations is None:
+        if conversions is None:
             
-            transformations = []
+            conversions = []
             
         
         if example_string is None:
@@ -2839,32 +2961,32 @@ class StringConverter( StringProcessingStep ):
         
         StringProcessingStep.__init__( self )
         
-        self.transformations = transformations
+        self.conversions = conversions
         
         self.example_string = example_string
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self.transformations, self.example_string )
+        return ( self.conversions, self.example_string )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_transformations, self.example_string ) = serialisable_info
+        ( serialisable_conversions, self.example_string ) = serialisable_info
         
-        self.transformations = []
+        self.conversions = []
         
         try: # I initialised this bad one time and broke a dialog on subsequent loads, fugg
             
-            for ( transformation_type, data ) in serialisable_transformations:
+            for ( conversion_type, data ) in serialisable_conversions:
                 
                 if isinstance( data, list ):
                     
                     data = tuple( data ) # convert from list to tuple thing
                     
                 
-                self.transformations.append( ( transformation_type, data ) )
+                self.conversions.append( ( conversion_type, data ) )
                 
             
         except:
@@ -2875,7 +2997,7 @@ class StringConverter( StringProcessingStep ):
     
     def Convert( self, s, max_steps_allowed = None ):
         
-        for ( i, transformation ) in enumerate( self.transformations ):
+        for ( i, conversion ) in enumerate( self.conversions ):
             
             if max_steps_allowed is not None and i >= max_steps_allowed:
                 
@@ -2884,45 +3006,45 @@ class StringConverter( StringProcessingStep ):
             
             try:
                 
-                ( transformation_type, data ) = transformation
+                ( conversion_type, data ) = conversion
                 
-                if transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
+                if conversion_type == STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING:
                     
                     num_chars = data
                     
                     s = s[ num_chars : ]
                     
-                elif transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
+                elif conversion_type == STRING_CONVERSION_REMOVE_TEXT_FROM_END:
                     
                     num_chars = data
                     
                     s = s[ : - num_chars ]
                     
-                elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
+                elif conversion_type == STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING:
                     
                     num_chars = data
                     
                     s = s[ : num_chars ]
                     
-                elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
+                elif conversion_type == STRING_CONVERSION_CLIP_TEXT_FROM_END:
                     
                     num_chars = data
                     
                     s = s[ - num_chars : ]
                     
-                elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
+                elif conversion_type == STRING_CONVERSION_PREPEND_TEXT:
                     
                     text = data
                     
                     s = text + s
                     
-                elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+                elif conversion_type == STRING_CONVERSION_APPEND_TEXT:
                     
                     text = data
                     
                     s = s + text
                     
-                elif transformation_type == STRING_TRANSFORMATION_ENCODE:
+                elif conversion_type == STRING_CONVERSION_ENCODE:
                     
                     encode_type = data
                     
@@ -2950,7 +3072,7 @@ class StringConverter( StringProcessingStep ):
                             
                         
                     
-                elif transformation_type == STRING_TRANSFORMATION_DECODE:
+                elif conversion_type == STRING_CONVERSION_DECODE:
                     
                     encode_type = data
                     
@@ -2974,17 +3096,17 @@ class StringConverter( StringProcessingStep ):
                             
                         
                     
-                elif transformation_type == STRING_TRANSFORMATION_REVERSE:
+                elif conversion_type == STRING_CONVERSION_REVERSE:
                     
                     s = s[::-1]
                     
-                elif transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
+                elif conversion_type == STRING_CONVERSION_REGEX_SUB:
                     
                     ( pattern, repl ) = data
                     
                     s = re.sub( pattern, repl, s )
                     
-                elif transformation_type == STRING_TRANSFORMATION_DATE_DECODE:
+                elif conversion_type == STRING_CONVERSION_DATE_DECODE:
                     
                     ( phrase, timezone, timezone_offset ) = data
                     
@@ -3012,7 +3134,7 @@ class StringConverter( StringProcessingStep ):
                     
                     s = str( timestamp )
                     
-                elif transformation_type == STRING_TRANSFORMATION_DATE_ENCODE:
+                elif conversion_type == STRING_CONVERSION_DATE_ENCODE:
                     
                     ( phrase, timezone ) = data
                     
@@ -3040,7 +3162,7 @@ class StringConverter( StringProcessingStep ):
                     
                     s = time.strftime( phrase, struct_time )
                     
-                elif transformation_type == STRING_TRANSFORMATION_INTEGER_ADDITION:
+                elif conversion_type == STRING_CONVERSION_INTEGER_ADDITION:
                     
                     delta = data
                     
@@ -3049,26 +3171,26 @@ class StringConverter( StringProcessingStep ):
                 
             except Exception as e:
                 
-                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.TransformationToString( transformation ) + '" to string "' + repr( s ) + '":' + str( e ) )
+                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.ConversionToString( conversion ) + '" to string "' + repr( s ) + '":' + str( e ) )
                 
             
         
         return s
         
     
-    def GetTransformationStrings( self ):
+    def GetConversionStrings( self ):
         
-        return [ self.TransformationToString( transformation ) for transformation in self.transformations ]
+        return [ self.ConversionToString( conversion ) for conversion in self.conversions ]
         
     
     def MakesChanges( self ):
         
-        return len( self.transformations ) > 0
+        return len( self.conversions ) > 0
         
     
-    def ToString( self, simple = False ) -> str:
+    def ToString( self, simple = False, with_type = False ) -> str:
         
-        num_rules = len( self.transformations )
+        num_rules = len( self.conversions )
         
         if num_rules == 0:
             
@@ -3078,7 +3200,7 @@ class StringConverter( StringProcessingStep ):
                 
             else:
                 
-                label = 'no string transformations'
+                label = 'no string conversions'
                 
             
         else:
@@ -3089,73 +3211,78 @@ class StringConverter( StringProcessingStep ):
                 
             else:
                 
-                label = '{} string transformations'.format( HydrusData.ToHumanInt( num_rules ) )
+                label = ', '.join( self.GetConversionStrings() )
                 
+            
+        
+        if with_type:
+            
+            label = 'CONVERT: {}'.format( label )
             
         
         return label
         
     
     @staticmethod
-    def TransformationToString( transformation ):
+    def ConversionToString( conversion ):
         
-        ( transformation_type, data ) = transformation
+        ( conversion_type, data ) = conversion
         
-        if transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
+        if conversion_type == STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING:
             
             return 'remove the first ' + HydrusData.ToHumanInt( data ) + ' characters'
             
-        elif transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
+        elif conversion_type == STRING_CONVERSION_REMOVE_TEXT_FROM_END:
             
             return 'remove the last ' + HydrusData.ToHumanInt( data ) + ' characters'
             
-        elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
+        elif conversion_type == STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING:
             
             return 'take the first ' + HydrusData.ToHumanInt( data ) + ' characters'
             
-        elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
+        elif conversion_type == STRING_CONVERSION_CLIP_TEXT_FROM_END:
             
             return 'take the last ' + HydrusData.ToHumanInt( data ) + ' characters'
             
-        elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
+        elif conversion_type == STRING_CONVERSION_PREPEND_TEXT:
             
             return 'prepend with "' + data + '"'
             
-        elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+        elif conversion_type == STRING_CONVERSION_APPEND_TEXT:
             
             return 'append with "' + data + '"'
             
-        elif transformation_type == STRING_TRANSFORMATION_ENCODE:
+        elif conversion_type == STRING_CONVERSION_ENCODE:
             
             return 'encode to ' + data
             
-        elif transformation_type == STRING_TRANSFORMATION_DECODE:
+        elif conversion_type == STRING_CONVERSION_DECODE:
             
             return 'decode from ' + data
             
-        elif transformation_type == STRING_TRANSFORMATION_REVERSE:
+        elif conversion_type == STRING_CONVERSION_REVERSE:
             
-            return transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ]
+            return conversion_type_str_lookup[ STRING_CONVERSION_REVERSE ]
             
-        elif transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
+        elif conversion_type == STRING_CONVERSION_REGEX_SUB:
             
             return 'regex substitution: ' + str( data )
             
-        elif transformation_type == STRING_TRANSFORMATION_DATE_DECODE:
+        elif conversion_type == STRING_CONVERSION_DATE_DECODE:
             
             return 'datestring to timestamp: ' + repr( data )
             
-        elif transformation_type == STRING_TRANSFORMATION_DATE_ENCODE:
+        elif conversion_type == STRING_CONVERSION_DATE_ENCODE:
             
             return 'timestamp to datestring: ' + repr( data )
             
-        elif transformation_type == STRING_TRANSFORMATION_INTEGER_ADDITION:
+        elif conversion_type == STRING_CONVERSION_INTEGER_ADDITION:
             
             return 'integer addition: add ' + str( data )
             
         else:
             
-            return 'unknown transformation'
+            return 'unknown conversion'
             
         
     
@@ -3199,14 +3326,19 @@ class StringMatch( StringProcessingStep ):
         ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string ) = serialisable_info
         
     
-    def SetMaxChars( self, max_chars ):
+    def MakesChanges( self ) -> bool:
         
-        self._max_chars = max_chars
+        if self._min_chars is not None or self._max_chars is not None:
+            
+            return True
+            
         
-    
-    def SetMinChars( self, min_chars ):
+        if self._match_type != STRING_MATCH_ANY:
+            
+            return True
+            
         
-        self._min_chars = min_chars
+        return False
         
     
     def Matches( self, text ):
@@ -3223,11 +3355,26 @@ class StringMatch( StringProcessingStep ):
             
         
     
+    def SetMaxChars( self, max_chars ):
+        
+        self._max_chars = max_chars
+        
+    
+    def SetMinChars( self, min_chars ):
+        
+        self._min_chars = min_chars
+        
+    
     def Test( self, text ):
+        
+        if isinstance( text, bytes ):
+            
+            raise HydrusExceptions.StringMatchException( 'Got a bytes value in a string match!' )
+            
         
         text_len = len( text )
         
-        presentation_text = '"' + text + '"'
+        presentation_text = '"{}"'.format( text )
         
         if self._min_chars is not None and text_len < self._min_chars:
             
@@ -3257,12 +3404,12 @@ class StringMatch( StringProcessingStep ):
                     
                 elif self._match_value == ALPHANUMERIC:
                     
-                    r = '^[a-zA-Z\d]+$'
+                    r = '^[a-zA-Z\\d]+$'
                     fail_reason = ' had non-alphanumeric characters'
                     
                 elif self._match_value == NUMERIC:
                     
-                    r = '^\d+$'
+                    r = '^\\d+$'
                     fail_reason = ' had non-numeric characters'
                     
                 
@@ -3298,7 +3445,7 @@ class StringMatch( StringProcessingStep ):
         return ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string )
         
     
-    def ToString( self, simple = False ):
+    def ToString( self, simple = False, with_type = False ) -> str:
         
         if simple:
             
@@ -3369,6 +3516,11 @@ class StringMatch( StringProcessingStep ):
             result += ', such as "' + self._example_string + '"'
             
         
+        if with_type:
+            
+            result = 'MATCH: {}'.format( result )
+            
+        
         return result
         
     
@@ -3408,7 +3560,17 @@ class StringSplitter( StringProcessingStep ):
         return self._separator
         
     
+    def MakesChanges( self ) -> bool:
+        
+        return True
+        
+    
     def Split( self, text: str ) -> typing.List[ str ]:
+        
+        if isinstance( text, bytes ):
+            
+            raise HydrusExceptions.StringSplitterException( 'Got a bytes value in a string splitter!' )
+            
         
         if self._max_splits is None:
             
@@ -3422,7 +3584,7 @@ class StringSplitter( StringProcessingStep ):
         return [ result for result in results if result != '' ]
         
     
-    def ToString( self, simple = False ):
+    def ToString( self, simple = False, with_type = False ) -> str:
         
         if simple:
             
@@ -3434,6 +3596,11 @@ class StringSplitter( StringProcessingStep ):
         if self._max_splits is not None:
             
             result = '{}, at most {} times'.format( result, HydrusData.ToHumanInt( self._max_splits ) )
+            
+        
+        if with_type:
+            
+            result = 'SPLIT: {}'.format( result )
             
         
         return result
@@ -3471,6 +3638,25 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
         return list( self._processing_steps )
         
     
+    def GetProcessingStrings( self ):
+        
+        proc_strings = []
+        
+        for processing_step in self._processing_steps:
+            
+            if isinstance( processing_step, StringConverter ):
+                
+                proc_strings.extend( processing_step.GetConversionStrings() )
+                
+            else:
+                
+                proc_strings.append( processing_step.ToString() )
+                
+            
+        
+        return proc_strings
+        
+    
     def ProcessStrings( self, starting_strings: typing.Iterable[ str ], max_steps_allowed = None ) -> typing.List[ str ]:
         
         final_strings = []
@@ -3491,6 +3677,11 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
                 for current_string in current_strings:
                     
                     if isinstance( processing_step, StringConverter ):
+                        
+                        if isinstance( current_string, bytes ):
+                            
+                            continue
+                            
                         
                         try:
                             
@@ -3519,9 +3710,21 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
                         
                     elif isinstance( processing_step, StringSplitter ):
                         
-                        split_strings = processing_step.Split( current_string )
+                        if isinstance( current_string, bytes ):
+                            
+                            continue
+                            
                         
-                        next_strings.extend( split_strings )
+                        try:
+                            
+                            split_strings = processing_step.Split( current_string )
+                            
+                            next_strings.extend( split_strings )
+                            
+                        except HydrusExceptions.StringSplitterException:
+                            
+                            continue
+                            
                         
                     
                 
@@ -3551,21 +3754,21 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
             
             if True in ( isinstance( ps, StringConverter ) for ps in self._processing_steps ):
                 
-                components = 'conversion'
+                components.append( 'conversion' )
                 
             
             if True in ( isinstance( ps, StringMatch ) for ps in self._processing_steps ):
                 
-                components = 'filtering'
+                components.append( 'filtering' )
                 
             
             if True in ( isinstance( ps, StringSplitter ) for ps in self._processing_steps ):
                 
-                components = 'splitting'
+                components.append( 'splitting' )
                 
             
             return 'some {}'.format( ', '.join( components ) )
             
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER ] = StringSplitter
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR ] = StringProcessor

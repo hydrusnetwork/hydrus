@@ -1,7 +1,7 @@
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocalServer
-from hydrus.client import ClientMedia
-from hydrus.client import ClientMediaManagers
+from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientServices
 import hashlib
 import http.client
@@ -286,7 +286,7 @@ class TestServer( unittest.TestCase ):
         
         file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
         
-        media_results = [ ClientMedia.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {} ), ClientMediaManagers.LocationsManager( set(), set(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
+        media_results = [ ClientMediaResult.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {} ), ClientMediaManagers.LocationsManager( set(), set(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
         
         HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HG.test_controller.SetRead( 'local_booru_share', info )

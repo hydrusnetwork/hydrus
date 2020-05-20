@@ -10,9 +10,10 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientMedia
 from hydrus.client import ClientRendering
+from hydrus.client.media import ClientMedia
 from hydrus.client.gui import ClientGUICommon
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMPV
@@ -61,6 +62,7 @@ class Animation( QW.QWidget ):
         
         self._canvas_type = canvas_type
         
+        # pass up un-button-pressed mouse moves to parent, which wants to do cursor show/hide
         self.setMouseTracking( True )
         
         self._media = None
@@ -530,12 +532,8 @@ class AnimationBar( QW.QWidget ):
         self._num_frames = 1
         self._last_drawn_info = None
         
-        self._has_experienced_mouse_down = False
         self._currently_in_a_drag = False
-        self._it_was_playing = False
-        
-        self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )    
+        self._it_was_playing_before_drag = False
         
     
     def _DrawBlank( self, painter ):
@@ -571,6 +569,23 @@ class AnimationBar( QW.QWidget ):
         return int( ( my_width - width_offset ) * timestamp_ms / self._duration_ms )
         
     
+    def _CurrentMediaWindowIsBad( self ):
+        
+        if self._media_window is None:
+            
+            return True
+            
+        
+        if not QP.isValid( self._media_window ):
+            
+            self.ClearMedia()
+            
+            return True
+            
+        
+        return False
+        
+    
     def _Redraw( self, painter ):
         
         self._last_drawn_info = self._GetAnimationBarStatus()
@@ -585,7 +600,7 @@ class AnimationBar( QW.QWidget ):
         
         if paused:
             
-            background_colour = ClientData.GetLighterDarkerColour( background_colour )
+            background_colour = ClientGUIFunctions.GetLighterDarkerColour( background_colour )
             
         
         painter.setBackground( QG.QBrush( background_colour ) )
@@ -611,7 +626,7 @@ class AnimationBar( QW.QWidget ):
             
             if start_x != rendered_to_x:
                 
-                rendered_colour = ClientData.GetDifferentLighterDarkerColour( background_colour )
+                rendered_colour = ClientGUIFunctions.GetDifferentLighterDarkerColour( background_colour )
                 
                 painter.setBrush( QG.QBrush( rendered_colour ) )
                 
@@ -629,7 +644,7 @@ class AnimationBar( QW.QWidget ):
             
             if rendered_to_x != end_x:
                 
-                to_be_rendered_colour = ClientData.GetDifferentLighterDarkerColour( background_colour, 1 )
+                to_be_rendered_colour = ClientGUIFunctions.GetDifferentLighterDarkerColour( background_colour, 1 )
                 
                 painter.setBrush( QG.QBrush( to_be_rendered_colour ) )
                 
@@ -694,6 +709,37 @@ class AnimationBar( QW.QWidget ):
             
         
     
+    def _ScanToCurrentMousePos( self ):
+        
+        my_width = self.size().width()
+        
+        mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
+        
+        animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
+        
+        compensated_x_position = mouse_pos.x() - ( animated_scanbar_nub_width / 2 )
+        
+        proportion = ( compensated_x_position ) / ( my_width - animated_scanbar_nub_width )
+        
+        proportion = max( proportion, 0.0 )
+        proportion = min( 1.0, proportion )
+        
+        self.update()
+        
+        if isinstance( self._media_window, Animation ):
+            
+            current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
+            
+            self._media_window.GotoFrame( current_frame_index )
+            
+        elif isinstance( self._media_window, ClientGUIMPV.mpvWidget ):
+            
+            time_index_ms = int( proportion * self._duration_ms )
+            
+            self._media_window.Seek( time_index_ms )
+            
+        
+    
     def ClearMedia( self ):
         
         self._media_window = None
@@ -703,84 +749,64 @@ class AnimationBar( QW.QWidget ):
         self.update()
         
     
-    def EventMouse( self, event ):
+    def mouseMoveEvent( self, event ):
         
-        if self._media_window is not None:
+        if self._CurrentMediaWindowIsBad():
             
-            if not self._media_window or not QP.isValid( self._media_window ):
+            return
+            
+        
+        CC.CAN_HIDE_MOUSE = False
+        
+        if self._currently_in_a_drag:
+            
+            if event.buttons() == QC.Qt.NoButton:
                 
-                self.ClearMedia()
+                self._currently_in_a_drag = False
                 
                 return
                 
             
-            CC.CAN_HIDE_MOUSE = False
+            self._ScanToCurrentMousePos()
             
-            if event.type() == QC.QEvent.MouseButtonPress:
-                
-                self._has_experienced_mouse_down = True
-                
-                self._it_was_playing = self._media_window.IsPlaying()
-                
-                if self._it_was_playing:
-                    
-                    self._media_window.Pause()
-                    
-                
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if self._CurrentMediaWindowIsBad():
             
-            # sometimes, this can inherit mouse-down from previous filter or embed button reveal, resulting in undesired scan
+            return
             
-            if not self._has_experienced_mouse_down:
-                
-                return
-                
+        
+        CC.CAN_HIDE_MOUSE = False
+        
+        self._it_was_playing_before_drag = self._media_window.IsPlaying()
+        
+        if self._it_was_playing_before_drag:
             
-            my_width = self.size().width()
+            self._media_window.Pause()
             
-            if event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton:
-                
-                self._currently_in_a_drag = True
-                
+        
+        self._currently_in_a_drag = True
+        
+        self._ScanToCurrentMousePos()
+        
+    
+    def mouseReleaseEvent( self, event ):
+        
+        CC.CAN_HIDE_MOUSE = True
+        
+        if self._currently_in_a_drag:
             
-            a_button_is_down = event.buttons() != QC.Qt.NoButton
-            
-            if a_button_is_down:
+            if self._it_was_playing_before_drag:
                 
-                event_pos = event.pos()
-                
-                animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
-                
-                compensated_x_position = event_pos.x() - ( animated_scanbar_nub_width / 2 )
-                
-                proportion = ( compensated_x_position ) / ( my_width - animated_scanbar_nub_width )
-                
-                if proportion < 0: proportion = 0
-                if proportion > 1: proportion = 1
-                
-                self.update()
-                
-                if isinstance( self._media_window, Animation ):
-                    
-                    current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
-                    
-                    self._media_window.GotoFrame( current_frame_index )
-                    
-                elif isinstance( self._media_window, ClientGUIMPV.mpvWidget ):
-                    
-                    time_index_ms = int( proportion * self._duration_ms )
-                    
-                    self._media_window.Seek( time_index_ms )
-                    
-                
-            elif event.type() == QC.QEvent.MouseButtonRelease:
-                
-                if self._it_was_playing:
+                if not self._CurrentMediaWindowIsBad():
                     
                     self._media_window.Play()
                     
                 
-                self._currently_in_a_drag = False
-                
+            
+            self._currently_in_a_drag = False
             
         
     
@@ -788,7 +814,7 @@ class AnimationBar( QW.QWidget ):
         
         painter = QG.QPainter( self )
         
-        if self._media_window is None:
+        if self._CurrentMediaWindowIsBad():
             
             self._DrawBlank( painter )
             
@@ -816,9 +842,8 @@ class AnimationBar( QW.QWidget ):
         
         self._last_drawn_info = None
         
-        self._has_experienced_mouse_down = False
         self._currently_in_a_drag = False
-        self._it_was_playing = False
+        self._it_was_playing_before_drag = False
         
         HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
@@ -843,32 +868,11 @@ class AnimationBar( QW.QWidget ):
             
         
     
-class MediaContainerDragClickReportingFilter( QC.QObject ):
-    
-    def __init__( self, parent ):
-        
-        QC.QObject.__init__( self, parent )
-        
-    
-    def eventFilter( self, watched, event ):
-        
-        if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton and event.modifiers() == QC.Qt.NoModifier:
-            
-            self.parent().BeginDrag()
-            
-        elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton and event.modifiers() == QC.Qt.NoModifier:
-            
-            self.parent().EndDrag()
-            
-        
-        return False
-        
-
 class MediaContainer( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
     
-    def __init__( self, parent, canvas_type ):
+    def __init__( self, parent, canvas_type, additional_event_filter: QC.QObject ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -892,9 +896,10 @@ class MediaContainer( QW.QWidget ):
         self._embed_button_widget_event_filter = QP.WidgetEventFilter( self._embed_button )
         self._embed_button_widget_event_filter.EVT_LEFT_DOWN( self.EventEmbedButton )
         
+        # pass up un-button-pressed mouse moves to parent, which wants to do cursor show/hide
         self.setMouseTracking( True )
         
-        self._drag_click_reporting_filter = MediaContainerDragClickReportingFilter( self.parentWidget() )
+        self._additional_event_filter = additional_event_filter
         
         self._animation_window = Animation( self, self._canvas_type )
         self._animation_bar = AnimationBar( self )
@@ -917,7 +922,23 @@ class MediaContainer( QW.QWidget ):
         
         if media_window is not None:
             
-            if isinstance( media_window, ( Animation, StaticImage, ClientGUIMPV.mpvWidget ) ):
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.mpvWidget, StaticImage )
+            
+            media_window.removeEventFilter( self._additional_event_filter )
+            
+            if isinstance( media_window, launch_media_viewer_classes ):
+                
+                try:
+                    
+                    media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
+                    
+                except RuntimeError:
+                    
+                    pass # lmao, weird 'Failed to disconnect signal launchMediaViewer()' error I couldn't figure out, I guess some out-of-order deleteLater gubbins
+                    
+                
+            
+            if isinstance( media_window, launch_media_viewer_classes ):
                 
                 media_window.ClearMedia()
                 
@@ -1031,10 +1052,12 @@ class MediaContainer( QW.QWidget ):
             self._volume_control.hide()
             
         
+        media_window_changed = old_media_window != self._media_window
+        
         # this has to go after setcanvastype on the mpv window so the filters are in the correct order
-        if old_media_window != self._media_window:
+        if media_window_changed:
             
-            self._media_window.installEventFilter( self._drag_click_reporting_filter )
+            self._media_window.installEventFilter( self._additional_event_filter )
             
             launch_media_viewer_classes = ( Animation, ClientGUIMPV.mpvWidget, StaticImage )
             
@@ -1042,28 +1065,6 @@ class MediaContainer( QW.QWidget ):
                 
                 self._media_window.launchMediaViewer.connect( self.launchMediaViewer )
                 
-            
-            if old_media_window is not None:
-                
-                old_media_window.removeEventFilter( self._drag_click_reporting_filter )
-                
-                if isinstance( old_media_window, launch_media_viewer_classes ):
-                    
-                    try:
-                        
-                        old_media_window.launchMediaViewer.disconnect( self.launchMediaViewer )
-                        
-                    except RuntimeError:
-                        
-                        pass # lmao, weird 'Failed to disconnect signal launchMediaViewer()' error I couldn't figure out, I guess some out-of-order deleteLater gubbins
-                        
-                    
-                
-            
-            self._media_window
-            
-        
-        if old_media_window is not None and destroy_old_media_window:
             
             self._DestroyOrHideThisMediaWindow( old_media_window )
             
@@ -1584,6 +1585,7 @@ class StaticImage( QW.QWidget ):
         
         self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
         
+        # pass up un-button-pressed mouse moves to parent, which wants to do cursor show/hide
         self.setMouseTracking( True )
         
         self._media = None

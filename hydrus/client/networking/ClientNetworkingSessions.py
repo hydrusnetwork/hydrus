@@ -1,12 +1,13 @@
 import pickle
+import requests
+import threading
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusGlobals as HG
-import requests
-import threading
 
 try:
     

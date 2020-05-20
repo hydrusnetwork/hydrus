@@ -14,7 +14,7 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRatings
 from hydrus.client import ClientTags
@@ -346,11 +346,6 @@ class Canvas( QW.QWidget ):
         
         self._current_media_start_time = HydrusData.GetNow()
         
-        self._reserved_shortcut_names = []
-        
-        self._reserved_shortcut_names.append( 'media' )
-        self._reserved_shortcut_names.append( 'media_viewer' )
-        
         self._new_options = HG.client_controller.new_options
         
         self._canvas_key = HydrusData.GenerateKey()
@@ -370,7 +365,18 @@ class Canvas( QW.QWidget ):
             self._canvas_type = ClientGUICommon.CANVAS_MEDIA_VIEWER
             
         
-        self._media_container = ClientGUICanvasMedia.MediaContainer( self, self._canvas_type )
+        catch_mouse = True
+        
+        # once we have catch_mouse full shortcut support for canvases, swap out this out for an option to swallow activating clicks
+        ignore_activating_mouse_click = catch_mouse and not self.PREVIEW_WINDOW
+        
+        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, initial_shortcuts_names = ( 'media', 'media_viewer' ), catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
+        
+        self._click_drag_reporting_filter = MediaContainerDragClickReportingFilter( self )
+        
+        self.installEventFilter( self._click_drag_reporting_filter )
+        
+        self._media_container = ClientGUICanvasMedia.MediaContainer( self, self._canvas_type, self._click_drag_reporting_filter )
         
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
@@ -381,13 +387,6 @@ class Canvas( QW.QWidget ):
         self._media_window_pos = QC.QPoint( 0, 0 )
         
         self._UpdateBackgroundColour()
-        
-        catch_mouse = False
-        
-        # once we have catch_mouse full shortcut support for canvases, swap out this out for an option to swallow activating clicks
-        ignore_activating_mouse_click = catch_mouse and not self.PREVIEW_WINDOW
-        
-        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, initial_shortcuts_names = ( 'media', 'media_viewer' ), catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -1345,11 +1344,6 @@ class Canvas( QW.QWidget ):
         return self._my_shortcuts_handler.GetCustomShortcutNames()
         
     
-    def KeepCursorAlive( self ):
-        
-        pass
-        
-    
     def ManageNotes( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
@@ -1660,6 +1654,29 @@ class Canvas( QW.QWidget ):
             
             self._ZoomSwitch()
             
+        
+    
+class MediaContainerDragClickReportingFilter( QC.QObject ):
+    
+    def __init__( self, parent: Canvas ):
+        
+        QC.QObject.__init__( self, parent )
+        
+        self._canvas = parent
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
+            
+            self._canvas.BeginDrag()
+            
+        elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
+            
+            self._canvas.EndDrag()
+            
+        
+        return False
         
     
 class CanvasPanel( Canvas ):
@@ -2195,9 +2212,10 @@ class CanvasWithHovers( CanvasWithDetails ):
         self._timer_cursor_hide_job = None
         self._last_cursor_autohide_touch_time = HydrusData.GetNowFloat()
         
-        self._widget_event_filter.EVT_MOTION( self.EventMouseMove )
+        # need this as we need un-button-pressed move events for cursor hide
+        self.setMouseTracking( True )
         
-        self._InitiateCursorHideWait()
+        self._RestartCursorHideWait()
         
         HG.client_controller.sub( self, 'CloseFromHover', 'canvas_close' )
         HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
@@ -2206,164 +2224,6 @@ class CanvasWithHovers( CanvasWithDetails ):
     def _GenerateHoverTopFrame( self ):
         
         raise NotImplementedError()
-        
-    
-    def _TryToCloseWindow( self ):
-        
-        self.window().close()
-        
-    
-    def CloseFromHover( self, canvas_key ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._TryToCloseWindow()
-            
-        
-    
-    def EventDragBegin( self, event ):
-        
-        if event.button() != QC.Qt.LeftButton:
-            
-            return True
-            
-        
-        self.BeginDrag()
-        
-        return True # was: event.ignore()
-        
-    
-    def EventDragEnd( self, event ):
-        
-        if event.button() != QC.Qt.LeftButton:
-            
-            return True
-            
-        
-        self._last_drag_pos = None
-        
-        return True # was: event.ignore()
-        
-    
-    def EventMouseMove( self, event ):
-        
-        CC.CAN_HIDE_MOUSE = True
-        
-        # due to the mouse setPos below, the event pos can get funky I think due to out of order coordinate setting events, so we'll poll current value directly
-        event_pos = self.mapFromGlobal( QG.QCursor.pos() )
-        
-        show_mouse = self.cursor() == QG.QCursor( QC.Qt.ArrowCursor )
-        
-        is_dragging = ( event.type() == QC.QEvent.MouseMove and event.buttons() == QC.Qt.LeftButton ) and self._last_drag_pos is not None
-        has_moved = event_pos != self._last_motion_pos
-        
-        if is_dragging:
-            
-            delta = event_pos - self._last_drag_pos
-            
-            approx_distance = delta.manhattanLength()
-            
-            if approx_distance > 0:
-                
-                touchscreen_canvas_drags_unanchor = HG.client_controller.new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' )
-                
-                if not self._current_drag_is_touch and approx_distance > 50:
-                    
-                    # if user is able to generate such a large distance, they are almost certainly touching
-                    
-                    self._current_drag_is_touch = True
-                    
-                
-                # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
-                
-                touch_anchor_override = touchscreen_canvas_drags_unanchor and self._current_drag_is_touch
-                anchor_and_hide_canvas_drags = HG.client_controller.new_options.GetBoolean( 'anchor_and_hide_canvas_drags' )
-                
-                if anchor_and_hide_canvas_drags and not touch_anchor_override:
-                    
-                    show_mouse = False
-                    
-                    global_mouse_pos = self.mapToGlobal( self._last_drag_pos )
-                    
-                    QG.QCursor.setPos( global_mouse_pos )
-                    
-                else:
-                    
-                    show_mouse = True
-                    
-                    self._last_drag_pos = QC.QPoint( event_pos )
-                    
-                
-                self._media_window_pos += delta
-                
-                self._DrawCurrentMedia()
-                
-            
-        elif has_moved:
-            
-            self._last_motion_pos = QC.QPoint( event_pos )
-            
-            show_mouse = True
-            
-        
-        if show_mouse:
-            
-            self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
-            
-            self._InitiateCursorHideWait()
-            
-        else:
-            
-            self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
-            
-        
-        return True
-        
-    
-    def FullscreenSwitch( self, canvas_key ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self.parentWidget().FullscreenSwitch()
-            
-        
-    
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'close_media_viewer':
-                
-                self._TryToCloseWindow()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        if not command_processed:
-            
-            command_processed = CanvasWithDetails.ProcessApplicationCommand( self, command )
-            
-        
-        return command_processed
         
     
     def _HideCursorCheck( self ):
@@ -2408,7 +2268,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
         
     
-    def _InitiateCursorHideWait( self ):
+    def _RestartCursorHideWait( self ):
         
         self._last_cursor_autohide_touch_time = HydrusData.GetNowFloat()
         
@@ -2428,6 +2288,150 @@ class CanvasWithHovers( CanvasWithDetails ):
             
         
         self._timer_cursor_hide_job = HG.client_controller.CallLaterQtSafe( self, 0.1, self._HideCursorCheck )
+        
+    
+    def _TryToCloseWindow( self ):
+        
+        self.window().close()
+        
+    
+    def CloseFromHover( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._TryToCloseWindow()
+            
+        
+    
+    def FullscreenSwitch( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self.parentWidget().FullscreenSwitch()
+            
+        
+    
+    def mouseMoveEvent( self, event ):
+        
+        CC.CAN_HIDE_MOUSE = True
+        
+        # due to the mouse setPos below, the event pos can get funky I think due to out of order coordinate setting events, so we'll poll current value directly
+        event_pos = self.mapFromGlobal( QG.QCursor.pos() )
+        
+        mouse_currently_shown = self.cursor() == QG.QCursor( QC.Qt.ArrowCursor )
+        show_mouse = mouse_currently_shown
+        
+        is_dragging = event.buttons() & QC.Qt.LeftButton and self._last_drag_pos is not None
+        has_moved = event_pos != self._last_motion_pos
+        
+        if is_dragging:
+            
+            delta = event_pos - self._last_drag_pos
+            
+            approx_distance = delta.manhattanLength()
+            
+            if approx_distance > 0:
+                
+                touchscreen_canvas_drags_unanchor = HG.client_controller.new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' )
+                
+                if not self._current_drag_is_touch and approx_distance > 50:
+                    
+                    # if user is able to generate such a large distance, they are almost certainly touching
+                    
+                    self._current_drag_is_touch = True
+                    
+                
+                # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
+                
+                touch_anchor_override = touchscreen_canvas_drags_unanchor and self._current_drag_is_touch
+                anchor_and_hide_canvas_drags = HG.client_controller.new_options.GetBoolean( 'anchor_and_hide_canvas_drags' )
+                
+                if anchor_and_hide_canvas_drags and not touch_anchor_override:
+                    
+                    show_mouse = False
+                    
+                    global_mouse_pos = self.mapToGlobal( self._last_drag_pos )
+                    
+                    QG.QCursor.setPos( global_mouse_pos )
+                    
+                else:
+                    
+                    show_mouse = True
+                    
+                    self._last_drag_pos = QC.QPoint( event_pos )
+                    
+                
+                self._media_window_pos += delta
+                
+                self._DrawCurrentMedia()
+                
+            
+        else:
+            
+            if has_moved:
+                
+                self._last_motion_pos = QC.QPoint( event_pos )
+                
+                show_mouse = True
+                
+            
+        
+        if show_mouse:
+            
+            if not mouse_currently_shown:
+                
+                self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
+                
+            
+            self._RestartCursorHideWait()
+            
+        else:
+            
+            if mouse_currently_shown:
+                
+                self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
+                
+            
+        
+        CanvasWithDetails.mouseMoveEvent( self, event )
+        
+    
+    def ProcessApplicationCommand( self, command, canvas_key = None ):
+        
+        if canvas_key is not None and canvas_key != self._canvas_key:
+            
+            return False
+            
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'close_media_viewer':
+                
+                self._TryToCloseWindow()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            command_processed = CanvasWithDetails.ProcessApplicationCommand( self, command )
+            
+        
+        return command_processed
         
     
 class CanvasFilterDuplicates( CanvasWithHovers ):
@@ -2458,14 +2462,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
         self._my_shortcuts_handler.AddShortcuts( 'duplicate_filter' )
-        
-        self._reserved_shortcut_names.append( 'media_viewer_browser' )
-        self._reserved_shortcut_names.append( 'duplicate_filter' )
-        
-        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )
-        
-        # add support for 'f' to borderless
-        # add support for F4 and other general shortcuts so people can do edits before processing
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
@@ -2705,7 +2701,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 duplicate_intensity = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
                 
-                return ClientData.GetLighterDarkerColour( normal_colour, duplicate_intensity )
+                return ClientGUIFunctions.GetLighterDarkerColour( normal_colour, duplicate_intensity )
                 
             
         
@@ -3094,63 +3090,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def EventMouse( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            if event.modifiers() & QC.Qt.ShiftModifier:
-                
-                caught = True
-                
-                if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
-                    
-                    self.BeginDrag()
-                    
-                elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
-                    
-                    self.EndDrag()
-                    
-                elif event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton:
-                    
-                    self.EventMouseMove( event )
-                    
-                else:
-                    
-                    caught = False
-                    
-                
-                if caught:
-                    
-                    return
-                    
-                
-            
-            shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._my_shortcuts_handler.ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
-                    
-                
-            
-            if event.type() == QC.QEvent.Wheel and event.angleDelta().y() != 0:
-                
-                self._SwitchMedia()
-                
-            else:
-                
-                return True # was: event.ignore()    
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
     def Inbox( self, canvas_key ):
         
         if self._canvas_key == canvas_key:
@@ -3389,9 +3328,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         self._just_started = True
         
-        self._widget_event_filter.EVT_LEFT_DOWN( self.EventDragBegin )
-        self._widget_event_filter.EVT_LEFT_UP( self.EventDragEnd )
-        
     
     def TryToDoPreClose( self ):
         
@@ -3566,11 +3502,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         self.parentWidget().FullscreenSwitch()
         
     
-    def KeepCursorAlive( self ):
-        
-        self._InitiateCursorHideWait()
-        
-    
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         if self._current_media is None:
@@ -3624,12 +3555,8 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         self._my_shortcuts_handler.AddShortcuts( 'archive_delete_filter' )
         
-        self._reserved_shortcut_names.append( 'archive_delete_filter' )
-        
         self._kept = set()
         self._deleted = set()
-        
-        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )
         
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
         HG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
@@ -3818,53 +3745,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def EventMouse( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            if event.modifiers() & QC.Qt.ShiftModifier:
-                
-                caught = True
-                
-                if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
-                    
-                    self.BeginDrag()
-                    
-                elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
-                    
-                    self.EndDrag()
-                    
-                elif event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton:
-                    
-                    self.EventMouseMove( event )
-                    
-                else:
-                    
-                    caught = False
-                    
-                
-                if caught:
-                    
-                    return False
-                    
-                
-            
-            shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._my_shortcuts_handler.ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return False
-                    
-                
-            
-        
-        return True # was: event.ignore()
-        
-    
     def EventUndelete( self, event ):
         
         if self._IShouldCatchShortcutEvent( event = event ):
@@ -3954,8 +3834,6 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         CanvasMediaList.__init__( self, parent, page_key, media_results )
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
-        
-        self._reserved_shortcut_names.append( 'media_viewer_browser' )
         
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
         HG.client_controller.sub( self, 'ShowNext', 'canvas_show_next' )
@@ -4097,8 +3975,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self._timer_slideshow_job = None
         self._timer_slideshow_interval = 0
         
-        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )
-        
         if first_hash is None:
             
             first_media = self._GetFirst()
@@ -4220,28 +4096,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         if event.reason() == QG.QContextMenuEvent.Keyboard:
             
             self.ShowMenu()
-            
-        
-    
-    def EventMouse( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._my_shortcuts_handler.ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
-                    
-                
-            
-        else:
-            
-            return True # was: event.ignore()
             
         
     

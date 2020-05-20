@@ -8,6 +8,67 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 398</h3></li>
+				<ul>
+					<li>new tag search options:</li>
+					<li>there are several new options for tag autocomplete under the newly renamed _services->tag display and search_:</li>
+					<li>for 'manage tags'-style 'write' autocompletes, you can now set which file service and tag service each tag service page's autocomplete starts with (e.g. some users have wanted to say 'start my "my tags" service looking at "all known files" and "ptr"' to get more suggestions for "my tags" typing). the default is 'all known files' and the same tag service</li>
+					<li>the old blanket 'show "all known files" in write autocompletes' option under _options->tags_ is removed</li>
+					<li>you now can enable the following potentially very slow and expensive searches on a per-tag-domain basis:</li>
+					<li>- you can permit namespace-autocompleting searches, so 'ser' also matches 'ser*:*', i.e. 'series:metroid' and every other series tag</li>
+					<li>- you can permit 'namespace:*', fetching all tags for a namespace</li>
+					<li>- you can permit '*', fetching all tags （╬ಠ益ಠ)</li>
+					<li>'*' and 'namespace:*' wildcard searches are now significantly faster on smaller specific tag domains (i.e. not "all known tags")</li>
+					<li>short explicit wildcard searches like "s*" now fire off that actual search, regardless of the 'exact match' character threshold</li>
+					<li>queries in the form "*:xxx" are now replaced with "xxx" in logic and display</li>
+					<li>improved the reliability of various search text definition logic to account for wildcard situations properly when doing quick-enter tag broadcast and so on</li>
+					<li>fixed up autocomplete db search code for wildcard namespaces with "*" subtags</li>
+					<li>simplified some autocomplete database search code</li>
+					<li>.</li>
+					<li>string processing:</li>
+					<li>the new string processor is now live. all parsing formulae now use a string processor instead of the string match/transformer pair, with existing matches and transformers that do work being integrated into the new processor</li>
+					<li>thus, all formulae parsing now supports the new string splitter object, which allows you to split '1,2,3' into ['1','2','3']</li>
+					<li>all formulae panels now have the combined 'string processing' button, which launches a new edit panel and will grow in height to list all current processing steps</li>
+					<li>the stringmatch panel now hides its controls when they are not relevent to the current match type. also, setting fixed match type (or, typically, mouse-scrolling past it), no longer resets min/max/example fields)</li>
+					<li>the string conversion step edit panel now clearly separates the controls vs the test results</li>
+					<li>improved button and summary labelling for string tools across the program</li>
+					<li>some differences in labelling between string 'conversion' and 'transformation' are unified to 'conversion' across the program</li>
+					<li>moved the test data used in parsing edit panels to its own object, and updated some of the handling to support passing up of multiple example texts</li>
+					<li>the separation formula of a subsidiary page parser now loads with current test data</li>
+					<li>the string processing panel loads with the current test data, and passes the first example string of the appropriate processing step to its sub-panels. this will be expanded in future to multiple example testing for each panel, and subsequently for note parsing, multiline testing</li>
+					<li>added safety code and unit tests to test string processing for hex/base64 bytes outcomes. as a reminder, I expect to eliminate the bytes issue in future and just eat hashes as hex</li>
+					<li>cleaned up a variety of string processing code</li>
+					<li>misc improvements to string processing controls</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>double-clicking a page tab now opens up the rename dialog</li>
+					<li>system:time imported now has quick buttons for 'since 1/7/30 days ago'</li>
+					<li>all hydrus downloaders now accept percent-encoded characters in the query field, so if you are on a site that has tags with spaces, you can now enter a query like "simple%20background red%20hair" to get the input you want. you can also generally now paste encoded queries from your address bar into hydrus and they should work, with the only proviso being "%25", which is "%", when all bets are off</li>
+					<li>duplicates shut down work (both tree rebalancing and dupe searching) now quickly obeys the 'cancel shutdown work' splash button</li>
+					<li>fixed a signal cleanup bug that meant some media windows in the preview viewer were hanging on to and multiplying a 'launch media' signal and a shortcut handler, which meant double-clicking on the preview viewer successively on a page would result in multiple media window launches</li>
+					<li>fixed an issue opening the manage parsers dialog for users with certain unusual parsers</li>
+					<li>fixed the 'hide the preview window' setting for the new page layout method</li>
+					<li>updated the default gelbooru gallery page parser to fix gelb gallery parsing</li>
+					<li>updated the newgrounds parser to the latest on the github. it should support static image art now</li>
+					<li>if automatic vacuum is disabled in the client, forced vacuum is no longer prohibited</li>
+					<li>updated cloudscraper for all builds to 1.2.38</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>all final mouse event processing hackey is removed from the media viewers, and the shortcut system is now fully responsible. left click (now with no or any modifier) is still hardcoded to do drag but does not interfere with other mapped left-click actions</li>
+					<li>the duplicates filter no longer hardcodes mouse wheel to navigate--whatever is set for the normal browser, it now obeys</li>
+					<li>cleaned up some mouse move tracking code</li>
+					<li>clicking to focus an unfocused media viewer window will now not trigger the associated click action, so you can now click on archive/delete filters without moving on!</li>
+					<li>the red/green on/off buttons on the autocomplete dropdown are updated from the old wx pubsub to Qt signalling</li>
+					<li>updated wx hacks to proper Qt event processing for splash window, mouse move events in the media viewer and the animation scanbar</li>
+					<li>cleaned up how some event filtering and other processing propagates in the media viewer</li>
+					<li>deleted some old unused mouse show/hide media viewer code</li>
+					<li>did some more python imports cleanup</li>
+					<li>cleaned up some unit test selection code</li>
+					<li>refactored the media code to a new directory module</li>
+					<li>refactored the media result and media result cache code to their own files</li>
+					<li>refactored some qt colour functions from core to gui module</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 397</h3></li>
 				<ul>
 					<li>regular changelog:</li>

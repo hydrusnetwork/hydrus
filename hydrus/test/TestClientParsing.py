@@ -1,4 +1,5 @@
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
 from hydrus.client import ClientParsing
 import unittest
 
@@ -6,107 +7,107 @@ class TestStringConverter( unittest.TestCase ):
     
     def test_basics( self ):
         
-        transformations = []
+        conversions = []
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, 1 ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), '123456789' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, 1 ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_END, 1 ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), '12345678' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, 7 ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, 7 ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), '1234567' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, 6 ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_END, 6 ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), '234567' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, 'abc' ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_PREPEND_TEXT, 'abc' ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'abc234567' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, 'x z' ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_APPEND_TEXT, 'x z' ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'abc234567x z' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_ENCODE, 'url percent encoding' ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_ENCODE, 'url percent encoding' ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'abc234567x%20z' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_DECODE, 'url percent encoding' ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_DECODE, 'url percent encoding' ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'abc234567x z' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_REVERSE, None ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_REVERSE, None ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'z x765432cba' )
         
         #
         
-        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( '\\d', 'd' ) ) )
+        conversions.append( ( ClientParsing.STRING_CONVERSION_REGEX_SUB, ( '\\d', 'd' ) ) )
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'z xddddddcba' )
         
         #
         
-        transformations = [ ( ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ( '%Y-%m-%d %H:%M:%S', HC.TIMEZONE_GMT, 0 ) ) ]
+        conversions = [ ( ClientParsing.STRING_CONVERSION_DATE_DECODE, ( '%Y-%m-%d %H:%M:%S', HC.TIMEZONE_GMT, 0 ) ) ]
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '1970-01-02 00:00:00' ), '86400' )
         
         #
         
-        transformations = [ ( ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE, ( '%Y-%m-%d %H:%M:%S', 0 ) ) ]
+        conversions = [ ( ClientParsing.STRING_CONVERSION_DATE_ENCODE, ( '%Y-%m-%d %H:%M:%S', 0 ) ) ]
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '86400' ), '1970-01-02 00:00:00' )
         
         #
         
-        transformations = [ ( ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION, 5 ) ]
+        conversions = [ ( ClientParsing.STRING_CONVERSION_INTEGER_ADDITION, 5 ) ]
         
-        string_converter = ClientParsing.StringConverter( transformations = transformations )
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '4' ), '9' )
         
@@ -220,9 +221,9 @@ class TestStringProcessor( unittest.TestCase ):
         
         processing_steps.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC ) )
         
-        transformations = [ ( ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, 'abc' ) ]
+        conversions = [ ( ClientParsing.STRING_CONVERSION_APPEND_TEXT, 'abc' ) ]
         
-        processing_steps.append( ClientParsing.StringConverter( transformations = transformations ) )
+        processing_steps.append( ClientParsing.StringConverter( conversions = conversions ) )
         
         processor.SetProcessingSteps( processing_steps )
         
@@ -231,3 +232,35 @@ class TestStringProcessor( unittest.TestCase ):
         self.assertEqual( processor.ProcessStrings( [ '1,a,2,3', 'test', '123' ] ), expected_result )
         
     
+    def test_hex_fail( self ):
+        
+        processor = ClientParsing.StringProcessor()
+        
+        conversions = [ ( ClientParsing.STRING_CONVERSION_DECODE, 'hex' ) ]
+        
+        string_converter = ClientParsing.StringConverter( conversions = conversions )
+        
+        #
+        
+        processing_steps = []
+        
+        processing_steps.append( string_converter )
+        
+        processing_steps.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC ) )
+        
+        processor.SetProcessingSteps( processing_steps )
+        
+        self.assertEqual( processor.ProcessStrings( [ '0123456789abcdef' ] ), [] )
+        
+        #
+        
+        processing_steps = []
+        
+        processing_steps.append( string_converter )
+        
+        processing_steps.append( ClientParsing.StringSplitter( separator = ',' ) )
+        
+        processor.SetProcessingSteps( processing_steps )
+        
+        self.assertEqual( processor.ProcessStrings( [ '0123456789abcdef' ] ), [] )
+        

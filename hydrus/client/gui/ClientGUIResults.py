@@ -18,7 +18,7 @@ from hydrus.core import HydrusPaths
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client import ClientTags
@@ -2357,7 +2357,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if HG.thumbnail_debug_mode and page_index % 2 == 0:
             
-            bg_colour = ClientData.GetLighterDarkerColour( bg_colour )
+            bg_colour = ClientGUIFunctions.GetLighterDarkerColour( bg_colour )
             
         
         if new_options.GetNoneableString( 'media_background_bmp_path' ) is not None:

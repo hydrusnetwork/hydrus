@@ -1,11 +1,12 @@
+import re
+import os
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
-import re
-import os
 
 def GetClientDefaultOptions():
     
@@ -82,7 +83,6 @@ def GetClientDefaultOptions():
     default_sort_by_choices.append( ( 'namespaces', [ 'creator', 'series', 'title', 'volume', 'chapter', 'page' ] ) )
     
     options[ 'sort_by' ] = default_sort_by_choices
-    options[ 'show_all_tags_in_autocomplete' ] = True
     
     options[ 'proxy' ] = None
     
@@ -644,7 +644,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
-    from hydrus.client import ClientMedia
+    from hydrus.client.media import ClientMedia
     from hydrus.client import ClientSearch
     
     rows = []

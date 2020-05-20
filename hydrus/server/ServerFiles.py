@@ -1,8 +1,6 @@
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-import itertools
 import os
 
 def GetAllHashes( file_type ):

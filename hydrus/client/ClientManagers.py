@@ -1,3 +1,11 @@
+import collections
+import random
+import threading
+import traceback
+import typing
+
+from qtpy import QtGui as QG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientSearch
@@ -7,12 +15,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
-import random
-import threading
-import collections
-import traceback
-import typing
-from qtpy import QtGui as QG
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):

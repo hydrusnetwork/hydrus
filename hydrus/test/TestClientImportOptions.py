@@ -1,8 +1,9 @@
 from hydrus.client import ClientConstants as CC
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
-from hydrus.client import ClientMedia
-from hydrus.client import ClientMediaManagers
+from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -417,7 +418,7 @@ def GetNotesMediaResult( hash, names_to_notes ):
     notes_manager = ClientMediaManagers.NotesManager( names_to_notes )
     file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
     
-    media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
     
@@ -552,7 +553,7 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     notes_manager = ClientMediaManagers.NotesManager( {} )
     file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
     
-    media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
     

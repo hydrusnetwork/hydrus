@@ -1,23 +1,20 @@
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDefaults
-from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
-from hydrus.client.networking import ClientNetworkingJobs
-from hydrus.client import ClientParsing
-from hydrus.client import ClientThreading
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusSerialisable
 import itertools
 import os
-import json
-import requests
 import re
 import threading
 import time
 import urllib.parse
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientParsing
+from hydrus.client import ClientThreading
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 
 VALIDITY_VALID = 0
 VALIDITY_UNTESTED = 1
@@ -1495,7 +1492,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._subdomain is not None:
             
-            self._subdomain = re.sub( '[^a-z\.]+', '', self._subdomain )
+            self._subdomain = re.sub( '[^a-z\\.]+', '', self._subdomain )
             
         
         if not self._path.startswith( '/' ):

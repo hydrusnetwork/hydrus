@@ -1,5 +1,4 @@
 import os
-import traceback
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -12,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
@@ -2060,11 +2060,11 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         
         content_parsers_panel = ClientGUICommon.StaticBox( self, 'content parsers' )
         
-        test_context_callable = lambda: ( {}, '' )
+        test_data_callable = lambda: ClientParsing.ParsingTestData( {}, ( '', ) )
         
         permitted_content_types = [ HC.CONTENT_TYPE_VARIABLE, HC.CONTENT_TYPE_VETO ]
         
-        self._content_parsers = ClientGUIParsing.EditContentParsersPanel( content_parsers_panel, test_context_callable, permitted_content_types )
+        self._content_parsers = ClientGUIParsing.EditContentParsersPanel( content_parsers_panel, test_data_callable, permitted_content_types )
         
         # a test panel a la pageparsers
         

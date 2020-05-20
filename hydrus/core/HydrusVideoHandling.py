@@ -2,18 +2,11 @@ from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusImageHandling
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
-from hydrus.core import HydrusThreading
 import numpy
 import os
 import re
 import subprocess
-import sys
-import traceback
-import threading
-import time
 
 FFMPEG_MISSING_ERROR_PUBBED = False
 FFMPEG_NO_CONTENT_ERROR_PUBBED = False
@@ -866,7 +859,7 @@ class VideoRendererFFMPEG( object ):
                         # I tried doing 'start from 0 and skip n frames', but this is super laggy so would need updates further up the pipe to display this to the user
                         # atm this error states does not communicate to the videocontainer that the current frame num has changed, so the frames are henceforth out of phase
                         
-                        frames_to_jump = self.pos
+                        #frames_to_jump = self.pos
                         
                         self.set_position( 0 )
                         

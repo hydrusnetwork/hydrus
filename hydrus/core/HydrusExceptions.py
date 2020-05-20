@@ -1,5 +1,4 @@
 import os
-import traceback
 import collections.abc
 
 class HydrusException( Exception ):
@@ -52,6 +51,7 @@ class DecompressionBombException( SizeException ): pass
 class ParseException( HydrusException ): pass
 class StringConvertException( ParseException ): pass
 class StringMatchException( ParseException ): pass
+class StringSplitterException( ParseException ): pass
 class URLClassException( ParseException ): pass
 class GUGException( ParseException ): pass
 

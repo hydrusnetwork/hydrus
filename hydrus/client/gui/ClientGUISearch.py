@@ -10,7 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientMedia
+from hydrus.client.media import ClientMedia
 from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUICommon
@@ -569,6 +569,10 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         static_pred_buttons = []
         
         if predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
+            
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 1, 0 ) ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ) ) )
             
             editable_pred_panel_classes.append( PanelPredicateSystemAgeDelta )
             editable_pred_panel_classes.append( PanelPredicateSystemAgeDate )

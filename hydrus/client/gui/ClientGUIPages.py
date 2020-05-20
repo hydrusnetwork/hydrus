@@ -460,11 +460,6 @@ class Page( QW.QSplitter ):
         self._search_preview_split._handle_event_filter = QP.WidgetEventFilter( self._search_preview_split.handle( 1 ) )
         self._search_preview_split._handle_event_filter.EVT_LEFT_DCLICK( self.EventPreviewUnsplit )
         
-        if HC.options[ 'hide_preview' ]:
-            
-            QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
-            
-        
         self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
         self._controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
         
@@ -744,6 +739,11 @@ class Page( QW.QSplitter ):
             
             self.SetupSplits()
             
+            if HC.options[ 'hide_preview' ]:
+                
+                QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
+                
+            
             self._done_split_setups = True
             
         
@@ -977,6 +977,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
+        
+        self.tabBarDoubleClicked.connect( self._RenamePage )
         
         self._previous_page_index = -1
         
