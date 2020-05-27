@@ -115,6 +115,8 @@ class mpvWidget( QW.QWidget ):
         
         self._media = None
         
+        self._file_is_loaded = False
+        
         self._times_to_play_gif = 0
         
         self._current_seek_to_start_count = 0
@@ -192,9 +194,24 @@ class mpvWidget( QW.QWidget ):
     
     def _InitialiseMPVCallbacks( self ):
         
+        def qt_file_loaded_event():
+            
+            if not QP.isValid( self ):
+                
+                return
+                
+            
+            self._file_is_loaded = True
+            
+        
         def qt_seek_event():
             
             if not QP.isValid( self ):
+                
+                return
+                
+            
+            if not self._file_is_loaded:
                 
                 return
                 
@@ -224,12 +241,18 @@ class mpvWidget( QW.QWidget ):
             QP.CallAfter( qt_seek_event )
             
         
+        @player.event_callback( mpv.MpvEventID.FILE_LOADED )
+        def file_loaded_event( event ):
+            
+            QP.CallAfter( qt_file_loaded_event )
+            
+        
     
     def GetAnimationBarStatus( self ):
         
         buffer_indices = None
         
-        if self._media is None:
+        if self._media is None or not self._file_is_loaded:
             
             current_frame_index = 0
             current_timestamp_ms = 0
@@ -268,6 +291,11 @@ class mpvWidget( QW.QWidget ):
     
     def GotoPreviousOrNextFrame( self, direction ):
         
+        if not self._file_is_loaded:
+            
+            return
+            
+        
         command = 'frame-step'
         
         if direction == 1:
@@ -283,6 +311,11 @@ class mpvWidget( QW.QWidget ):
         
     
     def Seek( self, time_index_ms ):
+        
+        if not self._file_is_loaded:
+            
+            return
+            
         
         time_index_s = time_index_ms / 1000
         
@@ -388,6 +421,8 @@ class mpvWidget( QW.QWidget ):
             
             return
             
+        
+        self._file_is_loaded = False
         
         self._media = media
         

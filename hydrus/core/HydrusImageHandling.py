@@ -42,6 +42,17 @@ def EnableLoadTruncatedImages():
         return False
         
     
+if not hasattr( PILImage, 'DecompressionBombError' ):
+    
+    # super old versions don't have this, so let's just make a stub, wew
+    
+    class DBE_stub( Exception ):
+        
+        pass
+        
+    
+    PILImage.DecompressionBombError = DBE_stub
+    
 if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     # super old versions don't have this, so let's just make a stub, wew
@@ -53,8 +64,8 @@ if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     PILImage.DecompressionBombWarning = DBW_stub
     
-
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
+warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
 
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
@@ -246,7 +257,7 @@ def GeneratePILImage( path ):
         
     except Exception as e:
         
-        raise HydrusExceptions.MimeException( 'Could not load the image--it was likely malformed!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load the image--it was likely malformed!' )
         
     
     if pil_image.format == 'JPEG' and hasattr( pil_image, '_getexif' ):
@@ -690,24 +701,32 @@ def GetTimesToPlayGIFFromPIL( pil_image ):
     
 def IsDecompressionBomb( path ):
     
-    # I boosted this up x2 as a temp test
-    PILImage.MAX_IMAGE_PIXELS = OLD_PIL_MAX_IMAGE_PIXELS * 2
+    # there are two errors here, the 'Warning' and the 'Error', which atm is just a test vs a test x 2 for number of pixels
+    # 256MB bmp by default, ( 1024 ** 3 ) // 4 // 3
+    # we'll set it at 512MB, and now catching error should be about 1GB
     
-    warnings.simplefilter( 'error', PILImage.DecompressionBombWarning )
+    PILImage.MAX_IMAGE_PIXELS = ( 1024 ** 3 ) // 2 // 3
+    
+    warnings.simplefilter( 'error', PILImage.DecompressionBombError )
     
     try:
         
         GeneratePILImage( path )
         
-    except ( PILImage.DecompressionBombWarning, PILImage.DecompressionBombError ):
+    except ( PILImage.DecompressionBombError ):
         
         return True
+        
+    except:
+        
+        # pil was unable to load it, which does not mean it was a decomp bomb
+        return False
         
     finally:
         
         PILImage.MAX_IMAGE_PIXELS = None
         
-        warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
+        warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
         
     
     return False

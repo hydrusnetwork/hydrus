@@ -85,6 +85,9 @@ class BetterListCtrl( QW.QTreeWidget ):
         #self.setColumnWidth( resize_column - 1, sizing_column_initial_width )
         #self.header().setStretchLastSection( True )
         
+        # hydev looked at this problem. the real answer I think will be to move to column size memory and let the last section resize
+        # start with decent values and then we can remember whatever the user ends up liking later. this will be simpler
+        
         self.setMinimumWidth( total_width )
         
         self.GrowShrinkColumnsHeight( height_num_chars )
@@ -363,7 +366,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in ClientGUIShortcuts.DELETE_KEYS:
+        if key in ClientGUIShortcuts.DELETE_KEYS_QT:
             
             self.ProcessDeleteAction()
             

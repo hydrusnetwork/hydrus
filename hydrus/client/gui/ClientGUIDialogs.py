@@ -422,7 +422,7 @@ class DialogInputNamespaceRegex( Dialog ):
         self._shortcuts = ClientGUICommon.RegexButton( self )
         
         self._regex_intro_link = ClientGUICommon.BetterHyperLink( self, 'a good regex introduction', 'http://www.aivosto.com/vbtips/regex.html' )
-        self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practise', 'http://regexr.com/3cvmf' )
+        self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practice', 'http://regexr.com/3cvmf' )
         
         self._ok = QW.QPushButton( 'OK', self )
         self._ok.clicked.connect( self.EventOK )

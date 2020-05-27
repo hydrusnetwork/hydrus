@@ -343,6 +343,26 @@ def GetDefaultShortcuts():
     
     media = ClientGUIShortcuts.ShortcutSet( 'media' )
     
+    delete_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'delete_file' )
+    undelete_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'undelete_file' )
+    
+    for delete_key in ClientGUIShortcuts.DELETE_KEYS_HYDRUS:
+        
+        shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, delete_key, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
+        
+        if media.GetCommand( shortcut ) is None:
+            
+            media.SetCommand( shortcut, delete_command )
+            
+        
+        shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, delete_key, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] )
+        
+        if media.GetCommand( shortcut ) is None:
+            
+            media.SetCommand( shortcut, undelete_command )
+            
+        
+    
     media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F4, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_ratings' ) )
     media.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_F3, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_tags' ) )
     
@@ -549,10 +569,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules = HydrusNetworking.BandwidthRules()
     
-    # most gallery downloaders need two rqs per file (page and file), remember
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 200 ) # after that first sample of small files, take it easy
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 512 * MB ) # just a careful stopgap
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE ), rules )
     
@@ -563,17 +580,13 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     # most gallery downloaders need two rqs per file (page and file), remember
     rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 800 ) # catch up on a big sub in little chunks every day
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 512 * MB ) # catch up on a big sub in little chunks every day
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 768 * MB ) # catch up on a big sub in little chunks every day
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
     
     #
     
     rules = HydrusNetworking.BandwidthRules()
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 100 ) # after that first sample of small files, take it easy
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_WATCHER_PAGE ), rules )
     

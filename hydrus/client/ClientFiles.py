@@ -1602,7 +1602,7 @@ class FilesMaintenanceManager( object ):
             
             return additional_data
             
-        except HydrusExceptions.MimeException:
+        except HydrusExceptions.UnsupportedFileException:
             
             self._CheckFileIntegrity( media_result, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL )
             

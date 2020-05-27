@@ -8,6 +8,57 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 399</h3></li>
+				<ul>
+					<li>improvements:</li>
+					<li>the media viewer and thumbnail _right-click->manage_ menus now have a _viewing stats->clear_ action, which does a straight-up delete of all viewing stats record for the selected files. 'edit' will be added to this menu in future</li>
+					<li>extended the tag autocomplete options with a checkbox to allow 'namespace:' to match all tags, without the explicit asterisk</li>
+					<li>tag autocomplete options now permit namespace searches if the 'search namespaces into full tags' option is set</li>
+					<li>the tag autocomplete options panel now disables and checks the namespace checkboxes when one option overrules another</li>
+					<li>cleaned up some tag search logic to recognise and deal with 'namespace:' as a query</li>
+					<li>added some more unit tests for tag autocomplete options</li>
+					<li>the html and json parsing formulae now support negative indexing, to select the nth last item from a list</li>
+					<li>extended the '1 -> "1st"' ordinal string conversion code to deal with negative indices</li>
+					<li>the 'hide tag' taglist menu actions are now wrapped in yes/no dialogs</li>
+					<li>reduced the activation-to-click-accept time that the shortcuts handler uses to ignore activating clicks from 100ms to 17ms</li>
+					<li>clicking the media viewer's top hover window's zoom buttons now forces the 'media viewer center' zoom centerpoint, so if you have the mouse centerpoint set, it won't zoom around the button where you are clicking!</li>
+					<li>added a simple 8chan.moe watcher to the defaults, all users will get it on update</li>
+					<li>the default bandwidth rules for download pages, subs, and watchers are now more liberal. only new users will get these. various improvements to db and ui update pipeline mean the enforced breaks are less needed</li>
+					<li>when a manage tags dialog moves to another media, if it has a 'recent tags' suggestion list with a selection, the selection now resets to the top item in the list</li>
+					<li>the mpv player now tracks when a video is fully loaded and only reports seek bar info and allows seeks when this is so (this should fix some seekbar errors on broken/slow-loading vids)</li>
+					<li>added 'undelete_file' to media shortcut commands</li>
+					<li>file delete and undelete are no longer hardcoded in the media viewer and media thumbnail grid. these actions are now handled entirely in the media shortcut set, and added to all clients by default (this defaults to (shift +) delete key, and also backspace on macos, so likely no changes)</li>
+					<li>ctrl+mouse wheel is no longer hardcoded to zoom in the media browser. these actions are now handled entirely in the 'all' media viewer shortcut set (this defaults to ctrl+wheel or +/-, so likely no changes)</li>
+					<li>deleted some old shortcut processing code</li>
+					<li>tightened up some update timers to better halt work while the client is minimised to system tray. this _may_ improve some users' restore hanging issues</li>
+					<li>as Qt is happier than wx about making pages on a non-visible client, subscriptions and various url import operations are now permitted to create pages while the client is minimised to taskbar or system tray. if this applies to your situation, please let me know how you get on here, as this may relieve some restore hanging as the pending new-file jobs are no longer queued up</li>
+					<li>.</li>
+					<li>fixes:</li>
+					<li>clicks on hover window greyspace should no longer propagate up to the media viewer. this was causing weird archive/delete filter actions</li>
+					<li>mouse scroll on hover window taglist should no longer propagate up to the media viewer when the taglist has no more to scroll in that direction</li>
+					<li>fixed an issue that meant preview windows were initialising about twenty pixels too short for the first page loaded in a session, and also pages created within nested page of pages. also cleaned up some logic for unusual situations like hidden preview windows. one more cycle of closing and reopening the client will fix the option value here</li>
+					<li>cleaned and unified some page sash setting code, also improving the 'hide preview window' option reliability for advanced actions</li>
+					<li>fixed a bug that meant file viewtime was still being recorded on the duplicate filter when the special exception option was off</li>
+					<li>reduced some file viewtime manager overhead</li>
+					<li>fixed an issue with database repair code when local_tags_cache is missing</li>
+					<li>fixed an issue updating a very old db not recognising that local_tags_cache does not yet exist for proper reason and then trying to repair it before update code runs</li>
+					<li>fixed the annoying issue introduced in the recent string match overhaul where a 'fixed character' string match edit panel would not want to ok if the (now hidden) example string input did not have the same fixed char data. it now validates no matter what is in the hidden input</li>
+					<li>potentially important parsing fix: JSON parsing, when set to get strings, no longer converts a 'null' value to 'None'</li>
+					<li>the JSON parsing formula now allows you to select the nth indexed item of an Object (a JSON key->value dictionary). due to technical limitations, it alphabetises the keys, not selecting them as-is in the JSON itself</li>
+					<li>images that do not load in PIL no longer cause mime exceptions if they are run through the decompression bomb check</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>boosted the values of the decompression bomb check anyway, to reduce false positives. it generally now has a problem with images with a bmp > 1GB memory</li>
+					<li>by default, new file import options now start with decompression bombs allowed. this option is being reduced to a stopgap for users with less memory</li>
+					<li>'MimeException' is renamed to 'UnsupportedFileException'</li>
+					<li>added 'DamagedOrUnusualFileException' to handle normally supported files that cannot be parsed or loaded</li>
+					<li>'SizeException' is split into 'TagSizeException' and 'FileSizeException'</li>
+					<li>improved some file exception inheritance</li>
+					<li>removed the 'experimental' label from sub-gallery page url type in parsing system</li>
+					<li>updated some advanced help regarding bad files</li>
+					<li>misc help updates</li>
+					<li>updated cloudscraper to 1.2.40</li>
+				</ul>
 				<li><h3>version 398</h3></li>
 				<ul>
 					<li>new tag search options:</li>

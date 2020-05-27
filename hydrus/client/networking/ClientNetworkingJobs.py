@@ -1344,7 +1344,7 @@ class NetworkJob( object ):
                 
                 trace = traceback.format_exc()
                 
-                if not isinstance( e, ( HydrusExceptions.NetworkInfrastructureException, HydrusExceptions.StreamTimeoutException, HydrusExceptions.SizeException ) ):
+                if not isinstance( e, ( HydrusExceptions.NetworkInfrastructureException, HydrusExceptions.StreamTimeoutException, HydrusExceptions.FileSizeException ) ):
                     
                     HydrusData.Print( trace )
                     

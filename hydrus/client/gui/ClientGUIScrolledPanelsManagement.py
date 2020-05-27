@@ -5451,7 +5451,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in ClientGUIShortcuts.DELETE_KEYS:
+        if key in ClientGUIShortcuts.DELETE_KEYS_QT:
             
             urls = [ QP.GetClientData( self._urls_listbox, selection.row() ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
             

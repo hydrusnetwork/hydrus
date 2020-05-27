@@ -579,14 +579,17 @@ class TestTagObjects( unittest.TestCase ):
         
         tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
-        namespace_fetch_all_allowed = True
+        search_namespaces_into_full_tags = True
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
         fetch_all_allowed = False
         
         tag_autocomplete_options.SetTuple(
             tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
             tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
             tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
-            tag_autocomplete_options.SearchNamespacesIntoFullTags(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
             namespace_fetch_all_allowed,
             fetch_all_allowed
         )
@@ -621,6 +624,12 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'series:', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, True, False, True ] )
+        
+        #
+        
         parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'series:*', tag_autocomplete_options, True )
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, True, False, True ] )
@@ -630,6 +639,128 @@ class TestTagObjects( unittest.TestCase ):
         
         tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = True
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, True, False, False, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, False, False, False, False ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '*', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, True, False, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '*:*', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, True, False, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'series:', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, True, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'series:*', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, True, False, True ] )
+        
+        #
+        #
+        
+        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = True
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, True, False, False, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '-', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, False, False, False, False ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, False, False, True, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '*', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, True, False, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '*:*', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ False, False, False, True, False, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'series:', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, False, False, False, True, False, True ] )
+        
+        #
+        
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( 'series:*', tag_autocomplete_options, True )
+        
+        bool_tests( parsed_autocomplete_text, [ True, True, False, True, True, False, True ] )
+        
+        #
+        #
+        
+        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
         namespace_fetch_all_allowed = True
         fetch_all_allowed = True
         
@@ -637,7 +768,8 @@ class TestTagObjects( unittest.TestCase ):
             tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
             tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
             tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
-            tag_autocomplete_options.SearchNamespacesIntoFullTags(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
             namespace_fetch_all_allowed,
             fetch_all_allowed
         )

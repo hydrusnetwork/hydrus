@@ -86,9 +86,25 @@ def ConvertIntToPixels( i ):
     elif i == 1000000: return 'megapixels'
     else: return 'megapixels'
     
-def ConvertIntToPrettyOrdinalString( num ):
+def ConvertIndexToPrettyOrdinalString( index: int ):
     
-    remainder = num % 10
+    if index >= 0:
+        
+        return ConvertIntToPrettyOrdinalString( index + 1 )
+        
+    else:
+        
+        return ConvertIntToPrettyOrdinalString( index )
+        
+    
+def ConvertIntToPrettyOrdinalString( num: int ):
+    
+    if num == 0:
+        
+        return 'unknown position'
+        
+    
+    remainder = abs( num ) % 10
     
     if remainder == 1:
         
@@ -107,7 +123,14 @@ def ConvertIntToPrettyOrdinalString( num ):
         ordinal = 'th'
         
     
-    return ToHumanInt( num ) + ordinal
+    s = '{}{}'.format( ToHumanInt( abs( num ) ), ordinal )
+    
+    if num < 0:
+        
+        s = '{} from last'.format( s )
+        
+    
+    return s
     
 def ConvertIntToUnit( unit ):
     
@@ -1603,9 +1626,16 @@ class ContentUpdate( object ):
             
         elif self._data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
             
-            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = self._row
-            
-            hashes = { hash }
+            if self._action == HC.CONTENT_UPDATE_ADD:
+                
+                ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = self._row
+                
+                hashes = { hash }
+                
+            elif self._action == HC.CONTENT_UPDATE_DELETE:
+                
+                hashes = self._row
+                
             
         
         if not isinstance( hashes, set ):

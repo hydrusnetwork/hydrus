@@ -75,6 +75,9 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._search_namespaces_into_full_tags = QW.QCheckBox( self )
         self._search_namespaces_into_full_tags.setToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metrod". On large tag services, these searches are extremely slow.' )
         
+        self._namespace_bare_fetch_all_allowed = QW.QCheckBox( self )
+        self._namespace_bare_fetch_all_allowed.setToolTip( 'If on, a search for "series:" will return all "series:" results. On large tag services, these searches are extremely slow.' )
+        
         self._namespace_fetch_all_allowed = QW.QCheckBox( self )
         self._namespace_fetch_all_allowed.setToolTip( 'If on, a search for "series:*" will return all "series:" results. On large tag services, these searches are extremely slow.' )
         
@@ -87,6 +90,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._override_write_autocomplete_file_domain.setChecked( tag_autocomplete_options.OverridesWriteAutocompleteFileDomain() )
         self._write_autocomplete_file_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteFileDomain() )
         self._search_namespaces_into_full_tags.setChecked( tag_autocomplete_options.SearchNamespacesIntoFullTags() )
+        self._namespace_bare_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceBareFetchAllAllowed() )
         self._namespace_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceFetchAllAllowed() )
         self._fetch_all_allowed.setChecked( tag_autocomplete_options.FetchAllAllowed() )
         
@@ -107,9 +111,10 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( 'Manage tags default autocomplete tag domain: ', self._write_autocomplete_tag_domain ) )
             
         
-        rows.append( ( 'Search namespaces into full tags: ', self._search_namespaces_into_full_tags ) )
-        rows.append( ( 'Search "namespace:*": ', self._namespace_fetch_all_allowed ) )
-        rows.append( ( 'Search "*": ', self._fetch_all_allowed ) )
+        rows.append( ( 'Search namespaces with normal input: ', self._search_namespaces_into_full_tags ) )
+        rows.append( ( 'Allow "namespace:": ', self._namespace_bare_fetch_all_allowed ) )
+        rows.append( ( 'Allow "namespace:*": ', self._namespace_fetch_all_allowed ) )
+        rows.append( ( 'Allow "*": ', self._fetch_all_allowed ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -128,11 +133,44 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
         self._override_write_autocomplete_file_domain.stateChanged.connect( self._UpdateControls )
+        self._search_namespaces_into_full_tags.stateChanged.connect( self._UpdateControls )
+        self._namespace_bare_fetch_all_allowed.stateChanged.connect( self._UpdateControls )
         
     
     def _UpdateControls( self ):
         
         self._write_autocomplete_file_domain.setEnabled( self._override_write_autocomplete_file_domain.isChecked() )
+        
+        if self._search_namespaces_into_full_tags.isChecked():
+            
+            self._namespace_bare_fetch_all_allowed.setEnabled( False )
+            self._namespace_fetch_all_allowed.setEnabled( False )
+            
+        else:
+            
+            self._namespace_bare_fetch_all_allowed.setEnabled( True )
+            
+            if self._namespace_bare_fetch_all_allowed.isChecked():
+                
+                self._namespace_fetch_all_allowed.setEnabled( False )
+                
+            else:
+                
+                self._namespace_fetch_all_allowed.setEnabled( True )
+                
+            
+        
+        for c in ( self._namespace_bare_fetch_all_allowed, self._namespace_fetch_all_allowed ):
+            
+            if not c.isEnabled():
+                
+                c.blockSignals( True )
+                
+                c.setChecked( True )
+                
+                c.blockSignals( False )
+                
+            
         
     
     def GetValue( self ):
@@ -143,6 +181,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         override_write_autocomplete_file_domain = self._override_write_autocomplete_file_domain.isChecked()
         write_autocomplete_file_domain = self._write_autocomplete_file_domain.GetValue()
         search_namespaces_into_full_tags = self._search_namespaces_into_full_tags.isChecked()
+        namespace_bare_fetch_all_allowed = self._namespace_bare_fetch_all_allowed.isChecked()
         namespace_fetch_all_allowed = self._namespace_fetch_all_allowed.isChecked()
         fetch_all_allowed = self._fetch_all_allowed.isChecked()
         
@@ -151,6 +190,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             override_write_autocomplete_file_domain,
             write_autocomplete_file_domain,
             search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
             namespace_fetch_all_allowed,
             fetch_all_allowed
         )

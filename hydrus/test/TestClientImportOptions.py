@@ -283,7 +283,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 512, HC.IMAGE_JPEG, 640, 480 )
             
@@ -297,7 +297,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
             
@@ -314,7 +314,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_GIF, 640, 480 )
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 2200, HC.IMAGE_GIF, 640, 480 )
             
@@ -328,12 +328,12 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 180, 480 )
             
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 80 )
             
@@ -349,12 +349,12 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 3200, 480 )
             
         
-        with self.assertRaises( HydrusExceptions.SizeException ):
+        with self.assertRaises( HydrusExceptions.FileSizeException ):
             
             file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 4200 )
             

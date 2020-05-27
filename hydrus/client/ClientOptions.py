@@ -507,7 +507,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         exclude_deleted = True
         do_not_check_known_urls_before_importing = False
         do_not_check_hashes_before_importing = False
-        allow_decompression_bombs = False
+        allow_decompression_bombs = True
         min_size = None
         max_size = None
         max_gif_size = 32 * 1048576

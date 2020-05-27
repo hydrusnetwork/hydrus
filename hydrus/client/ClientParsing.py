@@ -481,9 +481,7 @@ def RenderJSONParseRule( rule ):
         
         index = parse_rule
         
-        num = index + 1
-        
-        s = 'get the ' + HydrusData.ConvertIntToPrettyOrdinalString( num ) + ' item'
+        s = 'get the ' + HydrusData.ConvertIndexToPrettyOrdinalString( index ) + ' item (for Objects, keys sorted)'
         
     elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
         
@@ -1308,14 +1306,16 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 
                 if self._tag_index is not None:
                     
-                    if len( found_nodes ) < self._tag_index + 1:
+                    try:
                         
-                        found_nodes = []
+                        indexed_node = found_nodes[ self._tag_index ]
                         
-                    else:
+                    except IndexError:
                         
-                        found_nodes = [ found_nodes[ self._tag_index ] ]
+                        continue
                         
+                    
+                    found_nodes = [ indexed_node ]
                     
                 
             elif self._rule_type == HTML_RULE_TYPE_ASCENDING:
@@ -1388,9 +1388,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                num = self._tag_index + 1
-                
-                s += ' the ' + HydrusData.ConvertIntToPrettyOrdinalString( num )
+                s += ' the ' + HydrusData.ConvertIndexToPrettyOrdinalString( self._tag_index )
                 
             
             if self._tag_name is not None:
@@ -1511,19 +1509,43 @@ class ParseFormulaJSON( ParseFormula ):
                     
                 elif parse_rule_type == JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
                     
-                    if not isinstance( root, list ):
-                        
-                        continue
-                        
-                    
                     index = parse_rule
                     
-                    if len( root ) < index + 1:
+                    if isinstance( root, ( list, dict ) ):
+                        
+                        if isinstance( root, list ):
+                            
+                            list_to_index = root
+                            
+                        elif isinstance( root, dict ):
+                            
+                            list_to_index = list( root.keys() )
+                            
+                            HydrusData.HumanTextSort( list_to_index )
+                            
+                        
+                        try:
+                            
+                            indexed_item = list_to_index[ index ]
+                            
+                        except IndexError:
+                            
+                            continue
+                            
+                        
+                        if isinstance( root, list ):
+                            
+                            next_roots.append( indexed_item )
+                            
+                        elif isinstance( root, dict ):
+                            
+                            next_roots.append( root[ indexed_item ] )
+                            
+                        
+                    else:
                         
                         continue
                         
-                    
-                    next_roots.append( root[ index ] )
                     
                 elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
                     
@@ -1560,9 +1582,12 @@ class ParseFormulaJSON( ParseFormula ):
                     continue
                     
                 
-                raw_text = str( root )
-                
-                raw_texts.append( raw_text )
+                if root is not None:
+                    
+                    raw_text = str( root )
+                    
+                    raw_texts.append( raw_text )
+                    
                 
             elif self._content_to_fetch == JSON_CONTENT_JSON:
                 
@@ -3324,6 +3349,11 @@ class StringMatch( StringProcessingStep ):
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string ) = serialisable_info
+        
+    
+    def GetExampleString( self ):
+        
+        return self._example_string
         
     
     def MakesChanges( self ) -> bool:

@@ -139,7 +139,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     if size == 0:
         
-        raise HydrusExceptions.SizeException( 'File is of zero length!' )
+        raise HydrusExceptions.FileSizeException( 'File is of zero length!' )
         
     
     if mime is None:
@@ -151,15 +151,15 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         if mime == HC.TEXT_HTML:
             
-            raise HydrusExceptions.MimeException( 'Looks like HTML -- maybe the client needs to be taught how to parse this?' )
+            raise HydrusExceptions.UnsupportedFileException( 'Looks like HTML -- maybe the client needs to be taught how to parse this?' )
             
         elif mime == HC.APPLICATION_UNKNOWN:
             
-            raise HydrusExceptions.MimeException( 'Unknown filetype!' )
+            raise HydrusExceptions.UnsupportedFileException( 'Unknown filetype!' )
             
         else:
             
-            raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
+            raise HydrusExceptions.UnsupportedFileException( 'Filetype is not permitted!' )
             
         
     
@@ -266,7 +266,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     if size == 0:
         
-        raise HydrusExceptions.SizeException( 'File is of zero length!' )
+        raise HydrusExceptions.FileSizeException( 'File is of zero length!' )
         
     
     with open( path, 'rb' ) as f:
@@ -316,7 +316,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             return mime
             
         
-    except HydrusExceptions.MimeException:
+    except HydrusExceptions.UnsupportedFileException:
         
         pass
         

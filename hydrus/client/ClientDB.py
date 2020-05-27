@@ -10718,6 +10718,14 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._c.execute( 'UPDATE file_viewing_stats SET preview_views = preview_views + ?, preview_viewtime = preview_viewtime + ?, media_views = media_views + ?, media_viewtime = media_viewtime + ? WHERE hash_id = ?;', ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta, hash_id ) )
                             
+                        elif action == HC.CONTENT_UPDATE_DELETE:
+                            
+                            hashes = row
+                            
+                            hash_ids = self._GetHashIds( hashes )
+                            
+                            self._c.executemany( 'DELETE FROM file_viewing_stats WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+                            
                         
                     
                 elif service_type in HC.REAL_TAG_SERVICES:
@@ -10730,7 +10738,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             tag_id = self._GetTagId( tag )
                             
-                        except HydrusExceptions.SizeException:
+                        except HydrusExceptions.TagSizeException:
                             
                             continue
                             
@@ -10805,7 +10813,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 parent_tag_id = self._GetTagId( parent_tag )
                                 
-                            except HydrusExceptions.SizeException:
+                            except HydrusExceptions.TagSizeException:
                                 
                                 continue
                                 
@@ -10840,7 +10848,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 parent_tag_id = self._GetTagId( parent_tag )
                                 
-                            except HydrusExceptions.SizeException:
+                            except HydrusExceptions.TagSizeException:
                                 
                                 continue
                                 
@@ -10874,7 +10882,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 parent_tag_id = self._GetTagId( parent_tag )
                                 
-                            except HydrusExceptions.SizeException:
+                            except HydrusExceptions.TagSizeException:
                                 
                                 continue
                                 
@@ -10898,7 +10906,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 good_tag_id = self._GetTagId( good_tag )
                                 
-                            except HydrusExceptions.SizeException:
+                            except HydrusExceptions.TagSizeException:
                                 
                                 continue
                                 
@@ -10933,7 +10941,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 good_tag_id = self._GetTagId( good_tag )
                                 
-                            except HydrusExceptions.SizeException:
+                            except HydrusExceptions.TagSizeException:
                                 
                                 continue
                                 
@@ -10967,7 +10975,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 bad_tag_id = self._GetTagId( bad_tag )
                                 
-                            except HydrusExceptions.SizeException:
+                            except HydrusExceptions.TagSizeException:
                                 
                                 continue
                                 
@@ -11552,6 +11560,10 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'modal_message', job_key )
             
+            # need this here to ensure that local_tags_cache exists, as the mappings cache regens use it
+            # we can't move it up, as it relies on them for its own regen. just make an empty table here to get repopulated
+            self._CreateDBCaches()
+            
             tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
             
@@ -11898,7 +11910,10 @@ class DB( HydrusDB.HydrusDB ):
             mappings_cache_tables.add( GenerateCombinedFilesMappingsCacheTableName( tag_service_id ).split( '.' )[1] )
             
         
-        mappings_cache_tables.add( 'local_tags_cache' )
+        if version >= 351:
+            
+            mappings_cache_tables.add( 'local_tags_cache' )
+            
         
         missing_main_tables = sorted( mappings_cache_tables.difference( existing_cache_tables ) )
         
@@ -12406,7 +12421,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusTags.CheckTagNotEmpty( subtag )
             
-        except HydrusExceptions.SizeException:
+        except HydrusExceptions.TagSizeException:
             
             return False
             
@@ -12431,7 +12446,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusTags.CheckTagNotEmpty( tag )
             
-        except HydrusExceptions.SizeException:
+        except HydrusExceptions.TagSizeException:
             
             return False
             
@@ -14780,6 +14795,85 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( [ 'gelbooru 0.2.x gallery page parser', 'newgrounds art parser', 'newgrounds file page parser', 'newgrounds gallery page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 398:
+            
+            existing_shortcut_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+            
+            if 'media' in existing_shortcut_names:
+                
+                try:
+                    
+                    media_shortcuts = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'media' )
+                    
+                    from hydrus.client.gui import ClientGUIShortcuts
+                    
+                    delete_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'delete_file' )
+                    undelete_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'undelete_file' )
+                    
+                    for delete_key in ClientGUIShortcuts.DELETE_KEYS_HYDRUS:
+                        
+                        shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, delete_key, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
+                        
+                        if media_shortcuts.GetCommand( shortcut ) is None:
+                            
+                            media_shortcuts.SetCommand( shortcut, delete_command )
+                            
+                        
+                        shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, delete_key, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] )
+                        
+                        if media_shortcuts.GetCommand( shortcut ) is None:
+                            
+                            media_shortcuts.SetCommand( shortcut, undelete_command )
+                            
+                        
+                    
+                    self._SetJSONDump( media_shortcuts )
+                    
+                except:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to update the media shortcuts failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+        
+        if version == 398:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ '8chan.moe thread', '8chan.moe thread json api' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ '8chan.moe thread api parser' ] )
                 
                 #
                 

@@ -163,8 +163,6 @@ def ReadFetch(
         
         if fetch_from_db:
             
-            small_exact_match_search = False
-            
             is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard()
             
             small_exact_match_search = ShouldDoExactSearch( strict_search_text ) and not is_explicit_wildcard
@@ -361,7 +359,7 @@ def ShouldDoExactSearch( entry_text ):
         test_text = entry_text
         
     
-    return len( test_text ) <= autocomplete_exact_match_threshold
+    return 0 < len( test_text ) <= autocomplete_exact_match_threshold
     
 def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_service_key: bytes, tag_service_key: bytes, expand_parents: bool, results_cache: ClientSearch.PredicateResultsCache ):
     

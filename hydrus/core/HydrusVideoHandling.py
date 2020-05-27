@@ -27,7 +27,7 @@ def CheckFFMPEGError( lines ):
     
     if len( lines ) == 0:
         
-        raise HydrusExceptions.MimeException( 'Could not parse that file--no FFMPEG output given.' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not parse that file--no FFMPEG output given.' )
         
     
     if "No such file or directory" in lines[-1]:
@@ -37,7 +37,7 @@ def CheckFFMPEGError( lines ):
     
     if 'Invalid data' in lines[-1]:
         
-        raise HydrusExceptions.MimeException( 'FFMPEG could not parse.' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'FFMPEG could not parse.' )
         
     
 def GetFFMPEGVersion():
@@ -219,7 +219,7 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
     if not has_video:
         
-        raise HydrusExceptions.MimeException( 'File did not appear to have a video stream!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'File did not appear to have a video stream!' )
         
     
     resolution = ParseFFMPEGVideoResolution( first_second_lines )
@@ -298,7 +298,7 @@ def GetMime( path ):
         
         mime_text = ParseFFMPEGMimeText( lines )
         
-    except HydrusExceptions.MimeException:
+    except HydrusExceptions.UnsupportedFileException:
         
         return HC.APPLICATION_UNKNOWN
         
@@ -462,7 +462,7 @@ def ParseFFMPEGDuration( lines ):
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Error reading duration!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading duration!' )
         
     
 def ParseFFMPEGFPS( first_second_lines ):
@@ -549,7 +549,7 @@ def ParseFFMPEGFPS( first_second_lines ):
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Error estimating framerate!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error estimating framerate!' )
         
     
 def ParseFFMPEGHasVideo( lines ):
@@ -558,7 +558,7 @@ def ParseFFMPEGHasVideo( lines ):
         
         video_line = ParseFFMPEGVideoLine( lines )
         
-    except HydrusExceptions.MimeException:
+    except HydrusExceptions.UnsupportedFileException:
         
         return False
         
@@ -581,7 +581,7 @@ def ParseFFMPEGMimeText( lines ):
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Error reading mime!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading mime!' )
         
     
 def ParseFFMPEGNumFramesManually( lines ):
@@ -590,7 +590,7 @@ def ParseFFMPEGNumFramesManually( lines ):
     
     if len( frame_lines ) == 0:
         
-        raise HydrusExceptions.MimeException( 'Video appears to be broken and non-renderable--perhaps a damaged single-frame video?' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Video appears to be broken and non-renderable--perhaps a damaged single-frame video?' )
         
     
     final_line = frame_lines[-1] # there will be many progress rows, counting up as the file renders. we hence want the final one
@@ -612,7 +612,7 @@ def ParseFFMPEGNumFramesManually( lines ):
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Video was unable to render correctly--could not parse ffmpeg output line: "{}"'.format( final_line ) )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Video was unable to render correctly--could not parse ffmpeg output line: "{}"'.format( final_line ) )
         
     
     return num_frames
@@ -623,7 +623,7 @@ def ParseFFMPEGVideoFormat( lines ):
         
         line = ParseFFMPEGVideoLine( lines )
         
-    except HydrusExceptions.MimeException:
+    except HydrusExceptions.UnsupportedFileException:
         
         return ( False, 'unknown' )
         
@@ -649,7 +649,7 @@ def ParseFFMPEGVideoLine( lines ):
     
     if len( lines_video ) == 0:
         
-        raise HydrusExceptions.MimeException( 'Could not find video information!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not find video information!' )
         
     
     line = lines_video[0]
@@ -693,7 +693,7 @@ def ParseFFMPEGVideoResolution( lines ):
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Error parsing resolution!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error parsing resolution!' )
         
     
 # This was built from moviepy's FFMPEG_VideoReader

@@ -367,7 +367,7 @@ class FileViewingStatsManager( object ):
             
             do_it = True
             
-            if viewtime_delta == 'media_duplicates_filter' and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
+            if viewtype == 'media_duplicates_filter' and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
                 
                 do_it = False
                 
@@ -391,6 +391,16 @@ class FileViewingStatsManager( object ):
             
         
         return ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+        
+    
+    def _RowMakesChanges( self, row ):
+        
+        ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+        
+        preview_change = preview_views_delta != 0 or preview_viewtime_delta != 0
+        media_change = media_views_delta != 0 or media_viewtime_delta != 0
+        
+        return preview_change or media_change
         
     
     def _PubSubRow( self, hash, row ):
@@ -449,6 +459,11 @@ class FileViewingStatsManager( object ):
         with self._lock:
             
             row = self._GenerateViewsRow( viewtype, viewtime_delta )
+            
+            if not self._RowMakesChanges( row ):
+                
+                return
+                
             
             if hash not in self._pending_updates:
                 

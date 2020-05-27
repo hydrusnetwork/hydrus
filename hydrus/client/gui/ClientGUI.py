@@ -1923,13 +1923,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             url_caught = True
             
-            if not self._notebook.HasURLImportPage() and self._CurrentlyMinimisedOrHidden():
-                
-                self._controller.CallLaterQtSafe(self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls)
-                
-                return ( url, '"{}" URL was accepted, but it needed a new page and the client is currently minimized or hidden. It is queued to be added once the client is restored.' )
-                
-            
             page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
             
             if page is not None:
@@ -1949,13 +1942,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         elif url_type == HC.URL_TYPE_WATCHABLE and allow_watchers:
             
             url_caught = True
-            
-            if not self._notebook.HasMultipleWatcherPage() and self._CurrentlyMinimisedOrHidden():
-                
-                self._controller.CallLaterQtSafe(self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls)
-                
-                return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized or hidden. It is queued to be added once the client is restored.' )
-                
             
             page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
             
@@ -4061,6 +4047,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def TIMEREventAnimationUpdate( self ):
         
+        if self._currently_minimised_to_system_tray:
+            
+            return
+            
+        
         try:
             
             windows = list( self._animation_update_windows )
@@ -5408,13 +5399,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
-        if self._CurrentlyMinimisedOrHidden() and not self._notebook.HasMediaPageName( page_name ):
-            
-            self._controller.CallLaterQtSafe( self, 10.0, self.PresentImportedFilesToPage, hashes, page_name )
-            
-            return
-            
-        
         self._notebook.PresentImportedFilesToPage( hashes, page_name )
         
     
@@ -5837,6 +5821,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def REPEATINGUIUpdate( self ):
+        
+        if self._currently_minimised_to_system_tray:
+            
+            return
+            
         
         for window in list( self._ui_update_windows ):
             

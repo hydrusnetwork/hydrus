@@ -787,7 +787,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._exclude_deleted = True
         self._do_not_check_known_urls_before_importing = False
         self._do_not_check_hashes_before_importing = False
-        self._allow_decompression_bombs = False
+        self._allow_decompression_bombs = True
         self._min_size = None
         self._max_size = None
         self._max_gif_size = None
@@ -840,7 +840,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             max_size = None
             max_resolution = None
             
-            allow_decompression_bombs = False
+            allow_decompression_bombs = True
             max_gif_size = 32 * 1048576
             
             pre_import_options = ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
@@ -888,17 +888,17 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._min_size is not None and size < self._min_size:
             
-            raise HydrusExceptions.SizeException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
+            raise HydrusExceptions.FileSizeException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
             
         
         if self._max_size is not None and size > self._max_size:
             
-            raise HydrusExceptions.SizeException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
+            raise HydrusExceptions.FileSizeException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
             
         
         if mime == HC.IMAGE_GIF and self._max_gif_size is not None and size > self._max_gif_size:
             
-            raise HydrusExceptions.SizeException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
+            raise HydrusExceptions.FileSizeException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
             
         
         if self._min_resolution is not None:
@@ -910,7 +910,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if too_thin or too_short:
                 
-                raise HydrusExceptions.SizeException( 'File had resolution ' + HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) + ' but the lower limit is ' + HydrusData.ConvertResolutionToPrettyString( self._min_resolution ) )
+                raise HydrusExceptions.FileSizeException( 'File had resolution ' + HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) + ' but the lower limit is ' + HydrusData.ConvertResolutionToPrettyString( self._min_resolution ) )
                 
             
         
@@ -923,7 +923,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if too_wide or too_tall:
                 
-                raise HydrusExceptions.SizeException( 'File had resolution ' + HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) + ' but the upper limit is ' + HydrusData.ConvertResolutionToPrettyString( self._max_resolution ) )
+                raise HydrusExceptions.FileSizeException( 'File had resolution ' + HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) + ' but the upper limit is ' + HydrusData.ConvertResolutionToPrettyString( self._max_resolution ) )
                 
             
         
@@ -943,20 +943,20 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if possible_mime == HC.IMAGE_GIF and self._max_gif_size is not None and num_bytes > self._max_gif_size:
                 
-                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
+                raise HydrusExceptions.FileSizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
                 
             
         
         if self._max_size is not None and num_bytes > self._max_size:
             
-            raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
+            raise HydrusExceptions.FileSizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
             
         
         if is_complete_file_size:
             
             if self._min_size is not None and num_bytes < self._min_size:
                 
-                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
+                raise HydrusExceptions.FileSizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
                 
             
         

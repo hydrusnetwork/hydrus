@@ -5,9 +5,9 @@ class HydrusException( Exception ):
     
     def __str__( self ):
         
-        s = []
-        
         if isinstance( self.args, collections.abc.Iterable ):
+            
+            s = []
             
             for arg in self.args:
                 
@@ -43,10 +43,15 @@ class ShutdownException( HydrusException ): pass
 class QtDeadWindowException(HydrusException): pass
 
 class VetoException( HydrusException ): pass
+
 class CancelledException( VetoException ): pass
-class MimeException( VetoException ): pass
-class SizeException( VetoException ): pass
-class DecompressionBombException( SizeException ): pass
+
+class UnsupportedFileException( VetoException ): pass
+class DamagedOrUnusualFileException( UnsupportedFileException ): pass
+class FileSizeException( UnsupportedFileException ): pass
+class DecompressionBombException( FileSizeException ): pass
+
+class TagSizeException( VetoException ): pass
 
 class ParseException( HydrusException ): pass
 class StringConvertException( ParseException ): pass

@@ -1038,7 +1038,8 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._tag_attributes = ClientGUIStringControls.StringToStringDictControl( self, tag_attributes, min_height = 4 )
         
-        self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = 0, max = 255 )
+        self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = -65536, max = 65535 )
+        self._tag_index.setToolTip( 'You can make this negative to do negative indexing, i.e. "Select the second from last item".' )
         
         self._tag_depth = QP.MakeQSpinBox( self, min=1, max=255 )
         
@@ -1465,13 +1466,14 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parse_rule_type.addItem( 'dictionary entry', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
         self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
-        self._parse_rule_type.addItem( 'indexed list item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
+        self._parse_rule_type.addItem( 'indexed item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
         
         string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' )
         
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
         
-        self._index = QP.MakeQSpinBox( self, min=0, max=65535 )
+        self._index = QP.MakeQSpinBox( self, min=-65536, max=65535 )
+        self._index.setToolTip( 'You can make this negative to do negative indexing, i.e. "Select the second from last item".' )
         
         #
         
@@ -1839,7 +1841,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._url_type.addItem( 'url to download/pursue (file/post url)', HC.URL_TYPE_DESIRED )
         self._url_type.addItem( 'POST parsers only: url to associate (source url)', HC.URL_TYPE_SOURCE )
         self._url_type.addItem( 'GALLERY parsers only: next gallery page (not queued if no post/file urls found)', HC.URL_TYPE_NEXT )
-        self._url_type.addItem( 'EXPERIMENTAL: GALLERY parsers only: sub-gallery page (is queued even if no post/file urls found)', HC.URL_TYPE_SUB_GALLERY )
+        self._url_type.addItem( 'GALLERY parsers only: sub-gallery page (is queued even if no post/file urls found--be careful, only use if you know you need it)', HC.URL_TYPE_SUB_GALLERY )
         
         self._file_priority = QP.MakeQSpinBox( self._urls_panel, min=0, max=100 )
         self._file_priority.setValue( 50 )

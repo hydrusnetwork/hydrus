@@ -177,7 +177,7 @@ def CheckTagNotEmpty( tag ):
     
     if subtag == '':
         
-        raise HydrusExceptions.SizeException( 'Received a zero-length tag!' )
+        raise HydrusExceptions.TagSizeException( 'Received a zero-length tag!' )
         
     
 def CleanTag( tag ):
@@ -239,7 +239,7 @@ def CleanTags( tags ):
             
             CheckTagNotEmpty( tag )
             
-        except HydrusExceptions.SizeException:
+        except HydrusExceptions.TagSizeException:
             
             continue
             

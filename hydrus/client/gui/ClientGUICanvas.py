@@ -714,11 +714,6 @@ class Canvas( QW.QWidget ):
         return media_show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
     
-    def _IShouldCatchShortcutEvent( self, event = None ):
-        
-        return ClientGUIShortcuts.IShouldCatchShortcutEvent( self, event = event, child_tlw_classes_who_can_pass_up = ( ClientGUICanvasHoverFrames.CanvasHoverFrame, ) )
-        
-    
     def _MaintainZoom( self, previous_media ):
         
         if previous_media is None:
@@ -1049,7 +1044,7 @@ class Canvas( QW.QWidget ):
             
         
     
-    def _TryToChangeZoom( self, new_zoom ):
+    def _TryToChangeZoom( self, new_zoom, zoom_center_type_override = None ):
         
         if self._current_media is None:
             
@@ -1073,7 +1068,14 @@ class Canvas( QW.QWidget ):
         
         #
         
-        zoom_center_type = HG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
+        if zoom_center_type_override is None:
+            
+            zoom_center_type = HG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
+            
+        else:
+            
+            zoom_center_type = zoom_center_type_override
+            
         
         # viewer center is the default
         zoom_centerpoint = QC.QPoint( my_size.width() // 2, my_size.height() // 2 )
@@ -1163,7 +1165,7 @@ class Canvas( QW.QWidget ):
         self.update()
         
     
-    def _ZoomIn( self ):
+    def _ZoomIn( self, zoom_center_type_override = None ):
         
         if self._current_media is not None and self._IsZoomable():
             
@@ -1203,12 +1205,12 @@ class Canvas( QW.QWidget ):
                 
                 new_zoom = min( bigger_zooms )
                 
-                self._TryToChangeZoom( new_zoom )
+                self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
                 
             
         
     
-    def _ZoomOut( self ):
+    def _ZoomOut( self, zoom_center_type_override = None ):
         
         if self._current_media is not None and self._IsZoomable():
             
@@ -1248,12 +1250,12 @@ class Canvas( QW.QWidget ):
                 
                 new_zoom = max( smaller_zooms )
                 
-                self._TryToChangeZoom( new_zoom )
+                self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
                 
             
         
     
-    def _ZoomSwitch( self ):
+    def _ZoomSwitch( self, zoom_center_type_override = None ):
         
         if self._current_media is not None and self._IsZoomable():
             
@@ -1271,7 +1273,7 @@ class Canvas( QW.QWidget ):
                 new_zoom = 1.0
                 
             
-            self._TryToChangeZoom( new_zoom )
+            self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
             
             if new_zoom <= self._canvas_zoom:
                 
@@ -1473,6 +1475,10 @@ class Canvas( QW.QWidget ):
                 
                 self._Delete()
                 
+            elif action == 'undelete_file':
+                
+                self._Undelete()
+                
             elif action == 'inbox_file':
                 
                 self._Inbox()
@@ -1521,13 +1527,25 @@ class Canvas( QW.QWidget ):
                 
                 self._ZoomIn()
                 
+            elif action == 'zoom_in_canvas_button':
+                
+                self._ZoomIn( zoom_center_type_override = ZOOM_CENTERPOINT_VIEWER_CENTER )
+                
             elif action == 'zoom_out':
                 
                 self._ZoomOut()
                 
+            elif action == 'zoom_out_canvas_button':
+                
+                self._ZoomOut( zoom_center_type_override = ZOOM_CENTERPOINT_VIEWER_CENTER )
+                
             elif action == 'switch_between_100_percent_and_canvas_zoom':
                 
                 self._ZoomSwitch()
+                
+            elif action == 'switch_between_100_percent_and_canvas_zoom_canvas_button':
+                
+                self._ZoomSwitch( zoom_center_type_override = ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             else:
                 
@@ -1815,6 +1833,8 @@ class CanvasPanel( Canvas ):
                 
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
+            
+            ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -3098,32 +3118,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def keyPressEvent( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if modifier == QC.Qt.NoModifier and key in ClientGUIShortcuts.DELETE_KEYS:
-                
-                self._Delete()
-                
-            elif modifier == QC.Qt.ShiftModifier and key in ClientGUIShortcuts.DELETE_KEYS:
-                
-                self._Undelete()
-                
-            else:
-                
-                CanvasWithHovers.keyPressEvent( self, event )
-                
-            
-            
-        else:
-            
-            event.ignore()
-            
-        
-    
     def ProcessApplicationCommand( self, command, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
@@ -3571,19 +3565,16 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _Back( self ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._current_media == self._GetFirst():
             
-            if self._current_media == self._GetFirst():
-                
-                return
-                
-            else:
-                
-                self._ShowPrevious()
-                
-                self._kept.discard( self._current_media )
-                self._deleted.discard( self._current_media )
-                
+            return
+            
+        else:
+            
+            self._ShowPrevious()
+            
+            self._kept.discard( self._current_media )
+            self._deleted.discard( self._current_media )
             
         
     
@@ -3730,30 +3721,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         if canvas_key == self._canvas_key:
             
             self._Delete()
-            
-        
-    
-    def EventDelete( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            self._Delete()
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
-    def EventUndelete( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            self._Undelete()
-            
-        else:
-            
-            return True # was: event.ignore()
             
         
     
@@ -4099,25 +4066,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def keyPressEvent( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if modifier == QC.Qt.NoModifier and key in ClientGUIShortcuts.DELETE_KEYS: self._Delete()
-            elif modifier == QC.Qt.ShiftModifier and key in ClientGUIShortcuts.DELETE_KEYS: self._Undelete()
-            else:
-                
-                CanvasMediaListNavigable.keyPressEvent( self, event )
-                
-            
-        else:
-            
-            event.ignore()
-            
-        
-    
     def ProcessApplicationCommand( self, command, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
@@ -4299,6 +4247,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
+            ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
+            
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
             ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
@@ -4352,35 +4302,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
             CGC.core().PopupMenu( self, menu )
-            
-        
-    
-    def wheelEvent( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            if event.modifiers() & QC.Qt.ControlModifier:
-                
-                if event.angleDelta().y() > 0:
-                    
-                    self._ZoomIn()
-                    
-                else:
-                    
-                    self._ZoomOut()
-                    
-                
-            else:
-                
-                if event.angleDelta().y() > 0:
-                    
-                    self._ShowPrevious()
-                    
-                else:
-                    
-                    self._ShowNext()
-                    
-                
             
         
     

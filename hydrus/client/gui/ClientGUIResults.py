@@ -2050,6 +2050,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 self._Delete()
                 
+            elif action == 'undelete_file':
+                
+                self._Undelete()
+                
             elif action == 'inbox_file':
                 
                 self._Inbox()
@@ -2267,6 +2271,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseFullScreen )
         
         # notice this is on widget, not myself. fails to set up scrollbars if just moved up
+        # there's a job in qt to-do to sort all this out and fix other scroll issues
         self._widget_event_filter.EVT_SIZE( self.EventResize )
         
         self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
@@ -2918,7 +2923,7 @@ class MediaPanelThumbnails( MediaPanel ):
     def _UpdateBackgroundColour( self ):
         
         MediaPanel._UpdateBackgroundColour( self )
-    
+        
         self._DirtyAllPages()
         
         self._DeleteAllDirtyPages()
@@ -3214,8 +3219,10 @@ class MediaPanelThumbnails( MediaPanel ):
         
         services_manager = HG.client_controller.services_manager
         
+        flat_selected_medias = ClientMedia.FlattenMedia( self._selected_media )
+        
         all_locations_managers = [ media.GetLocationsManager() for media in ClientMedia.FlattenMedia( self._sorted_media ) ]
-        selected_locations_managers = [ media.GetLocationsManager() for media in ClientMedia.FlattenMedia( self._selected_media ) ]
+        selected_locations_managers = [ media.GetLocationsManager() for media in flat_selected_medias ]
         
         selection_has_local = True in ( locations_manager.IsLocal() for locations_manager in selected_locations_managers )
         selection_has_local_file_domain = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
@@ -3630,6 +3637,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage notes for the focused file.', self._ManageNotes )
             
+            ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
+            
             len_interesting_remote_service_keys = 0
             
             len_interesting_remote_service_keys += len( downloadable_file_service_keys )
@@ -3654,10 +3663,12 @@ class MediaPanelThumbnails( MediaPanel ):
                 remote_action_menu = QW.QMenu( manage_menu )
                 
                 if len( downloadable_file_service_keys ) > 0:
+                    
                     ClientGUIMenus.AppendMenuItem( remote_action_menu, download_phrase, 'Download all possible selected files.', self._DownloadSelected )
                     
                 
                 if some_downloading:
+                    
                     ClientGUIMenus.AppendMenuItem( remote_action_menu, rescind_download_phrase, 'Stop downloading any of the selected files.', self._RescindDownloadSelected )
                     
                 
@@ -3817,6 +3828,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 else:
                     
                     if not focus_is_definitely_king:
+                        
                         ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_focused_king' ) )
                         
                     
@@ -3825,18 +3837,22 @@ class MediaPanelThumbnails( MediaPanel ):
                         duplicates_single_dissolution_menu = QW.QMenu( duplicates_action_submenu )
                         
                         if focus_can_be_searched:
+                            
                             ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_reset_focused_potential_search' ) )
                             
                         
                         if focus_has_potentials:
+                            
                             ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focused_potentials' ) )
                             
                         
                         if focus_is_in_duplicate_group:
                             
                             if not focus_is_definitely_king:
+                                
                                 ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focused_from_duplicate_group' ) )
                                 
+                            
                             ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focused_duplicate_group' ) )
                             
                         
@@ -3848,6 +3864,7 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                         
                         if focus_has_fps:
+                            
                             ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_clear_focused_false_positives' ) )
                             
                         
@@ -4166,8 +4183,6 @@ class MediaPanelThumbnails( MediaPanel ):
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, False )
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_End, self._ScrollEnd, False )
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Delete, self._Delete )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Delete, self._Delete )
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Return, self._LaunchMediaViewer )
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Enter, self._LaunchMediaViewer )
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
@@ -4182,8 +4197,6 @@ class MediaPanelThumbnails( MediaPanel ):
         QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, True )
         QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_End, self._ScrollEnd, True )
         QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Delete, self._Undelete )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Delete, self._Undelete )
         QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
         QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
         QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
@@ -4194,13 +4207,6 @@ class MediaPanelThumbnails( MediaPanel ):
         QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True )
         QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL ) )
         QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_Space, ctrl_space_callback, self )
-        
-        if HC.PLATFORM_MACOS:
-            
-            QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Back, self._Delete )
-            QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Back, self._Undelete )
-            
-        
         
     
     def SetFocusedMedia( self, media ):

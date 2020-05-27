@@ -2272,11 +2272,22 @@ def SearchTextIsFetchAll( search_text: str ):
     
     return False
     
+def SearchTextIsNamespaceBareFetchAll( search_text: str ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    if namespace not in ( '', '*' ) and subtag == '':
+        
+        return True
+        
+    
+    return False
+    
 def SearchTextIsNamespaceFetchAll( search_text: str ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
     
-    if namespace not in ( '', '*' ) and subtag in ( '', '*' ):
+    if namespace not in ( '', '*' ) and subtag == '*':
         
         return True
         
@@ -2335,7 +2346,9 @@ class ParsedAutocompleteText( object ):
             
             ( namespace, subtag ) = HydrusTags.SplitTag( text )
             
-            if len( subtag ) > 0 and not subtag.endswith( '*' ):
+            should_have_it = len( namespace ) > 0 or len( subtag ) > 0
+            
+            if should_have_it and not subtag.endswith( '*' ):
                 
                 text = '{}*'.format( text )
                 
@@ -2406,19 +2419,30 @@ class ParsedAutocompleteText( object ):
         
         search_text = self._GetSearchText( False )
         
-        if SubtagIsEmpty( search_text ):
+        if search_text == '':
             
             return False
             
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        bnfa = SearchTextIsNamespaceBareFetchAll( search_text )
+        nfa = SearchTextIsNamespaceFetchAll( search_text )
+        fa = SearchTextIsFetchAll( search_text )
         
-        if not self._tag_autocomplete_options.NamespaceFetchAllAllowed() and SearchTextIsNamespaceFetchAll( search_text ):
+        bare_ok = self._tag_autocomplete_options.NamespaceBareFetchAllAllowed() or self._tag_autocomplete_options.SearchNamespacesIntoFullTags()
+        namespace_ok = self._tag_autocomplete_options.NamespaceBareFetchAllAllowed() or self._tag_autocomplete_options.NamespaceFetchAllAllowed() or self._tag_autocomplete_options.SearchNamespacesIntoFullTags()
+        fa_ok = self._tag_autocomplete_options.FetchAllAllowed()
+        
+        if bnfa and not bare_ok:
             
             return False
             
         
-        if not self._tag_autocomplete_options.FetchAllAllowed() and SearchTextIsFetchAll( search_text ):
+        if nfa and not namespace_ok:
+            
+            return False
+            
+        
+        if fa and not fa_ok:
             
             return False
             
@@ -2463,7 +2487,7 @@ class ParsedAutocompleteText( object ):
         
         search_text = self._GetSearchText( False )
         
-        return SearchTextIsNamespaceFetchAll( search_text )
+        return SearchTextIsNamespaceFetchAll( search_text ) or SearchTextIsNamespaceBareFetchAll( search_text )
         
     
     def IsTagSearch( self ):

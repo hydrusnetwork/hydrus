@@ -123,6 +123,13 @@ class FileViewingStatsManager( object ):
             self.media_views += media_views_delta
             self.media_viewtime += media_viewtime_delta
             
+        elif action == HC.CONTENT_UPDATE_DELETE:
+            
+            self.preview_views = 0
+            self.preview_viewtime = 0
+            self.media_views = 0
+            self.media_viewtime = 0
+            
         
     
     @staticmethod

@@ -235,7 +235,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS
     SERIALISABLE_NAME = 'Tag Autocomplete Options'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, service_key: typing.Optional[ bytes ] = None ):
         
@@ -262,6 +262,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             
         
         self._search_namespaces_into_full_tags = False
+        self._namespace_bare_fetch_all_allowed = False
         self._namespace_fetch_all_allowed = False
         self._fetch_all_allowed = False
         
@@ -279,6 +280,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             self._override_write_autocomplete_file_domain,
             serialisable_write_autocomplete_file_domain,
             self._search_namespaces_into_full_tags,
+            self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
             self._fetch_all_allowed
         ]
@@ -294,6 +296,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             self._override_write_autocomplete_file_domain,
             serialisable_write_autocomplete_file_domain,
             self._search_namespaces_into_full_tags,
+            self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
             self._fetch_all_allowed
         ] = serialisable_info
@@ -303,6 +306,37 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         self._write_autocomplete_file_domain = bytes.fromhex( serialisable_write_autocomplete_file_domain )
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_file_domain,
+                serialisable_write_autocomplete_file_domain,
+                search_namespaces_into_full_tags,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed
+            ] = old_serialisable_info
+            
+            namespace_bare_fetch_all_allowed = False
+            
+            new_serialisable_info = [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_file_domain,
+                serialisable_write_autocomplete_file_domain,
+                search_namespaces_into_full_tags,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed
+            ]
+            
+            
+            return ( 2, new_serialisable_info )
+            
+        
     def FetchAllAllowed( self ):
         
         return self._fetch_all_allowed
@@ -345,6 +379,11 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return self._write_autocomplete_tag_domain
         
     
+    def NamespaceBareFetchAllAllowed( self ):
+        
+        return self._namespace_bare_fetch_all_allowed
+        
+    
     def NamespaceFetchAllAllowed( self ):
         
         return self._namespace_fetch_all_allowed
@@ -365,6 +404,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         override_write_autocomplete_file_domain: bool,
         write_autocomplete_file_domain: bytes,
         search_namespaces_into_full_tags: bool,
+        namespace_bare_fetch_all_allowed: bool,
         namespace_fetch_all_allowed: bool,
         fetch_all_allowed: bool
     ):
@@ -373,6 +413,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         self._override_write_autocomplete_file_domain = override_write_autocomplete_file_domain
         self._write_autocomplete_file_domain = write_autocomplete_file_domain
         self._search_namespaces_into_full_tags = search_namespaces_into_full_tags
+        self._namespace_bare_fetch_all_allowed = namespace_bare_fetch_all_allowed
         self._namespace_fetch_all_allowed = namespace_fetch_all_allowed
         self._fetch_all_allowed = fetch_all_allowed
         

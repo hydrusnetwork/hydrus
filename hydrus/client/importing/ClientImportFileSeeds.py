@@ -857,7 +857,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             self.WriteContentUpdates()
             
-        except HydrusExceptions.MimeException as e:
+        except HydrusExceptions.UnsupportedFileException as e:
             
             self.SetStatus( CC.STATUS_ERROR, exception = e )
             

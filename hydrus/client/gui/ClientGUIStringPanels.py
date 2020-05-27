@@ -949,7 +949,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            string_match.Test( self._example_string.text() )
+            string_match.Test( string_match.GetExampleString() )
             
         except HydrusExceptions.StringMatchException:
             

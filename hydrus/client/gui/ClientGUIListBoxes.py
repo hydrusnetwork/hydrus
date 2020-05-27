@@ -1449,7 +1449,7 @@ class ListBox( QW.QScrollArea ):
         
         key_code = event.key()
         
-        if self.hasFocus() and key_code in ClientGUIShortcuts.DELETE_KEYS:
+        if self.hasFocus() and key_code in ClientGUIShortcuts.DELETE_KEYS_QT:
             
             self._DeleteActivate()
             
@@ -1628,6 +1628,16 @@ class ListBox( QW.QScrollArea ):
             hit_index = self._GetSafeHitIndex( hit_index, -1 )
             
             self._Hit( False, False, hit_index )
+            
+        
+    
+    def SelectTopItem( self ):
+        
+        if len( self._ordered_terms ) > 0:
+            
+            self._selected_terms = set()
+            
+            self._Hit( False, False, 0 )
             
         
     
@@ -1914,11 +1924,42 @@ class ListBoxTags( ListBox ):
                 
                 if command == 'hide':
                     
+                    message = 'Hide "{}" from here?'.format( tag )
+                    
+                    from hydrus.client.gui import ClientGUIDialogsQuick
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != QW.QDialog.Accepted:
+                        
+                        return
+                        
+                    
                     HG.client_controller.tag_display_manager.HideTag( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tag )
                     
                 elif command == 'hide_namespace':
                     
                     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                    
+                    if namespace == '':
+                        
+                        insert = 'unnamespaced'
+                        
+                    else:
+                        
+                        insert = '"{}"'.format( namespace )
+                        
+                    
+                    message = 'Hide {} tags from here?'.format( insert )
+                    
+                    from hydrus.client.gui import ClientGUIDialogsQuick
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != QW.QDialog.Accepted:
+                        
+                        return
+                        
                     
                     if namespace != '':
                         
@@ -2936,7 +2977,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in ClientGUIShortcuts.DELETE_KEYS:
+        if key in ClientGUIShortcuts.DELETE_KEYS_QT:
             
             self._Activate()
             

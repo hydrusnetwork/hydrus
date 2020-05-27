@@ -68,11 +68,13 @@ SHORTCUT_KEY_SPECIAL_F12 = 28
 
 if HC.PLATFORM_MACOS:
     
-    DELETE_KEYS = ( QC.Qt.Key_Backspace, QC.Qt.Key_Delete )
+    DELETE_KEYS_QT = ( QC.Qt.Key_Backspace, QC.Qt.Key_Delete )
+    DELETE_KEYS_HYDRUS = ( SHORTCUT_KEY_SPECIAL_BACKSPACE, SHORTCUT_KEY_SPECIAL_DELETE )
     
 else:
     
-    DELETE_KEYS = ( QC.Qt.Key_Delete, )
+    DELETE_KEYS_QT = ( QC.Qt.Key_Delete, )
+    DELETE_KEYS_HYDRUS = ( SHORTCUT_KEY_SPECIAL_DELETE, )
     
 
 special_key_shortcut_enum_lookup = {}
@@ -212,7 +214,7 @@ shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any vide
 SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
 
 SHORTCUTS_GLOBAL_ACTIONS = [ 'global_audio_mute', 'global_audio_unmute', 'global_audio_mute_flip', 'exit_application', 'exit_application_force_maintenance', 'restart_application', 'hide_to_system_tray' ]
-SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'export_files', 'export_files_quick_auto_export', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_set_alternate', 'duplicate_media_set_alternate_collections', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_focused_king', 'duplicate_media_set_same_quality', 'open_known_url' ]
+SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'undelete_file', 'export_files', 'export_files_quick_auto_export', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_set_alternate', 'duplicate_media_set_alternate_collections', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_focused_king', 'duplicate_media_set_same_quality', 'open_known_url' ]
 SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'pause_media', 'pause_play_media', 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode', 'close_media_viewer' ]
 SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous', 'pause_play_slideshow', 'show_menu', 'close_media_viewer' ]
 SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'refresh_all_pages', 'refresh_page_of_pages_pages', 'new_page', 'new_page_of_pages', 'new_duplicate_filter_page', 'new_gallery_downloader_page', 'new_url_downloader_page', 'new_simple_downloader_page', 'new_watcher_downloader_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders', 'flip_debug_force_idle_mode_do_not_set_this', 'show_and_focus_manage_tags_favourite_tags', 'show_and_focus_manage_tags_related_tags', 'show_and_focus_manage_tags_file_lookup_script_tags', 'show_and_focus_manage_tags_recent_tags', 'focus_media_viewer' ]
@@ -469,23 +471,54 @@ def AncestorShortcutsHandlers( widget: QW.QWidget ):
     
     return shortcuts_handlers
     
-def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlw_classes_who_can_pass_up = None ):
+def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: typing.Optional[ QC.QEvent ] = None, child_tlw_classes_who_can_pass_up: typing.Optional[ typing.Iterable[ type ] ] = None ):
     
     do_focus_test = True
     
-    if event is not None and isinstance( event, QG.QWheelEvent ):
+    if event is not None:
         
-        do_focus_test = False
+        # the event happened to somewhere else, most likely a hover window of a media viewer
+        # should we intercept that event that happened somewhere else?
+        if event_handler_owner != event_catcher:
+            
+            # don't pass clicks up
+            if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick ):
+                
+                return False
+                
+            
+            # don't pass wheels that happen to legit controls that want to eat it, like a list, when the catcher is a window
+            if event.type() == QC.QEvent.Wheel:
+                
+                widget_under_mouse = event_catcher.childAt( event_catcher.mapFromGlobal( QG.QCursor.pos() ) )
+                
+                if widget_under_mouse is not None:
+                    
+                    mouse_scroll_over_window_greyspace = widget_under_mouse == event_catcher and event_catcher.isWindow()
+                    
+                    if not mouse_scroll_over_window_greyspace:
+                        
+                        return False
+                        
+                    
+                
+            
         
+        if event.type() == QC.QEvent.Wheel:
+            
+            do_focus_test = False
+            
         
+    
+    do_focus_test = False
     
     if do_focus_test:
         
-        if not ClientGUIFunctions.TLWIsActive( evt_handler ):
+        if not ClientGUIFunctions.TLWIsActive( event_handler_owner ):
             
             if child_tlw_classes_who_can_pass_up is not None:
                 
-                child_tlw_has_focus = ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( evt_handler ) and isinstance( QW.QApplication.activeWindow(), child_tlw_classes_who_can_pass_up )
+                child_tlw_has_focus = ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( event_handler_owner ) and isinstance( QW.QApplication.activeWindow(), child_tlw_classes_who_can_pass_up )
                 
                 if not child_tlw_has_focus:
                     
@@ -1050,7 +1083,7 @@ class ShortcutsHandler( QC.QObject ):
         
         if event.type() == QC.QEvent.KeyPress:
             
-            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( watched, event = event )
+            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, watched, event = event )
             
             shortcut = ConvertKeyEventToShortcut( event )
             
@@ -1089,7 +1122,7 @@ class ShortcutsHandler( QC.QObject ):
             
             if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
                 
-                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.1 ):
+                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
                     
                     if event.type() == QC.QEvent.MouseButtonRelease:
                         
@@ -1099,7 +1132,7 @@ class ShortcutsHandler( QC.QObject ):
                     return False
                     
                 
-                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( watched, event = event )
+                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, watched, event = event )
                 
                 shortcut = ConvertMouseEventToShortcut( event )
                 

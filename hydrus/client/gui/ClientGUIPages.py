@@ -682,24 +682,31 @@ class Page( QW.QSplitter ):
     
     def GetSashPositions( self ):
         
-        if QP.SplitterVisibleCount( self ) > 1:
+        hpos = HC.options[ 'hpos' ]
+        
+        sizes = self.sizes()
+        
+        if len( sizes ) > 1:
             
-            x = self.widget( 0 ).width()
-            
-        else:
-            
-            x = HC.options[ 'hpos' ]
+            if sizes[0] != 0:
+                
+                hpos = sizes[0]
+                
             
         
-        if QP.SplitterVisibleCount( self._search_preview_split ) > 1:
+        vpos = HC.options[ 'vpos' ]
+        
+        sizes = self._search_preview_split.sizes()
+        
+        if len( sizes ) > 1:
             
-            y = self._search_preview_split.widget( 0 ).height()
+            if sizes[1] != 0:
+                
+                vpos = - sizes[1]
+                
             
-        else:
-            
-            y = HC.options[ 'vpos' ]
-            
-        return ( x, y )
+        
+        return ( hpos, vpos )
         
     
     def GetTotalWeight( self ):
@@ -737,12 +744,7 @@ class Page( QW.QSplitter ):
         
         if self.isVisible() and not self._done_split_setups:
             
-            self.SetupSplits()
-            
-            if HC.options[ 'hide_preview' ]:
-                
-                QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
-                
+            self.SetSplitterPositions()
             
             self._done_split_setups = True
             
@@ -760,13 +762,6 @@ class Page( QW.QSplitter ):
             
         
     
-    def SetupSplits( self ):
-        
-        QP.SplitVertically( self, self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
-        
-        QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
-        
-    
     def ShowHideSplit( self ):
         
         if QP.SplitterVisibleCount( self ) > 1:
@@ -777,7 +772,7 @@ class Page( QW.QSplitter ):
             
         else:
             
-            self.SetupSplits()
+            self.SetSplitterPositions()
             
         
     
@@ -828,7 +823,17 @@ class Page( QW.QSplitter ):
         self._management_panel.SetSearchFocus()
         
     
-    def SetSplitterPositions( self, hpos, vpos ):
+    def SetSplitterPositions( self, hpos = None, vpos = None ):
+        
+        if hpos is None:
+            
+            hpos = HC.options[ 'hpos' ]
+            
+        
+        if vpos is None:
+            
+            vpos = HC.options[ 'vpos' ]
+            
         
         QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
         

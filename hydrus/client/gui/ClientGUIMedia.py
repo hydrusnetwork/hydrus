@@ -1,9 +1,11 @@
 import os
 import random
 import time
+import typing
 
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusData
@@ -54,6 +56,35 @@ def CopyMediaURLClassURLs( medias, url_class ):
     urls_string = os.linesep.join( urls )
     
     HG.client_controller.pub( 'clipboard', 'text', urls_string )
+    
+def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Iterable[ ClientMedia.MediaSingleton ] ):
+    
+    if len( flat_medias ) == 0:
+        
+        return
+        
+    
+    if len( flat_medias ) == 1:
+        
+        insert = 'this file'
+        
+    else:
+        
+        insert = 'these {} files'.format( HydrusData.ToHumanInt( len( flat_medias ) ) )
+        
+    
+    message = 'Clear the file viewing stats for {}?'.format( insert )
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.Accepted:
+        
+        hashes = { m.GetHash() for m in flat_medias }
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_DELETE, hashes )
+        
+        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+        
     
 def DoOpenKnownURLFromShortcut( win, media ):
     
@@ -477,6 +508,16 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
         
     
+def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: typing.Iterable[ ClientMedia.MediaSingleton ] ):
+    
+    # add test here for if media actually has stats, edit them, all that
+    
+    submenu = QW.QMenu( menu )
+    
+    ClientGUIMenus.AppendMenuItem( submenu, 'clear', 'Clear all the recorded file viewing stats for the selected files.', DoClearFileViewingStats, win, flat_medias )
+    
+    ClientGUIMenus.AppendMenu( menu, submenu, 'viewing stats' )
+    
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
     services_manager = HG.client_controller.services_manager
@@ -505,7 +546,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
         ClientGUIMenus.AppendMenu( menu, submenu, phrase + '\u2026' )
         
     
-def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description, callable ):
+def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description, call ):
     
     services_manager = HG.client_controller.services_manager
     
@@ -517,7 +558,7 @@ def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description
         
         label = phrase + ' ' + name
         
-        ClientGUIMenus.AppendMenuItem( menu, label, description, callable, service_key )
+        ClientGUIMenus.AppendMenuItem( menu, label, description, call, service_key )
         
     else:
         
@@ -527,7 +568,7 @@ def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description
             
             name = services_manager.GetName( service_key )
             
-            ClientGUIMenus.AppendMenuItem( submenu, name, description, callable, service_key )
+            ClientGUIMenus.AppendMenuItem( submenu, name, description, call, service_key )
             
         
         ClientGUIMenus.AppendMenu( menu, submenu, phrase + '\u2026' )
