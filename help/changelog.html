@@ -8,6 +8,77 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 400</h3></li>
+				<ul>
+					<li>subscription data overhaul:</li>
+					<li>the formerly monolithic subscription object is finally broken up into smaller pieces, reducing work and load lag and total db read/write for all actions</li>
+					<li>subscriptions work the same as before, no user input is required. they just work better now™</li>
+					<li>depending on the size and number of your subscriptions, the db update may take a minute or two this week. a backup of your old subscription objects will be created in your db directory, under a new 'legacy_subscriptions_backup' subdirectory</li>
+					<li>the manage subscriptions dialog should now open within a second (assuming subs are not currently running). it should save just as fast, only with a little lag if you decide to make significant changes or go into many queries' logs, which are now fetched on demand inside the dialog</li>
+					<li>when subscriptions run, they similarly only have to load the query they are currently working on. boot lag is now almost nothing, and total drive read/write data for a typical sub run is massively reduced</li>
+					<li>the 'total files in a sub' limits no longer apply. you can have a sub with a thousand queries and half a million urls if you like</li>
+					<li>basic subscription data is now held in memory at all times, opening up future fast access such as client api and general UI editing of subs. more work will happen here in coming weeks</li>
+					<li>if due to hard drive fault or other unusual situations some subscription file/gallery log data is missing from the db, a running sub will note this, pause the sub, and provide a popup error for the user. the manage subscription dialog will correct it on launch by resetting the affected queries with new empty data</li>
+					<li>similarly, if you launch the manage subs dialog and there is orphaned file/gallery log data in the db, this will be noticed, with the surplus data then backed up to the database directory and deleted from the database proper</li>
+					<li>subscription queries can now handle domain and bandwidth tests for downloaders that host files/posts on a different domain to the gallery search step</li>
+					<li>if subs are running when manage subs is booted, long delays while waiting for them to pause are less likely</li>
+					<li>some subscription 'should run?' tests are improved for odd situations such as subs that have no queries or all DEAD queries</li>
+					<li>improved some error handling in merge/separate code</li>
+					<li>the 'show/copy quality info' buttons now work off the main thread, disabling the sub edit dialog while they work</li>
+					<li>updated a little of the subs help</li>
+					<li>.</li>
+					<li>boring actual code changes for subs:</li>
+					<li>wrote a query log container object to store bulky file and gallery log info</li>
+					<li>wrote a query header object to store options and cache log summary info</li>
+					<li>wrote a file cache status object to summarise important info so check timings and similar can be decided upon without needing to load a log</li>
+					<li>the new cache is now used across the program for all file import summary presentation</li>
+					<li>wrote a new subscription object to hold the new query headers and load logs as needed</li>
+					<li>updated subscription management to deal with the new subscription objects. it now also keeps them in memory all the time</li>
+					<li>wrote a fail-safe update from the old subscription objects to the new, which also saves a backup to disk, just in case of unforeseen problems in the near future</li>
+					<li>updated the subscription ui code to deal with all the new objects</li>
+					<li>updated the subscription ui to deal with asynchronous log fetching as needed</li>
+					<li>cleaned up some file import status code</li>
+					<li>moved old subscription code to a new legacy file</li>
+					<li>refactored subscription ui code to a new file</li>
+					<li>refactored and improved sub sync code</li>
+					<li>misc subscription cleanup</li>
+					<li>misc subscription ui cleanup</li>
+					<li>added type hints to multiple subscription locations</li>
+					<li>improved how missing serialisable object errors are handled at the db level</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the client api now delivers 'is_inbox', 'is_local', 'is_trashed' for 'GET /get_files/file_metadata'</li>
+					<li>the client api's Access-Control-Allow-Headers CORS header is now '*', allowing all</li>
+					<li>client api version is now 12</li>
+					<li>.</li>
+					<li>downloaders:</li>
+					<li>twitter retired their old api on the 1st of June, and there is unfortunately no good hydrus solution for the new one. however thanks to a user's efforts, a nice new parser for nitter, a twitter wrapper, is added in today's update. please play with it--it has three downloaders, one for a user's media, one for retweets, and one for both together--and adjust your twitter subscriptions to use the new downloader as needed. the twitter downloader is no longer included for new hydrus users</li>
+					<li>thanks to a user's submission, fixed the md5 hash fetching for default danbooru parsers</li>
+					<li>derpibooru gallery searching _should_ be fixed to use their current api</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>when the client exits or gets a 'modal' maintenance popup window, all currently playing media windows will now pause</li>
+					<li>regrettably, due to some content merging issues that are too complicated to improve at the moment, the dupe filter will no longer show the files of processed pairs in the duplicate filter more than once per batch. you won't get a series of AB, AC, AD any more. this will return in future</li>
+					<li>the weird bug where double-clicking the topmost recent tags suggestion would actually remove the top two items _should_ be fixed. general selection-setting on this column should also be improved</li>
+					<li>middle-clicking on a parent tag in a 'write' autocomplete dropdown no longer launches a page with that invalid parent 'label' tag included--it just does the base tag. the same is true of label tags (such as 'loading...') and namespace tags</li>
+					<li>when changing 'expand parents on autocomplete' in the cog button on manage tags, the respective autocomplete now changes whether it displays parents</li>
+					<li>this is slightly complicated: a tag 'write' context (like manage tags) now presents its autocomplete tags (filtering, siblings, parents) according to the tag service of the parent panel, not the current tag service of the autocomplete. so, if you are on 'my tags' panel and switch to 'all known tags' for the a/c, you will no longer get 'all known tags' siblings and parents and so on presented if 'my tags' is not set to take them. this was sometimes causing confusion when a list showed a parent but the underlying panel did not add it on tag entry</li>
+					<li>to reduce blacklist confusion, when you launch the edit blacklist dialog from an edit tag import options panel, now only the 'blacklist' tab shows, the summary text is blacklist-specific, and the top intro message is improved. a separate 'whitelist' filter will be added in the near future to allow downloading of files only if they have certain tags</li>
+					<li>'hard-replace siblings and parents' in _manage tags_ should now correctly remove bad siblings when they are currently pending</li>
+					<li>network->downloaders->manage downloader and url display now has a checkbox to make the media viewer top-right hover show unmatched urls</li>
+					<li>the '... elide page tab names' option now applies instantly on options dialog ok to all pages</li>
+					<li>added 'copy_bmp_or_file_if_not_bmpable' shortcut command to media set. it tries copy_bmp first, then copy_file if not a static image</li>
+					<li>fixed some edit tag filter layout to stop long intro messages making it super wide</li>
+					<li>fixed an issue where tag filters could accept non-whitespace-stripped entries and entries with uppercase characters</li>
+					<li>fixed a display typo where the 'clear orphan files' maintenance job, when set to delete orphans, was accidentally reporting (total number of thumbnails)/(number of files to delete) text in the file delete step instead of the correct (num_done/num_to_do)</li>
+					<li>clarified the 'reset repository' commands in review services</li>
+					<li>when launching an external program, the child process's environment's PATH is reset to what it was at hydrus boot (removing hydrus base dir)</li>
+					<li>when launching an external program from the frozen build, if some Qt/SSL specific PATH variables have been set to hydrus subdirectories by pyinstaller or otherwise, they are now removed. (this hopefully fixes issues launching some Qt programs as external file launchers)</li>
+					<li>added a separate requirements.txt for python 3.8, which can't handle PySide2 5.13.0</li>
+					<li>updated help->about to deal better with missing mpv</li>
+					<li>updated windows mpv to 2020-05-31 build, api version is now 1.108</li>
+					<li>updated windows sqlite to 3.32.2</li>
+				</ul>
 				<li><h3>version 399</h3></li>
 				<ul>
 					<li>improvements:</li>

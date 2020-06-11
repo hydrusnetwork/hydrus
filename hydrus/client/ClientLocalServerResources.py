@@ -1479,7 +1479,13 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 metadata_row[ 'num_words' ] = file_info_manager.num_words
                 metadata_row[ 'has_audio' ] = file_info_manager.has_audio
                 
-                known_urls = sorted( media_result.GetLocationsManager().GetURLs() )
+                locations_manager = media_result.GetLocationsManager()
+                
+                metadata_row[ 'is_inbox' ] = locations_manager.inbox
+                metadata_row[ 'is_local' ] = locations_manager.IsLocal()
+                metadata_row[ 'is_trashed' ] = locations_manager.IsTrashed()
+                
+                known_urls = sorted( locations_manager.GetURLs() )
                 
                 metadata_row[ 'known_urls' ] = known_urls
                 

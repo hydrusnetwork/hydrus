@@ -469,7 +469,7 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( obj.GetName(), dupe_obj.GetName() )
             
             self.assertEqual( obj._gug_key_and_name, dupe_obj._gug_key_and_name )
-            self.assertEqual( len( obj._queries ), len( dupe_obj._queries ) )
+            self.assertEqual( len( obj._query_headers ), len( dupe_obj._query_headers ) )
             self.assertEqual( obj._initial_file_limit, dupe_obj._initial_file_limit )
             self.assertEqual( obj._periodic_file_limit, dupe_obj._periodic_file_limit )
             self.assertEqual( obj._paused, dupe_obj._paused )
@@ -485,7 +485,17 @@ class TestSerialisables( unittest.TestCase ):
         self._dump_and_load_and_test( sub, test )
         
         gug_key_and_name = ( HydrusData.GenerateKey(), 'muh test gug' )
-        queries = [ ClientImportSubscriptionQuery.SubscriptionQuery( 'test query' ), ClientImportSubscriptionQuery.SubscriptionQuery( 'test query 2' ) ]
+        
+        query_headers = []
+        
+        q = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
+        q.SetQueryText( 'test query' )
+        query_headers.append( q )
+        
+        q = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
+        q.SetQueryText( 'test query 2' )
+        query_headers.append( q )
+        
         checker_options = ClientImportOptions.CheckerOptions()
         initial_file_limit = 100
         periodic_file_limit = 50
@@ -501,11 +511,11 @@ class TestSerialisables( unittest.TestCase ):
         
         sub.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
         
-        sub.SetQueries( queries )
+        sub.SetQueryHeaders( query_headers )
         
         self.assertEqual( sub.GetGUGKeyAndName(), gug_key_and_name )
         self.assertEqual( sub.GetTagImportOptions(), tag_import_options )
-        self.assertEqual( sub.GetQueries(), queries )
+        self.assertEqual( sub.GetQueryHeaders(), query_headers )
         
         self.assertEqual( sub._paused, False )
         sub.PauseResume()

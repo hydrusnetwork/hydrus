@@ -1635,9 +1635,16 @@ class ListBox( QW.QScrollArea ):
         
         if len( self._ordered_terms ) > 0:
             
-            self._selected_terms = set()
+            if len( self._selected_terms ) == 1 and self._IsSelected( 0 ):
+                
+                return
+                
+            
+            self._DeselectAll()
             
             self._Hit( False, False, 0 )
+            
+            self.widget().update()
             
         
     
@@ -1821,7 +1828,10 @@ class ListBoxTags( ListBox ):
             
             if isinstance( term, ClientSearch.Predicate ):
                 
-                predicates.append( term )
+                if term.GetType() not in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_PARENT ):
+                    
+                    predicates.append( term )
+                    
                 
             else:
                 

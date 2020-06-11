@@ -231,6 +231,11 @@ class RecentTagsPanel( QW.QWidget ):
                 
                 self._UpdateTagDisplay()
                 
+                if len( self._recent_tags.GetTags() ) > 0:
+                    
+                    self._recent_tags.SelectTopItem()
+                    
+                
             
             recent_tags = HG.client_controller.Read( 'recent_tags', service_key )
             
@@ -242,16 +247,9 @@ class RecentTagsPanel( QW.QWidget ):
     
     def _UpdateTagDisplay( self ):
         
-        had_selection_before = len( self._recent_tags.GetSelectedTags() ) > 0
-        
         tags = FilterSuggestedTagsForMedia( self._last_fetched_tags, self._media, self._service_key )
         
         self._recent_tags.SetTags( tags )
-        
-        if had_selection_before and len( tags ) > 0:
-            
-            self._recent_tags.SelectTopItem()
-            
         
     
     def EventClear( self ):

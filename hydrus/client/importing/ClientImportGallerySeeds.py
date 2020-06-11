@@ -1,9 +1,11 @@
 import collections
 import itertools
 import os
+import random
 import threading
 import time
 import traceback
+import typing
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
@@ -557,7 +559,6 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self._gallery_seed_log_key = HydrusData.GenerateKey()
         
         self._status_cache = None
-        self._status_cache_generation_time = 0
         
         self._status_dirty = True
         
@@ -574,9 +575,21 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         statuses_to_counts = self._GetStatusesToCounts()
         
         self._status_cache = GenerateGallerySeedLogStatus( statuses_to_counts )
-        self._status_cache_generation_time = HydrusData.GetNow()
         
         self._status_dirty = False
+        
+    
+    def _GetNextGallerySeed( self, status: int ) -> typing.Optional[ GallerySeed ]:
+        
+        for gallery_seed in self._gallery_seeds:
+            
+            if gallery_seed.status == status:
+                
+                return gallery_seed
+                
+            
+        
+        return None
         
     
     def _GetStatusesToCounts( self ):
@@ -775,20 +788,26 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
         
     
-    def GetNextGallerySeed( self, status ):
+    def GetExampleGallerySeed( self ):
         
         with self._lock:
             
-            for gallery_seed in self._gallery_seeds:
+            if len( self._gallery_seeds ) == 0:
                 
-                if gallery_seed.status == status:
+                return None
+                
+            else:
+                
+                example_seed = self._GetNextGallerySeed( CC.STATUS_UNKNOWN )
+                
+                if example_seed is None:
                     
-                    return gallery_seed
+                    example_seed = random.choice( self._gallery_seeds[-10:] )
                     
+                
+                return example_seed
                 
             
-        
-        return None
         
     
     def GetAPIInfoDict( self, simple ):
@@ -863,6 +882,14 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNextGallerySeed( self, status ):
+        
+        with self._lock:
+            
+            return self._GetNextGallerySeed( status )
+            
+        
+    
     def GetStatus( self ):
         
         with self._lock:
@@ -873,19 +900,6 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 
             
             return self._status_cache
-            
-        
-    
-    def GetStatusGenerationTime( self ):
-        
-        with self._lock:
-            
-            if self._status_dirty:
-                
-                return HydrusData.GetNow()
-                
-            
-            return self._status_cache_generation_time
             
         
     
@@ -985,7 +999,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self.NotifyGallerySeedsUpdated( new_gallery_seeds )
         
     
-    def RetryFailures( self ):
+    def RetryFailed( self ):
         
         with self._lock:
             

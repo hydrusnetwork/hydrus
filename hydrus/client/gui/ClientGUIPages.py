@@ -943,11 +943,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         QP.TabWidgetWithDnD.__init__( self, parent )
         
-        if HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
-            
-            self.tabBar().setElideMode( QC.Qt.ElideMiddle )
-            
-        
         self._parent_notebook = parent
         
         # this is disabled for now because it seems borked in Qt
@@ -973,6 +968,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
+        self._controller.sub( self, '_UpdatePageTabEliding', 'notify_new_options' )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventLeftDoubleClick )
@@ -987,6 +983,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._previous_page_index = -1
         
+        self._UpdatePageTabEliding()
+        
     
     def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
         
@@ -1000,6 +998,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if hasattr( source_notebook, 'GetPageKey' ):
             
             self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+            
+        
+    
+    def _UpdatePageTabEliding( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
+            
+            self.tabBar().setElideMode( QC.Qt.ElideMiddle )
+            
+        else:
+            
+            self.tabBar().setElideMode( QC.Qt.ElideNone )
             
         
     

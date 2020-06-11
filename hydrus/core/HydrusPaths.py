@@ -24,6 +24,8 @@ def AddBaseDirToEnvPath():
     
     if 'PATH' in os.environ:
         
+        HydrusData.ORIGINAL_PATH = os.environ[ 'PATH' ]
+        
         os.environ[ 'PATH' ] = HC.BASE_DIR + os.pathsep + os.environ[ 'PATH' ]
         
     

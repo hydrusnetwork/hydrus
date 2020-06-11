@@ -1,5 +1,6 @@
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 import unittest
 from hydrus.core import HydrusGlobals as HG
@@ -61,7 +62,7 @@ class TestDBDialogs( unittest.TestCase ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( None, title ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, [] )
+                panel = ClientGUISubscriptions.EditSubscriptionsPanel( dlg, [] )
                 
                 dlg.SetPanel( panel )
                 

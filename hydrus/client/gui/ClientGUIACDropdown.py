@@ -361,7 +361,7 @@ def ShouldDoExactSearch( entry_text ):
     
     return 0 < len( test_text ) <= autocomplete_exact_match_threshold
     
-def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_service_key: bytes, tag_service_key: bytes, expand_parents: bool, results_cache: ClientSearch.PredicateResultsCache ):
+def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_service_key: bytes, tag_service_key: bytes, expand_parents: bool, display_tag_service_key, results_cache: ClientSearch.PredicateResultsCache ):
     
     tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
     
@@ -387,7 +387,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                 
             
-            matches = results_cache.FilterPredicates( tag_service_key, strict_search_text )
+            matches = results_cache.FilterPredicates( display_tag_service_key, strict_search_text )
             
         else:
             
@@ -402,7 +402,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             if cache_valid:
                 
-                matches = results_cache.FilterPredicates( tag_service_key, autocomplete_search_text )
+                matches = results_cache.FilterPredicates( display_tag_service_key, autocomplete_search_text )
                 
             else:
                 
@@ -412,13 +412,13 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 
                 if is_explicit_wildcard:
                     
-                    matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
+                    matches = ClientSearch.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, predicates )
                     
                 else:
                     
                     results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, False )
                     
-                    matches = results_cache.FilterPredicates( tag_service_key, autocomplete_search_text )
+                    matches = results_cache.FilterPredicates( display_tag_service_key, autocomplete_search_text )
                     
                 
             
@@ -426,11 +426,11 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
         matches = ClientSearch.SortPredicates( matches )
         
     
-    InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text )
+    InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text )
     
     if expand_parents:
         
-        matches = HG.client_controller.tag_parents_manager.ExpandPredicates( tag_service_key, matches )
+        matches = HG.client_controller.tag_parents_manager.ExpandPredicates( display_tag_service_key, matches )
         
     
     HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
@@ -2195,6 +2195,8 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def __init__( self, parent, chosen_tag_callable, expand_parents, file_service_key, tag_service_key, null_entry_callable = None, tag_service_key_changed_callable = None, show_paste_button = False ):
         
+        self._display_tag_service_key = tag_service_key
+        
         self._chosen_tag_callable = chosen_tag_callable
         self._expand_parents = expand_parents
         self._null_entry_callable = null_entry_callable
@@ -2278,7 +2280,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        favs_list = ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
@@ -2287,7 +2289,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._list_height_num_chars = 8
         
-        return ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        return ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
         
     
     def _Paste( self ):
@@ -2326,7 +2328,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
-    
     def _ShouldTakeResponsibilityForEnter( self ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
@@ -2355,18 +2356,18 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         stub_predicates = []
         
-        InsertTagPredicates( stub_predicates, self._tag_service_key, parsed_autocomplete_text )
+        InsertTagPredicates( stub_predicates, self._display_tag_service_key, parsed_autocomplete_text )
         
         if self._expand_parents:
             
-            stub_predicates = HG.client_controller.tag_parents_manager.ExpandPredicates( self._tag_service_key, stub_predicates )
+            stub_predicates = HG.client_controller.tag_parents_manager.ExpandPredicates( self._display_tag_service_key, stub_predicates )
             
         
         AppendLoadingPredicate( stub_predicates )
         
         HG.client_controller.CallLaterQtSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
-        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._results_cache )
+        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._display_tag_service_key, self._results_cache )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):

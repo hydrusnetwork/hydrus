@@ -466,7 +466,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             gallery_seed_log = self._gallery_seed_log_get_callable()
             
-            gallery_seed_log.RetryFailures()
+            gallery_seed_log.RetryFailed()
             
         
     

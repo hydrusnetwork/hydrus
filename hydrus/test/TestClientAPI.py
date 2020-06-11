@@ -442,7 +442,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 200 )
         
         self.assertEqual( response.getheader( 'Access-Control-Allow-Methods' ), 'GET' )
-        self.assertEqual( response.getheader( 'Access-Control-Allow-Headers' ), 'Hydrus-Client-API-Access-Key' )
+        self.assertEqual( response.getheader( 'Access-Control-Allow-Headers' ), '*' )
         self.assertEqual( response.getheader( 'Access-Control-Allow-Origin' ), '*' )
         
     
@@ -1587,7 +1587,7 @@ class TestClientAPI( unittest.TestCase ):
             
             tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
             
-            locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), urls = urls )
+            locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = False, urls = urls )
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
             notes_manager = ClientMediaManagers.NotesManager( {} )
             file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
@@ -1620,6 +1620,10 @@ class TestClientAPI( unittest.TestCase ):
             metadata_row[ 'has_audio' ] = file_info_manager.has_audio
             metadata_row[ 'num_frames' ] = file_info_manager.num_frames
             metadata_row[ 'num_words' ] = file_info_manager.num_words
+            
+            metadata_row[ 'is_inbox' ] = False
+            metadata_row[ 'is_local' ] = False
+            metadata_row[ 'is_trashed' ] = False
             
             metadata_row[ 'known_urls' ] = list( sorted_urls )
             

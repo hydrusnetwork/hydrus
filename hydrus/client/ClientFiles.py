@@ -535,7 +535,7 @@ class ClientFilesManager( object ):
                 
                 dir = os.path.join( location, prefix )
                 
-                filenames = os.listdir( dir )
+                filenames = list( os.listdir( dir ) )
                 
                 for filename in filenames:
                     
@@ -553,7 +553,7 @@ class ClientFilesManager( object ):
                 
                 dir = os.path.join( location, prefix )
                 
-                filenames = os.listdir( dir )
+                filenames = list( os.listdir( dir ) )
                 
                 for filename in filenames:
                     
@@ -893,7 +893,7 @@ class ClientFilesManager( object ):
                 
                 time.sleep( 5 )
                 
-                for path in orphan_paths:
+                for ( i, path ) in enumerate( orphan_paths ):
                     
                     ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                     

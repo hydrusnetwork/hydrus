@@ -146,6 +146,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _CopyBMPToClipboard( self ):
         
+        copied = False
+        
         if self._focused_media is not None:
             
             if self._HasFocusSingleton():
@@ -156,12 +158,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     
                     HG.client_controller.pub( 'clipboard', 'bmp', media )
                     
-                else:
-                    
-                    QW.QMessageBox.critical( self, 'Error', 'Sorry, cannot take bmps of anything but static images right now!' )
+                    copied = True
                     
                 
             
+        
+        return copied
         
     
     def _CopyFilesToClipboard( self ):
@@ -1851,6 +1853,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             if action == 'copy_bmp':
                 
                 self._CopyBMPToClipboard()
+                
+            elif action == 'copy_bmp_or_file_if_not_bmpable':
+                
+                copied = self._CopyBMPToClipboard()
+                
+                if not copied:
+                    
+                    self._CopyFilesToClipboard()
+                    
                 
             elif action == 'copy_file':
                 

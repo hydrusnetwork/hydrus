@@ -45,8 +45,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._watchers_repeating_job = None
         
         self._status_dirty = True
-        self._status_cache = None
-        self._status_cache_generation_time = 0
+        self._status_cache = ClientImportFileSeeds.FileSeedCacheStatus()
         
         #
         
@@ -134,7 +133,6 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._status_cache = ClientImportFileSeeds.GenerateFileSeedCachesStatus( file_seed_caches )
         
         self._status_dirty = False
-        self._status_cache_generation_time = HydrusData.GetNow()
         
     
     def _RemoveWatcher( self, watcher_key ):
@@ -334,7 +332,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetTotalStatus( self ):
+    def GetTotalStatus( self ) -> ClientImportFileSeeds.FileSeedCacheStatus:
         
         with self._lock:
             
@@ -492,7 +490,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     file_seed_cache = watcher.GetFileSeedCache()
                     
-                    if file_seed_cache.GetStatusGenerationTime() > self._status_cache_generation_time: # has there has been an update?
+                    if file_seed_cache.GetStatus().GetGenerationTime() > self._status_cache.GetGenerationTime(): # has there has been an update?
                         
                         self._SetDirty()
                         
@@ -1334,7 +1332,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._file_seed_cache.RetryFailures()
+            self._file_seed_cache.RetryFailed()
             
         
     

@@ -344,11 +344,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     TEST_RESULT_DEFAULT = 'Enter a tag here to test if it passes the current filter:'
     TEST_RESULT_BLACKLIST_DEFAULT = 'Enter a tag here to test if it passes the current filter in a tag import options blacklist (siblings tested, unnamespaced rules match namespaced tags):'
     
-    def __init__( self, parent, tag_filter, prefer_blacklist = False, namespaces = None, message = None ):
+    def __init__( self, parent, tag_filter, only_show_blacklist = False, namespaces = None, message = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._prefer_blacklist = prefer_blacklist
+        self._only_show_blacklist = only_show_blacklist
         self._namespaces = namespaces
         
         self._wildcard_replacements = {}
@@ -384,18 +384,18 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        if self._prefer_blacklist:
+        if self._only_show_blacklist:
             
+            self._whitelist_panel.setVisible( False )
             self._notebook.addTab( self._blacklist_panel, 'blacklist' )
-            self._notebook.addTab( self._whitelist_panel, 'whitelist' )
+            self._advanced_panel.setVisible( False )
             
         else:
             
             self._notebook.addTab( self._whitelist_panel, 'whitelist' )
             self._notebook.addTab( self._blacklist_panel, 'blacklist' )
+            self._notebook.addTab( self._advanced_panel, 'advanced' )
             
-        
-        self._notebook.addTab( self._advanced_panel, 'advanced' )
         
         #
         
@@ -423,7 +423,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if message is not None:
             
-            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,message), CC.FLAGS_EXPAND_PERPENDICULAR )
+            st = ClientGUICommon.BetterStaticText( self, message )
+            
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         hbox = QP.HBoxLayout()
@@ -591,6 +595,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def _CleanTagSliceInput( self, tag_slice ):
+        
+        tag_slice = tag_slice.lower().strip()
         
         while '**' in tag_slice:
             
@@ -1246,9 +1252,16 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_filter = self.GetValue()
         
-        pretty_tag_filter = tag_filter.ToPermittedString()
+        if self._only_show_blacklist:
+            
+            pretty_tag_filter = tag_filter.ToBlacklistString()
+            
+        else:
+            
+            pretty_tag_filter = 'currently keeping: {}'.format( tag_filter.ToPermittedString() )
+            
         
-        self._current_filter_st.setText( 'currently keeping: '+pretty_tag_filter )
+        self._current_filter_st.setText( pretty_tag_filter )
         
         self._UpdateTest()
         
@@ -1388,11 +1401,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         selection_tests = []
         
-        if self._prefer_blacklist:
+        if self._only_show_blacklist:
             
             selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
-            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
-            selection_tests.append( ( True, self._advanced_panel ) )
             
         else:
             
@@ -1738,7 +1749,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items = []
             
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'add_parents_on_manage_tags' )
+            check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipExpandParents, lambda: self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
             
             menu_items.append( ( 'check', 'auto-add entered tags\' parents on add/pend action', 'If checked, adding any tag that has parents will also add those parents.', check_manager ) )
             
@@ -2259,6 +2270,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             addee_action = HC.CONTENT_UPDATE_ADD
             removee_action = HC.CONTENT_UPDATE_DELETE
+            other_removee_action = HC.CONTENT_UPDATE_RESCIND_PEND
             reason = None
             
             content_updates = []
@@ -2266,6 +2278,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             for ( tag, hashes ) in removee_tags_to_hashes.items():
                 
                 content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, removee_action, ( tag, hashes ), reason = reason ) )
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, other_removee_action, ( tag, hashes ), reason = reason ) )
                 
             
             for ( tag, hashes ) in addee_tags_to_hashes.items():
@@ -2300,6 +2313,15 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._tags_box.SetTagsByMedia( self._media )
+            
+        
+        def _FlipExpandParents( self ):
+            
+            value = not self._new_options.GetBoolean( 'add_parents_on_manage_tags' )
+            
+            self._new_options.SetBoolean( 'add_parents_on_manage_tags', value )
+            
+            self._add_tag_box.SetExpandParents( value )
             
         
         def _FlipShowDeleted( self ):
@@ -4258,13 +4280,13 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
 class TagFilterButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, message, tag_filter, is_blacklist = False, label_prefix = None ):
+    def __init__( self, parent, message, tag_filter, only_show_blacklist = False, label_prefix = None ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
         
         self._message = message
         self._tag_filter = tag_filter
-        self._is_blacklist = is_blacklist
+        self._only_show_blacklist = only_show_blacklist
         self._label_prefix = label_prefix
         
         self._UpdateLabel()
@@ -4272,11 +4294,20 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
     
     def _EditTagFilter( self ):
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag filter' ) as dlg:
+        if self._only_show_blacklist:
+            
+            title = 'edit blacklist'
+            
+        else:
+            
+            title = 'edit tag filter'
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             
-            panel = EditTagFilterPanel( dlg, self._tag_filter, prefer_blacklist = self._is_blacklist, namespaces = namespaces, message = self._message )
+            panel = EditTagFilterPanel( dlg, self._tag_filter, only_show_blacklist = self._only_show_blacklist, namespaces = namespaces, message = self._message )
             
             dlg.SetPanel( panel )
             
@@ -4291,7 +4322,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
     
     def _UpdateLabel( self ):
         
-        if self._is_blacklist:
+        if self._only_show_blacklist:
             
             tt = self._tag_filter.ToBlacklistString()
             

@@ -917,6 +917,8 @@ class MediaContainer( QW.QWidget ):
         
         self.hide()
         
+        HG.client_controller.sub( self, 'Pause', 'pause_all_media' )
+        
     
     def _DestroyOrHideThisMediaWindow( self, media_window ):
         

@@ -66,6 +66,7 @@ from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUIStyle
+from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUISystemTray
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -532,16 +533,23 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'OpenCV', cv2.__version__ ) )
         library_versions.append( ( 'Pillow', PIL.__version__ ) )
         
-        if ClientGUIMPV.MPV_IS_AVAILABLE:
+        if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
             
-            library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
+            library_versions.append( ( 'mpv: ', 'is not currently available on macOS' ) )
             
         else:
             
-            HydrusData.ShowText( 'MPV failed to import because:' )
-            HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
-            
-            library_versions.append( ( 'mpv', 'not available' ) )
+            if ClientGUIMPV.MPV_IS_AVAILABLE:
+                
+                library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
+                
+            else:
+                
+                HydrusData.ShowText( 'If this information helps, MPV failed to import because:' )
+                HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
+                
+                library_versions.append( ( 'mpv', 'not available' ) )
+                
             
         
         library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
@@ -1698,14 +1706,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 page.PageHidden()
                 
             
-            from hydrus.client.gui import ClientGUICanvasFrame
+            HG.client_controller.pub( 'pause_all_media' )
             
             for tlw in visible_tlws:
-                
-                if isinstance( tlw, ClientGUICanvasFrame.CanvasFrame ):
-                    
-                    tlw.PauseMedia()
-                    
                 
                 tlw.hide()
                 
@@ -2162,16 +2165,20 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             url_class_keys_to_display = domain_manager.GetURLClassKeysToDisplay()
             
-            panel = ClientGUIScrolledPanelsEdit.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display )
+            show_unmatched_urls_in_media_viewer = HG.client_controller.new_options.GetBoolean( 'show_unmatched_urls_in_media_viewer' )
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display, show_unmatched_urls_in_media_viewer )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                ( gug_keys_to_display, url_class_keys_to_display ) = panel.GetValue()
+                ( gug_keys_to_display, url_class_keys_to_display, show_unmatched_urls_in_media_viewer ) = panel.GetValue()
                 
                 domain_manager.SetGUGKeysToDisplay( gug_keys_to_display )
                 domain_manager.SetURLClassKeysToDisplay( url_class_keys_to_display )
+                
+                HG.client_controller.new_options.SetBoolean( 'show_unmatched_urls_in_media_viewer', show_unmatched_urls_in_media_viewer )
                 
             
         
@@ -2606,24 +2613,110 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageSubscriptions( self ):
         
-        def qt_do_it( subscriptions, original_pause_status ):
+        def qt_do_it( subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status ):
+            
+            if len( missing_query_log_container_names ) > 0:
+                
+                text = '{} subscription queries had missing database data! This is a serious error!'.format( HydrusData.ToHumanInt( len( missing_query_log_container_names ) ) )
+                text += os.linesep * 2
+                text += 'If you continue, the client will now create and save empty file/gallery logs for those queries, essentially resetting them, but if you know you need to exit and fix your database in a different way, cancel out now.'
+                text += os.linesep * 2
+                text += 'If you do not know why this happened, you may have had a hard drive fault. Please consult "install_dir/db/help my db is broke.txt", and you may want to contact hydrus dev.'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Missing Query Logs!', yes_label = 'continue', no_label = 'back out' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    from hydrus.client.importing import ClientImportSubscriptionQuery
+                    
+                    for missing_query_log_container_name in missing_query_log_container_names:
+                        
+                        query_log_container = ClientImportSubscriptionQuery.SubscriptionQueryLogContainer( missing_query_log_container_name )
+                        
+                        HG.client_controller.WriteSynchronous( 'serialisable', query_log_container )
+                        
+                    
+                    for subscription in subscriptions:
+                        
+                        for query_header in subscription.GetQueryHeaders():
+                            
+                            if query_header.GetQueryLogContainerName() in missing_query_log_container_names:
+                                
+                                query_header.Reset( query_log_container )
+                                
+                            
+                        
+                    
+                    HG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions ) # save the reset
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            if len( surplus_query_log_container_names ) > 0:
+                
+                text = 'When loading subscription data, the client discovered surplus orphaned subscription data for {} queries! This data is harmless and no longer used. The situation is however unusual, and probably due to an unusual deletion routine or a bug.'.format( HydrusData.ToHumanInt( len( surplus_query_log_container_names ) ) )
+                text += os.linesep * 2
+                text += 'If you continue, this surplus data will backed up to your database directory and then safely deleted from the database itself, but if you recently did manual database editing and know you need to exit and fix your database in a different way, cancel out now.'
+                text += os.linesep * 2
+                text += 'If you do not know why this happened, hydrus dev would be interested in being told about it and the surrounding circumstances.'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Orphan Query Logs!', yes_label = 'continue', no_label = 'back out' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    sub_dir = os.path.join( self._controller.GetDBDir(), 'orphaned_query_log_containers' )
+                    
+                    HydrusPaths.MakeSureDirectoryExists( sub_dir )
+                    
+                    for surplus_query_log_container_name in surplus_query_log_container_names:
+                        
+                        surplus_query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, surplus_query_log_container_name )
+                        
+                        backup_path = os.path.join( sub_dir, 'qlc_{}.json'.format( surplus_query_log_container_name ) )
+                        
+                        with open( backup_path, 'w', encoding = 'utf-8' ) as f:
+                            
+                            f.write( surplus_query_log_container.DumpToString() )
+                            
+                        
+                        HG.client_controller.WriteSynchronous( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, surplus_query_log_container_name )
+                        
+                    
+                else:
+                    
+                    return
+                    
+                
             
             title = 'manage subscriptions'
             frame_key = 'manage_subscriptions_dialog'
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, subscriptions, original_pause_status )
+                panel = ClientGUISubscriptions.EditSubscriptionsPanel( dlg, subscriptions, original_pause_status )
                 
                 dlg.SetPanel( panel )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    subscriptions = panel.GetValue()
+                    ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = panel.GetValue()
+                    
+                    for edited_query_log_container in edited_query_log_containers:
+                        
+                        HG.client_controller.Write( 'serialisable', edited_query_log_container )
+                        
                     
                     HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
                     
-                    HG.client_controller.subscriptions_manager.NewSubscriptions( subscriptions )
+                    for deletee_query_log_container_name in deletee_query_log_container_names:
+                        
+                        HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, deletee_query_log_container_name )
+                        
+                    
+                    HG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions )
                     
                 
             
@@ -2664,40 +2757,24 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                             
                         
                     
-                    job_key = ClientThreading.JobKey( cancellable = True )
+                    subscriptions = HG.client_controller.subscriptions_manager.GetSubscriptions()
                     
-                    job_key.SetVariable( 'popup_title', 'loading subscriptions' )
+                    expected_query_log_container_names = set()
                     
-                    controller.CallLater( 1.0, controller.pub, 'message', job_key )
-                    
-                    subscription_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-                    
-                    num_to_do = len( subscription_names )
-                    
-                    subscriptions = []
-                    
-                    for ( i, name ) in enumerate( subscription_names ):
+                    for subscription in subscriptions:
                         
-                        if job_key.IsCancelled():
-                            
-                            job_key.Delete()
-                            
-                            return
-                            
-                        
-                        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) + ': ' + name )
-                        job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
-                        
-                        subscription = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
-                        
-                        subscriptions.append( subscription )
+                        expected_query_log_container_names.update( subscription.GetAllQueryLogContainerNames() )
                         
                     
-                    job_key.Delete()
+                    actual_query_log_container_names = set( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER ) )
+                    
+                    missing_query_log_container_names = expected_query_log_container_names.difference( actual_query_log_container_names )
+                    
+                    surplus_query_log_container_names = actual_query_log_container_names.difference( expected_query_log_container_names )
                     
                     try:
                         
-                        controller.CallBlockingToQt( self, qt_do_it, subscriptions, original_pause_status )
+                        controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status )
                         
                     except HydrusExceptions.QtDeadWindowException:
                         
@@ -3860,6 +3937,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
+            HG.client_controller.pub( 'pause_all_media' )
+            
             title = job_key.GetIfHasVariable( 'popup_title' )
             
             if title is None:
@@ -4372,7 +4451,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if self._controller.new_options.GetBoolean( 'advanced_mode' ):
                 
-                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.subscriptions_manager.ClearCacheAndWake )
+                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.subscriptions_manager.Wake )
                 
             
             ClientGUIMenus.AppendSeparator( submenu )
@@ -5994,6 +6073,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._controller.CreateSplash( 'hydrus client exiting' )
             
+        
+        HG.client_controller.pub( 'pause_all_media' )
         
         try:
             

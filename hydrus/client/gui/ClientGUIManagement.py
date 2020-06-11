@@ -1856,11 +1856,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         pretty_status = status
         
-        ( file_seed_cache_status, file_seed_cache_simple_status, ( num_done, num_total ) ) = gallery_import.GetFileSeedCache().GetStatus()
+        file_seed_cache_status = gallery_import.GetFileSeedCache().GetStatus()
+        
+        ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
         
         progress = ( num_total, num_done )
         
-        pretty_progress = file_seed_cache_simple_status
+        pretty_progress = file_seed_cache_status.GetStatusText( simple = True )
         
         added = gallery_import.GetCreationTime()
         
@@ -2232,10 +2234,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
             else:
                 
-                ( status, simple_status, ( value, range ) ) = self._multiple_gallery_import.GetTotalStatus()
+                file_seed_cache_status = self._multiple_gallery_import.GetTotalStatus()
                 
-                text_top = HydrusData.ToHumanInt( num_gallery_imports ) + ' queries - ' + HydrusData.ConvertValueRangeToPrettyString( value, range )
-                text_bottom = status
+                ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
+                
+                text_top = '{} queries - {}'.format( HydrusData.ToHumanInt( num_gallery_imports ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
+                text_bottom = file_seed_cache_status.GetStatusText()
                 
             
             self._gallery_importers_status_st_top.setText( text_top )
@@ -2561,11 +2565,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             pretty_checking_paused = ''
             
         
-        ( status, simple_status, ( num_done, num_total ) ) = watcher.GetFileSeedCache().GetStatus()
+        file_seed_cache_status = watcher.GetFileSeedCache().GetStatus()
+        
+        ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
         
         progress = ( num_total, num_done )
         
-        pretty_progress = simple_status
+        pretty_progress = file_seed_cache_status.GetStatusText( simple = True )
         
         added = watcher.GetCreationTime()
         
@@ -2953,10 +2959,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     num_dead_text = HydrusData.ToHumanInt( num_dead ) + ' DEAD - '
                     
                 
-                ( status, simple_status, ( value, range ) ) = self._multiple_watcher_import.GetTotalStatus()
+                file_seed_cache_status = self._multiple_watcher_import.GetTotalStatus()
                 
-                text_top = HydrusData.ToHumanInt( num_watchers ) + ' watchers - ' + num_dead_text + HydrusData.ConvertValueRangeToPrettyString( value, range )
-                text_bottom = status
+                ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
+                
+                text_top = '{} watchers - {}'.format( HydrusData.ToHumanInt( num_watchers ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
+                text_bottom = file_seed_cache_status.GetStatusText()
                 
             
             self._watchers_status_st_top.setText( text_top )

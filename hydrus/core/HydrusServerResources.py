@@ -739,7 +739,7 @@ class HydrusResource( Resource ):
             
             if self._service.SupportsCORS():
                 
-                request.setHeader( 'Access-Control-Allow-Headers', 'Hydrus-Client-API-Access-Key' )
+                request.setHeader( 'Access-Control-Allow-Headers', '*' )
                 request.setHeader( 'Access-Control-Allow-Origin', '*' )
                 request.setHeader( 'Access-Control-Allow-Methods', allowed_methods_string )
                 

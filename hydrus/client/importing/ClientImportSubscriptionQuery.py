@@ -1,3 +1,5 @@
+import typing
+
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
@@ -6,178 +8,44 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImportOptions
+from hydrus.client.networking import ClientNetworking
+from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 
-class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
+def GenerateSubQueryName() -> str:
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY
-    SERIALISABLE_NAME = 'Subscription Query'
-    SERIALISABLE_VERSION = 3
+    return HydrusData.GenerateKey().hex()
     
-    def __init__( self, query = 'query text' ):
+class SubscriptionQueryLogContainer( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER
+    SERIALISABLE_NAME = 'Subscription Query Container'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._query = query
-        self._display_name = None
-        self._check_now = False
-        self._last_check_time = 0
-        self._next_check_time = 0
-        self._paused = False
-        self._status = ClientImporting.CHECKER_STATUS_OK
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
-        self._tag_import_options = ClientImportOptions.TagImportOptions()
-        
-    
-    def _GetExampleNetworkContexts( self, subscription_name ):
-        
-        file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
-        
-        subscription_key = self.GetNetworkJobSubscriptionKey( subscription_name )
-        
-        if file_seed is None:
-            
-            return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
-            
-        
-        url = file_seed.file_seed_data
-        
-        try: # if the url is borked for some reason
-            
-            example_nj = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, 'GET', url )
-            example_network_contexts = example_nj.GetNetworkContexts()
-            
-        except:
-            
-            return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
-            
-        
-        return example_network_contexts
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_gallery_seed_log = self._gallery_seed_log.GetSerialisableTuple()
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
-        serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( self._query, self._display_name, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_tag_import_options )
+        return ( serialisable_gallery_seed_log, serialisable_file_seed_cache )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._query, self._display_name, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_tag_import_options ) = serialisable_info
+        ( serialisable_gallery_seed_log, serialisable_file_seed_cache ) = serialisable_info
         
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
-        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            ( query, check_now, last_check_time, next_check_time, paused, status, serialisable_file_seed_cache ) = old_serialisable_info
-            
-            gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
-            
-            serialisable_gallery_seed_log = gallery_seed_log.GetSerialisableTuple()
-            
-            new_serialisable_info = ( query, check_now, last_check_time, next_check_time, paused, status, serialisable_gallery_seed_log, serialisable_file_seed_cache )
-            
-            return ( 2, new_serialisable_info )
-            
-        
-        if version == 2:
-            
-            ( query, check_now, last_check_time, next_check_time, paused, status, serialisable_gallery_seed_log, serialisable_file_seed_cache ) = old_serialisable_info
-            
-            display_name = None
-            tag_import_options = ClientImportOptions.TagImportOptions()
-            
-            serialisable_tag_import_options = tag_import_options.GetSerialisableTuple()
-            
-            new_serialisable_info = ( query, display_name, check_now, last_check_time, next_check_time, paused, status, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_tag_import_options )
-            
-            return ( 3, new_serialisable_info )
-            
-        
-    
-    def BandwidthOK( self, subscription_name ):
-        
-        example_network_contexts = self._GetExampleNetworkContexts( subscription_name )
-        
-        threshold = 90
-        
-        bandwidth_ok = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
-        
-        if HG.subscription_report_mode:
-            
-            HydrusData.ShowText( 'Query "' + self.GetHumanName() + '" bandwidth/domain test. Bandwidth ok: {}'.format( bandwidth_ok ) )
-            
-        
-        return bandwidth_ok
-        
-    
-    def CanCheckNow( self ):
-        
-        return not self._check_now
-        
-    
-    def CanRetryFailed( self ):
-        
-        return self._file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR ) > 0
-        
-    
-    def CanRetryIgnored( self ):
-        
-        return self._file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED ) > 0
-        
-    
-    def CheckNow( self ):
-        
-        self._check_now = True
-        self._paused = False
-        
-        self._next_check_time = 0
-        self._status = ClientImporting.CHECKER_STATUS_OK
-        
-    
-    def DomainOK( self ):
-        
-        file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
-        
-        if file_seed is None:
-            
-            return True
-            
-        
-        url = file_seed.file_seed_data
-        
-        domain_ok = HG.client_controller.network_engine.domain_manager.DomainOK( url )
-        
-        if HG.subscription_report_mode:
-            
-            HydrusData.ShowText( 'Query "' + self.GetHumanName() + '" domain test. Domain ok: {}'.format( domain_ok ) )
-            
-        
-        return domain_ok
-        
-    
-    def GetBandwidthWaitingEstimate( self, subscription_name ):
-        
-        example_network_contexts = self._GetExampleNetworkContexts( subscription_name )
-        
-        ( estimate, bandwidth_network_context ) = HG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
-        
-        return estimate
-        
-    
-    def GetDisplayName( self ):
-        
-        return self._display_name
         
     
     def GetFileSeedCache( self ):
@@ -190,11 +58,147 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         return self._gallery_seed_log
         
     
-    def GetHumanName( self ):
+    def SetFileSeedCache( self, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+        
+        self._file_seed_cache = file_seed_cache
+        
+    
+    def SetGallerySeedLog( self, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+        
+        self._gallery_seed_log = gallery_seed_log
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER ] = SubscriptionQueryLogContainer
+
+LOG_CONTAINER_SYNCED = 0
+LOG_CONTAINER_UNSYNCED = 1
+LOG_CONTAINER_MISSING = 2
+
+class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER
+    SERIALISABLE_NAME = 'Subscription Query Summary'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._query_log_container_name = GenerateSubQueryName()
+        self._query_text = 'query'
+        self._display_name = None
+        self._check_now = False
+        self._last_check_time = 0
+        self._next_check_time = 0
+        self._paused = False
+        self._checker_status = ClientImporting.CHECKER_STATUS_OK
+        self._query_log_container_status = LOG_CONTAINER_UNSYNCED
+        self._file_seed_cache_status = ClientImportFileSeeds.FileSeedCacheStatus()
+        self._tag_import_options = ClientImportOptions.TagImportOptions()
+        self._raw_file_velocity = ( 0, 1 )
+        self._pretty_file_velocity = 'unknown'
+        self._example_file_seed = None
+        self._example_gallery_seed = None
+        
+        # a status cache, so we know number complete, unknown, ignored, etc...
+        # prob should have a new serialisable object for this mate
+        
+    
+    def _DomainOK( self, domain_manager: ClientNetworkingDomain.NetworkDomainManager, example_url: typing.Optional[ str ] ):
+        
+        if example_url is None:
+            
+            domain_ok = True
+            
+        else:
+            
+            domain_ok = domain_manager.DomainOK( example_url )
+            
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "{}" domain test. Domain ok: {}'.format( self._GetHumanName(), domain_ok ) )
+            
+        
+        return domain_ok
+        
+    
+    def _GenerateNetworkJobFactory( self, subscription_name: str ):
+        
+        subscription_key = self._GenerateNetworkJobSubscriptionKey( subscription_name )
+        
+        def network_job_factory( *args, **kwargs ):
+            
+            network_job = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, *args, **kwargs )
+            
+            network_job.OverrideBandwidth( 30 )
+            
+            return network_job
+            
+        
+        return network_job_factory
+        
+    
+    def _GenerateNetworkJobSubscriptionKey( self, subscription_name: str ):
+        
+        return '{}: {}'.format( subscription_name, self._GetHumanName() )
+        
+    
+    def _GetExampleFileURL( self ):
+        
+        if self._example_file_seed is None or self._example_file_seed.file_seed_type == ClientImportFileSeeds.FILE_SEED_TYPE_HDD:
+            
+            example_url = None
+            
+        else:
+            
+            example_url = self._example_file_seed.file_seed_data
+            
+        
+        return example_url
+        
+    
+    def _GetExampleGalleryURL( self ):
+        
+        if self._example_gallery_seed is None:
+            
+            example_url = None
+            
+        else:
+            
+            example_url = self._example_gallery_seed.url
+            
+        
+        return example_url
+        
+    
+    def _GetExampleNetworkContexts( self, example_url: typing.Optional[ str ], subscription_name: str ):
+        
+        subscription_key = self._GenerateNetworkJobSubscriptionKey( subscription_name )
+        
+        if example_url is None:
+            
+            return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
+            
+        
+        try: # if the url is borked for some reason
+            
+            example_nj = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, 'GET', example_url )
+            example_network_contexts = example_nj.GetNetworkContexts()
+            
+        except:
+            
+            return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
+            
+        
+        return example_network_contexts
+        
+    
+    def _GetHumanName( self ) -> str:
         
         if self._display_name is None:
             
-            return self._query
+            return self._query_text
             
         else:
             
@@ -202,14 +206,250 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetLastChecked( self ):
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_file_seed_cache_status = self._file_seed_cache_status.GetSerialisableTuple()
+        serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
+        
+        serialisable_example_file_seed = HydrusSerialisable.GetNoneableSerialisableTuple( self._example_file_seed )
+        serialisable_example_gallery_seed = HydrusSerialisable.GetNoneableSerialisableTuple( self._example_gallery_seed )
+        
+        return (
+            self._query_log_container_name,
+            self._query_text,
+            self._display_name,
+            self._check_now,
+            self._last_check_time,
+            self._next_check_time,
+            self._paused,
+            self._checker_status,
+            self._query_log_container_status,
+            serialisable_file_seed_cache_status,
+            serialisable_tag_import_options,
+            self._raw_file_velocity,
+            self._pretty_file_velocity,
+            serialisable_example_file_seed,
+            serialisable_example_gallery_seed
+        )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        (
+            self._query_log_container_name,
+            self._query_text,
+            self._display_name,
+            self._check_now,
+            self._last_check_time,
+            self._next_check_time,
+            self._paused,
+            self._checker_status,
+            self._query_log_container_status,
+            serialisable_file_seed_cache_status,
+            serialisable_tag_import_options,
+            self._raw_file_velocity,
+            self._pretty_file_velocity,
+            serialisable_example_file_seed,
+            serialisable_example_gallery_seed
+            ) = serialisable_info
+        
+        self._file_seed_cache_status = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache_status )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+        
+        self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed )
+        self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed )
+        
+    
+    def CanCheckNow( self ):
+        
+        return not self._check_now
+        
+    
+    def CanRetryFailed( self ):
+        
+        return self._file_seed_cache_status.GetFileSeedCount( CC.STATUS_ERROR ) > 0
+        
+    
+    def CanRetryIgnored( self ):
+        
+        return self._file_seed_cache_status.GetFileSeedCount( CC.STATUS_VETOED ) > 0
+        
+    
+    def CheckNow( self ):
+        
+        self._check_now = True
+        self._paused = False
+        
+        self._next_check_time = 0
+        self._checker_status = ClientImporting.CHECKER_STATUS_OK
+        
+    
+    def FileBandwidthOK( self, bandwidth_manager: ClientNetworkingBandwidth.NetworkBandwidthManager, subscription_name: str ):
+        
+        example_url = self._GetExampleFileURL()
+        
+        example_network_contexts = self._GetExampleNetworkContexts( example_url, subscription_name )
+        
+        threshold = 90
+        
+        bandwidth_ok = bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "' + self._GetHumanName() + '" bandwidth/domain test. Bandwidth ok: {}'.format( bandwidth_ok ) )
+            
+        
+        return bandwidth_ok
+        
+    
+    def FileDomainOK( self, domain_manager: ClientNetworkingDomain.NetworkDomainManager ):
+        
+        example_url = self._GetExampleFileURL()
+        
+        return self._DomainOK( domain_manager, example_url )
+        
+    
+    def FileLoginOK( self, network_engine: ClientNetworking.NetworkEngine, subscription_name: str ) -> typing.Tuple[ bool, str ]:
+        
+        reason = 'login looks good!'
+        
+        if self._example_file_seed is None:
+            
+            result = True
+            
+        else:
+            
+            nj = self._example_file_seed.GetExampleNetworkJob( self._GenerateNetworkJobFactory( subscription_name ) )
+            
+            nj.engine = network_engine
+            
+            if nj.NeedsLogin():
+                
+                try:
+                    
+                    nj.CheckCanLogin()
+                    
+                    result = True
+                    
+                except Exception as e:
+                    
+                    result = False
+                    reason = str( e )
+                    
+                
+            else:
+                
+                result = True
+                
+            
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "{}" pre-work file login test. Login ok: {}. {}'.format( self._GetHumanName(), str( result ), reason ) )
+            
+        
+        return ( result, reason )
+        
+    
+    
+    def GalleryDomainOK( self, domain_manager: ClientNetworkingDomain.NetworkDomainManager ):
+        
+        example_url = self._GetExampleGalleryURL()
+        
+        return self._DomainOK( domain_manager, example_url )
+        
+    
+    def GalleryLoginOK( self, network_engine: ClientNetworking.NetworkEngine, subscription_name: str ) -> typing.Tuple[ bool, str ]:
+        
+        reason = 'login looks good!'
+        
+        if self._example_gallery_seed is None:
+            
+            result = True
+            
+        else:
+            
+            nj = self._example_gallery_seed.GetExampleNetworkJob( self._GenerateNetworkJobFactory( subscription_name ) )
+            
+            nj.engine = network_engine
+            
+            if nj.NeedsLogin():
+                
+                try:
+                    
+                    nj.CheckCanLogin()
+                    
+                    result = True
+                    
+                except Exception as e:
+                    
+                    result = False
+                    reason = str( e )
+                    
+                
+            else:
+                
+                result = True
+                
+            
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "{}" pre-work sync login test. Login ok: {}. {}'.format( self._GetHumanName(), str( result ), reason ) )
+            
+        
+        return ( result, reason )
+        
+    
+    def GenerateNetworkJobFactory( self, subscription_name: str ):
+        
+        return self._GenerateNetworkJobFactory( subscription_name )
+        
+    
+    def GetBandwidthWaitingEstimate( self, bandwidth_manager: ClientNetworkingBandwidth.NetworkBandwidthManager, subscription_name: str ):
+        
+        example_url = self._GetExampleFileURL()
+        
+        example_network_contexts = self._GetExampleNetworkContexts( example_url, subscription_name )
+        
+        ( estimate, bandwidth_network_context ) = bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
+        
+        return estimate
+        
+    
+    def GetCheckerStatus( self ):
+        
+        return self._checker_status
+        
+    
+    def GetDisplayName( self ):
+        
+        return self._display_name
+        
+    
+    def GetHumanName( self ):
+        
+        return self._GetHumanName()
+        
+    
+    def GetFileSeedCacheStatus( self ):
+        
+        return self._file_seed_cache_status
+        
+    
+    def GetFileVelocityInfo( self ):
+        
+        return ( self._raw_file_velocity, self._pretty_file_velocity )
+        
+    
+    def GetLastCheckTime( self ):
         
         return self._last_check_time
         
     
     def GetLatestAddedTime( self ):
         
-        return self._file_seed_cache.GetLatestAddedTime()
+        return self._file_seed_cache_status.GetLatestAddedTime()
         
     
     def GetNextCheckStatusString( self ):
@@ -218,7 +458,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             
             return 'checking on dialog ok'
             
-        elif self._status == ClientImporting.CHECKER_STATUS_DEAD:
+        elif self._checker_status == ClientImporting.CHECKER_STATUS_DEAD:
             
             return 'dead, so not checking'
             
@@ -242,20 +482,32 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNextWorkTime( self, subscription_name ):
+    def GetNextCheckTime( self ):
         
-        if self.IsPaused():
+        return self._next_check_time
+        
+    
+    def GetNextWorkTime( self, bandwidth_manager: ClientNetworkingBandwidth.NetworkBandwidthManager, subscription_name: str ):
+        
+        if not self.IsExpectingToWorkInFuture():
             
             return None
             
         
         work_times = set()
         
+        if self._query_log_container_status == LOG_CONTAINER_UNSYNCED:
+            
+            work_times.add( 0 )
+            
+        
+        work_times.add( self._next_check_time )
+        
         if self.HasFileWorkToDo():
             
             try:
                 
-                file_bandwidth_estimate = self.GetBandwidthWaitingEstimate( subscription_name )
+                file_bandwidth_estimate = self.GetBandwidthWaitingEstimate( bandwidth_manager, subscription_name )
                 
             except:
                 
@@ -276,11 +528,6 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if not self.IsDead():
-            
-            work_times.add( self._next_check_time )
-            
-        
         if len( work_times ) == 0:
             
             return None
@@ -289,19 +536,19 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         return min( work_times )
         
     
-    def GetNumURLsAndFailed( self ):
+    def GetQueryLogContainerName( self ):
         
-        return ( self._file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN ), len( self._file_seed_cache ), self._file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR ) )
+        return self._query_log_container_name
         
     
-    def GetNetworkJobSubscriptionKey( self, subscription_name ):
+    def GetQueryLogContainerStatus( self ):
         
-        return subscription_name + ': ' + self.GetHumanName()
+        return self._query_log_container_status
         
     
     def GetQueryText( self ):
         
-        return self._query
+        return self._query_text
         
     
     def GetTagImportOptions( self ):
@@ -311,24 +558,44 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     
     def HasFileWorkToDo( self ):
         
-        file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
+        result = self._file_seed_cache_status.HasWorkToDo()
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + self._query + '" HasFileWorkToDo test. Next import is ' + repr( file_seed ) + '.' )
+            HydrusData.ShowText( 'Query "{}" HasFileWorkToDo test. Result is {}.'.format( self._query_text, result ) )
             
         
-        return file_seed is not None
+        return result
+        
+    
+    def IsCheckingNow( self ):
+        
+        return self._check_now
         
     
     def IsDead( self ):
         
-        return self._status == ClientImporting.CHECKER_STATUS_DEAD
+        return self._checker_status == ClientImporting.CHECKER_STATUS_DEAD
+        
+    
+    def IsExpectingToWorkInFuture( self ):
+        
+        if self.IsPaused() or self.IsDead() or not self.IsLogContainerOK():
+            
+            return False
+            
+        
+        return True
         
     
     def IsInitialSync( self ):
         
         return self._last_check_time == 0
+        
+    
+    def IsLogContainerOK( self ):
+        
+        return self._query_log_container_status != LOG_CONTAINER_MISSING
         
     
     def IsPaused( self ):
@@ -340,10 +607,10 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + self._query + '" IsSyncDue test. Paused/dead status is {}/{}, check time due is {}, and check_now is {}.'.format( self._paused, self.IsDead(), HydrusData.TimeHasPassed( self._next_check_time ), self._check_now ) )
+            HydrusData.ShowText( 'Query "' + self._query_text + '" IsSyncDue test. Paused/dead/container status is {}/{}/{}, check time due is {}, and check_now is {}.'.format( self._paused, self.IsDead(), self.IsLogContainerOK(), HydrusData.TimeHasPassed( self._next_check_time ), self._check_now ) )
             
         
-        if self._paused or self.IsDead():
+        if not self.IsExpectingToWorkInFuture():
             
             return False
             
@@ -356,7 +623,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._paused = not self._paused
         
     
-    def RegisterSyncComplete( self, checker_options: ClientImportOptions.CheckerOptions ):
+    def RegisterSyncComplete( self, checker_options: ClientImportOptions.CheckerOptions, query_log_container: SubscriptionQueryLogContainer ):
         
         self._last_check_time = HydrusData.GetNow()
         
@@ -366,40 +633,45 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         compact_before_this_time = self._last_check_time - death_period
         
-        if self._gallery_seed_log.CanCompact( compact_before_this_time ):
+        gallery_seed_log = query_log_container.GetGallerySeedLog()
+        
+        if gallery_seed_log.CanCompact( compact_before_this_time ):
             
-            self._gallery_seed_log.Compact( compact_before_this_time )
+            gallery_seed_log.Compact( compact_before_this_time )
             
         
-        if self._file_seed_cache.CanCompact( compact_before_this_time ):
+        file_seed_cache = query_log_container.GetFileSeedCache()
+        
+        if file_seed_cache.CanCompact( compact_before_this_time ):
             
-            self._file_seed_cache.Compact( compact_before_this_time )
+            file_seed_cache.Compact( compact_before_this_time )
             
+        
+        self.SyncToQueryLogContainer( checker_options, query_log_container )
         
     
-    def Reset( self ):
+    def Reset( self, query_log_container: SubscriptionQueryLogContainer ):
         
         self._last_check_time = 0
         self._next_check_time = 0
-        self._status = ClientImporting.CHECKER_STATUS_OK
+        self._checker_status = ClientImporting.CHECKER_STATUS_OK
         self._paused = False
         
-        self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
+        file_seed_cache = ClientImportFileSeeds.FileSeedCache()
+        
+        query_log_container.SetFileSeedCache( file_seed_cache )
+        
+        self.UpdateFileStatus( query_log_container )
         
     
-    def RetryFailures( self ):
-        
-        self._file_seed_cache.RetryFailures()    
-        
-    
-    def RetryIgnored( self ):
-        
-        self._file_seed_cache.RetryIgnored()    
-        
-    
-    def SetCheckNow( self, check_now ):
+    def SetCheckNow( self, check_now: bool ):
         
         self._check_now = check_now
+        
+    
+    def SetCheckerStatus( self, checker_status: int ):
+        
+        self._checker_status = checker_status
         
     
     def SetDisplayName( self, display_name ):
@@ -407,36 +679,63 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._display_name = display_name
         
     
-    def SetPaused( self, paused ):
+    def SetLastCheckTime( self, last_check_time: int ):
+        
+        self._last_check_time = last_check_time
+        
+    
+    def SetNextCheckTime( self, next_check_time: int ):
+        
+        self._next_check_time = next_check_time
+        
+    
+    def SetPaused( self, paused: bool ):
         
         self._paused = paused
         
     
-    def SetQueryAndSeeds( self, query, file_seed_cache, gallery_seed_log ):
+    def SetQueryLogContainerStatus( self, log_container_status: int ):
         
-        self._query = query
-        self._file_seed_cache = file_seed_cache
-        self._gallery_seed_log = gallery_seed_log
+        self._query_log_container_status = log_container_status
+        
+        if self._query_log_container_status == LOG_CONTAINER_UNSYNCED:
+            
+            self._raw_file_velocity = ( 0, 1 )
+            self._pretty_file_velocity = 'unknown'
+            
         
     
-    def SetTagImportOptions( self, tag_import_options ):
+    def SetQueryText( self, query_text: str ):
+        
+        self._query_text = query_text
+        
+    
+    def SetTagImportOptions( self, tag_import_options: ClientImportOptions.TagImportOptions ):
         
         self._tag_import_options = tag_import_options
         
     
-    def UpdateNextCheckTime( self, checker_options: ClientImportOptions.CheckerOptions ):
+    def SyncToQueryLogContainer( self, checker_options: ClientImportOptions.CheckerOptions, query_log_container: SubscriptionQueryLogContainer ):
+        
+        gallery_seed_log = query_log_container.GetGallerySeedLog()
+        
+        self._example_gallery_seed = gallery_seed_log.GetExampleGallerySeed()
+        
+        self.UpdateFileStatus( query_log_container )
+        
+        file_seed_cache = query_log_container.GetFileSeedCache()
         
         if self._check_now:
             
             self._next_check_time = 0
             
-            self._status = ClientImporting.CHECKER_STATUS_OK
+            self._checker_status = ClientImporting.CHECKER_STATUS_OK
             
         else:
             
-            if checker_options.IsDead( self._file_seed_cache, self._last_check_time ):
+            if checker_options.IsDead( file_seed_cache, self._last_check_time ):
                 
-                self._status = ClientImporting.CHECKER_STATUS_DEAD
+                self._checker_status = ClientImporting.CHECKER_STATUS_DEAD
                 
                 if not self.HasFileWorkToDo():
                     
@@ -446,13 +745,38 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             
             last_next_check_time = self._next_check_time
             
-            self._next_check_time = checker_options.GetNextCheckTime( self._file_seed_cache, self._last_check_time, last_next_check_time )
+            self._next_check_time = checker_options.GetNextCheckTime( file_seed_cache, self._last_check_time, last_next_check_time )
             
         
-    
-    def ToTuple( self ):
+        self._raw_file_velocity = checker_options.GetRawCurrentVelocity( file_seed_cache, self._last_check_time )
+        self._pretty_file_velocity = checker_options.GetPrettyCurrentVelocity( file_seed_cache, self._last_check_time, no_prefix = True )
         
-        return ( self._query, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status )
+        self._query_log_container_status = LOG_CONTAINER_SYNCED
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY ] = SubscriptionQuery
+    def UpdateFileStatus( self, query_log_container: SubscriptionQueryLogContainer ):
+        
+        file_seed_cache = query_log_container.GetFileSeedCache()
+        
+        self._file_seed_cache_status = file_seed_cache.GetStatus()
+        self._example_file_seed = file_seed_cache.GetExampleFileSeed()
+        
+    
+    def WantsToResyncWithLogContainer( self ):
+        
+        return self._query_log_container_status == LOG_CONTAINER_UNSYNCED
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER ] = SubscriptionQueryHeader
+
+def GenerateQueryHeadersStatus( query_headers: typing.Iterable[ SubscriptionQueryHeader ] ):
+    
+    fscs = ClientImportFileSeeds.FileSeedCacheStatus()
+    
+    for query_header in query_headers:
+        
+        fscs.Merge( query_header.GetFileSeedCacheStatus() )
+        
+    
+    return fscs
+    

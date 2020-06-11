@@ -127,6 +127,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
+        self._dictionary[ 'booleans' ][ 'show_unmatched_urls_in_media_viewer' ] = False
+        
         self._dictionary[ 'booleans' ][ 'set_search_focus_on_page_change' ] = False
         
         self._dictionary[ 'booleans' ][ 'allow_remove_on_manage_tags_input' ] = True

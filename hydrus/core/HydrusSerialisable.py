@@ -18,7 +18,7 @@ except: # ImportError wasn't enough here as Linux went up the shoot with a __ver
 SERIALISABLE_TYPE_BASE = 0
 SERIALISABLE_TYPE_BASE_NAMED = 1
 SERIALISABLE_TYPE_SHORTCUT_SET = 2
-SERIALISABLE_TYPE_SUBSCRIPTION = 3
+SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY = 3
 SERIALISABLE_TYPE_PERIODIC = 4
 SERIALISABLE_TYPE_GALLERY_IDENTIFIER = 5
 SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS = 6
@@ -69,7 +69,7 @@ SERIALISABLE_TYPE_URL_CLASS = 50
 SERIALISABLE_TYPE_STRING_MATCH = 51
 SERIALISABLE_TYPE_CHECKER_OPTIONS = 52
 SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER = 53
-SERIALISABLE_TYPE_SUBSCRIPTION_QUERY = 54
+SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LEGACY = 54
 SERIALISABLE_TYPE_STRING_CONVERTER = 55
 SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS = 56
 SERIALISABLE_TYPE_FILE_SEED = 57
@@ -101,6 +101,10 @@ SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS = 82
 SERIALISABLE_TYPE_STRING_SPLITTER = 83
 SERIALISABLE_TYPE_STRING_PROCESSOR = 84
 SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS = 85
+SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER = 86
+SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER = 87
+SERIALISABLE_TYPE_SUBSCRIPTION = 88
+SERIALISABLE_TYPE_FILE_SEED_CACHE_STATUS = 89
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -126,6 +130,17 @@ def CreateFromNetworkBytes( network_string ):
     
     return CreateFromString( obj_string )
     
+def CreateFromNoneableSerialisableTuple( obj_tuple_or_none ):
+    
+    if obj_tuple_or_none is None:
+        
+        return None
+        
+    else:
+        
+        return CreateFromSerialisableTuple( obj_tuple_or_none )
+        
+    
 def CreateFromString( obj_string ):
     
     obj_tuple = json.loads( obj_string )
@@ -150,6 +165,17 @@ def CreateFromSerialisableTuple( obj_tuple ):
     obj.InitialiseFromSerialisableInfo( version, serialisable_info )
     
     return obj
+    
+def GetNoneableSerialisableTuple( obj_or_none ):
+    
+    if obj_or_none is None:
+        
+        return None
+        
+    else:
+        
+        return obj_or_none.GetSerialisableTuple()
+        
     
 def SetNonDupeName( obj, disallowed_names ):
     

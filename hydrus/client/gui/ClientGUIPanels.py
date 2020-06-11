@@ -1141,10 +1141,10 @@ class ReviewServicePanel( QW.QWidget ):
             
             reset_menu_items = []
             
-            reset_menu_items.append( ( 'normal', 'reprocess definitions', 'Reprocess all definitions.', self._ReprocessDefinitions ) )
-            reset_menu_items.append( ( 'normal', 'reprocess content', 'Reprocess all content.', self._ReprocessContent ) )
+            reset_menu_items.append( ( 'normal', 'fill in definition gaps', 'Reprocess all definitions.', self._ReprocessDefinitions ) )
+            reset_menu_items.append( ( 'normal', 'fill in content gaps', 'Reprocess all content.', self._ReprocessContent ) )
             reset_menu_items.append( ( 'separator', None, None, None ) )
-            reset_menu_items.append( ( 'normal', 'complete wipe and reset', 'Reset entire repository.', self._Reset ) )
+            reset_menu_items.append( ( 'normal', 'wipe database data and reprocess from update files', 'Reset entire repository.', self._Reset ) )
             
             self._reset_button = ClientGUICommon.MenuButton( self, 'reset processing', reset_menu_items )
             
@@ -1364,7 +1364,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             name = self._service.GetName()
             
-            message = 'This will delete all the processed information for ' + name + ' from the database.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything that has been downloaded over again. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
+            message = 'This will delete all the processed information for ' + name + ' from the database.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything from your downloaded update files. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             

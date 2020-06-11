@@ -1012,7 +1012,9 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_title_text', 'booting gui\u2026' )
         
-        self.subscriptions_manager = ClientImportSubscriptions.SubscriptionsManager( self )
+        subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+        
+        self.subscriptions_manager = ClientImportSubscriptions.SubscriptionsManager( self, subscriptions )
         
         def qt_code_gui():
             

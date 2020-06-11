@@ -342,9 +342,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateText( self ):
         
-        ( status, simple_status, ( total_processed, total ) ) = self._file_seed_cache.GetStatus()
+        file_seed_cache_status = self._file_seed_cache.GetStatus()
         
-        self._text.setText( status )
+        self._text.setText( file_seed_cache_status.GetStatusText() )
         
     
     def GetValue( self ):
@@ -510,7 +510,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             file_seed_cache = self._file_seed_cache_get_callable()
             
-            file_seed_cache.RetryFailures()
+            file_seed_cache.RetryFailed()
             
         
     
@@ -758,9 +758,11 @@ class FileSeedCacheStatusControl( QW.QFrame ):
             
         else:
             
-            ( import_summary, simple_status, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
+            file_seed_cache_status = self._file_seed_cache.GetStatus()
             
-            self._import_summary_st.setText( import_summary )
+            ( num_done, num_to_do ) = file_seed_cache_status.GetValueRange()
+            
+            self._import_summary_st.setText( file_seed_cache_status.GetStatusText() )
             
             if num_to_do == 0:
                 
@@ -797,7 +799,9 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         
         if self._file_seed_cache is not None:
             
-            ( import_summary, simple_status, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
+            file_seed_cache_status = self._file_seed_cache.GetStatus()
+            
+            ( num_done, num_to_do ) = file_seed_cache_status.GetValueRange()
             
             ( old_num_done, old_num_to_do ) = self._progress_gauge.GetValueRange()
             

@@ -1184,7 +1184,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def ConvertURLsToMediaViewerTuples( self, urls ):
         
+        show_unmatched_urls_in_media_viewer = HG.client_controller.new_options.GetBoolean( 'show_unmatched_urls_in_media_viewer' )
+        
         url_tuples = []
+        unmatched_url_tuples = []
         
         with self._lock:
             
@@ -1199,7 +1202,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     continue
                     
                 
-                if url_class is not None:
+                if url_class is None:
+                    
+                    if show_unmatched_urls_in_media_viewer:
+                        
+                        try:
+                            
+                            domain = ConvertURLIntoDomain( url )
+                            
+                        except HydrusExceptions.URLClassException:
+                            
+                            continue
+                            
+                        
+                        unmatched_url_tuples.append( ( domain, url ) )
+                        
+                    
+                else:
                     
                     url_class_key = url_class.GetMatchKey()
                     
@@ -1219,6 +1238,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
         url_tuples.sort()
+        
+        unmatched_url_tuples.sort()
+        
+        url_tuples.extend( unmatched_url_tuples )
         
         return url_tuples
         

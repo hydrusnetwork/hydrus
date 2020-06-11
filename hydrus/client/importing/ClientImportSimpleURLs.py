@@ -942,14 +942,6 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetStatus( self ):
-        
-        with self._lock:
-            
-            return ( self._file_seed_cache.GetStatus(), self._paused )
-            
-        
-    
     def GetValueRange( self ):
         
         with self._lock:

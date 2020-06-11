@@ -21,6 +21,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
+ORIGINAL_PATH = None
+
 def default_dict_list(): return collections.defaultdict( list )
 
 def default_dict_set(): return collections.defaultdict( set )
@@ -681,18 +683,23 @@ def GetSubprocessEnv():
         ShowText( 'Your unmodified env is: {}'.format( env ) )
         
     
+    env = os.environ.copy()
+    
+    if ORIGINAL_PATH is not None:
+        
+        env[ 'PATH' ] = ORIGINAL_PATH
+        
+    
     if HC.RUNNING_FROM_FROZEN_BUILD:
         
         # let's make a proper env for subprocess that doesn't have pyinstaller woo woo in it
         
-        env = os.environ.copy()
-        
         changes_made = False
         
-        swaperoo_strings = [ 'LD_LIBRARY_PATH', 'XDG_DATA_DIRS'  ]
+        orig_swaperoo_strings = [ 'LD_LIBRARY_PATH', 'XDG_DATA_DIRS'  ]
         ok_to_remove_absent_orig = [ 'LD_LIBRARY_PATH' ]
         
-        for key in swaperoo_strings:
+        for key in orig_swaperoo_strings:
             
             orig_key = '{}_ORIG'.format( key )
             
@@ -703,6 +710,19 @@ def GetSubprocessEnv():
                 changes_made = True
                 
             elif key in env and key in ok_to_remove_absent_orig:
+                
+                del env[ key ]
+                
+                changes_made = True
+                
+            
+        
+        remove_if_hydrus_base_dir = [ 'QT_PLUGIN_PATH', 'QML2_IMPORT_PATH', 'SSL_CERT_FILE' ]
+        hydrus_base_dir = HG.client_controller.GetDBDir()
+        
+        for key in remove_if_hydrus_base_dir:
+            
+            if key in env and env[ key ].startswith( hydrus_base_dir ):
                 
                 del env[ key ]
                 

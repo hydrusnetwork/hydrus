@@ -442,17 +442,19 @@ class Canvas( QW.QWidget ):
     
     def _CopyBMPToClipboard( self ):
         
+        copied = False
+        
         if self._current_media is not None:
             
             if self._current_media.GetMime() in HC.IMAGES:
                 
                 HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
                 
-            else:
-                
-                QW.QMessageBox.critical( self, 'Error', 'Sorry, cannot take bmps of anything but static images right now!' )
+                copied = True
                 
             
+        
+        return copied
         
     
     def _CopyHashToClipboard( self, hash_type ):
@@ -1458,6 +1460,15 @@ class Canvas( QW.QWidget ):
             elif action == 'copy_bmp':
                 
                 self._CopyBMPToClipboard()
+                
+            elif action == 'copy_bmp_or_file_if_not_bmpable':
+                
+                copied = self._CopyBMPToClipboard()
+                
+                if not copied:
+                    
+                    self._CopyFileToClipboard()
+                    
                 
             elif action == 'copy_file':
                 
@@ -2476,6 +2487,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
         
+        # ok we started excluding pairs if they had been deleted, now I am extending it to any files that have been processed.
+        # main thing is if you have AB, AC, that's neat and a bunch of people want it, but current processing system doesn't do B->A->C merge if it happens in a single batch
+        # I need to store dupe merge options rather than content updates apply them in db transaction or do the retroactive sync or similar to get this done properly
+        # so regrettably I turn it off for now
+        
+        self._hashes_processed_in_this_batch = set()
+        
         file_service_key = self._file_search_context.GetFileServiceKey()
         
         self._media_list = ClientMedia.ListeningMediaList( file_service_key, [] )
@@ -2523,6 +2541,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
+        self._hashes_processed_in_this_batch = set()
         
     
     def _CurrentMediaIsBetter( self, delete_second = True ):
@@ -2787,6 +2806,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
             self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
+            self._hashes_processed_in_this_batch.difference_update( hash_pair )
             
             self._ShowNewPair()
             
@@ -2832,6 +2852,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         second_media = self._media_list.GetNext( first_media )
         
         was_auto_skipped = False
+        
+        self._hashes_processed_in_this_batch.update( first_media.GetHashes() )
+        self._hashes_processed_in_this_batch.update( second_media.GetHashes() )
         
         if delete_first or delete_second or delete_both:
             
@@ -2935,6 +2958,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 
                 self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
+                self._hashes_processed_in_this_batch.difference_update( hash_pair )
                 
             
         
@@ -2943,6 +2967,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         if len( self._unprocessed_pairs ) == 0:
             
             self._hashes_due_to_be_deleted_in_this_batch = set()
+            self._hashes_processed_in_this_batch = set()
             self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above
             
             self.ClearMedia()
@@ -2960,6 +2985,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             def pair_is_good( pair ):
                 
                 ( first_hash, second_hash ) = pair
+                
+                if first_hash in self._hashes_processed_in_this_batch or second_hash in self._hashes_processed_in_this_batch:
+                    
+                    return False
+                    
                 
                 if first_hash in self._hashes_due_to_be_deleted_in_this_batch or second_hash in self._hashes_due_to_be_deleted_in_this_batch:
                     

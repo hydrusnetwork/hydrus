@@ -1512,7 +1512,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CleanUpCaches( self ):
         
-        self._subscriptions_cache = {}
         self._service_cache = {}
         
     
@@ -7185,12 +7184,19 @@ class DB( HydrusDB.HydrusDB ):
             
             if timestamp is None:
                 
-                ( version, dump, object_timestamp ) = self._c.execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp DESC;', ( dump_type, dump_name ) ).fetchone()
+                result = self._c.execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp DESC;', ( dump_type, dump_name ) ).fetchone()
                 
             else:
                 
-                ( version, dump, object_timestamp ) = self._c.execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
+                result = self._c.execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
                 
+            
+            if result is None:
+                
+                raise HydrusExceptions.DataMissing( 'Could not find the object of type "{}" and name "{}" and timestamp "{}".'.format( dump_type, dump_name, str( timestamp ) ) )
+                
+            
+            ( version, dump, object_timestamp ) = result
             
             try:
                 
@@ -9012,7 +9018,6 @@ class DB( HydrusDB.HydrusDB ):
         self._combined_file_service_id = self._GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
         self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
         
-        self._subscriptions_cache = {}
         self._service_cache = {}
         
         self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
@@ -11727,7 +11732,6 @@ class DB( HydrusDB.HydrusDB ):
         self._combined_file_service_id = self._GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
         self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
         
-        self._subscriptions_cache = {}
         self._service_cache = {}
         
         self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
@@ -12722,227 +12726,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 341:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'gelbooru 0.2.5 file page parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 344:
-            
-            message = 'The client now only uses one thumbnail per file (previously it needed two). Your \'resized\' thumbnails will now be deleted. This is a significant step that could take some time to complete. It will also significantly impact your next backup run.'
-            message += os.linesep * 2
-            message += 'In order to keep your recycle bin sane, the thumbnails will be permanently deleted. Therefore, this operation cannot be undone. If you are not ready to do this yet (for instance if you do not have a recent backup), kill the hydrus process in Task Manager now.'
-            message += os.linesep * 2
-            message += 'BTW: If you previously put your resized thumbnails on an SSD but not your \'full-size\' ones, you should check the \'migrate database\' dialog once the client boots so you can move the remaining thumbnail directories to fast storage.'
-            
-            BlockingSafeShowMessage( message )
-            
-            new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_client_files_locations ( location TEXT, weight INTEGER );' )
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_thumbnail_override_location ( location TEXT );' )
-            
-            for ( location, weight ) in new_options._dictionary[ 'client_files_locations_ideal_weights' ]:
-                
-                self._c.execute( 'INSERT INTO ideal_client_files_locations ( location, weight ) VALUES ( ?, ? );', ( location, weight ) )
-                
-            
-            thumbnail_override_location = new_options._dictionary[ 'client_files_locations_full_size_thumbnail_override' ]
-            
-            if thumbnail_override_location is not None:
-                
-                self._c.execute( 'INSERT INTO ideal_thumbnail_override_location ( location ) VALUES ( ? );', ( thumbnail_override_location, ) )
-                
-            
-            self._SetJSONDump( new_options )
-            
-            #
-            
-            error_occurred = False
-            
-            for ( i, prefix ) in enumerate( HydrusData.IterateHexPrefixes() ):
-                
-                self._controller.pub( 'splash_set_status_subtext', 'deleting resized thumbnails {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, 256 ) ) )
-                
-                resized_prefix = 'r' + prefix
-                
-                try:
-                    
-                    ( location, ) = self._c.execute( 'SELECT location FROM client_files_locations WHERE prefix = ?;', ( resized_prefix, ) ).fetchone()
-                    
-                except:
-                    
-                    continue
-                    
-                
-                full_path = os.path.join( HydrusPaths.ConvertPortablePathToAbsPath( location ), resized_prefix )
-                
-                if os.path.exists( full_path ):
-                    
-                    try:
-                        
-                        HydrusPaths.DeletePath( full_path )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.PrintException( e )
-                        
-                        if not error_occurred:
-                            
-                            error_occurred = True
-                            
-                            message = 'There was a problem deleting one or more of your old \'rxx\' resized thumbnail directories, perhaps because of some old read-only files. There is no big harm here, since the old directories are no longer needed, but you will want to delete them yourself. Additional error information has been written to the log. Please contact hydrus dev if you need help.'
-                            
-                            self.pub_initial_message( message )
-                            
-                        
-                    
-                
-                self._c.execute( 'DELETE FROM client_files_locations WHERE prefix = ?;', ( resized_prefix, ) )
-                
-            
-        
-        if version == 345:
-            
-            # I screwed up the permissions setting on 344 update so that certain non-windows users got de-execution-permissioned rxx folders, which then made them non-traversable and -deletable
-            # so, let's give it another spin, albeit with less information since we have to guess potential location from remaining locations
-            
-            if not HC.PLATFORM_WINDOWS:
-                
-                locations_where_r_folders_were_found = set()
-                
-                locations = self._STL( self._c.execute( 'SELECT DISTINCT location FROM client_files_locations;' ) )
-                
-                possible_resized_paths = []
-                
-                error_occurred = False
-                
-                for prefix in HydrusData.IterateHexPrefixes():
-                    
-                    resized_prefix = 'r' + prefix
-                    
-                    for location in locations:
-                        
-                        full_path = os.path.join( HydrusPaths.ConvertPortablePathToAbsPath( location ), resized_prefix )
-                        
-                        if os.path.exists( full_path ):
-                            
-                            possible_resized_paths.append( full_path )
-                            
-                            locations_where_r_folders_were_found.add( location )
-                            
-                        
-                    
-                
-                num_possible_resized_paths = len( possible_resized_paths )
-                
-                if num_possible_resized_paths > 0:
-                    
-                    message = 'It appears that the update code from last week\'s release, 345, did not successfully delete all your old (and now unneeded) resized thumbnail directories.'
-                    message += os.linesep * 2
-                    message += 'I have found {} spare \'rxx\' directories (this number should be less than or equal to 256) in these current locations:'.format( num_possible_resized_paths )
-                    message += os.linesep * 2
-                    message += os.linesep.join( [ HydrusPaths.ConvertPortablePathToAbsPath( location ) for location in locations_where_r_folders_were_found ] )
-                    message += os.linesep * 2
-                    message += 'I will now attempt to delete these directories again, this time with fixed permissions. If you are not ready to do this, kill the hydrus process now.'
-                    
-                    BlockingSafeShowMessage( message )
-                    
-                    for ( i, full_path ) in enumerate( possible_resized_paths ):
-                        
-                        self._controller.pub( 'splash_set_status_subtext', 'deleting resized thumbnails 2: electric boogaloo {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_possible_resized_paths ) ) )
-                        
-                        try:
-                            
-                            stat_result = os.stat( full_path )
-                            
-                            current_bits = stat_result.st_mode
-                            
-                            if not stat.S_IXUSR & current_bits:
-                                
-                                os.chmod( full_path, current_bits | stat.S_IXUSR )
-                                
-                            
-                            HydrusPaths.DeletePath( full_path )
-                            
-                        except Exception as e:
-                            
-                            HydrusData.PrintException( e )
-                            
-                            if not error_occurred:
-                                
-                                error_occurred = True
-                                
-                                message = 'The second attempt to delete old resized directories also failed. Error information has been written to the log. Please consult hydrus dev if you cannot figure this out on your own.'
-                                
-                                self.pub_initial_message( message )
-                                
-                            
-                        
-                    
-                
-            
-        
-        if version == 346:
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
-            
-        
-        if version == 347:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'yiff.party file attachment long' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 349:
             
@@ -14892,6 +14675,105 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 399:
+            
+            try:
+                
+                legacy_subscription_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY )
+                
+                if len( legacy_subscription_names ) > 0:
+                    
+                    try:
+                        
+                        HydrusPaths.CheckHasSpaceForDBTransaction( self._db_dir, 500 * 1024 * 1024 )
+                        
+                    except:
+                        
+                        message = 'The big subscription update for v400 will now start. However this update is heavy and will also try to make a backup of your old subs, and it looks like your system drive or hydrus drive are a bit short on space right now. If your drives are truly currently real tight, please free up some space now. If you have thousands of subs with hundreds of thousands of URLs, you will need a few GB.'
+                        
+                        BlockingSafeShowMessage( message )
+                        
+                    
+                    from hydrus.client.importing import ClientImportSubscriptionLegacy
+                    
+                    sub_dir = os.path.join( self._db_dir, 'legacy_subscriptions_backup' )
+                    
+                    HydrusPaths.MakeSureDirectoryExists( sub_dir )
+                    
+                    for ( i, legacy_subscription_name ) in enumerate( legacy_subscription_names ):
+                        
+                        self._controller.pub( 'splash_set_status_subtext', 'updating subscriptions: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( legacy_subscription_names ) ) ) )
+                        
+                        legacy_subscription = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY, legacy_subscription_name )
+                        
+                        backup_path = os.path.join( sub_dir, 'sub_{}.json'.format( i ) )
+                        
+                        with open( backup_path, 'w', encoding = 'utf-8' ) as f:
+                            
+                            f.write( legacy_subscription.DumpToString() )
+                            
+                        
+                        ( subscription, query_log_containers ) = ClientImportSubscriptionLegacy.ConvertLegacySubscriptionToNew( legacy_subscription )
+                        
+                        self._SetJSONDump( subscription )
+                        
+                        for query_log_container in query_log_containers:
+                            
+                            self._SetJSONDump( query_log_container )
+                            
+                        
+                        self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY, legacy_subscription_name )
+                        
+                    
+                
+            except Exception as e:
+                
+                message = 'Damn, the big subscription update for v400 did not work for you! No changes have been saved, your database is still on v399. You will get an error next, please send it to hydrus dev and go back to using v399 for now!'
+                
+                BlockingSafeShowMessage( message )
+                
+                raise
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'twitter tweet', 'nitter tweet media', 'nitter tweet', 'nitter timeline', 'nitter media timeline', 'derpibooru gallery page', 'derpibooru gallery page api' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'nitter media lookup', 'nitter retweets lookup', 'nitter media and retweets lookup', 'derpibooru tag search', 'derpibooru tag search - no filter' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'nitter media parser', 'nitter retweet parser', 'nitter tweet parser', 'nitter tweet parser (video from koto.reisen)', 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'derpibooru gallery page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
