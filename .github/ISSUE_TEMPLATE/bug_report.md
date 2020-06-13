@@ -2,7 +2,7 @@
 name: Bug report
 about: Report a reproducible bug or regression in Hydrus.
 title: ''
-labels: ''
+labels: bug
 assignees: ''
 
 ---
