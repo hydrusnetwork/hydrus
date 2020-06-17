@@ -11678,6 +11678,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RelocateClientFiles( self, prefix, source, dest ):
         
+        if not os.path.exists( dest ):
+            
+            raise Exception( 'Was commanded to move prefix "{}" from "{}" to "{}", but that destination does not exist!'.format( prefix, source, dest ) )
+            
+        
         full_source = os.path.join( source, prefix )
         full_dest = os.path.join( dest, prefix )
         
@@ -14774,6 +14779,39 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 400:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'e621 gallery page (alternate format)' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'nitter tweet parser', 'nitter tweet parser (video from koto.reisen)', 'e621 gallery page parser', 'derpibooru gallery page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         

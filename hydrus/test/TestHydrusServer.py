@@ -22,13 +22,13 @@ import twisted.internet.ssl
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
-with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
+with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f_g:
     
-    EXAMPLE_FILE = f.read()
+    EXAMPLE_FILE = f_g.read()
     
-with open( os.path.join( HC.STATIC_DIR, 'hydrus_small.png' ), 'rb' ) as f:
+with open( os.path.join( HC.STATIC_DIR, 'hydrus_small.png' ), 'rb' ) as f_g:
     
-    EXAMPLE_THUMBNAIL = f.read()
+    EXAMPLE_THUMBNAIL = f_g.read()
     
 class TestServer( unittest.TestCase ):
     

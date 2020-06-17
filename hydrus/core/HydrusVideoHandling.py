@@ -3,6 +3,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
+from hydrus.core import HydrusThreading
 import numpy
 import os
 import re
@@ -44,6 +45,8 @@ def GetFFMPEGVersion():
     
     cmd = [ FFMPEG_PATH, '-version' ]
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     try:
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
@@ -61,7 +64,7 @@ def GetFFMPEGVersion():
         return 'unable to execute ffmpeg at path "{}"'.format( FFMPEG_PATH )
         
     
-    ( stdout, stderr ) = process.communicate()
+    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
     
     del process
     
@@ -135,6 +138,8 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     try:
         
         process = subprocess.Popen( cmd, bufsize = 10**5, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
@@ -168,7 +173,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
         raise FileNotFoundError( 'Cannot interact with video because FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
         
     
-    ( stdout, stderr ) = process.communicate()
+    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
     
     data_bytes = stderr
     
@@ -792,6 +797,8 @@ class VideoRendererFFMPEG( object ):
             
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        
+        HydrusData.CheckProgramIsNotShuttingDown()
         
         try:
             

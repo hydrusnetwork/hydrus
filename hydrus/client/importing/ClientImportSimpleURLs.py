@@ -994,7 +994,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            urls = [u for u in urls if len( u ) > 1] # > _1_ to take out the occasional whitespace
+            urls = [ u for u in urls if len( u ) > 1 ] # > _1_ to take out the occasional whitespace
             
             file_seeds = []
             

@@ -689,67 +689,9 @@ class NetworkJob( object ):
             
             if self._ObeysBandwidth():
                 
-                result = self.engine.bandwidth_manager.TryToStartRequest( self._network_contexts )
-                
-                if result:
-                    
-                    self._bandwidth_tracker.ReportRequestUsed()
-                    
-                else:
-                    
-                    ( bandwidth_waiting_duration, bandwidth_network_context ) = self.engine.bandwidth_manager.GetWaitingEstimateAndContext( self._network_contexts )
-                    
-                    will_override = self._bandwidth_manual_override_delayed_timestamp is not None
-                    
-                    override_coming_first = False
-                    
-                    if will_override:
-                        
-                        override_waiting_duration = self._bandwidth_manual_override_delayed_timestamp - HydrusData.GetNow()
-                        
-                        override_coming_first = override_waiting_duration < bandwidth_waiting_duration
-                        
-                    
-                    just_now_threshold = 2
-                    
-                    if override_coming_first:
-                        
-                        waiting_duration = override_waiting_duration
-                        
-                        waiting_str = 'overriding bandwidth ' + HydrusData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
-                        
-                    else:
-                        
-                        waiting_duration = bandwidth_waiting_duration
-                        
-                        waiting_str = 'bandwidth free ' + HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
-                        
-                    
-                    waiting_str += '\u2026 (' + bandwidth_network_context.ToHumanString() + ')'
-                    
-                    self._status_text = waiting_str
-                    
-                    if waiting_duration > 1200:
-                        
-                        self._Sleep( 30 )
-                        
-                    elif waiting_duration > 120:
-                        
-                        self._Sleep( 10 )
-                        
-                    elif waiting_duration > 10:
-                        
-                        self._Sleep( 1 )
-                        
-                    
-                
-                return result
+                return self.engine.bandwidth_manager.CanDoWork( self._network_contexts )
                 
             else:
-                
-                self._bandwidth_tracker.ReportRequestUsed()
-                
-                self.engine.bandwidth_manager.ReportRequestUsed( self._network_contexts )
                 
                 return True
                 
@@ -1402,6 +1344,79 @@ class NetworkJob( object ):
             
         
         return True
+        
+    
+    def TryToStartBandwidth( self ):
+        
+        with self._lock:
+            
+            if self._ObeysBandwidth():
+                
+                result = self.engine.bandwidth_manager.TryToStartRequest( self._network_contexts )
+                
+                if result:
+                    
+                    self._bandwidth_tracker.ReportRequestUsed()
+                    
+                else:
+                    
+                    ( bandwidth_waiting_duration, bandwidth_network_context ) = self.engine.bandwidth_manager.GetWaitingEstimateAndContext( self._network_contexts )
+                    
+                    will_override = self._bandwidth_manual_override_delayed_timestamp is not None
+                    
+                    override_coming_first = False
+                    
+                    if will_override:
+                        
+                        override_waiting_duration = self._bandwidth_manual_override_delayed_timestamp - HydrusData.GetNow()
+                        
+                        override_coming_first = override_waiting_duration < bandwidth_waiting_duration
+                        
+                    
+                    just_now_threshold = 2
+                    
+                    if override_coming_first:
+                        
+                        waiting_duration = override_waiting_duration
+                        
+                        waiting_str = 'overriding bandwidth ' + HydrusData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                        
+                    else:
+                        
+                        waiting_duration = bandwidth_waiting_duration
+                        
+                        waiting_str = 'bandwidth free ' + HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                        
+                    
+                    waiting_str += '\u2026 (' + bandwidth_network_context.ToHumanString() + ')'
+                    
+                    self._status_text = waiting_str
+                    
+                    if waiting_duration > 1200:
+                        
+                        self._Sleep( 30 )
+                        
+                    elif waiting_duration > 120:
+                        
+                        self._Sleep( 10 )
+                        
+                    elif waiting_duration > 10:
+                        
+                        self._Sleep( 1 )
+                        
+                    
+                
+                return result
+                
+            else:
+                
+                self._bandwidth_tracker.ReportRequestUsed()
+                
+                self.engine.bandwidth_manager.ReportRequestUsed( self._network_contexts )
+                
+                return True
+                
+            
         
     
     def WaitUntilDone( self ):

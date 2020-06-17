@@ -3,6 +3,7 @@ import collections
 from hydrus.core import HydrusExceptions
 import queue
 import random
+import subprocess
 import threading
 import time
 import traceback
@@ -69,6 +70,11 @@ def GetThreadInfo( thread = None ):
     
 def IsThreadShuttingDown():
     
+    if HG.emergency_exit:
+        
+        return True
+        
+    
     me = threading.current_thread()
     
     if isinstance( me, DAEMON ):
@@ -95,6 +101,39 @@ def ShutdownThread( thread ):
     thread_info = GetThreadInfo( thread )
     
     thread_info[ 'shutting_down' ] = True
+    
+def SubprocessCommunicate( process: subprocess.Popen ):
+    
+    def do_test():
+        
+        if HG.model_shutdown:
+            
+            try:
+                
+                process.kill()
+                
+            except:
+                
+                pass
+                
+            
+            raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+            
+        
+    
+    do_test()
+    
+    while True:
+        
+        try:
+            
+            return process.communicate( timeout = 10 )
+            
+        except subprocess.TimeoutExpired:
+            
+            do_test()
+            
+        
     
 class DAEMON( threading.Thread ):
     

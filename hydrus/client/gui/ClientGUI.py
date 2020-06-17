@@ -798,6 +798,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
                     
+                    HydrusData.CheckProgramIsNotShuttingDown()
+                    
                     subprocess.Popen( cmd, **sbp_kwargs )
                     
                     time_waited = 0
@@ -2717,6 +2719,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                         
                     
                     HG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions )
+                    
+                else:
+                    
+                    HG.client_controller.subscriptions_manager.Wake()
                     
                 
             
@@ -4650,6 +4656,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             links = QW.QMenu( menu )
             
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, '8kun board', 'Open hydrus dev\'s 8kun board, where he makes release posts and other status updates.', CC.global_pixmaps().eight_kun, ClientPaths.LaunchURLInWebBrowser, 'https://8kun.top/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.global_pixmaps().twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )

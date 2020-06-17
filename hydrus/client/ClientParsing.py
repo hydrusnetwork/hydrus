@@ -3648,7 +3648,7 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
         
         StringProcessingStep.__init__( self )
         
-        self._processing_steps: typing.List[ StringProcessingStep ] = []
+        self._processing_steps = []
         
     
     def _GetSerialisableInfo( self ):

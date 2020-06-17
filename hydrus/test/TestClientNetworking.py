@@ -523,25 +523,25 @@ class TestNetworkingJob( unittest.TestCase ):
         
         job = self._GetJob()
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.ReportDataUsed( [ DOMAIN_NETWORK_CONTEXT ], 50 )
         
         job.engine.bandwidth_manager.SetRules( DOMAIN_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), False )
+        self.assertEqual( job.TryToStartBandwidth(), False )
         
         #
         
         job = self._GetJob( for_login = True )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.ReportDataUsed( [ DOMAIN_NETWORK_CONTEXT ], 50 )
         
         job.engine.bandwidth_manager.SetRules( DOMAIN_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
     
     def test_bandwidth_ok( self ):
@@ -558,11 +558,11 @@ class TestNetworkingJob( unittest.TestCase ):
         
         job.engine.bandwidth_manager.ReportDataUsed( [ DOMAIN_NETWORK_CONTEXT ], 50 )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         #
         
@@ -570,11 +570,11 @@ class TestNetworkingJob( unittest.TestCase ):
         
         job.engine.bandwidth_manager.ReportDataUsed( [ DOMAIN_NETWORK_CONTEXT ], 50 )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
     
     def test_bandwidth_reported( self ):
@@ -585,7 +585,7 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 job = self._GetJob()
                 
-                job.BandwidthOK()
+                job.TryToStartBandwidth()
                 
                 job.Start()
                 
@@ -695,25 +695,25 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         job = self._GetJob()
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.ReportDataUsed( [ HYDRUS_NETWORK_CONTEXT ], 50 )
         
         job.engine.bandwidth_manager.SetRules( HYDRUS_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), False )
+        self.assertEqual( job.TryToStartBandwidth(), False )
         
         #
         
         job = self._GetJob( for_login = True )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.ReportDataUsed( [ HYDRUS_NETWORK_CONTEXT ], 50 )
         
         job.engine.bandwidth_manager.SetRules( HYDRUS_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
     
     def test_bandwidth_ok( self ):
@@ -730,11 +730,11 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         job.engine.bandwidth_manager.ReportDataUsed( [ HYDRUS_NETWORK_CONTEXT ], 50 )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.SetRules( HYDRUS_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         #
         
@@ -742,11 +742,11 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         job.engine.bandwidth_manager.ReportDataUsed( [ HYDRUS_NETWORK_CONTEXT ], 50 )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
         job.engine.bandwidth_manager.SetRules( HYDRUS_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
         
-        self.assertEqual( job.BandwidthOK(), True )
+        self.assertEqual( job.TryToStartBandwidth(), True )
         
     
     def test_bandwidth_reported( self ):

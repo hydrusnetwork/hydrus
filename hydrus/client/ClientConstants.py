@@ -532,6 +532,7 @@ class GlobalPixmaps( object ):
         self.tumblr = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'tumblr.png' ) )
         self.discord = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'discord.png' ) )
         self.patreon = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'patreon.png' ) )
+        self.github = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'github.png' ) )
         
         self.first = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'first.png' ) )
         self.previous = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )

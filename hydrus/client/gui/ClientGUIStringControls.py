@@ -337,7 +337,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, label, self._Edit )
         
-        self._value: typing.Dict[ str, str ] = {}
+        self._value = {}
         
     
     def _Edit( self ):

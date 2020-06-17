@@ -68,6 +68,8 @@ def VideoHasAudio( path ):
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     try:
         
         process = subprocess.Popen( cmd, bufsize = 65536, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )

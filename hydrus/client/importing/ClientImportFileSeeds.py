@@ -599,7 +599,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             post_url = self.file_seed_data
             
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+            try:
+                
+                ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                url_to_check = post_url
+                
             
         else:
             

@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 401</h3></li>
+				<ul>
+					<li>subscriptions:</li>
+					<li>as subs can now load more flexibly, previously hardcoded waits are now eliminated:</li>
+					<li>- the subscriptions manager now only waits three seconds after initial session load to boot (previously 15)</li>
+					<li>- the subscriptions manager now wakes as soon as the subscriptions dialog is ok'd or cancelled</li>
+					<li>- a timing calculation that would delay the work of a sub up to five or fifteen minutes if more queries would come due for sync in that time window (in order previously to batch to reduce read/write) is now eliminated--subs will now start as soon as any query is due. if you were ever confused why a query that seemed due did not boot after dialog ok or other wake-up event, this _should_ no longer happen</li>
+					<li>re-added the import/export/duplicate buttons to manage subs. export and dupe may need to do db work for a couple of seconds and will have a yes/no confirmation on larger jobs</li>
+					<li>the import button on manage subs accepts and converts the old 'legacy' subscription object format, including a copy/paste of the objects backed up to disk in the v400 update</li>
+					<li>fixed an issue where creating a subscription query and then deleting it in the same manage subs dialog session would result in surplus data being written to the db (which the next dialog launch would note and clear out)</li>
+					<li>an unusual error with pre-run domain checking, exposed by the new subscription code and e621 subs, where the gallery url has also recently changed, is now fixed</li>
+					<li>.</li>
+					<li>issue tracker:</li>
+					<li>the Github issue tracker (https://github.com/hydrusnetwork/hydrus/issues) is turned on again! it is now run by a team of volunteer users. the idea is going to be to try to merge duplicate feature suggestions with the proper platform and put some discussion and cognition and prioritisation into idea development before it gets to my desk, so I can be more focused and productive and so 95% of feature suggestions do not simply get banished to the shadow realm of the back of my todo</li>
+					<li>this is mostly intended for wishlist and other suggestions, as the tsunami was just getting too much for me to handle, but we'll see how it goes for things like bug reports as well. I'll still take any sort of report through my normal channels, if you are uncomfortable with github, or if you wish for me to forward an item to the issue tracker anonymously</li>
+					<li>the website, help documents, and hydrus help menu links have been updated regarding the issue tracker</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>improved how the database 'update default downloader objects' job works, ensuring that new defaults are better at simply take the place of existing objects and do not break/reset existing url class to parser links</li>
+					<li>tightened up how automatic url class to parser linking works, eliminating some surplus and potentially bad data related to api links. furthermore, whenever the links between url classes and parsers update, existing surplus data, which may creep in when api links change, is now cleaned from the data structure</li>
+					<li>rolling out updated e621 url class and parser to deal with their alternate gallery url format</li>
+					<li>rolling out an updated derpibooru parser that will link to the new api class correctly</li>
+					<li>thanks to a user's submission, rolling out updated versions of the new default nitter parsers that pull creator:username tags</li>
+					<li>before every subprocess launch, and when waiting for all subprocess communication (e.g. to ffmpeg), now tests regularly for program shutdown. if an unusual situation develops where a subscription is doing a file import job while the OS is shutting down, and that system shut down would hang or is hanging on a 'ffmpeg can't be launched now' dialog, the hydrus client should now notice this and bomb out, rather than going for that never-running ffmpeg. this may not fix all instances of this issue, and further feedback on the client not closing down cleanly with the OS is welcome.</li>
+					<li>when adding a new path to the 'migrate database' panel, any symbolic links will be converted to canonical equivalents</li>
+					<li>added some location checks and appropriate errors when the database is doing file storage rebalancing</li>
+					<li>fixed an issue uploading swfs, video, or audio to the server when it is launched from a frozen executable build</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 400</h3></li>
 				<ul>
 					<li>subscription data overhaul:</li>

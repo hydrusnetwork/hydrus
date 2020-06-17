@@ -363,7 +363,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        eligible_url_classes = [ url_class for url_class in url_classes if url_class.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and url_class.GetMatchKey() in self._url_class_keys_to_parser_keys ]
+        eligible_url_classes = [ url_class for url_class in url_classes if url_class.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and url_class.GetClassKey() in self._url_class_keys_to_parser_keys ]
         
         self._list_ctrl.AddDatas( eligible_url_classes )
         
@@ -388,7 +388,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertDataToListCtrlTuples( self, url_class ):
         
-        url_class_key = url_class.GetMatchKey()
+        url_class_key = url_class.GetClassKey()
         
         name = url_class.GetName()
         url_type = url_class.GetURLType()
@@ -422,7 +422,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for url_class in url_classes_to_clear:
                 
-                url_class_key = url_class.GetMatchKey()
+                url_class_key = url_class.GetClassKey()
                 
                 if url_class_key in self._url_class_keys_to_tag_import_options:
                     
@@ -442,7 +442,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_class = selected[0]
             
-            url_class_key = url_class.GetMatchKey()
+            url_class_key = url_class.GetClassKey()
             
             if url_class_key in self._url_class_keys_to_tag_import_options:
                 
@@ -472,7 +472,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    url_class_key = url_class.GetMatchKey()
+                    url_class_key = url_class.GetClassKey()
                     
                     tag_import_options = panel.GetValue()
                     
@@ -490,7 +490,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetDefaultTagImportOptions( self, url_class ):
         
-        url_class_key = url_class.GetMatchKey()
+        url_class_key = url_class.GetClassKey()
         
         if url_class_key in self._url_class_keys_to_tag_import_options:
             
@@ -525,7 +525,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_class = selected[0]
             
-            url_class_key = url_class.GetMatchKey()
+            url_class_key = url_class.GetClassKey()
             
             if url_class_key in self._url_class_keys_to_tag_import_options:
                 
@@ -560,7 +560,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for url_class in self._list_ctrl.GetData( only_selected = True ):
                 
-                url_class_key = url_class.GetMatchKey()
+                url_class_key = url_class.GetClassKey()
                 
                 self._url_class_keys_to_tag_import_options[ url_class_key ] = tag_import_options.Duplicate()
                 
@@ -929,7 +929,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         self._gug_keys_to_gugs = { gug.GetGUGKey() : gug for gug in self._gugs }
         
         self._url_classes = url_classes
-        self._url_class_keys_to_url_classes = { url_class.GetMatchKey() : url_class for url_class in self._url_classes }
+        self._url_class_keys_to_url_classes = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
         
         self._network_engine = network_engine
         
@@ -3913,7 +3913,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_classes = domain_manager.GetURLClasses()
             
-            url_class_keys_to_url_classes = { url_class.GetMatchKey() : url_class for url_class in url_classes }
+            url_class_keys_to_url_classes = { url_class.GetClassKey() : url_class for url_class in url_classes }
             
             url_class_names_and_default_tag_import_options = sorted( ( ( url_class_keys_to_url_classes[ url_class_key ].GetName(), url_class_keys_to_default_tag_import_options[ url_class_key ] ) for url_class_key in list( url_class_keys_to_default_tag_import_options.keys() ) if url_class_key in url_class_keys_to_url_classes ) )
             
@@ -5117,7 +5117,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetValue( self ):
         
-        url_class_key = self._original_url_class.GetMatchKey()
+        url_class_key = self._original_url_class.GetClassKey()
         name = self._name.text()
         url_type = self._url_type.GetValue()
         preferred_scheme = self._preferred_scheme.GetValue()
@@ -5495,7 +5495,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         HydrusSerialisable.SetNonDupeName( url_class, self._GetExistingNames() )
         
-        url_class.RegenerateMatchKey()
+        url_class.RegenerateClassKey()
         
         self._list_ctrl.AddDatas( ( url_class, ) )
         
@@ -5614,7 +5614,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._url_classes = url_classes
-        self._url_class_keys_to_url_classes = { url_class.GetMatchKey() : url_class for url_class in self._url_classes }
+        self._url_class_keys_to_url_classes = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
         
         self._parsers = parsers
         self._parser_keys_to_parsers = { parser.GetParserKey() : parser for parser in self._parsers }
@@ -5672,7 +5672,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
                 continue
                 
             
-            url_class_key = url_class.GetMatchKey()
+            url_class_key = url_class.GetClassKey()
             
             if url_class_key in url_class_keys_to_parser_keys:
                 

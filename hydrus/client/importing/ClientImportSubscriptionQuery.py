@@ -14,7 +14,7 @@ from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 
-def GenerateSubQueryName() -> str:
+def GenerateQueryLogContainerName() -> str:
     
     return HydrusData.GenerateKey().hex()
     
@@ -84,7 +84,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._query_log_container_name = GenerateSubQueryName()
+        self._query_log_container_name = GenerateQueryLogContainerName()
         self._query_text = 'query'
         self._display_name = None
         self._check_now = False
@@ -692,6 +692,13 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     def SetPaused( self, paused: bool ):
         
         self._paused = paused
+        
+    
+    def SetQueryLogContainerName( self, query_log_container_name: str ):
+        
+        self._query_log_container_name = query_log_container_name
+        
+        self.SetQueryLogContainerStatus( LOG_CONTAINER_UNSYNCED )
         
     
     def SetQueryLogContainerStatus( self, log_container_status: int ):

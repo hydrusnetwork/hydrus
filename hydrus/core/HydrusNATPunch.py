@@ -2,6 +2,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
+from hydrus.core import HydrusThreading
 import os
 import socket
 import subprocess
@@ -35,11 +36,13 @@ def GetExternalIP():
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
         
+        HydrusData.CheckProgramIsNotShuttingDown()
+        
         p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
         HydrusData.WaitForProcessToFinish( p, 30 )
         
-        ( stdout, stderr ) = p.communicate()
+        ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
         
         if stderr is not None and len( stderr ) > 0:
             
@@ -83,11 +86,13 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
-    ( stdout, stderr ) = p.communicate()
+    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
     if 'x.x.x.x:' + str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in stdout:
         
@@ -117,11 +122,13 @@ def GetUPnPMappings():
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
-    ( stdout, stderr ) = p.communicate()
+    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
     if stderr is not None and len( stderr ) > 0:
         
@@ -213,11 +220,13 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
-    ( stdout, stderr ) = p.communicate()
+    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
     if stderr is not None and len( stderr ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + stderr )
     

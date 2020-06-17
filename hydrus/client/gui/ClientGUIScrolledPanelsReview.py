@@ -170,6 +170,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddPath( self, path, starting_weight = 1 ):
         
+        path = os.path.realpath( path )
+        
         if path in self._locations_to_ideal_weights:
             
             QW.QMessageBox.warning( self, 'Warning', 'You already have that location entered!' )
@@ -802,6 +804,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
+                
+                path = os.path.realpath( path )
                 
                 if path in self._locations_to_ideal_weights:
                     

@@ -492,6 +492,22 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._RecalcCache()
         
     
+    def _CleanURLClassKeysToParserKeys( self ):
+        
+        api_pairs = ConvertURLClassesIntoAPIPairs( self._url_classes )
+        
+        # anything that goes to an api url will be parsed by that api's parser--it can't have its own
+        for ( a, b ) in api_pairs:
+            
+            unparseable_url_class_key = a.GetClassKey()
+            
+            if unparseable_url_class_key in self._url_class_keys_to_parser_keys:
+                
+                del self._url_class_keys_to_parser_keys[ unparseable_url_class_key ]
+                
+            
+        
+    
     def _GetDefaultTagImportOptionsForURL( self, url ):
         
         url_class = self._GetURLClass( url )
@@ -516,7 +532,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             return self._file_post_default_tag_import_options
             
         
-        url_class_key = url_class.GetMatchKey()
+        url_class_key = url_class.GetClassKey()
         
         if url_class_key in self._url_class_keys_to_default_tag_import_options:
             
@@ -672,7 +688,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             raise HydrusExceptions.URLClassException( 'Could not find a parser for ' + url + '!' + os.linesep * 2 + str( e ) )
             
         
-        url_class_key = parser_url_class.GetMatchKey()
+        url_class_key = parser_url_class.GetClassKey()
         
         if url_class_key in self._url_class_keys_to_parser_keys:
             
@@ -815,7 +831,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             for url_class in url_classes:
                 
-                url_class_key = url_class.GetMatchKey()
+                url_class_key = url_class.GetClassKey()
                 
                 name = url_class.GetName()
                 
@@ -1046,7 +1062,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             # absent irrelevant variables, do we have the exact same object already in?
             
             name = new_url_class.GetName()
-            match_key = new_url_class.GetMatchKey()
+            match_key = new_url_class.GetClassKey()
             example_url = new_url_class.GetExampleURL()
             
             dupe_url_classes = [ url_class.Duplicate() for url_class in self._url_classes ]
@@ -1054,7 +1070,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             for dupe_url_class in dupe_url_classes:
                 
                 dupe_url_class.SetName( name )
-                dupe_url_class.SetMatchKey( match_key )
+                dupe_url_class.SetClassKey( match_key )
                 dupe_url_class.SetExampleURL( example_url )
                 
                 if dupe_url_class.DumpToString() == new_url_class.DumpToString():
@@ -1095,7 +1111,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         for url_class in new_url_classes:
             
-            url_class.RegenerateMatchKey()
+            url_class.RegenerateClassKey()
             
         
         for parser in new_parsers:
@@ -1169,6 +1185,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             self._url_class_keys_to_parser_keys.update( new_url_class_keys_to_parser_keys )
             
+            self._CleanURLClassKeysToParserKeys()
+            
         
         # let's do a trytolink just in case there are loose ends due to some dupe being discarded earlier (e.g. url match is new, but parser was not).
         
@@ -1220,7 +1238,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    url_class_key = url_class.GetMatchKey()
+                    url_class_key = url_class.GetClassKey()
                     
                     if url_class_key in self._url_class_keys_to_display:
                         
@@ -1700,9 +1718,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             default_gugs = ClientDefaults.GetDefaultGUGs()
             
+            existing_gug_names_to_keys = { gug.GetName() : gug.GetGUGKey() for gug in self._gugs }
+            
             for gug in default_gugs:
                 
-                gug.RegenerateGUGKey()
+                gug_name = gug.GetName()
+                
+                if gug_name in existing_gug_names_to_keys:
+                    
+                    gug.SetGUGKey( existing_gug_names_to_keys[ gug_name ] )
+                    
+                else:
+                    
+                    gug.RegenerateGUGKey()
+                    
                 
             
             existing_gugs = list( self._gugs )
@@ -1722,9 +1751,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             default_parsers = ClientDefaults.GetDefaultParsers()
             
+            existing_parser_names_to_keys = { parser.GetName() : parser.GetParserKey() for parser in self._parsers }
+            
             for parser in default_parsers:
                 
-                parser.RegenerateParserKey()
+                name = parser.GetName()
+                
+                if name in existing_parser_names_to_keys:
+                    
+                    parser.SetParserKey( existing_parser_names_to_keys[ name ] )
+                    
+                else:
+                    
+                    parser.RegenerateParserKey()
+                    
                 
             
             existing_parsers = list( self._parsers )
@@ -1744,9 +1784,25 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             default_url_classes = ClientDefaults.GetDefaultURLClasses()
             
+            existing_class_names_to_keys = { url_class.GetName() : url_class.GetClassKey() for url_class in self._url_classes }
+            
             for url_class in default_url_classes:
                 
-                url_class.RegenerateMatchKey()
+                name = url_class.GetName()
+                
+                if name in existing_class_names_to_keys:
+                    
+                    url_class.SetClassKey( existing_class_names_to_keys[ name ] )
+                    
+                else:
+                    
+                    url_class.RegenerateClassKey()
+                    
+                
+            
+            for url_class in default_url_classes:
+                
+                url_class.RegenerateClassKey()
                 
             
             existing_url_classes = list( self._url_classes )
@@ -1762,7 +1818,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            url_class_key = url_class.GetMatchKey()
+            url_class_key = url_class.GetClassKey()
             parser_key = parser.GetParserKey()
             
             self._url_class_keys_to_parser_keys[ url_class_key ] = parser_key
@@ -1899,7 +1955,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             deletee_url_class_keys = set()
             
-            for ( url_class_key, parser_key ) in list(self._url_class_keys_to_parser_keys.items()):
+            for ( url_class_key, parser_key ) in self._url_class_keys_to_parser_keys.items():
                 
                 if parser_key not in parser_keys:
                     
@@ -1926,8 +1982,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             # by default, we will show post urls
             
-            old_post_url_class_keys = { url_class.GetMatchKey() for url_class in self._url_classes if url_class.IsPostURL() }
-            post_url_class_keys = { url_class.GetMatchKey() for url_class in url_classes if url_class.IsPostURL() }
+            old_post_url_class_keys = { url_class.GetClassKey() for url_class in self._url_classes if url_class.IsPostURL() }
+            post_url_class_keys = { url_class.GetClassKey() for url_class in url_classes if url_class.IsPostURL() }
             
             added_post_url_class_keys = post_url_class_keys.difference( old_post_url_class_keys )
             
@@ -1945,7 +2001,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             # delete orphans
             
-            url_class_keys = { url_class.GetMatchKey() for url_class in url_classes }
+            url_class_keys = { url_class.GetClassKey() for url_class in url_classes }
             
             self._url_class_keys_to_display.intersection_update( url_class_keys )
             
@@ -1960,7 +2016,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             for ( url_class_original, url_class_api ) in url_class_api_pairs:
                 
-                url_class_key = url_class_original.GetMatchKey()
+                url_class_key = url_class_original.GetClassKey()
                 
                 if url_class_key in self._url_class_keys_to_parser_keys:
                     
@@ -1981,6 +2037,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._url_class_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
             
             self._url_class_keys_to_parser_keys.update( url_class_keys_to_parser_keys )
+            
+            self._CleanURLClassKeysToParserKeys()
             
             self._SetDirty()
             
@@ -2020,6 +2078,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             new_url_class_keys_to_parser_keys = NetworkDomainManager.STATICLinkURLClassesAndParsers( self._url_classes, self._parsers, self._url_class_keys_to_parser_keys )
             
             self._url_class_keys_to_parser_keys.update( new_url_class_keys_to_parser_keys )
+            
+            self._CleanURLClassKeysToParserKeys()
             
             self._SetDirty()
             
@@ -2096,11 +2156,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 for url_class in url_classes:
                     
+                    if url_class in api_pair_unparsable_url_classes:
+                        
+                        continue
+                        
+                    
                     if url_class.Matches( example_url ):
                         
                         # we have a match. this is the 'correct' match for this example url, and we should not search any more, so we break below
                         
-                        url_class_key = url_class.GetMatchKey()
+                        url_class_key = url_class.GetClassKey()
                         
                         parsable = url_class.IsParsable()
                         linkable = url_class_key not in existing_url_class_keys_to_parser_keys and url_class_key not in new_url_class_keys_to_parser_keys
@@ -2125,7 +2190,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            url_class_key = url_class.GetMatchKey()
+            url_class_key = url_class.GetClassKey()
             
             if url_class_key in existing_url_class_keys_to_parser_keys:
                 
@@ -2547,6 +2612,11 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._url_template, self._replacement_phrase, self._search_terms_separator, self._example_search_text )
         
     
+    def SetGUGKey( self, gug_key: bytes ):
+        
+        self._gallery_url_generator_key = gug_key
+        
+    
     def SetGUGKeyAndName( self, gug_key_and_name ):
         
         ( gug_key, name ) = gug_key_and_name
@@ -2742,6 +2812,11 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self._gug_keys_and_names = good_gug_keys_and_names
+        
+    
+    def SetGUGKey( self, gug_key: bytes ):
+        
+        self._gallery_url_generator_key = gug_key
         
     
     def SetGUGKeyAndName( self, gug_key_and_name ):
@@ -3141,7 +3216,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta )
         
     
-    def GetMatchKey( self ):
+    def GetClassKey( self ):
         
         return self._url_class_key
         
@@ -3359,7 +3434,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return is_a_direct_file_page or is_a_single_file_post_page
         
     
-    def RegenerateMatchKey( self ):
+    def RegenerateClassKey( self ):
         
         self._url_class_key = HydrusData.GenerateKey()
         
@@ -3369,7 +3444,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._example_url = example_url
         
     
-    def SetMatchKey( self, match_key ):
+    def SetClassKey( self, match_key ):
         
         self._url_class_key = match_key
         

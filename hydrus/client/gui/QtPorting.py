@@ -1500,7 +1500,7 @@ class StatusBar( QW.QStatusBar ):
         
         QW.QStatusBar.__init__( self )
         
-        self._labels: typing.List[ QW.QLabel ] = []
+        self._labels = []
         
         for w in status_widths:
             

@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 import typing
 
 from qtpy import QtCore as QC
@@ -1197,8 +1199,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions_panel.AddSeparator()
         
-        # disabled for now
-        #subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptions.Subscription, ), self._AddSubscription )
+        subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptionLegacy.SubscriptionLegacy, ClientImportSubscriptions.SubscriptionContainer ), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
         
         subscriptions_panel.NewButtonRow()
         
@@ -1248,7 +1249,62 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _AddSubscription( self, subscription ):
+    def _AddSubscription( self, unknown_subscription ):
+        
+        if isinstance( unknown_subscription, ( ClientImportSubscriptionLegacy.SubscriptionLegacy, ClientImportSubscriptions.SubscriptionContainer ) ):
+            
+            if isinstance( unknown_subscription, ClientImportSubscriptionLegacy.SubscriptionLegacy ):
+                
+                ( subscription, query_log_containers ) = ClientImportSubscriptionLegacy.ConvertLegacySubscriptionToNew( unknown_subscription )
+                
+            elif isinstance( unknown_subscription, ClientImportSubscriptions.SubscriptionContainer ):
+                
+                subscription = unknown_subscription.subscription
+                query_log_containers = unknown_subscription.query_log_containers
+                
+            
+            old_names_to_query_log_containers = { query_log_container.GetName() : query_log_container for query_log_container in query_log_containers }
+            
+            there_were_missing_query_log_containers = False
+            
+            for query_header in subscription.GetQueryHeaders():
+                
+                old_query_log_container_name = query_header.GetQueryLogContainerName()
+                
+                new_query_log_container_name = ClientImportSubscriptionQuery.GenerateQueryLogContainerName()
+                
+                query_header.SetQueryLogContainerName( new_query_log_container_name )
+                
+                if old_query_log_container_name in old_names_to_query_log_containers:
+                    
+                    old_names_to_query_log_containers[ old_query_log_container_name ].SetName( new_query_log_container_name )
+                    
+                else:
+                    
+                    there_were_missing_query_log_containers = True
+                    
+                
+            
+            if there_were_missing_query_log_containers:
+                
+                message = 'When importing this subscription, "{}", there was missing log data! I will still let you add it, but some of its queries are incomplete. If you are ok with this, ok and then immediately re-open the manage subscriptions dialog to reinitialise the missing data back to zero (and clear any orphaned data that came with this). If you are not ok with this, cancel out now or cancel out of the whole manage subs dialog.'.format( subscription.GetName() )
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'missing query log data!', yes_label = 'import it anyway', no_label = 'back out now' )
+                
+                if result != QW.QDialog.Accepted:
+                    
+                    return
+                    
+                
+            
+            new_names_to_query_log_containers = { query_log_container.GetName() : query_log_container for query_log_container in query_log_containers }
+            
+            self._names_to_edited_query_log_containers.update( new_names_to_query_log_containers )
+            
+        elif isinstance( unknown_subscription, ClientImportSubscriptions.Subscription ):
+            
+            subscription = unknown_subscription
+            
         
         subscription.SetNonDupeName( self._GetExistingNames() )
         
@@ -1514,13 +1570,78 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return names
         
     
-    def _GetExportObject( self ):
+    def _GetSelectedSubsAsExportableContainers( self ):
+        
+        subs_to_export = self._subscriptions.GetData( only_selected = True )
+        
+        required_query_log_headers = []
+        
+        for sub in subs_to_export:
+            
+            required_query_log_headers.extend( sub.GetQueryHeaders() )
+            
+        
+        missing_query_headers = [ query_header for query_header in required_query_log_headers if query_header.GetQueryLogContainerName() not in self._names_to_edited_query_log_containers ]
+        
+        if len( missing_query_headers ) > 0:
+            
+            if len( missing_query_headers ) > 25:
+                
+                message = 'Exporting or duplicating the current selection means reading query data for {} queries from the database. This may take just a couple of seconds, or, for hundreds of thousands of cached URLs, it could be a couple of minutes (and a whack of memory). Do not panic, it will get there in the end. Do you want to do the export?'.format( HydrusData.ToHumanInt( len( missing_query_headers ) ) )
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.Accepted:
+                    
+                    return None
+                    
+                
+            
+            self.setEnabled( False )
+            
+            done = threading.Event()
+            
+            done_call = lambda: done.set()
+            
+            HG.client_controller.CallToThread( AsyncGetQueryLogContainers, self, missing_query_headers, self._CATCHQueryLogContainers, done_call )
+            
+            while True:
+                
+                if not QP.isValid( self ):
+                    
+                    return None
+                    
+                
+                if done.is_set():
+                    
+                    break
+                    
+                else:
+                    
+                    time.sleep( 0.25 )
+                    
+                
+                QW.QApplication.instance().processEvents()
+                
+            
+            self.setEnabled( True )
+            
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for subscription in self._subscriptions.GetData( only_selected = True ):
+        for sub in subs_to_export:
             
-            to_export.append( subscription )
+            query_log_container_names = [ query_header.GetQueryLogContainerName() for query_header in sub.GetQueryHeaders() ]
+            
+            query_log_containers = [ self._names_to_edited_query_log_containers[ query_log_container_name ] for query_log_container_name in query_log_container_names ]
+            
+            subscription_container = ClientImportSubscriptions.SubscriptionContainer()
+            
+            subscription_container.subscription = sub
+            subscription_container.query_log_containers = HydrusSerialisable.SerialisableList( query_log_containers )
+            
+            # duplicate important here to make sure we aren't linked with existing objects on a dupe call
+            to_export.append( subscription_container.Duplicate() )
             
         
         if len( to_export ) == 0:
@@ -1534,32 +1655,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         else:
             
             return to_export
-            
-        
-    
-    def _ImportObject( self, obj ):
-        
-        if isinstance( obj, HydrusSerialisable.SerialisableList ):
-            
-            for sub_obj in obj:
-                
-                self._ImportObject( sub_obj )
-                
-            
-        else:
-            
-            if isinstance( obj, ClientImportSubscriptions.Subscription ):
-                
-                subscription = obj
-                
-                subscription.SetNonDupeName( self._GetExistingNames() )
-                
-                self._subscriptions.AddDatas( ( subscription, ) )
-                
-            else:
-                
-                QW.QMessageBox.warning( self, 'Warning', 'That was not a subscription--it was a: '+type(obj).__name__ )
-                
             
         
     
@@ -1762,16 +1857,18 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions = self._subscriptions.GetData()
         
-        edited_query_log_containers = list( self._names_to_edited_query_log_containers.values() )
-        
-        new_query_log_container_names = set()
+        required_query_log_container_names = set()
         
         for subscription in subscriptions:
             
-            new_query_log_container_names.update( subscription.GetAllQueryLogContainerNames() )
+            required_query_log_container_names.update( subscription.GetAllQueryLogContainerNames() )
             
         
-        deletee_query_log_container_names = self._existing_query_log_container_names.difference( new_query_log_container_names )
+        edited_query_log_containers = list( self._names_to_edited_query_log_containers.values() )
+        
+        edited_query_log_containers = [ query_log_container for query_log_container in edited_query_log_containers if query_log_container.GetName() in required_query_log_container_names ]
+        
+        deletee_query_log_container_names = self._existing_query_log_container_names.difference( required_query_log_container_names )
         
         return ( subscriptions, edited_query_log_containers, deletee_query_log_container_names )
         

@@ -133,6 +133,9 @@ class App( QW.QApplication ):
                 HG.client_controller.gui.SaveAndClose()
                 
             
+            HG.view_shutdown = True
+            HG.model_shutdown = True
+            
         
     
 class Controller( HydrusController.HydrusController ):

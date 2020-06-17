@@ -1,6 +1,7 @@
 from hydrus.external import hexagonitswfheader
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusThreading
 import os
 import subprocess
 import time
@@ -49,6 +50,8 @@ def RenderPageToFile( path, temp_path, page_index ):
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
     p = subprocess.Popen( cmd, **sbp_kwargs )
     
     while p.poll() is None:
@@ -63,5 +66,5 @@ def RenderPageToFile( path, temp_path, page_index ):
         time.sleep( 0.5 )
         
     
-    p.communicate()
+    HydrusThreading.SubprocessCommunicate( p )
     

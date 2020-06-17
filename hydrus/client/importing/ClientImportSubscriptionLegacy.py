@@ -482,7 +482,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._gug_key_and_name = gug_key_and_name
         
-        self._queries: typing.List[ SubscriptionQueryLegacy ] = []
+        self._queries = []
         
         new_options = HG.client_controller.new_options
         
@@ -1883,80 +1883,80 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY ] = SubscriptionLegacy
 
 def ConvertLegacySubscriptionToNew( legacy_subscription: SubscriptionLegacy ):
-	
-	(
-	    name,
-	    gug_key_and_name,
-	    queries,
-	    checker_options,
-	    initial_file_limit,
-	    periodic_file_limit,
-	    paused,
-	    file_import_options,
-	    tag_import_options,
-	    no_work_until,
-	    no_work_until_reason
-	    ) = legacy_subscription.ToTuple()
-	
-	subscription = ClientImportSubscriptions.Subscription( name )
-	
-	subscription.SetTuple(
-	    gug_key_and_name,
-	    checker_options,
-	    initial_file_limit,
-	    periodic_file_limit,
-	    paused,
-	    file_import_options,
-	    tag_import_options,
-	    no_work_until
-	    )
-	
-	(
-	    show_a_popup_while_working,
-	    publish_files_to_popup_button,
-	    publish_files_to_page,
-	    publish_label_override,
-	    merge_query_publish_events
-	    ) = legacy_subscription.GetPresentationOptions()
-	
-	subscription.SetPresentationOptions(
-	    show_a_popup_while_working,
-	    publish_files_to_popup_button,
-	    publish_files_to_page,
-	    publish_label_override,
-	    merge_query_publish_events
-	)
-	
-	query_headers = []
-	query_log_containers = []
-	
-	for query in queries:
-		
-		query_header = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
-		
-		( query_text, check_now, last_check_time, next_check_time, query_paused, status ) = query.ToTuple()
-		
-		query_header.SetQueryText( query_text )
-		query_header.SetDisplayName( query.GetDisplayName() )
-		query_header.SetCheckNow( check_now )
-		query_header.SetLastCheckTime( last_check_time )
-		query_header.SetNextCheckTime( next_check_time )
-		query_header.SetPaused( query_paused )
-		query_header.SetCheckerStatus( status )
-		query_header.SetTagImportOptions( query.GetTagImportOptions() )
-		
-		query_log_container = ClientImportSubscriptionQuery.SubscriptionQueryLogContainer( query_header.GetQueryLogContainerName() )
-		
-		query_log_container.SetGallerySeedLog( query.GetGallerySeedLog() )
-		query_log_container.SetFileSeedCache( query.GetFileSeedCache() )
-		
-		query_header.SyncToQueryLogContainer( checker_options, query_log_container )
-		
-		query_headers.append( query_header )
-		query_log_containers.append( query_log_container )
-		
-	
-	subscription.SetQueryHeaders( query_headers )
-	
-	return ( subscription, query_log_containers )
+    
+    (
+        name,
+        gug_key_and_name,
+        queries,
+        checker_options,
+        initial_file_limit,
+        periodic_file_limit,
+        paused,
+        file_import_options,
+        tag_import_options,
+        no_work_until,
+        no_work_until_reason
+        ) = legacy_subscription.ToTuple()
+    
+    subscription = ClientImportSubscriptions.Subscription( name )
+    
+    subscription.SetTuple(
+        gug_key_and_name,
+        checker_options,
+        initial_file_limit,
+        periodic_file_limit,
+        paused,
+        file_import_options,
+        tag_import_options,
+        no_work_until
+        )
+    
+    (
+        show_a_popup_while_working,
+        publish_files_to_popup_button,
+        publish_files_to_page,
+        publish_label_override,
+        merge_query_publish_events
+        ) = legacy_subscription.GetPresentationOptions()
+    
+    subscription.SetPresentationOptions(
+        show_a_popup_while_working,
+        publish_files_to_popup_button,
+        publish_files_to_page,
+        publish_label_override,
+        merge_query_publish_events
+    )
+    
+    query_headers = []
+    query_log_containers = []
+    
+    for query in queries:
+        
+        query_header = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
+        
+        ( query_text, check_now, last_check_time, next_check_time, query_paused, status ) = query.ToTuple()
+        
+        query_header.SetQueryText( query_text )
+        query_header.SetDisplayName( query.GetDisplayName() )
+        query_header.SetCheckNow( check_now )
+        query_header.SetLastCheckTime( last_check_time )
+        query_header.SetNextCheckTime( next_check_time )
+        query_header.SetPaused( query_paused )
+        query_header.SetCheckerStatus( status )
+        query_header.SetTagImportOptions( query.GetTagImportOptions() )
+        
+        query_log_container = ClientImportSubscriptionQuery.SubscriptionQueryLogContainer( query_header.GetQueryLogContainerName() )
+        
+        query_log_container.SetGallerySeedLog( query.GetGallerySeedLog() )
+        query_log_container.SetFileSeedCache( query.GetFileSeedCache() )
+        
+        query_header.SyncToQueryLogContainer( checker_options, query_log_container )
+        
+        query_headers.append( query_header )
+        query_log_containers.append( query_log_container )
+        
+    
+    subscription.SetQueryHeaders( query_headers )
+    
+    return ( subscription, query_log_containers )
     

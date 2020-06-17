@@ -609,8 +609,8 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._get_notes = False
         self._extend_existing_note_if_possible = True
         self._conflict_resolution = NOTE_IMPORT_CONFLICT_IGNORE
-        self._all_name_override: typing.Optional[ str ] = None
-        self._names_to_name_overrides: typing.Dict[ str, str ] = dict()
+        self._all_name_override = None
+        self._names_to_name_overrides = dict()
         
     
     def _GetSerialisableInfo( self ):

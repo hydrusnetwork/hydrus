@@ -57,6 +57,13 @@ def CalculateScoreFromRating( count, rating ):
     
     return score
     
+def CheckProgramIsNotShuttingDown():
+    
+    if HG.model_shutdown:
+        
+        raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+        
+    
 def CleanRunningFile( db_path, instance ):
     
     # just to be careful
@@ -718,7 +725,7 @@ def GetSubprocessEnv():
             
         
         remove_if_hydrus_base_dir = [ 'QT_PLUGIN_PATH', 'QML2_IMPORT_PATH', 'SSL_CERT_FILE' ]
-        hydrus_base_dir = HG.client_controller.GetDBDir()
+        hydrus_base_dir = HG.controller.GetDBDir()
         
         for key in remove_if_hydrus_base_dir:
             

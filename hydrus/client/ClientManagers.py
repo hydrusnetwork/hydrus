@@ -489,8 +489,8 @@ class ServicesManager( object ):
         self._controller = controller
         
         self._lock = threading.Lock()
-        self._keys_to_services: typing.Dict[ bytes, ClientServices.Service ] = {}
-        self._services_sorted: typing.List[ ClientServices.Service ] = []
+        self._keys_to_services = {}
+        self._services_sorted = []
         
         self.RefreshServices()
         

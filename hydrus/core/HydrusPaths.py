@@ -469,9 +469,11 @@ def LaunchDirectory( path ):
             
             preexec_fn = getattr( os, 'setsid', None )
             
+            HydrusData.CheckProgramIsNotShuttingDown()
+            
             process = subprocess.Popen( cmd, preexec_fn = preexec_fn, **sbp_kwargs )
             
-            process.communicate()
+            HydrusThreading.SubprocessCommunicate( process )
             
         
     
@@ -524,9 +526,11 @@ def LaunchFile( path, launch_path = None ):
                 
                 sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = hide_terminal, text = True )
                 
+                HydrusData.CheckProgramIsNotShuttingDown()
+                
                 process = subprocess.Popen( cmd, preexec_fn = preexec_fn, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
                 
-                ( stdout, stderr ) = process.communicate()
+                ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
                 
                 if HG.subprocess_report_mode:
                     
@@ -850,9 +854,11 @@ def OpenFileLocation( path ):
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
         
+        HydrusData.CheckProgramIsNotShuttingDown()
+        
         process = subprocess.Popen( cmd, **sbp_kwargs )
         
-        process.communicate()
+        HydrusThreading.SubprocessCommunicate( process )
         
     
     thread = threading.Thread( target = do_it )

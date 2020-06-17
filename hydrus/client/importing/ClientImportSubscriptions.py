@@ -1057,22 +1057,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             return None
             
         
-        # if there are three queries due say fifty seconds after our first one runs, we should wait that little bit longer
-        LAUNCH_WINDOW = 5 * 60
-        
-        earliest_next_work_time = min( next_work_times )
-        
-        latest_nearby_next_work_time = max( ( work_time for work_time in next_work_times if work_time < earliest_next_work_time + LAUNCH_WINDOW ) )
-        
-        # but if we are expecting to launch it right now (e.g. check_now call), we won't wait
-        if HydrusData.TimeUntil( earliest_next_work_time ) < 60:
-            
-            best_next_work_time = earliest_next_work_time
-            
-        else:
-            
-            best_next_work_time = latest_nearby_next_work_time
-            
+        best_next_work_time = min( next_work_times )
         
         if not HydrusData.TimeHasPassed( self._no_work_until ):
             
@@ -1395,6 +1380,42 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
 
+LOG_CONTAINER_SYNCED = 0
+LOG_CONTAINER_UNSYNCED = 1
+LOG_CONTAINER_MISSING = 2
+
+class SubscriptionContainer( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_CONTAINER
+    SERIALISABLE_NAME = 'Subscription with all data'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.subscription = Subscription( 'default' )
+        self.query_log_containers = HydrusSerialisable.SerialisableList()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_subscription = self.subscription.GetSerialisableTuple()
+        serialisable_query_log_containers = self.query_log_containers.GetSerialisableTuple()
+        
+        return ( serialisable_subscription, serialisable_query_log_containers )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_subscription, serialisable_query_log_containers ) = serialisable_info
+        
+        self.subscription = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_subscription )
+        self.query_log_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_query_log_containers )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_CONTAINER ] = SubscriptionContainer
+
 class SubscriptionJob( object ):
     
     def __init__( self, controller, subscription ):
@@ -1485,7 +1506,7 @@ class SubscriptionsManager( object ):
         
         if len( self._names_to_running_subscription_info ) > 0:
             
-            return 1
+            return 0.5
             
         else:
             
@@ -1493,11 +1514,11 @@ class SubscriptionsManager( object ):
             
             if subscription is not None:
                 
-                return 1
+                return 0.5
                 
             else:
                 
-                return 15
+                return 5
                 
             
         
@@ -1585,12 +1606,16 @@ class SubscriptionsManager( object ):
                 
             else:
                 
-                if just_finished_work:
+                p1 = HG.client_controller.options[ 'pause_subs_sync' ]
+                p2 = HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
+                
+                stopped_because_pause = p1 or p2
+                
+                if just_finished_work and not stopped_because_pause:
                     
-                    # don't want to have a load/save cycle repeating over and over
+                    # even with the new data format, we don't want to have a load/save cycle repeating _too_ much, just to stop any weird cascades
                     # this sets min resolution of a single sub repeat cycle
-                    # we'll clear it when we have data breakup done
-                    BUFFER_TIME = 60 * 60
+                    BUFFER_TIME = 120
                     
                     next_work_time = max( next_work_time, HydrusData.GetNow() + BUFFER_TIME )
                     
@@ -1617,7 +1642,7 @@ class SubscriptionsManager( object ):
         
         try:
             
-            self._wake_event.wait( 15 )
+            self._wake_event.wait( 3 )
             
             while not ( HG.view_shutdown or self._shutdown ):
                 
@@ -1686,6 +1711,8 @@ class SubscriptionsManager( object ):
                 
                 self._UpdateSubscriptionInfo( subscription )
                 
+            
+            self._wake_event.set()
             
         
     
