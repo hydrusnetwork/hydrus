@@ -1097,10 +1097,10 @@ class ShortcutWidget( QW.QWidget ):
         QW.QWidget.__init__( self, parent )
         
         self._mouse_radio = QW.QRadioButton( 'mouse', self )
-        self._mouse_shortcut = MouseShortcutWidget( self, self._mouse_radio )
+        self._mouse_shortcut = MouseShortcutWidget( self )
         
         self._keyboard_radio = QW.QRadioButton( 'keyboard', self )
-        self._keyboard_shortcut = KeyboardShortcutWidget( self, self._keyboard_radio )
+        self._keyboard_shortcut = KeyboardShortcutWidget( self )
         
         #
         
@@ -1120,6 +1120,9 @@ class ShortcutWidget( QW.QWidget ):
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
+        
+        self._mouse_shortcut.valueChanged.connect( self._mouse_radio.click )
+        self._keyboard_shortcut.valueChanged.connect( self._keyboard_radio.click )
         
     
     def GetValue( self ):
@@ -1150,11 +1153,11 @@ class ShortcutWidget( QW.QWidget ):
     
 class KeyboardShortcutWidget( QW.QLineEdit ):
     
-    def __init__( self, parent, related_radio = None ):
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
         
         self._shortcut = ClientGUIShortcuts.Shortcut()
-        
-        self._related_radio = related_radio
         
         QW.QLineEdit.__init__( self, parent )
         
@@ -1176,12 +1179,9 @@ class KeyboardShortcutWidget( QW.QLineEdit ):
             
             self._shortcut = shortcut
             
-            if self._related_radio is not None:
-                
-                self._related_radio.setChecked( True )
-                
-            
             self._SetShortcutString()
+            
+            self.valueChanged.emit()
             
         
     
@@ -1199,13 +1199,13 @@ class KeyboardShortcutWidget( QW.QLineEdit ):
     
 class MouseShortcutWidget( QW.QWidget ):
     
-    def __init__( self, parent, related_radio = None ):
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._related_radio = related_radio
-        
-        self._button = MouseShortcutButton( self, related_radio = related_radio )
+        self._button = MouseShortcutButton( self )
         
         self._press_or_release = ClientGUICommon.BetterChoice( self )
         
@@ -1220,6 +1220,14 @@ class MouseShortcutWidget( QW.QWidget ):
         self.setLayout( layout )
         
         self._press_or_release.currentIndexChanged.connect( self._NewChoice )
+        self._button.valueChanged.connect( self._ButtonValueChanged )
+        
+    
+    def _ButtonValueChanged( self ):
+        
+        self._press_or_release.setEnabled( self._button.GetValue().IsAppropriateForPressRelease() )
+        
+        self.valueChanged.emit()
         
     
     def _NewChoice( self ):
@@ -1230,6 +1238,8 @@ class MouseShortcutWidget( QW.QWidget ):
         
         self._button.SetPressInsteadOfRelease( press_instead_of_release )
         
+        self.valueChanged.emit()
+        
     
     def GetValue( self ):
         
@@ -1238,20 +1248,24 @@ class MouseShortcutWidget( QW.QWidget ):
     
     def SetValue( self, shortcut ):
         
+        self.blockSignals( True )
+        
         self._button.SetValue( shortcut )
         
         self._press_or_release.SetValue( shortcut.shortcut_press_type )
         
+        self.blockSignals( False )
+        
     
 class MouseShortcutButton( QW.QPushButton ):
     
-    def __init__( self, parent, related_radio = None ):
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
         
         self._shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
         
         self._press_instead_of_release = True
-        
-        self._related_radio = related_radio
         
         QW.QPushButton.__init__( self, parent )
         
@@ -1268,12 +1282,9 @@ class MouseShortcutButton( QW.QPushButton ):
             
             self._shortcut = shortcut
             
-            if self._related_radio is not None:
-                
-                self._related_radio.setChecked( True )
-                
-            
             self._SetShortcutString()
+            
+            self.valueChanged.emit()
             
         
     
@@ -1310,7 +1321,7 @@ class MouseShortcutButton( QW.QPushButton ):
         self._ProcessMouseEvent( event )
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> ClientGUIShortcuts.Shortcut:
         
         return self._shortcut
         
@@ -1319,7 +1330,7 @@ class MouseShortcutButton( QW.QPushButton ):
         
         self._press_instead_of_release = press_instead_of_release
         
-        if self._shortcut.shortcut_press_type != ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK and self._shortcut.shortcut_key in ClientGUIShortcuts.SHORTCUT_MOUSE_CLICKS:
+        if self._shortcut.IsAppropriateForPressRelease():
             
             self._shortcut = self._shortcut.Duplicate()
             
@@ -1334,12 +1345,16 @@ class MouseShortcutButton( QW.QPushButton ):
             
             self._SetShortcutString()
             
+            self.valueChanged.emit()
+            
         
     
-    def SetValue( self, shortcut ):
+    def SetValue( self, shortcut: ClientGUIShortcuts.Shortcut ):
         
-        self._shortcut = shortcut
+        self._shortcut = shortcut.Duplicate()
         
         self._SetShortcutString()
+        
+        self.valueChanged.emit()
         
     

@@ -14,8 +14,8 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
-from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
@@ -48,6 +48,7 @@ from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportSimpleURLs
 from hydrus.client.importing import ClientImportWatchers
+from hydrus.client.media import ClientMedia
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
@@ -769,6 +770,11 @@ class ManagementPanel( QW.QScrollArea ):
             
         
     
+    def _GetDefaultEmptyPageStatusOverride( self ) -> str:
+        
+        return 'empty page'
+        
+    
     def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
         
         if self._current_selection_tags_list is not None:
@@ -822,6 +828,19 @@ class ManagementPanel( QW.QScrollArea ):
     def CleanBeforeDestroy( self ):
         
         pass
+        
+    
+    def GetDefaultEmptyMediaPanel( self ) -> ClientGUIResults.MediaPanel:
+        
+        file_service_key = self._management_controller.GetKey( 'file_service' )
+        
+        media_panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+        
+        status = self._GetDefaultEmptyPageStatusOverride()
+        
+        media_panel.SetEmptyPageStatusOverride( status )
+        
+        return media_panel
         
     
     def PageHidden( self ):
@@ -1308,6 +1327,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         media_results = self._controller.Read( 'media_results', hashes, sorted = True )
         
         panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+        
+        panel.SetEmptyPageStatusOverride( 'no dupes found' )
         
         self._page.SwapMediaPanel( panel )
         
@@ -1800,6 +1821,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
+        panel.SetEmptyPageStatusOverride( 'no highlighted query' )
+        
         self._page.SwapMediaPanel( panel )
         
         self._gallery_importers_listctrl.UpdateDatas()
@@ -1866,7 +1889,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         added = gallery_import.GetCreationTime()
         
-        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
         sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress, added )
@@ -1884,6 +1907,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             
+        
+    
+    def _GetDefaultEmptyPageStatusOverride( self ) -> str:
+        
+        return 'no highlighted query'
         
     
     def _GetListCtrlMenu( self ):
@@ -1905,6 +1933,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' new files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='new' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all importers\' files (including trash)', 'Gather the presented files (including trash) for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show='all_and_trash' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'show file import status', 'Show the file import status windows for the selected query.', self._ShowSelectedImportersFileSeedCaches )
+        ClientGUIMenus.AppendMenuItem( menu, 'show gallery log', 'Show the gallery log windows for the selected query.', self._ShowSelectedImportersGallerySeedLogs )
         
         if self._CanRetryFailed() or self._CanRetryIgnored():
             
@@ -1958,6 +1991,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
             
             panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            
+            panel.SetEmptyPageStatusOverride( 'no files for this query and its publishing settings' )
             
             self._page.SwapMediaPanel( panel )
             
@@ -2149,6 +2184,29 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         CGC.core().PopupMenu( self._cog_button, menu )
         
     
+    def _ShowSelectedImportersFileSeedCaches( self ):
+        
+        gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( gallery_imports ) == 0:
+            
+            return
+            
+        
+        gallery_import = gallery_imports[0]
+        
+        file_seed_cache = gallery_import.GetFileSeedCache()
+        
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'file import status' ) as dlg:
+            
+            panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( dlg, HG.client_controller, file_seed_cache )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.exec()
+            
+        
+    
     def _ShowSelectedImportersFiles( self, show = 'presented' ):
         
         gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
@@ -2205,7 +2263,33 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         else:
             
-            QW.QMessageBox.critical( self, 'Error', 'No presented hashes for that selection!' )
+            QW.QMessageBox.warning( self, 'Warning', 'No presented hashes for that selection!' )
+            
+        
+    
+    def _ShowSelectedImportersGallerySeedLogs( self ):
+        
+        gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( gallery_imports ) == 0:
+            
+            return
+            
+        
+        gallery_import = gallery_imports[0]
+        
+        gallery_seed_log = gallery_import.GetGallerySeedLog()
+        
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'gallery import log' ) as dlg:
+            
+            read_only = False
+            can_generate_more_pages = True
+            
+            panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( dlg, HG.client_controller, read_only, can_generate_more_pages, gallery_seed_log )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.exec()
             
         
     
@@ -2522,6 +2606,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
+        panel.SetEmptyPageStatusOverride( 'no highlighted watcher' )
+        
         self._page.SwapMediaPanel( panel )
         
         self._watchers_listctrl.UpdateDatas()
@@ -2575,7 +2661,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         added = watcher.GetCreationTime()
         
-        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
@@ -2604,6 +2690,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
+    def _GetDefaultEmptyPageStatusOverride( self ) -> str:
+        
+        return 'no highlighted watcher'
+        
+    
     def _GetListCtrlMenu( self ):
         
         selected_watchers = self._watchers_listctrl.GetData( only_selected = True )
@@ -2624,6 +2715,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' new files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='new' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files (including trash)', 'Gather the presented files (including trash) for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all_and_trash' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'show file import status', 'Show the file import status windows for the selected watcher.', self._ShowSelectedImportersFileSeedCaches )
+        ClientGUIMenus.AppendMenuItem( menu, 'show checker log', 'Show the checker log windows for the selected watcher.', self._ShowSelectedImportersGallerySeedLogs )
         
         if self._CanRetryFailed() or self._CanRetryIgnored():
             
@@ -2675,6 +2771,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
             
             panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            
+            panel.SetEmptyPageStatusOverride( 'no files for this watcher and its publishing settings' )
             
             self._page.SwapMediaPanel( panel )
             
@@ -2864,6 +2962,29 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
+    def _ShowSelectedImportersFileSeedCaches( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) == 0:
+            
+            return
+            
+        
+        watcher = watchers[0]
+        
+        file_seed_cache = watcher.GetFileSeedCache()
+        
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'file import status' ) as dlg:
+            
+            panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( dlg, HG.client_controller, file_seed_cache )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.exec()
+            
+        
+    
     def _ShowSelectedImportersFiles( self, show = 'presented' ):
         
         watchers = self._watchers_listctrl.GetData( only_selected = True )
@@ -2920,7 +3041,33 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         else:
             
-            QW.QMessageBox.critical( self, 'Error', 'No presented hashes for that selection!' )
+            QW.QMessageBox.warning( self, 'Warning', 'No presented hashes for that selection!' )
+            
+        
+    
+    def _ShowSelectedImportersGallerySeedLogs( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) == 0:
+            
+            return
+            
+        
+        watcher = watchers[0]
+        
+        gallery_seed_log = watcher.GetGallerySeedLog()
+        
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'checker log' ) as dlg:
+            
+            read_only = True
+            can_generate_more_pages = False
+            
+            panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( dlg, HG.client_controller, read_only, can_generate_more_pages, gallery_seed_log )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.exec()
             
         
     
@@ -3083,7 +3230,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._page_download_control = ClientGUIControls.NetworkJobControl( self._simple_parsing_jobs_panel )
         
-        self._pending_jobs_listbox = QW.QListWidget( self._simple_parsing_jobs_panel )
+        self._pending_jobs_listbox = ClientGUIListBoxes.BetterQListWidget( self._simple_parsing_jobs_panel )
+        
+        self._pending_jobs_listbox.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
         
         self._advance_button = QW.QPushButton( '\u2191', self._simple_parsing_jobs_panel )
         self._advance_button.clicked.connect( self.EventAdvance )
@@ -3339,11 +3488,11 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         ( pending_jobs, parser_status, current_action, queue_paused, files_paused ) = self._simple_downloader_import.GetStatus()
         
-        current_pending_jobs = [ QP.GetClientData( self._pending_jobs_listbox, i ) for i in range( self._pending_jobs_listbox.count() ) ]
+        current_pending_jobs = self._pending_jobs_listbox.GetData()
         
         if current_pending_jobs != pending_jobs:
             
-            selected_string = QP.ListWidgetGetStringSelection( self._pending_jobs_listbox )
+            selected_jobs = set( self._pending_jobs_listbox.GetData( only_selected = True ) )
             
             self._pending_jobs_listbox.clear()
             
@@ -3353,18 +3502,10 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 
                 pretty_job = simple_downloader_formula.GetName() + ': ' + url
                 
-                item = QW.QListWidgetItem()
-                item.setText( pretty_job )
-                item.setData( QC.Qt.UserRole, job )
-                self._pending_jobs_listbox.addItem( item )
+                self._pending_jobs_listbox.Append( pretty_job, job )
                 
             
-            selection_index = QP.ListWidgetIndexForString( self._pending_jobs_listbox, selected_string )
-            
-            if selection_index != -1:
-                
-                QP.ListWidgetSetSelection( self._pending_jobs_listbox, selection_index )
-                
+            self._pending_jobs_listbox.SelectData( selected_jobs )
             
         
         if queue_paused:
@@ -3416,13 +3557,14 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def EventAdvance( self ):
         
-        selection = QP.ListWidgetGetSelection( self._pending_jobs_listbox )
+        selected_jobs = self._pending_jobs_listbox.GetData( only_selected = True )
         
-        if selection != -1:
-            
-            job = QP.GetClientData( self._pending_jobs_listbox, selection )
+        for job in selected_jobs:
             
             self._simple_downloader_import.AdvanceJob( job )
+            
+        
+        if len( selected_jobs ) > 0:
             
             self._UpdateImportStatus()
             
@@ -3430,13 +3572,16 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def EventDelay( self ):
         
-        selection = QP.ListWidgetGetSelection( self._pending_jobs_listbox )
+        selected_jobs = list( self._pending_jobs_listbox.GetData( only_selected = True ) )
         
-        if selection != -1:
-            
-            job = QP.GetClientData( self._pending_jobs_listbox, selection )
+        selected_jobs.reverse()
+        
+        for job in selected_jobs:
             
             self._simple_downloader_import.DelayJob( job )
+            
+        
+        if len( selected_jobs ) > 0:
             
             self._UpdateImportStatus()
             
@@ -3444,13 +3589,23 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def EventDelete( self ):
         
-        selection = QP.ListWidgetGetSelection( self._pending_jobs_listbox )
+        selected_jobs = self._pending_jobs_listbox.GetData( only_selected = True )
         
-        if selection != -1:
+        message = 'Delete {} jobs?'.format( HydrusData.ToHumanInt( len( selected_jobs ) ) )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
             
-            job = QP.GetClientData( self._pending_jobs_listbox, selection )
+            return
+            
+        
+        for job in selected_jobs:
             
             self._simple_downloader_import.DeleteJob( job )
+            
+        
+        if len( selected_jobs ) > 0:
             
             self._UpdateImportStatus()
             
@@ -4469,10 +4624,17 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
             
+            panel.SetEmptyPageStatusOverride( 'search cancelled!' )
+            
             self._page.SwapMediaPanel( panel )
             
             self._UpdateCancelButton()
             
+        
+    
+    def _GetDefaultEmptyPageStatusOverride( self ) -> str:
+        
+        return 'no search done yet'
         
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
@@ -4505,6 +4667,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._controller.ResetIdleTimer()
         
+        interrupting_current_search = not self._query_job_key.IsDone()
+        
         self._query_job_key.Cancel()
         
         if self._search_enabled:
@@ -4536,8 +4700,14 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
                     
+                    panel.SetEmptyPageStatusOverride( 'no search' )
+                    
                 
                 self._page.SwapMediaPanel( panel )
+                
+            elif interrupting_current_search:
+                
+                self._CancelSearch()
                 
             
         else:
@@ -4653,6 +4823,8 @@ class ManagementPanelQuery( ManagementPanel ):
             file_service_key = self._management_controller.GetKey( 'file_service' )
             
             panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+            
+            panel.SetEmptyPageStatusOverride( 'no files found for this search' )
             
             panel.Collect( self._page_key, self._media_collect.GetValue() )
             

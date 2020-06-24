@@ -65,6 +65,7 @@ from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
+from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUISystemTray
@@ -491,8 +492,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         if self._controller.new_options.GetBoolean( 'start_client_in_system_tray' ):
             
             self._currently_minimised_to_system_tray = True
-            
-            QW.QApplication.instance().setQuitOnLastWindowClosed( False )
             
             self.hide()
             
@@ -1181,7 +1180,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     if value == 'file':
                         
-                        with QP.FileDialog( self, 'select where to save content', defaultFile = 'result.html', acceptMode = QW.QFileDialog.AcceptSave ) as f_dlg:
+                        with QP.FileDialog( self, 'select where to save content', default_filename = 'result.html', acceptMode = QW.QFileDialog.AcceptSave ) as f_dlg:
                             
                             if f_dlg.exec() == QW.QDialog.Accepted:
                                 
@@ -1686,8 +1685,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if not self._currently_minimised_to_system_tray:
             
-            QW.QApplication.instance().setQuitOnLastWindowClosed( False )
-            
             visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if tlw.isVisible() or tlw.isMinimized() ]
             
             visible_dialogs = [ tlw for tlw in visible_tlws if isinstance( tlw, QW.QDialog ) ]
@@ -1739,8 +1736,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             self._system_tray_hidden_tlws = []
             
             self.RestoreOrActivateWindow()
-            
-            QW.QApplication.instance().setQuitOnLastWindowClosed( True )
             
         
         self._currently_minimised_to_system_tray = not self._currently_minimised_to_system_tray
@@ -2980,7 +2975,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
             
-            self._controller.pub( 'notify_restart_repo_sync_daemon' )
+            self._controller.pub( 'notify_restart_repo_sync' )
             
         elif sync_type == 'export_folders':
             
@@ -3824,7 +3819,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._system_tray_icon.highlight.connect( self.RestoreOrActivateWindow )
                 self._system_tray_icon.flip_show_ui.connect( self._FlipShowHideWholeUI )
-                self._system_tray_icon.exit_client.connect( self.TryToSaveAndClose )
+                self._system_tray_icon.exit_client.connect( self.TryToExit )
                 self._system_tray_icon.flip_pause_network_jobs.connect( self.FlipNetworkTrafficPaused )
                 self._system_tray_icon.flip_pause_subscription_jobs.connect( self.FlipSubscriptionsPaused )
                 
@@ -4006,9 +4001,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        exit_allowed = self.TryToSaveAndClose()
+        self.TryToExit()
         
-        event.ignore()
+        event.ignore() # we always ignore, as we'll close through the window through other means
         
     
     def DeleteAllClosedPages( self ):
@@ -4177,7 +4172,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         window.TIMERAnimationUpdate()
                         
                     
-                except Exception as e:
+                except Exception:
                     
                     self._animation_update_windows.discard( window )
                     
@@ -4740,6 +4735,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a non-cancellable modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, False )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: HG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, 'last session' )
@@ -4905,12 +4901,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if not we_borked_linux_pyinstaller:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.TryToSaveAndClose, restart = True )
+            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.TryToExit, restart = True )
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.TryToSaveAndClose, force_shutdown_maintenance = True )
+        ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.TryToExit, force_shutdown_maintenance = True )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.TryToSaveAndClose )
+        ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.TryToExit )
         
         return ( menu, '&file' )
         
@@ -5502,15 +5498,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if action == 'exit_application':
                 
-                self.TryToSaveAndClose()
+                self.TryToExit()
                 
             elif action == 'exit_application_force_maintenance':
                 
-                self.TryToSaveAndClose( force_shutdown_maintenance = True )
+                self.TryToExit( force_shutdown_maintenance = True )
                 
             elif action == 'restart_application':
                 
-                self.TryToSaveAndClose( restart = True )
+                self.TryToExit( restart = True )
                 
             elif action == 'hide_to_system_tray':
                 
@@ -6077,11 +6073,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        if not HG.emergency_exit:
-            
-            self._controller.CreateSplash( 'hydrus client exiting' )
-            
-        
         HG.client_controller.pub( 'pause_all_media' )
         
         try:
@@ -6107,7 +6098,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for tlw in QW.QApplication.topLevelWidgets():
                 
-                if not isinstance( tlw, FrameSplash ):
+                if not isinstance( tlw, ClientGUISplash.FrameSplash ):
                     
                     tlw.hide()
                     
@@ -6147,18 +6138,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusData.PrintException( e )
             
         
-        if HG.emergency_exit:
-            
-            self.deleteLater()
-            
-            self._controller.Exit()
-            
-        else:
-            
-            QP.CallAfter( self._controller.Exit )
-            
-            self.deleteLater()
-            
+        self.deleteLater()
         
     
     def SetMediaFocus( self ):
@@ -6183,11 +6163,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.ShowPage( page )
         
     
-    def TryToSaveAndClose( self, restart = False, force_shutdown_maintenance = False ):
+    def TryToExit( self, restart = False, force_shutdown_maintenance = False ):
         
-        # the return value here is 'exit allowed'
-        
-        if not HG.emergency_exit:
+        if not self._controller.DoingFastExit():
             
             able_to_close_statement = self._notebook.GetTestAbleToCloseStatement()
             
@@ -6212,7 +6190,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if result == QW.QDialog.Rejected:
                     
-                    return False
+                    return
                     
                 
             
@@ -6222,14 +6200,72 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HG.restart = True
             
         
-        if force_shutdown_maintenance:
+        if force_shutdown_maintenance or HG.do_idle_shutdown_work:
             
             HG.do_idle_shutdown_work = True
             
+        else:
+            
+            try:
+                
+                idle_shutdown_action = self._controller.options[ 'idle_shutdown' ]
+                
+                shutdown_work_ok_by_options = idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST )
+                
+                last_shutdown_work_time = self._controller.Read( 'last_shutdown_work_time' )
+                
+                shutdown_work_period = self._controller.new_options.GetInteger( 'shutdown_work_period' )
+                
+                shutdown_work_due = HydrusData.TimeHasPassed( last_shutdown_work_time + shutdown_work_period )
+                
+                if shutdown_work_due:
+                    
+                    if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN:
+                        
+                        HG.do_idle_shutdown_work = True
+                        
+                    elif idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
+                        
+                        idle_shutdown_max_minutes = self._controller.options[ 'idle_shutdown_max_minutes' ]
+                        
+                        time_to_stop = HydrusData.GetNow() + ( idle_shutdown_max_minutes * 60 )
+                        
+                        work_to_do = self._controller.GetIdleShutdownWorkDue( time_to_stop )
+                        
+                        if len( work_to_do ) > 0:
+                            
+                            text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
+                            text += os.linesep * 2
+                            text += 'The outstanding jobs appear to be:'
+                            text += os.linesep * 2
+                            text += os.linesep.join( work_to_do )
+                            
+                            result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Maintenance is due', auto_no_time = 15 )
+                            
+                            if result == QW.QDialog.Accepted:
+                                
+                                HG.do_idle_shutdown_work = True
+                                
+                            else:
+                                
+                                # if they said no, don't keep asking
+                                self._controller.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
+                                
+                            
+                        
+                    
+                
+            except Exception as e:
+                
+                self._controller.SafeShowCriticalMessage( 'shutdown error', 'There was a problem trying to review pending shutdown maintenance work. No shutdown maintenance work will be done, and info has been written to the log. Please let hydev know.' )
+                
+                HydrusData.PrintException( e )
+                
+                HG.do_idle_shutdown_work = False
+                
+            
         
-        self.SaveAndClose()
-        
-        return True
+        QP.CallAfter( self._controller.Exit )
         
     
     def UnregisterAnimationUpdateWindow( self, window ):
@@ -6240,248 +6276,5 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def UnregisterUIUpdateWindow( self, window ):
         
         self._ui_update_windows.discard( window )
-        
-    
-class FrameSplashPanel( QW.QWidget ):
-    
-    def __init__( self, parent, controller ):
-        
-        QW.QWidget.__init__( self, parent )
-        
-        self._controller = controller
-        
-        self._my_status = FrameSplashStatus( self._controller, self )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 64 )
-        
-        self.setMinimumWidth( width )
-        
-        self.setMaximumWidth( width * 2 )
-        
-        self._drag_last_pos = None
-        self._initial_position = self.parentWidget().pos()
-        
-        # this is 124 x 166
-        self._hydrus_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_splash.png' ) )
-        
-        self._image_label = QW.QLabel( self )
-        
-        self._image_label.setPixmap( self._hydrus_pixmap )
-        
-        self._image_label.setAlignment( QC.Qt.AlignCenter )
-        
-        self._title_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
-        self._status_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
-        self._status_sub_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
-        
-        self._title_label.setAlignment( QC.Qt.AlignCenter )
-        self._status_label.setAlignment( QC.Qt.AlignCenter )
-        self._status_sub_label.setAlignment( QC.Qt.AlignCenter )
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._image_label, CC.FLAGS_CENTER )
-        QP.AddToLayout( vbox, self._title_label, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._status_label, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._status_sub_label, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        margin = ClientGUIFunctions.ConvertTextToPixelWidth( self, 3 )
-        
-        self._image_label.setMargin( margin )
-        
-        self.setLayout( vbox )
-        
-    
-    def mouseMoveEvent( self, event ):
-        
-        if ( event.buttons() & QC.Qt.LeftButton ) and self._drag_last_pos is not None:
-            
-            mouse_pos = QG.QCursor.pos()
-            
-            delta = mouse_pos - self._drag_last_pos
-            
-            win = self.window()
-            
-            win.move( win.pos() + delta )
-            
-            self._drag_last_pos = QC.QPoint( mouse_pos )
-            
-            event.accept()
-            
-            return
-            
-        
-        QW.QWidget.mouseMoveEvent( self, event )
-        
-    
-    def mousePressEvent( self, event ):
-        
-        if event.button() == QC.Qt.LeftButton:
-            
-            self._drag_last_pos = QG.QCursor.pos()
-            
-            event.accept()
-            
-            return
-            
-        
-        QW.QWidget.mousePressEvent( self, event )
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() == QC.Qt.LeftButton:
-            
-            self._drag_last_pos = None
-            
-            event.accept()
-            
-            return
-            
-        
-        QW.QWidget.mouseReleaseEvent( self, event )
-        
-    
-    def SetDirty( self ):
-        
-        ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
-        
-        self._title_label.setText( title_text )
-        self._status_label.setText( status_text )
-        self._status_sub_label.setText( status_subtext )
-        
-    
-# We have this to be an off-Qt-thread-happy container for this info, as the framesplash has to deal with messages in the fuzzy time of shutdown
-# all of a sudden, pubsubs are processed in non Qt-thread time, so this handles that safely and lets the gui know if the Qt controller is still running
-class FrameSplashStatus( object ):
-    
-    def __init__( self, controller, ui ):
-        
-        self._controller = controller
-        
-        self._lock = threading.Lock()
-        
-        self._updater = ClientGUIAsync.FastThreadToGUIUpdater( ui, ui.SetDirty )
-        
-        self._title_text = ''
-        self._status_text = ''
-        self._status_subtext = ''
-        
-        self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
-        self._controller.sub( self, 'SetText', 'splash_set_status_text' )
-        self._controller.sub( self, 'SetSubtext', 'splash_set_status_subtext' )
-        
-    
-    def _NotifyUI( self ):
-        
-        self._updater.Update()
-        
-    
-    def GetTexts( self ):
-        
-        with self._lock:
-            
-            return ( self._title_text, self._status_text, self._status_subtext )
-            
-        
-    
-    def SetText( self, text, print_to_log = True ):
-        
-        if print_to_log and len( text ) > 0:
-            
-            HydrusData.Print( text )
-            
-        
-        with self._lock:
-            
-            self._status_text = text
-            self._status_subtext = ''
-            
-        
-        self._NotifyUI()
-        
-    
-    def SetSubtext( self, text ):
-        
-        with self._lock:
-            
-            self._status_subtext = text
-            
-        
-        self._NotifyUI()
-        
-    
-    def SetTitleText( self, text, clear_undertexts = True, print_to_log = True ):
-        
-        if print_to_log:
-            
-            HydrusData.DebugPrint( text )
-            
-        
-        with self._lock:
-            
-            self._title_text = text
-            
-            if clear_undertexts:
-                
-                self._status_text = ''
-                self._status_subtext = ''
-                
-            
-        
-        self._NotifyUI()
-        
-    
-class FrameSplash( QW.QWidget ):
-    
-    def __init__( self, controller, title ):
-        
-        self._controller = controller
-        
-        QW.QWidget.__init__( self, None )
-        
-        self.setWindowFlag( QC.Qt.CustomizeWindowHint )
-        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
-        self.setWindowFlag( QC.Qt.WindowCloseButtonHint, on = False )
-        self.setWindowFlag( QC.Qt.WindowMaximizeButtonHint, on = False )
-        self.setAttribute( QC.Qt.WA_DeleteOnClose )
-        
-        self.setWindowTitle( title )
-        
-        self.setWindowIcon( QG.QIcon( self._controller.frame_icon_pixmap ) )
-        
-        self._my_panel = FrameSplashPanel( self, self._controller )
-        
-        self._vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( self._vbox, self._my_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.setLayout( self._vbox )
-        
-        screen = ClientGUIFunctions.GetMouseScreen()
-        
-        if screen is not None:
-            
-            self.move( screen.availableGeometry().center() - self.rect().center() )
-            
-        
-        self.show()
-        
-        self.raise_()
-        
-    
-    def CancelShutdownMaintenance( self ):
-        
-        self._cancel_shutdown_maintenance.setText( 'stopping\u2026' )
-        self._cancel_shutdown_maintenance.setEnabled( False )
-        
-        HG.do_idle_shutdown_work = False
-        
-    
-    def MakeCancelShutdownButton( self ):
-        
-        self._cancel_shutdown_maintenance = ClientGUICommon.BetterButton( self, 'stop shutdown maintenance', self.CancelShutdownMaintenance )
-        
-        self._vbox.insertWidget( 0, self._cancel_shutdown_maintenance )
         
     

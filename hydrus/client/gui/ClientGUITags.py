@@ -3098,7 +3098,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            with QP.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
+            with QP.FileDialog( self, 'Set the export path.', default_filename = 'parents.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
@@ -3961,7 +3961,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            with QP.FileDialog( self, 'Set the export path.', defaultFile = 'siblings.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
+            with QP.FileDialog( self, 'Set the export path.', default_filename = 'siblings.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     

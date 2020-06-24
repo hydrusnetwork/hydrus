@@ -87,15 +87,15 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
             
             if action == 'exit_application':
                 
-                HG.client_controller.gui.TryToSaveAndClose()
+                HG.client_controller.gui.TryToExit()
                 
             elif action == 'exit_application_force_maintenance':
                 
-                HG.client_controller.gui.TryToSaveAndClose( force_shutdown_maintenance = True )
+                HG.client_controller.gui.TryToExit( force_shutdown_maintenance = True )
                 
             elif action == 'restart_application':
                 
-                HG.client_controller.gui.TryToSaveAndClose( restart = True )
+                HG.client_controller.gui.TryToExit( restart = True )
                 
             elif action == 'hide_to_system_tray':
                 

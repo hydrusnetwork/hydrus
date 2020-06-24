@@ -210,7 +210,7 @@ def GenerateEris( service ):
     
 def ParseFileArguments( path, decompression_bombs_ok = False ):
     
-    HydrusImageHandling.ConvertToPngIfBmp( path )
+    HydrusImageHandling.ConvertToPNGIfBMP( path )
     
     hash = HydrusFileHandling.GetHashFromPath( path )
     

@@ -14,6 +14,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
@@ -2478,7 +2479,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                         
                     else:
                         
-                        watcher_status = 'next check ' + HydrusData.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
+                        watcher_status = 'next check ' + ClientData.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
                         
                     
                 

@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICommon
@@ -83,8 +84,8 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_gallery_seed_index = HydrusData.ToHumanInt( gallery_seed_index )
         pretty_url = url
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
-        pretty_modified = HydrusData.TimestampToPrettyTimeDelta( modified )
+        pretty_added = ClientData.TimestampToPrettyTimeDelta( added )
+        pretty_modified = ClientData.TimestampToPrettyTimeDelta( modified )
         pretty_note = note.split( os.linesep )[0]
         
         display_tuple = ( pretty_gallery_seed_index, pretty_url, pretty_status, pretty_added, pretty_modified, pretty_note )
@@ -356,7 +357,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
-    def _ImportFromPng( self ):
+    def _ImportFromPNG( self ):
         
         with QP.FileDialog( self, 'select the png with the urls', wildcard = 'PNG (*.png)' ) as dlg:
             
@@ -364,7 +365,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                 
                 path = dlg.GetPath()
                 
-                payload = ClientSerialisable.LoadFromPng( path )
+                payload = ClientSerialisable.LoadFromPNG( path )
                 
                 try:
                     
@@ -435,13 +436,13 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         gallery_seed_log.AddGallerySeeds( gallery_seeds )
         
     
-    def _ExportToPng( self ):
+    def _ExportToPNG( self ):
         
         payload = self._GetExportableURLsString()
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
             
-            panel = ClientGUISerialisable.PngExportPanel( dlg, payload )
+            panel = ClientGUISerialisable.PNGExportPanel( dlg, payload )
             
             dlg.SetPanel( panel )
             
@@ -557,7 +558,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             submenu = QW.QMenu( menu )
 
             ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPng )
+            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPNG )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
             
@@ -567,7 +568,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             submenu = QW.QMenu( menu )
 
             ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPng )
+            ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPNG )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
             

@@ -1,3 +1,4 @@
+import itertools
 import os
 import random
 import time
@@ -17,6 +18,63 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
 
+def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.List[ ClientMedia.Media ] ):
+    
+    sha256_hashes = list( itertools.chain.from_iterable( ( media.GetHashes( ordered = True ) for media in medias ) ) )
+    
+    if hash_type == 'sha256':
+        
+        desired_hashes = sha256_hashes
+        
+    else:
+        
+        num_hashes = len( sha256_hashes )
+        num_remote_sha256_hashes = len( [ itertools.chain.from_iterable( ( media.GetHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL, ordered = True ) for media in medias ) ) ] )
+        
+        desired_hashes = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
+        
+        num_missing = num_hashes - len( desired_hashes )
+        
+        if num_missing > 0:
+            
+            if num_missing == num_hashes:
+                
+                message = 'Unfortunately, none of the {} hashes could be found.'.format( hash_type )
+                
+            else:
+                
+                message = 'Unfortunately, {} of the {} hashes could not be found.'.format( HydrusData.ToHumanInt( num_missing ), hash_type )
+                
+            
+            if num_remote_sha256_hashes > 0:
+                
+                message += ' {} of the files you wanted are not currently in this client. If they have never visited this client, the lookup is impossible.'.format( HydrusData.ToHumanInt( num_remote_sha256_hashes ) )
+                
+            
+            if num_remote_sha256_hashes < num_hashes:
+                
+                message += ' It could be that some of the local files are currently missing this information in the hydrus database. A file maintenance job (under the database menu) can repopulate this data.'
+                
+            
+            QW.QMessageBox.warning( win, 'Warning', message )
+            
+        
+    
+    if len( desired_hashes ) > 0:
+        
+        hex_hashes = os.linesep.join( [ desired_hash.hex() for desired_hash in desired_hashes ] )
+        
+        HG.client_controller.pub( 'clipboard', 'text', hex_hashes )
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
+        
+        HG.client_controller.pub( 'message', job_key )
+        
+        job_key.Delete( 2 )
+        
+    
 def CopyMediaURLs( medias ):
     
     urls = set()

@@ -209,10 +209,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.ShutdownModel()
         
-        if not HG.shutting_down_due_to_already_running:
-            
-            HydrusData.CleanRunningFile( self.db_dir, 'server' )
-            
+        self.CleanRunningFile()
         
     
     def GetFilesDir( self ):
@@ -292,7 +289,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        HydrusData.RecordRunningStart( self.db_dir, 'server' )
+        self.RecordRunningStart()
         
         HydrusData.Print( 'Initialising db\u2026' )
         

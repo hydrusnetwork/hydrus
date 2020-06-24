@@ -459,29 +459,12 @@ class Canvas( QW.QWidget ):
     
     def _CopyHashToClipboard( self, hash_type ):
         
-        sha256_hash = self._current_media.GetHash()
-        
-        if hash_type == 'sha256':
+        if self._current_media is None:
             
-            hex_hash = sha256_hash.hex()
-            
-        else:
-            
-            if self._current_media.GetLocationsManager().IsLocal():
-                
-                ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
-                
-                hex_hash = other_hash.hex()
-                
-            else:
-                
-                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
-                
-                return
-                
+            return
             
         
-        HG.client_controller.pub( 'clipboard', 'text', hex_hash )
+        ClientGUIMedia.CopyHashesToClipboard( self, hash_type, [ self._current_media ] )
         
     
     def _CopyFileToClipboard( self ):
@@ -1481,6 +1464,18 @@ class Canvas( QW.QWidget ):
             elif action == 'copy_sha256_hash':
                 
                 self._CopyHashToClipboard( 'sha256' )
+                
+            elif action == 'copy_md5_hash':
+                
+                self._CopyHashToClipboard( 'md5' )
+                
+            elif action == 'copy_sha1_hash':
+                
+                self._CopyHashToClipboard( 'sha1' )
+                
+            elif action == 'copy_sha512_hash':
+                
+                self._CopyHashToClipboard( 'sha512' )
                 
             elif action == 'delete_file':
                 

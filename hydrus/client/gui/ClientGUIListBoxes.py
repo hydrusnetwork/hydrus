@@ -25,6 +25,184 @@ from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 
+class BetterQListWidget( QW.QListWidget ):
+    
+    def _DeleteIndices( self, indices: typing.Iterable[ int ] ):
+        
+        indices = sorted( indices, reverse = True )
+        
+        for index in indices:
+            
+            item = self.takeItem( index )
+            
+            del item
+            
+        
+    
+    def _GetDataIndices( self, datas: typing.Iterable[ object ] ) -> typing.List[ int ]:
+        
+        indices = []
+        
+        for index in range( self.count() ):
+            
+            list_widget_item = self.item( index )
+            
+            data = self._GetRowData( list_widget_item )
+            
+            if data in datas:
+                
+                indices.append( index )
+                
+            
+        
+        return indices
+        
+    
+    def _GetListWidgetItems( self, only_selected = False ):
+        
+        # not sure if selectedItems is always sorted, so just do it manually
+        
+        list_widget_items = []
+        
+        for index in range( self.count() ):
+            
+            list_widget_item = self.item( index )
+            
+            if only_selected and not list_widget_item.isSelected():
+                
+                continue
+                
+            
+            list_widget_items.append( list_widget_item )
+            
+        
+        return list_widget_items
+        
+    
+    def _GetRowData( self, list_widget_item: QW.QListWidgetItem ):
+        
+        return list_widget_item.data( QC.Qt.UserRole )
+        
+    
+    def _GetSelectedIndices( self ):
+        
+        return [ model_index.row() for model_index in self.selectedIndexes() ]
+        
+    
+    def _MoveRow( self, index: int, distance: int ):
+        
+        new_index = index + distance
+        
+        new_index = max( 0, new_index )
+        new_index = min( new_index, self.count() - 1 )
+        
+        if index == new_index:
+            
+            return
+            
+        
+        was_selected = self.item( index ).isSelected()
+        
+        list_widget_item = self.takeItem( index )
+        
+        self.insertItem( new_index, list_widget_item )
+        
+        list_widget_item.setSelected( was_selected )
+        
+    
+    def Append( self, text: str, data: object ):
+        
+        item = QW.QListWidgetItem()
+        
+        item.setText( text )
+        item.setData( QC.Qt.UserRole, data )
+        
+        self.addItem( item )
+        
+    
+    def DeleteData( self, datas: typing.Iterable[ object ] ):
+        
+        indices = self._GetDataIndices( datas )
+        
+        self._DeleteIndices( indices )
+        
+    
+    def DeleteSelected( self ):
+        
+        indices = self._GetSelectedIndices()
+        
+        self._DeleteIndices( indices )
+        
+    
+    def GetData( self, only_selected: bool = False ) -> typing.List[ object ]:
+        
+        datas = []
+        
+        list_widget_items = self._GetListWidgetItems( only_selected = only_selected )
+        
+        for list_widget_item in list_widget_items:
+            
+            data = self._GetRowData( list_widget_item )
+            
+            datas.append( data )
+            
+        
+        return datas
+        
+    
+    def GetNumSelected( self ) -> int:
+        
+        indices = self._GetSelectedIndices()
+        
+        return len( indices )
+        
+    
+    def MoveSelected( self, distance: int ):
+        
+        if distance == 0:
+            
+            return
+            
+        
+        # if going up, -1, then do them in ascending order
+        # if going down, +1, then do them in descending order
+        
+        indices = sorted( self._GetSelectedIndices(), reverse = distance > 0 )
+        
+        for index in indices:
+            
+            self._MoveRow( index, distance )
+            
+        
+    
+    def PopData( self, index: int ):
+        
+        if index < 0 or index > self.count() - 1:
+            
+            return None
+            
+        
+        list_widget_item = self.item( index )
+        
+        data = self._GetRowData( list_widget_item )
+        
+        self._DeleteIndices( [ index ] )
+        
+        return data
+        
+    
+    def SelectData( self, datas: typing.Iterable[ object ] ):
+        
+        list_widget_items = self._GetListWidgetItems()
+        
+        for list_widget_item in list_widget_items:
+            
+            data = self._GetRowData( list_widget_item )
+            
+            list_widget_item.setSelected( data in datas )
+            
+        
+    
 class AddEditDeleteListBox( QW.QWidget ):
     
     listBoxChanged = QC.Signal()
@@ -37,7 +215,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._listbox = QW.QListWidget( self )
+        self._listbox = BetterQListWidget( self )
         self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
@@ -112,10 +290,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         pretty_data = self._data_to_pretty_callable( data )
         
-        item = QW.QListWidgetItem()
-        item.setText( pretty_data )
-        item.setData( QC.Qt.UserRole, data )
-        self._listbox.addItem( item )
+        self._listbox.Append( pretty_data, data )
         
     
     def _AddSomeDefaults( self, defaults_callable ):
@@ -151,40 +326,32 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def _Delete( self ):
         
-        indices = list( map( lambda idx: idx.row(), self._listbox.selectedIndexes() ) )
+        num_selected = self._listbox.GetNumSelected()
         
-        if len( indices ) == 0:
+        if num_selected == 0:
             
             return
             
         
-        indices.sort( reverse = True )
-        
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusData.ToHumanInt( num_selected ) ) )
         
-        if result == QW.QDialog.Accepted:
+        if result != QW.QDialog.Accepted:
             
-            for i in indices:
-                
-                QP.ListWidgetDelete( self._listbox, i )
-                
+            return
             
+        
+        self._listbox.DeleteSelected()
         
         self.listBoxChanged.emit()
         
     
     def _Edit( self ):
         
-        for i in range( self._listbox.count() ):
+        for list_widget_item in self._listbox.selectedItems():
             
-            if not QP.ListWidgetIsSelected( self._listbox, i ):
-                
-                continue
-                
-            
-            data = QP.GetClientData( self._listbox, i )
+            data = list_widget_item.data( QC.Qt.UserRole )
             
             try:
                 
@@ -195,17 +362,12 @@ class AddEditDeleteListBox( QW.QWidget ):
                 break
                 
             
-            QP.ListWidgetDelete( self._listbox, i )
-            
             self._SetNoneDupeName( new_data )
             
             pretty_new_data = self._data_to_pretty_callable( new_data )
             
-            item = QW.QListWidgetItem()
-            item.setText( pretty_new_data )
-            item.setData( QC.Qt.UserRole, new_data )
-            self._listbox.addItem( item )
-            self._listbox.insertItem( i, item )
+            list_widget_item.setText( pretty_new_data )
+            list_widget_item.setData( QC.Qt.UserRole, new_data )
             
         
         self.listBoxChanged.emit()
@@ -235,7 +397,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         
     
-    def _ExportToPng( self ):
+    def _ExportToPNG( self ):
         
         export_object = self._GetExportObject()
         
@@ -246,7 +408,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
             with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
                 
-                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                panel = ClientGUISerialisable.PNGExportPanel( dlg, export_object )
                 
                 dlg.SetPanel( panel )
                 
@@ -255,7 +417,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         
     
-    def _ExportToPngs( self ):
+    def _ExportToPNGs( self ):
         
         export_object = self._GetExportObject()
         
@@ -266,7 +428,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         if not isinstance( export_object, HydrusSerialisable.SerialisableList ):
             
-            self._ExportToPng()
+            self._ExportToPNG()
             
             return
             
@@ -276,7 +438,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
-            panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
+            panel = ClientGUISerialisable.PNGsExportPanel( dlg, export_object )
             
             dlg.SetPanel( panel )
             
@@ -333,7 +495,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         
     
-    def _ImportFromPng( self ):
+    def _ImportFromPNG( self ):
         
         with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
@@ -343,7 +505,7 @@ class AddEditDeleteListBox( QW.QWidget ):
                     
                     try:
                         
-                        payload = ClientSerialisable.LoadFromPng( path )
+                        payload = ClientSerialisable.LoadFromPNG( path )
                         
                     except Exception as e:
                         
@@ -415,7 +577,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def _ShowHideButtons( self ):
         
-        if len( self._listbox.selectedItems() ) == 0:
+        if self._listbox.GetNumSelected() == 0:
             
             self._edit_button.setEnabled( False )
             self._delete_button.setEnabled( False )
@@ -469,19 +631,19 @@ class AddEditDeleteListBox( QW.QWidget ):
         export_menu_items = []
         
         export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
-        export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPng ) )
+        export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPNG ) )
         
         all_objs_are_named = False not in ( issubclass( o, HydrusSerialisable.SerialisableBaseNamed ) for o in self._permitted_object_types )
         
         if all_objs_are_named:
             
-            export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPngs ) )
+            export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPNGs ) )
             
         
         import_menu_items = []
         
         import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
-        import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPng ) )
+        import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPNG ) )
         
         button = ClientGUICommon.MenuButton( self, 'export', export_menu_items )
         QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
@@ -509,21 +671,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def GetData( self, only_selected = False ):
         
-        datas = []
-        
-        for i in range( self._listbox.count() ):
-            
-            if only_selected and not QP.ListWidgetIsSelected( self._listbox, i ):
-                
-                continue
-                
-            
-            data = QP.GetClientData( self._listbox, i )
-            
-            datas.append( data )
-            
-        
-        return datas
+        return self._listbox.GetData( only_selected = only_selected )
         
     
     def GetValue( self ):
@@ -552,7 +700,7 @@ class QueueListBox( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._listbox = QW.QListWidget( self )
+        self._listbox = BetterQListWidget( self )
         self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
         
         self._up_button = ClientGUICommon.BetterButton( self, '\u2191', self._Up )
@@ -608,8 +756,10 @@ class QueueListBox( QW.QWidget ):
         
         #
         
-        self._listbox.itemSelectionChanged.connect( self.EventSelection )
+        self._listbox.itemSelectionChanged.connect( self._UpdateButtons )
         self._listbox.itemDoubleClicked.connect( self._Edit )
+        
+        self._UpdateButtons()
         
     
     def _Add( self ):
@@ -632,33 +782,25 @@ class QueueListBox( QW.QWidget ):
         
         pretty_data = self._data_to_pretty_callable( data )
         
-        item = QW.QListWidgetItem()
-        item.setText( pretty_data )
-        item.setData( QC.Qt.UserRole, data )
-        self._listbox.addItem( item )
+        self._listbox.Append( pretty_data, data )
         
     
     def _Delete( self ):
         
-        indices = list( self._listbox.selectedIndexes() )
+        num_selected = self._listbox.GetNumSelected()
         
-        if len( indices ) == 0:
+        if num_selected == 0:
             
             return
             
         
-        indices.sort( reverse = True )
-        
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusData.ToHumanInt( num_selected ) ) )
         
         if result == QW.QDialog.Accepted:
             
-            for i in indices:
-                
-                QP.ListWidgetDelete( self._listbox, i )
-                
+            self._listbox.DeleteSelected()
             
             self.listBoxChanged.emit()
             
@@ -666,34 +808,16 @@ class QueueListBox( QW.QWidget ):
     
     def _Down( self ):
         
-        indices = list( map( lambda idx: idx.row(), self._listbox.selectedIndexes() ) )
-        
-        indices.sort( reverse = True )
-        
-        for i in indices:
-            
-            if i < self._listbox.count() - 1:
-                
-                if not QP.ListWidgetIsSelected( self._listbox, i+1 ): # is the one below not selected?
-                    
-                    self._SwapRows( i, i + 1 )
-                    
-                
-            
+        self._listbox.MoveSelected( 1 )
         
         self.listBoxChanged.emit()
         
     
     def _Edit( self ):
         
-        for i in range( self._listbox.count() ):
+        for list_widget_item in self._listbox.selectedItems():
             
-            if not QP.ListWidgetIsSelected( self._listbox, i ):
-                
-                continue
-                
-            
-            data = QP.GetClientData( self._listbox, i )
+            data = list_widget_item.data( QC.Qt.UserRole )
             
             try:
                 
@@ -704,87 +828,25 @@ class QueueListBox( QW.QWidget ):
                 break
                 
             
-            QP.ListWidgetDelete( self._listbox, i )
-            
             pretty_new_data = self._data_to_pretty_callable( new_data )
             
-            new_item = QW.QListWidgetItem()
-            new_item.setText( pretty_new_data )
-            new_item.setData( QC.Qt.UserRole, new_data )
-            
-            self._listbox.insertItem( i, new_item )
+            list_widget_item.setText( pretty_new_data )
+            list_widget_item.setData( QC.Qt.UserRole, new_data )
             
         
         self.listBoxChanged.emit()
-        
-    
-    def _SwapRows( self, index_a, index_b ):
-        
-        a_was_selected = QP.ListWidgetIsSelected( self._listbox, index_a )
-        b_was_selected = QP.ListWidgetIsSelected( self._listbox, index_b )
-        
-        data_a = QP.GetClientData( self._listbox, index_a )
-        data_b = QP.GetClientData( self._listbox, index_b )
-        
-        pretty_data_a = self._data_to_pretty_callable( data_a )
-        pretty_data_b = self._data_to_pretty_callable( data_b )
-        
-        QP.ListWidgetDelete( self._listbox, index_a )
-        
-        item_b = QW.QListWidgetItem()
-        item_b.setText( pretty_data_b )
-        item_b.setData( QC.Qt.UserRole, data_b )
-        self._listbox.insertItem( index_a, item_b )
-        
-        QP.ListWidgetDelete( self._listbox, index_b )
-        
-        item_a = QW.QListWidgetItem()
-        item_a.setText( pretty_data_a )
-        item_a.setData( QC.Qt.UserRole, data_a )
-        self._listbox.insertItem( index_b, item_a )
-        
-        if b_was_selected:
-            
-            QP.ListWidgetSetSelection( self._listbox, index_a )
-            
-        
-        if a_was_selected:
-            
-            QP.ListWidgetSetSelection( self._listbox, index_b )
-            
         
     
     def _Up( self ):
         
-        indices = map( lambda idx: idx.row(), self._listbox.selectedIndexes() )
-        
-        for i in indices:
-            
-            if i > 0:
-                
-                if not QP.ListWidgetIsSelected( self._listbox, i-1 ): # is the one above not selected?
-                    
-                    self._SwapRows( i, i - 1 )
-                    
-                
-            
+        self._listbox.MoveSelected( -1 )
         
         self.listBoxChanged.emit()
         
     
-    def AddDatas( self, datas ):
+    def _UpdateButtons( self ):
         
-        for data in datas:
-            
-            self._AddData( data )
-            
-        
-        self.listBoxChanged.emit()
-        
-    
-    def EventSelection( self ):
-        
-        if len( self._listbox.selectedIndexes() ) == 0:
+        if self._listbox.GetNumSelected() == 0:
             
             self._up_button.setEnabled( False )
             self._delete_button.setEnabled( False )
@@ -802,6 +864,16 @@ class QueueListBox( QW.QWidget ):
             
         
     
+    def AddDatas( self, datas ):
+        
+        for data in datas:
+            
+            self._AddData( data )
+            
+        
+        self.listBoxChanged.emit()
+        
+    
     def GetCount( self ):
         
         return self._listbox.count()
@@ -809,16 +881,7 @@ class QueueListBox( QW.QWidget ):
     
     def GetData( self, only_selected = False ):
         
-        datas = []
-        
-        for i in range( self._listbox.count() ):
-            
-            data = QP.GetClientData( self._listbox, i )
-            
-            datas.append( data )
-            
-        
-        return datas
+        return self._listbox.GetData( only_selected = only_selected )
         
     
     def Pop( self ):
@@ -828,11 +891,7 @@ class QueueListBox( QW.QWidget ):
             return None
             
         
-        data = QP.GetClientData( self._listbox, 0 )
-        
-        QP.ListWidgetDelete( self._listbox, 0 )
-        
-        return data
+        return self._listbox.PopData( 0 )
         
     
 class ListBox( QW.QScrollArea ):
@@ -2898,11 +2957,6 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def ForceTagRecalc( self ):
         
-        if self.window().isMinimized():
-            
-            return
-            
-        
         self._RecalcTags()
         
     
@@ -3299,11 +3353,6 @@ class ListBoxTagsMedia( ListBoxTags ):
         
     
     def ForceTagRecalc( self ):
-        
-        if self.window().isMinimized():
-            
-            return
-            
         
         self.SetTagsByMedia( self._last_media )
         

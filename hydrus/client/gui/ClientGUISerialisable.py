@@ -12,7 +12,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import QtPorting as QP
 
-class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
+class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, payload_obj, title = None, description = None, payload_description = None ):
         
@@ -168,14 +168,14 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             path += '.png'
             
         
-        ClientSerialisable.DumpToPng( width, payload_bytes, title, payload_description, text, path )
+        ClientSerialisable.DumpToPNG( width, payload_bytes, title, payload_description, text, path )
         
         self._export.setText( 'done!' )
         
         HG.client_controller.CallLaterQtSafe(self._export, 2.0, self._export.setText, 'export')
         
     
-class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
+class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, payload_objs ):
         
@@ -272,7 +272,7 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 path += '.png'
                 
             
-            ClientSerialisable.DumpToPng( width, payload_bytes, title, payload_description, text, path )
+            ClientSerialisable.DumpToPNG( width, payload_bytes, title, payload_description, text, path )
             
         
         self._export.setText( 'done!' )

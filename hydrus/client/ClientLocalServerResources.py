@@ -34,7 +34,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'simple' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
 def ParseLocalBooruGETArgs( requests_args ):
@@ -1210,12 +1210,12 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
             
             normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
             
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
+            
         except HydrusExceptions.URLClassException as e:
             
             raise HydrusExceptions.BadRequestException( e )
             
-        
-        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
         
         body_dict = { 'normalised_url' : normalised_url, 'url_type' : url_type, 'url_type_string' : HC.url_type_string_lookup[ url_type ], 'match_name' : match_name, 'can_parse' : can_parse }
         
@@ -1396,6 +1396,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
     def _threadDoGETJob( self, request ):
         
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
+        detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         
         try:
             
@@ -1488,6 +1489,31 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 known_urls = sorted( locations_manager.GetURLs() )
                 
                 metadata_row[ 'known_urls' ] = known_urls
+                
+                if detailed_url_information:
+                    
+                    detailed_known_urls = []
+                    
+                    for known_url in known_urls:
+                        
+                        try:
+                            
+                            normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( known_url )
+                            
+                            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
+                            
+                        except HydrusExceptions.URLClassException as e:
+                            
+                            continue
+                            
+                        
+                        detailed_dict = { 'normalised_url' : normalised_url, 'url_type' : url_type, 'url_type_string' : HC.url_type_string_lookup[ url_type ], 'match_name' : match_name, 'can_parse' : can_parse }
+                        
+                        detailed_known_urls.append( detailed_dict )
+                        
+                    
+                    metadata_row[ 'detailed_known_urls' ] = detailed_known_urls
+                    
                 
                 tags_manager = media_result.GetTagsManager()
                 

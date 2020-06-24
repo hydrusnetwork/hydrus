@@ -325,7 +325,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 description = ', '.join( gug_names )
                 
             
-            panel = ClientGUISerialisable.PngExportPanel( dlg, export_object, title = title, description = description )
+            panel = ClientGUISerialisable.PNGExportPanel( dlg, export_object, title = title, description = description )
             
             dlg.SetPanel( panel )
             
@@ -3738,14 +3738,14 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         menu_items = []
         
         menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
-        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
+        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPNG ) )
         
         self._export_button = ClientGUICommon.MenuButton( self, 'export', menu_items )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
-        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
+        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPNG ) )
         
         self._import_button = ClientGUICommon.MenuButton( self, 'import', menu_items )
         
@@ -3963,7 +3963,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def ExportToPng( self ):
+    def ExportToPNG( self ):
         
         export_object = self._GetExportObject()
         
@@ -3971,7 +3971,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
                 
-                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                panel = ClientGUISerialisable.PNGExportPanel( dlg, export_object )
                 
                 dlg.SetPanel( panel )
                 
@@ -4005,7 +4005,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def ImportFromPng( self ):
+    def ImportFromPNG( self ):
         
         with QP.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)' ) as dlg:
             
@@ -4015,7 +4015,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 try:
                     
-                    payload = ClientSerialisable.LoadFromPng( path )
+                    payload = ClientSerialisable.LoadFromPNG( path )
                     
                 except Exception as e:
                     

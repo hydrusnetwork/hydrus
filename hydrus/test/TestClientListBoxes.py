@@ -10,7 +10,7 @@ from hydrus.client.gui import QtPorting as QP
 
 def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
-    QW.QApplication.postEvent( panel.widget(), click )
+    QW.QApplication.instance().postEvent( panel.widget(), click )
     
     if do_delayed_ok_afterwards:
         

@@ -5789,13 +5789,26 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_class = self._url_class_keys_to_url_classes[ url_class_key ]
             
-            choice_tuples = [ ( parser.GetName(), parser ) for parser in self._parsers ]
+            matching_parsers = [ parser for parser in self._parsers if True in ( url_class.Matches( url ) for url in parser.GetExampleURLs() ) ]
+            unmatching_parsers = [ parser for parser in self._parsers if parser not in matching_parsers ]
+            
+            matching_parsers.sort( key = lambda p: p.GetName() )
+            unmatching_parsers.sort( key = lambda p: p.GetName() )
+            
+            choice_tuples = [ ( parser.GetName(), parser ) for parser in matching_parsers ]
+            choice_tuples.append( ( '------', None ) )
+            choice_tuples.extend( [ ( parser.GetName(), parser ) for parser in unmatching_parsers ] )
             
             try:
                 
-                parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_class.GetName(), choice_tuples )
+                parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_class.GetName(), choice_tuples, sort_tuples = False )
                 
             except HydrusExceptions.CancelledException:
+                
+                break
+                
+            
+            if parser is None:
                 
                 break
                 

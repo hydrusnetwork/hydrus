@@ -1749,7 +1749,7 @@ class FilesMaintenanceManager( object ):
         self._active_work_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, file_maintenance_active_throttle_time_delta, file_maintenance_active_throttle_files * NORMALISED_BIG_JOB_WEIGHT )
         
     
-    def _RunJob( self, media_results, job_type, job_key ):
+    def _RunJob( self, media_results, job_type, job_key, job_done_hook = None ):
         
         num_bad_files = 0
         num_thumb_refits = 0
@@ -1776,10 +1776,10 @@ class FilesMaintenanceManager( object ):
                     return
                     
                 
-                status_text = '{}: {}'.format( regen_file_enum_to_str_lookup[ job_type ], HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                
-                job_key.SetVariable( 'popup_text_1', status_text )
-                job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
+                if job_done_hook is not None:
+                    
+                    job_done_hook( job_type )
+                    
                 
                 additional_data = None
                 
@@ -1905,9 +1905,30 @@ class FilesMaintenanceManager( object ):
     
     def ForceMaintenance( self, mandated_job_types = None ):
         
-        self._reset_background_event.set()
-        
         job_key = ClientThreading.JobKey( cancellable = True )
+        
+        job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
+        
+        # in a dict so the hook has scope to alter it
+        vr_status = {}
+        
+        vr_status[ 'num_jobs_done' ] = 0
+        total_num_jobs_to_do = sum( ( value for ( key, value ) in job_types_to_counts.items() if mandated_job_types is None or key in mandated_job_types ) )
+        
+        def job_done_hook( job_type ):
+            
+            vr_status[ 'num_jobs_done' ] += 1
+            
+            num_jobs_done = vr_status[ 'num_jobs_done' ]
+            
+            status_text = '{} - {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
+            
+            job_key.SetVariable( 'popup_text_1', status_text )
+            
+            job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
+            
+        
+        self._reset_background_event.set()
         
         job_key.SetVariable( 'popup_title', 'regenerating file data' )
         
@@ -1953,7 +1974,7 @@ class FilesMaintenanceManager( object ):
                     
                     with self._lock:
                         
-                        self._RunJob( media_results, job_type, job_key )
+                        self._RunJob( media_results, job_type, job_key, job_done_hook = job_done_hook )
                         
                     
                     time.sleep( 0.0001 )
@@ -2118,6 +2139,26 @@ class FilesMaintenanceManager( object ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
+        total_num_jobs_to_do = len( media_results )
+        
+        # in a dict so the hook has scope to alter it
+        vr_status = {}
+        
+        vr_status[ 'num_jobs_done' ] = 0
+        
+        def job_done_hook( job_type ):
+            
+            vr_status[ 'num_jobs_done' ] += 1
+            
+            num_jobs_done = vr_status[ 'num_jobs_done' ]
+            
+            status_text = '{} - {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
+            
+            job_key.SetVariable( 'popup_text_1', status_text )
+            
+            job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
+            
+        
         job_key.SetVariable( 'popup_title', 'regenerating file data' )
         
         if pub_job_key:
@@ -2131,7 +2172,7 @@ class FilesMaintenanceManager( object ):
             
             try:
                 
-                self._RunJob( media_results, job_type, job_key )
+                self._RunJob( media_results, job_type, job_key, job_done_hook = job_done_hook )
                 
             finally:
                 

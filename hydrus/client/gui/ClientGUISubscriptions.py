@@ -14,6 +14,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
@@ -181,19 +182,15 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = '''****Subscriptions are not for large one-time syncs****
 
-tl;dr: Do not change the checker options or file limits until you really know what you are doing. The limits are now only 1000 (10000 in advanced mode) anyway, but you should leave them at 100/100.
+tl;dr: Do not change the checker options or file limits until you really know what you are doing. There are good technical reasons for it, and you can screw yourself.
 
-A subscription will start at a site's newest files and keep searching further and further back into the past. It will stop naturally if it reaches the end of results or starts to see files it saw in a previous check (and so assumes it has 'caught up' to where it was before). It will stop 'artificially' if it finds enough new files to hit the file limits here.
+Normally, a subscription starts at a site's newest files and searches until it reaches the end of results or starts to see files it saw in a previous check (having 'caught up' to where it was before). It will stop early if it finds enough new files to hit the file limits here. Unless you have a very special reason, it is important to keep these file limit numbers low. Being automated, it is good to have some brakes to stop them if something goes wrong.
 
-Unless you have a very special reason, it is important to keep these file limit numbers low. Being automated, subscriptions typically run when you are not looking at the client, and if they go wrong, it is good to have some brakes to stop them going very wrong.
+You want a few initial files so the sub has some data to work with, but not too much that the first sync takes ages. You want a limit on regular checks in case a site changes its URL format (say from artistname.deviantart.com to deviantart.com/artistname) or changes its markup or otherwise starts delivering unusual results, and the subscription may not realise it is seeing the old urls as new. If the periodic limit is 100, this is no big deal--you'll likely get a popup message out of it and might need to update the respective downloader--but if it were 60000 (or infinite, and the site were somehow serving you random/full results!), you could run into a huge problem completely by accident.
 
-First of all, making sure you only get a few dozen or hundred on the first check means you do not spend twenty minutes fetching all the search's thousands of file URLs that you may well have previously downloaded, but it is even more important for regular checks, where the sub is trying to find where it got to before: if a site changes its URL format (say from artistname.deviantart.com to deviantart.com/artistname) or changes its markup or otherwise starts delivering unusual results, the subscription may not realise it is seeing the wrong urls and will keep syncing until it hits its regular limit. If the periodic limit is 100, this is no big deal--you'll likely get a popup message out of it and might need to update the respective downloader--but if it were 60000 (or infinite, and the site were somehow serving you random/full results!), you could run into a huge problem completely by accident.
+Subscription sync searches are also 'fragile' (they cannot pause/resume the gallery pagewalk, only completely cancel), so it is best if they are short--say, no more than five pages. It is better for a sub to regularly pick up a small number of new files than trying to catch up in a giant rush.
 
-Subscription sync searches are somewhat 'fragile' (they cannot pause/resume the gallery pagewalk, only completely cancel), so it is best if they are short--say, no more than five pages. It is better for a sub to pick up a small number of new files every few weeks than trying to catch up in a giant rush once a year.
-
-If you are not experienced with subscriptions, I strongly suggest you set these to something like 100 for the first check and 100 thereafter, which is likely your default. This works great for typical artist and character queries.
-
-If you want to get all of an artist's files from a site, use the manual gallery download page first. A good routine is to check that you have the right search text and it all works correctly and that you know what tags you want, and then once that big queue is fully downloaded synced, start a new sub with the same settings to continue checking for anything posted in future.'''
+If you want to get all of an artist's files from a site, use the manual gallery download page first. Check you have the right search text and it all works correctly there, and then once that big queue is fully downloaded, start a new sub with the same settings to continue checking for anything posted in future.'''
         
         help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.global_pixmaps().help, QW.QMessageBox.information, None, 'Information', message )
         
@@ -473,7 +470,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         else:
             
-            pretty_latest_new_file_time = HydrusData.TimestampToPrettyTimeDelta( latest_new_file_time )
+            pretty_latest_new_file_time = ClientData.TimestampToPrettyTimeDelta( latest_new_file_time )
             
         
         if last_check_time is None or last_check_time == 0:
@@ -482,7 +479,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         else:
             
-            pretty_last_check_time = HydrusData.TimestampToPrettyTimeDelta( last_check_time )
+            pretty_last_check_time = ClientData.TimestampToPrettyTimeDelta( last_check_time )
             
         
         pretty_next_check_time = query_header.GetNextCheckStatusString()
@@ -994,7 +991,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         else:
             
-            status = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
+            status = 'delayed--retrying ' + ClientData.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.setText( status )
@@ -1420,7 +1417,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_latest_new_file_time = HydrusData.TimestampToPrettyTimeDelta( latest_new_file_time )
+            pretty_latest_new_file_time = ClientData.TimestampToPrettyTimeDelta( latest_new_file_time )
             
         
         if last_checked is None or last_checked == 0:
@@ -1429,7 +1426,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_last_checked = HydrusData.TimestampToPrettyTimeDelta( last_checked )
+            pretty_last_checked = ClientData.TimestampToPrettyTimeDelta( last_checked )
             
         
         #
@@ -1515,7 +1512,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_delay = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
+            pretty_delay = 'delayed--retrying ' + ClientData.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
             delay = HydrusData.GetTimeDeltaUntilTime( no_work_until )
             
         

@@ -127,34 +127,3 @@ def DAEMONMaintainTrash( controller ):
             
         
     
-def DAEMONSynchroniseRepositories( controller ):
-    
-    if not controller.options[ 'pause_repo_sync' ]:
-        
-        services = controller.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
-        
-        for service in services:
-            
-            if HydrusThreading.IsThreadShuttingDown():
-                
-                return
-                
-            
-            if controller.options[ 'pause_repo_sync' ]:
-                
-                return
-                
-            
-            service.SyncRemote()
-            
-            service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_IDLE )
-            
-            if HydrusThreading.IsThreadShuttingDown():
-                
-                return
-                
-            
-            time.sleep( 1 )
-            
-        
-    

@@ -7,6 +7,7 @@ import time
 import urllib
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.core import HydrusConstants as HC
@@ -640,7 +641,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = status_text + ' - retrying in {}'.format( HydrusData.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
+                self._status_text = status_text + ' - retrying in {}'.format( ClientData.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
                 
             
             time.sleep( 1 )
@@ -668,7 +669,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = status_text + ' - retrying in {}'.format( HydrusData.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
+                self._status_text = status_text + ' - retrying in {}'.format( ClientData.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
                 
             
             time.sleep( 1 )
@@ -1334,7 +1335,7 @@ class NetworkJob( object ):
                     
                 else:
                     
-                    self._status_text = 'waiting for a ' + self._gallery_token_name + ' slot: next ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 1 )
+                    self._status_text = 'waiting for a ' + self._gallery_token_name + ' slot: next ' + ClientData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 1 )
                     
                     self._Sleep( 1 )
                     
@@ -1379,13 +1380,13 @@ class NetworkJob( object ):
                         
                         waiting_duration = override_waiting_duration
                         
-                        waiting_str = 'overriding bandwidth ' + HydrusData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                        waiting_str = 'overriding bandwidth ' + ClientData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
                         
                     else:
                         
                         waiting_duration = bandwidth_waiting_duration
                         
-                        waiting_str = 'bandwidth free ' + HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                        waiting_str = 'bandwidth free ' + ClientData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
                         
                     
                     waiting_str += '\u2026 (' + bandwidth_network_context.ToHumanString() + ')'

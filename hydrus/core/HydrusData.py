@@ -15,6 +15,7 @@ import time
 import traceback
 import yaml
 import itertools
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -67,11 +68,6 @@ def CheckProgramIsNotShuttingDown():
 def CleanRunningFile( db_path, instance ):
     
     # just to be careful
-    
-    if HG.shutting_down_due_to_already_running:
-        
-        return
-        
     
     path = os.path.join( db_path, instance + '_running' )
     
@@ -412,11 +408,6 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
     if timestamp is None:
         
         timestamp = 0
-        
-    
-    if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
-        
-        return ConvertTimestampToPrettyTime( timestamp )
         
     
     if not show_seconds:
@@ -1035,6 +1026,18 @@ def MergeKeyToListDicts( key_to_list_dicts ):
         
     
     return result
+    
+def PartitionIterator( pred: typing.Callable[ [ object ], bool ], stream: typing.Iterable[ object ] ):
+    
+    ( t1, t2 ) = itertools.tee( stream )
+    
+    return ( itertools.filterfalse( pred, t1 ), filter( pred, t2 ) )
+    
+def PartitionIteratorIntoLists( pred: typing.Callable[ [ object ], bool ], stream: typing.Iterable[ object ] ):
+    
+    ( a, b ) = PartitionIterator( pred, stream )
+    
+    return ( list( a ), list( b ) )
     
 def Print( text ):
     

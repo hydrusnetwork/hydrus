@@ -703,7 +703,44 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         
     
-    def _ExportToPng( self ):
+    def _ExportToJSON( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            json = export_object.DumpToString()
+            
+            with QP.FileDialog( self, 'select where to save the json file', default_filename = 'export.json', wildcard = 'JSON (*.json)', acceptMode = QW.QFileDialog.AcceptSave ) as f_dlg:
+                
+                if f_dlg.exec() == QW.QDialog.Accepted:
+                    
+                    path = f_dlg.GetPath()
+                    
+                    if os.path.exists( path ):
+                        
+                        from hydrus.client.gui import ClientGUIDialogsQuick
+                        
+                        message = 'The path "{}" already exists! Ok to overwrite?'.format( path )
+                        
+                        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                        
+                        if result != QW.QDialog.Accepted:
+                            
+                            return
+                            
+                        
+                    
+                    with open( path, 'w', encoding = 'utf-8' ) as f:
+                        
+                        f.write( json )
+                        
+                    
+                
+            
+        
+    
+    def _ExportToPNG( self ):
         
         export_object = self._GetExportObject()
         
@@ -714,7 +751,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
                 
-                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                panel = ClientGUISerialisable.PNGExportPanel( dlg, export_object )
                 
                 dlg.SetPanel( panel )
                 
@@ -723,7 +760,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         
     
-    def _ExportToPngs( self ):
+    def _ExportToPNGs( self ):
         
         export_object = self._GetExportObject()
         
@@ -734,7 +771,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if not isinstance( export_object, HydrusSerialisable.SerialisableList ):
             
-            self._ExportToPng()
+            self._ExportToPNG()
             
             return
             
@@ -744,7 +781,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
-            panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
+            panel = ClientGUISerialisable.PNGsExportPanel( dlg, export_object )
             
             dlg.SetPanel( panel )
             
@@ -819,7 +856,22 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._listctrl.Sort()
         
     
-    def _ImportFromPng( self ):
+    def _ImportFromJSON( self ):
+        
+        with QP.FileDialog( self, 'select the json or jsons with the serialised data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'JSON (*.json)|*.json' ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                paths = dlg.GetPaths()
+                
+                self._ImportJSONs( paths )
+                
+            
+        
+        self._listctrl.Sort()
+        
+    
+    def _ImportFromPNG( self ):
         
         with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
@@ -827,7 +879,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 paths = dlg.GetPaths()
                 
-                self._ImportPngs( paths )
+                self._ImportPNGs( paths )
                 
             
         
@@ -871,13 +923,46 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         
     
-    def _ImportPngs( self, paths ):
+    def _ImportJSONs( self, paths ):
         
         for path in paths:
             
             try:
                 
-                payload = ClientSerialisable.LoadFromPng( path )
+                with open( path, 'r', encoding = 'utf-8' ) as f:
+                    
+                    payload = f.read()
+                    
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', str(e) )
+                
+                return
+                
+            
+            try:
+                
+                obj = HydrusSerialisable.CreateFromString( payload )
+                
+                self._ImportObject( obj )
+                
+            except:
+                
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in "{}"!'.format( path ) )
+                
+                return
+                
+            
+        
+    
+    def _ImportPNGs( self, paths ):
+        
+        for path in paths:
+            
+            try:
+                
+                payload = ClientSerialisable.LoadFromPNG( path )
                 
             except Exception as e:
                 
@@ -894,7 +979,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the file!' )
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in "{}"!'.format( path ) )
                 
                 return
                 
@@ -975,7 +1060,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         export_menu_items = []
         
         export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
-        export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPng ) )
+        export_menu_items.append( ( 'normal', 'to json file', 'Serialise the selected data and export to a json file.', self._ExportToJSON ) )
+        export_menu_items.append( ( 'normal', 'to png file', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPNG ) )
         
         if self._custom_get_callable is None:
             
@@ -983,14 +1069,15 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             if all_objs_are_named:
                 
-                export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPngs ) )
+                export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPNGs ) )
                 
             
         
         import_menu_items = []
         
         import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
-        import_menu_items.append( ( 'normal', 'from pngs (note you can also drag and drop pngs onto this list)', 'Load a data from an encoded png.', self._ImportFromPng ) )
+        import_menu_items.append( ( 'normal', 'from json files', 'Load a data from .json files.', self._ImportFromJSON ) )
+        import_menu_items.append( ( 'normal', 'from png files (you can also drag and drop pngs onto this list)', 'Load a data from an encoded png.', self._ImportFromPNG ) )
         
         self.AddMenuButton( 'export', export_menu_items, enabled_only_on_selection = True )
         self.AddMenuButton( 'import', import_menu_items )
@@ -1043,13 +1130,16 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
+        message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting json or png files.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
         if result == QW.QDialog.Accepted:
             
-            self._ImportPngs( paths )
+            ( jsons, pngs ) = HydrusData.PartitionIteratorIntoLists( lambda path: path.endswith( '.png' ), paths )
+            
+            self._ImportPNGs( pngs )
+            self._ImportJSONs( jsons )
             
             self._listctrl.Sort()
             

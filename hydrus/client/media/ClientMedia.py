@@ -3,6 +3,7 @@ import random
 import typing
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientTags
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -382,7 +383,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = 0
             
         
-        statement = '{} {} {}'.format( HydrusData.TimestampToPrettyTimeDelta( s_ts ), operator, HydrusData.TimestampToPrettyTimeDelta( c_ts ) )
+        statement = '{} {} {}'.format( ClientData.TimestampToPrettyTimeDelta( s_ts ), operator, ClientData.TimestampToPrettyTimeDelta( c_ts ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
@@ -2321,14 +2322,14 @@ class MediaSingleton( Media ):
             
             timestamp = locations_manager.GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'imported ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
+            lines.append( 'imported ' + ClientData.TimestampToPrettyTimeDelta( timestamp ) )
             
         
         if CC.TRASH_SERVICE_KEY in current_service_keys:
             
             timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
             
-            lines.append( 'trashed ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
+            lines.append( 'trashed ' + ClientData.TimestampToPrettyTimeDelta( timestamp ) )
             
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
@@ -2340,7 +2341,7 @@ class MediaSingleton( Media ):
         
         if file_modified_timestamp is not None:
             
-            lines.append( 'file modified: {}'.format( HydrusData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) )
+            lines.append( 'file modified: {}'.format( ClientData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) )
             
         
         for service_key in current_service_keys:
@@ -2372,7 +2373,7 @@ class MediaSingleton( Media ):
                 status = 'uploaded '
                 
             
-            lines.append( status + 'to ' + service.GetName() + ' ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
+            lines.append( status + 'to ' + service.GetName() + ' ' + ClientData.TimestampToPrettyTimeDelta( timestamp ) )
             
         
         return lines

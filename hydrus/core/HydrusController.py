@@ -23,6 +23,9 @@ class HydrusController( object ):
         
         self._name = 'hydrus'
         
+        self._last_shutdown_was_bad = False
+        self._i_own_running_file = False
+        
         self.db_dir = db_dir
         
         self.db = None
@@ -63,6 +66,8 @@ class HydrusController( object ):
         self._just_woke_from_sleep = False
         
         self._system_busy = False
+        
+        self._doing_fast_exit = False
         
     
     def _GetCallToThread( self ):
@@ -349,6 +354,14 @@ class HydrusController( object ):
         call_to_thread.put( callable, *args, **kwargs )
         
     
+    def CleanRunningFile( self ):
+        
+        if self._i_own_running_file:
+            
+            HydrusData.CleanRunningFile( self.db_dir, self._name )
+            
+        
+    
     def ClearCaches( self ):
         
         for cache in list(self._caches.values()): cache.Clear()
@@ -387,6 +400,11 @@ class HydrusController( object ):
         
         HydrusData.ShowText( 'slow scheduler:' )
         HydrusData.ShowText( summary )
+        
+    
+    def DoingFastExit( self ) -> bool:
+        
+        return self._doing_fast_exit
         
     
     def GetBootTime( self ):
@@ -539,6 +557,11 @@ class HydrusController( object ):
             
         
     
+    def LastShutdownWasBad( self ):
+        
+        return self._last_shutdown_was_bad
+        
+    
     def MaintainDB( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
         pass
@@ -587,6 +610,15 @@ class HydrusController( object ):
         return self._Read( action, *args, **kwargs )
         
     
+    def RecordRunningStart( self ):
+        
+        self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( self.db_dir, self._name )
+        
+        self._i_own_running_file = True
+        
+        HydrusData.RecordRunningStart( self.db_dir, self._name )
+        
+    
     def ReleaseThreadSlot( self, thread_type ):
         
         with self._thread_slot_lock:
@@ -615,6 +647,11 @@ class HydrusController( object ):
     def ResetIdleTimer( self ):
         
         self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
+        
+    
+    def SetDoingFastExit( self, value: bool ):
+        
+        self._doing_fast_exit = value
         
     
     def ShouldStopThisWork( self, maintenance_mode, stop_time = None ):

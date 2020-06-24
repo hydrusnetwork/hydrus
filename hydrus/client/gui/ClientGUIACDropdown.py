@@ -1378,6 +1378,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services:
             
+            if service.GetServiceKey() == CC.LOCAL_UPDATE_SERVICE_KEY and not advanced_mode:
+                
+                continue
+                
+            
             ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeFileService, service.GetServiceKey() )
             
         

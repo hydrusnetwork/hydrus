@@ -14,7 +14,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTags
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -257,8 +256,6 @@ class BitmapManager( object ):
             
             height = 20
             
-        
-        key = ( width, height )
         
         return QG.QPixmap( width, height )
         
@@ -517,8 +514,7 @@ class ServicesManager( object ):
         
         key = lambda s: s.GetName()
         
-        self._services_sorted = list( services )
-        self._services_sorted.sort( key = key )
+        self._services_sorted = sorted( services, key = key )
         
     
     def Filter( self, service_keys: typing.Iterable[ bytes ], desired_types: typing.Iterable[ int ] ):

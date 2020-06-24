@@ -70,7 +70,7 @@ def GetThreadInfo( thread = None ):
     
 def IsThreadShuttingDown():
     
-    if HG.emergency_exit:
+    if HG.controller.DoingFastExit():
         
         return True
         

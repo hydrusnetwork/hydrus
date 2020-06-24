@@ -8,6 +8,64 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 402</h3></li>
+				<ul>
+					<li>in many situations--such as a search result that gives no results, or a search cancel, or a downloader page cleared of a highlight--pages will now report a special status text rather than '0 files', such as 'no results for this search' or 'search cancelled!' (issue #277)</li>
+					<li>new pages, and the first page of a loaded session, should now correctly publish their status text to the status bar immediately after initialisation, (previously blank until first change)</li>
+					<li>clicking the 'searching immediately' button while a search is ongoing now correctly cancels a search, cleaning up status and page and buttons, rather than just stopping current work immediately</li>
+					<li>added 'copy_xxx_hash' shortcuts to the media shortcut set for 'md5', 'sha1', and 'sha512'</li>
+					<li>when copying file hashes to clipboard, a popup appears for two seconds to verify what happened</li>
+					<li>when copying file hashes to clipboard, recovery from missing hashes is more graceful, with multiple error report states</li>
+					<li>the way the client shuts down is untangled. the order in which the gui, managers, threads, database are shut down is smoothed out, with better error handling and fewer potential logical holes</li>
+					<li>the 'should I do shutdown work?' dialog is now only presented in the clean shutdown pipeline</li>
+					<li>menu labels now elide at 128 characters, extended from 64 previously. hopefully this strikes a better balance between fixed texts we do want to read while still not letting long dynamic texts go nuts (issue #276)</li>
+					<li>gallery and watcher pages now have 'show file/gallery log' on their menus, which directly zoom in to the edit dialogs for the top-most selected query or watcher (issue #256)</li>
+					<li>when file maintenance is forced to run from the thumbnail menu or file maintenance job panel, it now provides x/y progress text and gauge based on total jobs, e.g. 1,234/10,000, rather than out of the 256-job batches (issue #264)</li>
+					<li>the simple downloader page now updates its pending jobs list more efficiently, and supports multiple selection, and presents a yes/no confirmation on delete</li>
+					<li>most lists with clipboard/png import/export buttons can now also do .json files. they also accept json files in a drag and drop. you can mix json and png files in a multi-file drag and drop</li>
+					<li>when selecting a parser for a url class in 'manage url class links', those parsers with example urls that match the url class are now separately listed at the top of the choice dialog</li>
+					<li>in the recent autocomplete rewrite, the hidden repository update file domain was accidentally exposed in the file domain button. after some testing, it actually works(!), but as this is an advanced topic, it is now hidden behind advanced mode</li>
+					<li>the way services are deleted or completely reset is now changed to what should be a significantly faster and smaller operation</li>
+					<li>the latest user-made nitter/twitter downloader is rolled in to the update. some little fixes and adds support for mobile.twitter.com url imports</li>
+					<li>fixed an issue where uninitialised repositories thought they were caught up</li>
+					<li>to reflect that it does nothing in this case, the mouse shortcut edit panel now disables the press/release choice on double-click or scroll</li>
+					<li>fixed file save dialogs not filling in the default filename properly</li>
+					<li>removed an old wx safety hack where new pages would silently not create while the client was minimised. this fixes issues with large session loading and subscriptions publishing files to page names that do not yet exist while the client is minimised</li>
+					<li>removed an old wx safety hack where some tag lists would not regen their current tag display while the client was minimised</li>
+					<li>in lieu of a future better bit of html subscription help that I link to from the subscription panel, the 'file limits' help button has temporarily briefer text so it doesn't make such a giant popup</li>
+					<li>moving back to pyinstaller 3.5 (from 3.6) for the windows build, which appears to fix some dll loading for some users (issue #244)</li>
+					<li>the windows and linux builds are updated to Qt 5.15 (from 5.13.2). it does not seem to have the odd problems 5.14 gave us. let me know if you have any trouble or if any weird graphical issues magically fix themselves</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the /get_files/file_metadata call has a new true/false parameter, 'detailed_url_information', default false, that adds 'detailed_known_urls' structure to list the known urls results as in /add_urls/get_url_info. it has a help example and a unit test and everything (issue #235)</li>
+					<li>the client api version is now 13</li>
+					<li>.</li>
+					<li>boring cleanup details:</li>
+					<li>reshuffled the shutdown code. now the controller takes the lead, booting splash as appropriate and commanding gui to save and close, and then proceeds to other shutdown</li>
+					<li>fast and normal shutdown code is unified, just run differently</li>
+					<li>shutdown calls should now always be idempotent</li>
+					<li>a catch for some OS-level shutdown commands, normally user log-off, also hooks into the newer UI-free fast shutdown</li>
+					<li>SIGINT and SIGTERM also hook better into the new shutdown, and are thread safe</li>
+					<li>performing multiple SIGINTS on shutdown should no longer throw an error after the gui is deleted</li>
+					<li>more potential startup/shutdown errors are now caught and presented to the user and saved to log, with subsequent shutdown urgency accelerated afterwards</li>
+					<li>critical errors on a fast shutdown no longer present to the user--they just save to log</li>
+					<li>updated how an emergency shutdown state is tested</li>
+					<li>updated how a 'clean exit complete' state is set and tested</li>
+					<li>various unusual shutdown states now skip human interaction and jump straight to guaranteed fast shutdown</li>
+					<li>refactored splash window to its own file</li>
+					<li>wrote a new qlistwidget subclass to do some common data storage/retrieval/selection. it will eventually replace most lists across the program</li>
+					<li>the 'queue' list widget that has up/delete/down and add/edit buttons beside a list has nicer backend code and now initialises with its buttons correctly disabled due to no selection</li>
+					<li>the similar 'add/edit/delete' list widget is updated to use the nicer backend</li>
+					<li>some wx->Qt list hacks, which were themselves using borked old display-string-based indexing, are deleted</li>
+					<li>the repository download/process daemon has been moved to the newer job scheduler. it should start up and close out on program exit a bit more neatly</li>
+					<li>untangled some messy value-change radio button code in the shortcut edit panel</li>
+					<li>updated the way page status text propagates up from the thumbnail grid to the main gui to Qt signals instead of the old inefficient pubsub</li>
+					<li>all UI file hash clipboard copying code is now unified and improved</li>
+					<li>added a new subscription file publish debug test to help->debug->gui</li>
+					<li>refactored some client specific time delta rendering code out of core to client</li>
+					<li>misc event cleanup code</li>
+					<li>misc code style cleanup</li>
+				</ul>
 				<li><h3>version 401</h3></li>
 				<ul>
 					<li>subscriptions:</li>

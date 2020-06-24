@@ -1655,10 +1655,10 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_client_files_locations ( location TEXT, weight INTEGER );' )
         self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_thumbnail_override_location ( location TEXT );' )
         
-        self._c.execute( 'CREATE TABLE current_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+        self._c.execute( 'CREATE TABLE current_files ( service_id INTEGER, hash_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'current_files', [ 'timestamp' ] )
         
-        self._c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+        self._c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_files ( media_id INTEGER PRIMARY KEY, king_hash_id INTEGER UNIQUE );' )
         
@@ -1688,10 +1688,10 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER, name_id INTEGER, note_id INTEGER, PRIMARY KEY ( hash_id, name_id ) );' )
         self._CreateIndex( 'file_notes', [ 'note_id' ] )
         
-        self._c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+        self._c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'file_transfers', [ 'hash_id' ] )
         
-        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, hash_id, reason_id ) );' )
+        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, hash_id, reason_id ) );' )
         self._CreateIndex( 'file_petitions', [ 'hash_id' ] )
         
         self._c.execute( 'CREATE TABLE json_dict ( name TEXT PRIMARY KEY, dump BLOB_BYTES );' )
@@ -1700,7 +1700,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE last_shutdown_work_time ( last_shutdown_work_time INTEGER );' )
         
-        self._c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, rating REAL, PRIMARY KEY ( service_id, hash_id ) );' )
+        self._c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER, hash_id INTEGER, rating REAL, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'local_ratings', [ 'hash_id' ] )
         self._CreateIndex( 'local_ratings', [ 'rating' ] )
         
@@ -1709,30 +1709,25 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
         
-        self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id ) );' )
-        
-        self._c.execute( 'CREATE TABLE remote_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, count INTEGER, rating REAL, score REAL, PRIMARY KEY ( service_id, hash_id ) );' )
-        self._CreateIndex( 'remote_ratings', [ 'hash_id' ] )
-        self._CreateIndex( 'remote_ratings', [ 'rating' ] )
-        self._CreateIndex( 'remote_ratings', [ 'score' ] )
+        self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id ) );' )
         
         self._c.execute( 'CREATE TABLE remote_thumbnails ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
         
-        self._c.execute( 'CREATE TABLE service_filenames ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, filename TEXT, PRIMARY KEY ( service_id, hash_id ) );' )
-        self._c.execute( 'CREATE TABLE service_directories ( service_id INTEGER REFERENCES services ON DELETE CASCADE, directory_id INTEGER, num_files INTEGER, total_size INTEGER, note TEXT, PRIMARY KEY ( service_id, directory_id ) );' )
-        self._c.execute( 'CREATE TABLE service_directory_file_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, directory_id INTEGER, hash_id INTEGER, PRIMARY KEY ( service_id, directory_id, hash_id ) );' )
+        self._c.execute( 'CREATE TABLE service_filenames ( service_id INTEGER, hash_id INTEGER, filename TEXT, PRIMARY KEY ( service_id, hash_id ) );' )
+        self._c.execute( 'CREATE TABLE service_directories ( service_id INTEGER, directory_id INTEGER, num_files INTEGER, total_size INTEGER, note TEXT, PRIMARY KEY ( service_id, directory_id ) );' )
+        self._c.execute( 'CREATE TABLE service_directory_file_map ( service_id INTEGER, directory_id INTEGER, hash_id INTEGER, PRIMARY KEY ( service_id, directory_id, hash_id ) );' )
         
-        self._c.execute( 'CREATE TABLE service_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
+        self._c.execute( 'CREATE TABLE service_info ( service_id INTEGER, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
         
         self._c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT UNIQUE );' )
         
-        self._c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
+        self._c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
         
-        self._c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
+        self._c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
         
-        self._c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
+        self._c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
         
-        self._c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
+        self._c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
         
         self._c.execute( 'CREATE TABLE url_map ( hash_id INTEGER, url_id INTEGER, PRIMARY KEY ( hash_id, url_id ) );' )
         self._CreateIndex( 'url_map', [ 'url_id' ] )
@@ -2195,9 +2190,27 @@ class DB( HydrusDB.HydrusDB ):
         service_key = service.GetServiceKey()
         service_type = service.GetServiceType()
         
+        # for a long time, much of this was done with foreign keys, which had to be turned on especially for this operation
+        # however, this seemed to cause some immense temp drive space bloat when dropping the mapping tables, as there seems to be a trigger/foreign reference check for every row to be deleted
+        # so now we just blat all tables and trust in the Lord that we don't forget to add any new ones in future
+        
         self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
+        self._c.execute( 'DELETE FROM current_files WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM recent_tags WHERE service_id = ?;', ( service_id, ) )
         self._c.execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM service_filenames WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM service_directories WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM service_directory_file_map WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
         
         if service_type in HC.REPOSITORIES:
             
@@ -6916,7 +6929,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
-            note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusData.ConvertTimestampToPrettyTime( timestamp ), HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
+            note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusData.ConvertTimestampToPrettyTime( timestamp ), ClientData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
             return ( CC.STATUS_DELETED, hash, prefix + note )
             
@@ -6945,7 +6958,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            note = 'Imported at {}, which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
+            note = 'Imported at {}, which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), ClientData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
             return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + note )
             
@@ -8675,7 +8688,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if minimum_age is not None:
                 
-                message += ' with minimum age ' + HydrusData.TimestampToPrettyTimeDelta( timestamp_cutoff, just_now_threshold = 0 ) + ','
+                message += ' with minimum age ' + ClientData.TimestampToPrettyTimeDelta( timestamp_cutoff, just_now_threshold = 0 ) + ','
                 
             
             message += ' I found ' + HydrusData.ToHumanInt( len( hash_ids ) ) + '.'
@@ -9179,7 +9192,7 @@ class DB( HydrusDB.HydrusDB ):
                                     return False
                                     
                                 
-                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + HydrusData.TimestampToPrettyTimeDelta( stop_time, just_now_string = 'ok', just_now_threshold = 1 ) )
+                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + ClientData.TimestampToPrettyTimeDelta( stop_time, just_now_string = 'ok', just_now_threshold = 1 ) )
                                 
                                 next_stop_time_presentation = HydrusData.GetNow() + 1
                                 
@@ -12082,12 +12095,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ResetRepository( self, service ):
         
-        self._Commit()
-        
-        self._c.execute( 'PRAGMA foreign_keys = ON;' )
-        
-        self._BeginImmediate()
-        
         ( service_key, service_type, name, dictionary ) = service.ToTuple()
         
         service_id = self._GetServiceId( service_key )
@@ -14813,6 +14820,55 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 401:
+            
+            result = self._c.execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'remote_ratings', ) ).fetchone()
+            
+            if result is not None:
+                
+                try:
+                    
+                    # never used
+                    self._c.execute( 'DROP TABLE remote_ratings;' )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [ 'nitter tweet', 'twitter tweet' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'nitter media parser', 'nitter retweet parser', 'nitter tweet parser (video from koto.reisen)', 'nitter tweet parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -15158,12 +15214,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _UpdateServices( self, services ):
-        
-        self._Commit()
-        
-        self._c.execute( 'PRAGMA foreign_keys = ON;' )
-        
-        self._BeginImmediate()
         
         current_service_keys = { service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services;' ) }
         

@@ -28,6 +28,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUI
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
+from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -111,7 +112,7 @@ class App( QW.QApplication ):
         
         QC.qInstallMessageHandler( MessageHandler )
         
-        self.setQuitOnLastWindowClosed( True )
+        self.setQuitOnLastWindowClosed( False )
         
         self.call_after_catcher = QP.CallAfterEventCatcher( self )
         
@@ -122,19 +123,16 @@ class App( QW.QApplication ):
     
     def EventEndSession( self ):
         
-        # Since aboutToQuit gets called not only on external shutdown events (like user logging off), but even if we explicitely call QApplication.exit(),
-        # this check will make sure that we only do an emergency exit if it's really necessary (i.e. QApplication.exit() wasn't called by us).
-        if not QW.QApplication.instance().property( 'normal_exit' ):
+        # If a user log-off causes the OS to call the Qt Application's quit/exit func, we still want to save and close nicely
+        
+        if HG.client_controller is not None:
             
-            HG.emergency_exit = True
-            
-            if HG.client_controller.gui is not None and QP.isValid( HG.client_controller.gui ):
+            if not HG.client_controller.ProgramIsShuttingDown():
                 
-                HG.client_controller.gui.SaveAndClose()
+                HG.client_controller.SetDoingFastExit( True )
                 
-            
-            HG.view_shutdown = True
-            HG.model_shutdown = True
+                HG.client_controller.Exit()
+                
             
         
     
@@ -144,10 +142,9 @@ class Controller( HydrusController.HydrusController ):
     
     def __init__( self, db_dir ):
         
-        self._last_shutdown_was_bad = False
-        
         self._qt_app_running = False
         self._is_booted = False
+        self._program_is_shutting_down = False
         
         self._splash = None
         
@@ -244,8 +241,13 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.DebugPrint( traceback.format_exc() )
         
-        self.SafeShowCriticalMessage( 'shutdown error', text )
-        self.SafeShowCriticalMessage( 'shutdown error', traceback.format_exc() )
+        if not self._doing_fast_exit:
+            
+            self.SafeShowCriticalMessage( 'shutdown error', text )
+            self.SafeShowCriticalMessage( 'shutdown error', traceback.format_exc() )
+            
+        
+        self._doing_fast_exit = True
         
     
     def _ShutdownSubscriptionsManager( self ):
@@ -403,19 +405,27 @@ class Controller( HydrusController.HydrusController ):
     
     def CatchSignal( self, sig, frame ):
         
-        if sig in ( signal.SIGINT, signal.SIGTERM ):
+        if self._program_is_shutting_down:
             
-            if sig == signal.SIGTERM:
-                
-                HG.emergency_exit = True
-                
+            return
             
-            if hasattr( self, 'gui' ):
+        
+        if sig == signal.SIGINT:
+            
+            if self.gui is not None and QP.isValid( self.gui ):
                 
                 event = QG.QCloseEvent()
                 
-                QW.QApplication.postEvent( self.gui, event )
+                QW.QApplication.instance().postEvent( self.gui, event )
                 
+            else:
+                
+                QP.CallAfter( QW.QApplication.instance().quit )
+                
+            
+        elif sig == signal.SIGTERM:
+            
+            QP.CallAfter( QW.QApplication.instance().quit )
             
         
     
@@ -436,8 +446,6 @@ class Controller( HydrusController.HydrusController ):
                 result = ClientGUIDialogsQuick.GetYesNo( self._splash, message, title = 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' )
                 
                 if result != QW.QDialog.Accepted:
-                    
-                    HG.shutting_down_due_to_already_running = True
                     
                     raise HydrusExceptions.ShutdownException()
                     
@@ -496,9 +504,14 @@ class Controller( HydrusController.HydrusController ):
     
     def CreateSplash( self, title ):
         
+        if self._splash is not None:
+            
+            self._DestroySplash()
+            
+        
         try:
             
-            self._splash = ClientGUI.FrameSplash( self, title )
+            self._splash = ClientGUISplash.FrameSplash( self, title )
             
         except:
             
@@ -512,7 +525,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
-        if HG.program_is_shutting_down:
+        if self._program_is_shutting_down:
             
             return False
             
@@ -579,7 +592,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyVeryIdle( self ):
         
-        if HG.program_is_shutting_down:
+        if self._program_is_shutting_down:
             
             return False
             
@@ -622,96 +635,51 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
+        # this is idempotent and does not stop. we are shutting down now or in the very near future
+        
+        if self._program_is_shutting_down:
+            
+            return
+            
+        
+        self._program_is_shutting_down = True
+        
         if not self._is_booted:
             
-            HG.emergency_exit = True
+            self._doing_fast_exit = True
             
         
-        HG.program_is_shutting_down = True
-        
-        if HG.emergency_exit:
+        try:
             
-            HydrusData.DebugPrint( 'doing fast shutdown\u2026' )
-            
-            self.ShutdownView()
-            self.ShutdownModel()
-            
-            HydrusData.CleanRunningFile( self.db_dir, 'client' )
-            
-        else:
-            
-            try:
+            if not self._doing_fast_exit:
                 
-                last_shutdown_work_time = self.Read( 'last_shutdown_work_time' )
-                
-                idle_shutdown_action = self.options[ 'idle_shutdown' ]
-                
-                auto_shutdown_work_ok_by_user = idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST )
-                
-                shutdown_work_period = self.new_options.GetInteger( 'shutdown_work_period' )
-                
-                auto_shutdown_work_due = HydrusData.TimeHasPassed( last_shutdown_work_time + shutdown_work_period )
-                
-                manual_shutdown_work_not_already_set = not HG.do_idle_shutdown_work
-                
-                we_can_turn_on_auto_shutdown_work = auto_shutdown_work_ok_by_user and auto_shutdown_work_due and manual_shutdown_work_not_already_set
-                
-                if we_can_turn_on_auto_shutdown_work:
-                    
-                    idle_shutdown_max_minutes = self.options[ 'idle_shutdown_max_minutes' ]
-                    
-                    time_to_stop = HydrusData.GetNow() + ( idle_shutdown_max_minutes * 60 )
-                    
-                    work_to_do = self.GetIdleShutdownWorkDue( time_to_stop )
-                    
-                    if len( work_to_do ) > 0:
-                        
-                        if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
-                            
-                            from hydrus.client.gui import ClientGUIDialogsQuick
-                            
-                            text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
-                            text += os.linesep * 2
-                            text += 'The outstanding jobs appear to be:'
-                            text += os.linesep * 2
-                            text += os.linesep.join( work_to_do )
-                            
-                            result = ClientGUIDialogsQuick.GetYesNo( self._splash, text, title = 'Maintenance is due', auto_no_time = 15 )
-                            
-                            if result == QW.QDialog.Accepted:
-                                
-                                HG.do_idle_shutdown_work = True
-                                
-                            else:
-                                
-                                # if they said no, don't keep asking
-                                self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
-                                
-                            
-                        else:
-                            
-                            HG.do_idle_shutdown_work = True
-                            
-                        
-                    
+                self.CreateSplash( 'hydrus client exiting' )
                 
                 if HG.do_idle_shutdown_work:
                     
-                    self._splash.MakeCancelShutdownButton()
+                    self._splash.ShowCancelShutdownButton()
                     
                 
-                self.CallToThreadLongRunning( self.THREADExitEverything )
+            
+            if self.gui is not None and QP.isValid( self.gui ):
                 
-            except:
+                self.gui.SaveAndClose()
                 
-                self._DestroySplash()
-                
-                HydrusData.DebugPrint( traceback.format_exc() )
-                
-                HG.emergency_exit = True
-                
-                self.Exit()
-                
+            
+        except Exception as e:
+            
+            self._ReportShutdownException()
+            
+        
+        if self._doing_fast_exit:
+            
+            HydrusData.DebugPrint( 'doing fast shutdown\u2026' )
+            
+            self.THREADExitEverything()
+            
+        else:
+            
+            self.CallToThreadLongRunning( self.THREADExitEverything )
             
         
     
@@ -1079,7 +1047,6 @@ class Controller( HydrusController.HydrusController ):
         if not HG.no_daemons:
             
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions', 'wake_idle_workers' ), period = 4 * 3600, pre_call_wait = 1 ) )
             
         
         self.files_maintenance_manager.Start()
@@ -1092,6 +1059,13 @@ class Controller( HydrusController.HydrusController ):
         job.ShouldDelayOnWakeup( True )
         job.WakeOnPubSub( 'notify_unknown_accounts' )
         self._daemon_jobs[ 'synchronise_accounts' ] = job
+        
+        job = self.CallRepeating( 5.0, 3600.0 * 4, self.SynchroniseRepositories )
+        job.ShouldDelayOnWakeup( True )
+        job.WakeOnPubSub( 'notify_restart_repo_sync' )
+        job.WakeOnPubSub( 'notify_new_permissions' )
+        job.WakeOnPubSub( 'wake_idle_workers' )
+        self._daemon_jobs[ 'synchronise_repositories' ] = job
         
         job = self.CallRepeatingQtSafe( self, 10.0, 10.0, self.CheckMouseIdle )
         self._daemon_jobs[ 'check_mouse_idle' ] = job
@@ -1121,11 +1095,6 @@ class Controller( HydrusController.HydrusController ):
     def IsBooted( self ):
         
         return self._is_booted
-        
-    
-    def LastShutdownWasBad( self ):
-        
-        return self._last_shutdown_was_bad
         
     
     def MaintainDB( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
@@ -1261,6 +1230,11 @@ class Controller( HydrusController.HydrusController ):
         #QW.QApplication.instance().postEvent( QW.QApplication.instance().pubsub_catcher, PubSubEvent( self._pubsub ) )
         
     
+    def ProgramIsShuttingDown( self ):
+        
+        return self._program_is_shutting_down
+        
+    
     def RefreshServices( self ):
         
         self.services_manager.RefreshServices()
@@ -1352,7 +1326,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     self.CallToThreadLongRunning( THREADRestart )
                     
-                    QP.CallAfter( self.gui.SaveAndClose )
+                    self.Exit()
                     
                 
             
@@ -1676,7 +1650,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownView( self ):
         
-        if not HG.emergency_exit:
+        if not self._doing_fast_exit:
             
             self.pub( 'splash_set_status_text', 'waiting for subscriptions to exit' )
             
@@ -1744,6 +1718,38 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def SynchroniseRepositories( self ):
+        
+        if not self.options[ 'pause_repo_sync' ]:
+            
+            services = self.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
+            
+            for service in services:
+                
+                if HydrusThreading.IsThreadShuttingDown():
+                    
+                    return
+                    
+                
+                if self.options[ 'pause_repo_sync' ]:
+                    
+                    return
+                    
+                
+                service.SyncRemote()
+                
+                service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_IDLE )
+                
+                if HydrusThreading.IsThreadShuttingDown():
+                    
+                    return
+                    
+                
+                time.sleep( 1 )
+                
+            
+        
+    
     def SystemBusy( self ):
         
         if HG.force_idle_mode:
@@ -1794,9 +1800,7 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( self.db_dir, 'client' )
-            
-            HydrusData.RecordRunningStart( self.db_dir, 'client' )
+            self.RecordRunningStart()
             
             self.InitModel()
             
@@ -1808,9 +1812,9 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.Print( e )
             
-            HydrusData.CleanRunningFile( self.db_dir, 'client' )
+            self.CleanRunningFile()
             
-            QP.CallAfter( QW.QApplication.exit, 0 )
+            QP.CallAfter( QW.QApplication.quit )
             
         except Exception as e:
             
@@ -1825,7 +1829,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.SafeShowCriticalMessage( 'boot error', traceback.format_exc() )
             
-            QP.CallAfter( QW.QApplication.exit, 0 )
+            QP.CallAfter( QW.QApplication.exit, 1 )
             
         finally:
             
@@ -1849,7 +1853,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
             
-            HydrusData.CleanRunningFile( self.db_dir, 'client' )
+            self.CleanRunningFile()
             
         except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ):
             
@@ -1861,11 +1865,11 @@ class Controller( HydrusController.HydrusController ):
             
         finally:
             
-            QW.QApplication.instance().setProperty( 'normal_exit', True )
+            QW.QApplication.instance().setProperty( 'exit_complete', True )
             
             self._DestroySplash()
             
-            QP.CallAfter( QW.QApplication.exit )
+            QP.CallAfter( QW.QApplication.quit )
             
         
     

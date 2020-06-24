@@ -438,8 +438,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteService( self, service_key ):
         
-        # assume foreign keys is on here
-        
         service_id = self._GetServiceId( service_key )
         service_type = self._GetServiceType( service_id )
         
@@ -1189,12 +1187,6 @@ class DB( HydrusDB.HydrusDB ):
     def _ModifyServices( self, account, services ):
         
         account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
-        
-        self._Commit()
-        
-        self._c.execute( 'PRAGMA foreign_keys = ON;' )
-        
-        self._BeginImmediate()
         
         current_service_keys = { service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services;' ) }
         

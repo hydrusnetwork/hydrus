@@ -472,6 +472,11 @@ class Controller( object ):
         return False
         
     
+    def DoingFastExit( self ):
+        
+        return False
+        
+    
     def GetCurrentSessionPageAPIInfoDict( self ):
         
         return {

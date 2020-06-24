@@ -138,7 +138,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     return top_image
     
-def DumpToPng( width, payload_bytes, title, payload_description, text, path ):
+def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
     
     payload_bytes_length = len( payload_bytes )
     
@@ -238,7 +238,7 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
     
     return ( payload_description, payload_bytes )
     
-def LoadFromPng( path ):
+def LoadFromPNG( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
     ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()

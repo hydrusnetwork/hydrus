@@ -48,6 +48,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     selectedMediaTagPresentationChanged = QC.Signal( list, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
+    statusTextChanged = QC.Signal( str )
     
     focusMediaChanged = QC.Signal( ClientMedia.Media )
     focusMediaCleared = QC.Signal()
@@ -75,6 +76,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         self._focused_media = None
         self._next_best_media_after_focused_media_removed = None
         self._shift_focused_media = None
+        
+        self._empty_page_status_override = None
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         HG.client_controller.sub( self, 'Collect', 'collect_media' )
@@ -196,57 +199,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             media = self._GetFocusSingleton()
             
-            sha256_hash = media.GetHash()
-            
-            if hash_type == 'sha256':
-                
-                hex_hash = sha256_hash.hex()
-                
-            else:
-                
-                if media.GetLocationsManager().IsLocal():
-                    
-                    ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
-                    
-                    hex_hash = other_hash.hex()
-                    
-                else:
-                    
-                    QW.QMessageBox.critical( self, 'Error', 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
-                    
-                    return
-                    
-                
-            
-            HG.client_controller.pub( 'clipboard', 'text', hex_hash )
+            ClientGUIMedia.CopyHashesToClipboard( self, hash_type, [ media ] )
             
         
     
     def _CopyHashesToClipboard( self, hash_type ):
         
-        if hash_type == 'sha256':
-            
-            hex_hashes = os.linesep.join( [ hash.hex() for hash in self._GetSelectedHashes( ordered = True ) ] )
-            
-        else:
-            
-            sha256_hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL, ordered = True )
-            
-            if len( sha256_hashes ) > 0:
-                
-                other_hashes = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
-                
-                hex_hashes = os.linesep.join( [ other_hash.hex() for other_hash in other_hashes ] )
-                
-            else:
-                
-                QW.QMessageBox.critical( self, 'Error', 'Unfortunately, none of those files are in your database, so their non-sha256 hashes are unknown.' )
-                
-                return
-                
-            
+        medias = self._GetSelectedMediaOrdered()
         
-        HG.client_controller.pub( 'clipboard', 'text', hex_hashes )
+        ClientGUIMedia.CopyHashesToClipboard( self, hash_type, medias )
         
     
     def _CopyPathToClipboard( self ):
@@ -550,9 +511,23 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         return sum( [ media.GetNumFiles() for media in self._selected_media ] )
         
     
-    def _GetPrettyStatus( self ):
+    def _GetPrettyStatus( self ) -> str:
         
         num_files = len( self._hashes )
+        
+        if self._empty_page_status_override is not None:
+            
+            if num_files == 0:
+                
+                return self._empty_page_status_override
+                
+            else:
+                
+                # user has dragged files onto this page or similar
+                
+                self._empty_page_status_override = None
+                
+            
         
         num_selected = self._GetNumSelected()
         
@@ -668,12 +643,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             result = []
             
-            for media in self._sorted_media:
+            for media in self._GetSelectedMediaOrdered():
                 
-                if media in self._selected_media:
-                    
-                    result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
-                    
+                result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
                 
             
         else:
@@ -707,6 +679,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         flat_media = [ media for media in flat_media if media.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ) ]
         
         return flat_media
+        
+    
+    def _GetSelectedMediaOrdered( self ):
+        
+        medias = []
+        
+        for media in self._sorted_media:
+            
+            if media in self._selected_media:
+                
+                medias.append( media )
+                
+            
+        
+        return medias
         
     
     def _GetSimilarTo( self, max_hamming ):
@@ -1145,7 +1132,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             self.selectedMediaTagPresentationChanged.emit( tags_media, tags_changed )
             
-            HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+            self.statusTextChanged.emit( self._GetPrettyStatus() )
             
             if tags_changed:
                 
@@ -1166,7 +1153,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             self.selectedMediaTagPresentationIncremented.emit( medias )
             
-            HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+            self.statusTextChanged.emit( self._GetPrettyStatus() )
             
         else:
             
@@ -1875,6 +1862,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 self._CopyHashesToClipboard( 'sha256' )
                 
+            elif action == 'copy_md5_hash':
+                
+                self._CopyHashesToClipboard( 'md5' )
+                
+            elif action == 'copy_sha1_hash':
+                
+                self._CopyHashesToClipboard( 'sha1' )
+                
+            elif action == 'copy_sha512_hash':
+                
+                self._CopyHashesToClipboard( 'sha512' )
+                
             elif action == 'duplicate_media_clear_focused_false_positives':
                 
                 if self._HasFocusSingleton():
@@ -2196,6 +2195,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         media_group = ClientMedia.FlattenMedia( self._sorted_media )
         
         return self._SetDuplicates( duplicate_type, media_group = media_group )
+        
+    
+    def SetEmptyPageStatusOverride( self, value: str ):
+        
+        self._empty_page_status_override = value
         
     
     def SetFocusedMedia( self, media ):

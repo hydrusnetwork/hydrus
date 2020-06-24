@@ -1598,6 +1598,7 @@ class TestClientAPI( unittest.TestCase ):
             
         
         metadata = []
+        detailed_known_urls_metadata = []
         
         services_manager = HG.client_controller.services_manager
         
@@ -1649,8 +1650,18 @@ class TestClientAPI( unittest.TestCase ):
             
             metadata.append( metadata_row )
             
+            detailed_known_urls_metadata_row = dict( metadata_row )
+            
+            detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
+                {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
+                {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False}
+            ]
+            
+            detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )
+            
         
         expected_metadata_result = { 'metadata' : metadata }
+        expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
@@ -1761,6 +1772,24 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d, expected_metadata_result )
+        
+        # metadata from hashes with detailed url info
+        
+        path = '/get_files/file_metadata?hashes={}&detailed_url_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_detailed_known_urls_metadata_result )
         
         # files and thumbs
         

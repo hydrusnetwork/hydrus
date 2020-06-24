@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICommon
@@ -88,8 +89,8 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_file_seed_data = str( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
-        pretty_modified = HydrusData.TimestampToPrettyTimeDelta( modified )
+        pretty_added = ClientData.TimestampToPrettyTimeDelta( added )
+        pretty_modified = ClientData.TimestampToPrettyTimeDelta( modified )
         
         if source_time is None:
             
@@ -97,7 +98,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_source_time = HydrusData.TimestampToPrettyTimeDelta( source_time )
+            pretty_source_time = ClientData.TimestampToPrettyTimeDelta( source_time )
             
         
         sort_source_time = ClientGUIListCtrl.SafeNoneInt( source_time )
@@ -435,7 +436,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
-    def _ImportFromPng( self ):
+    def _ImportFromPNG( self ):
         
         with QP.FileDialog( self, 'select the png with the sources', wildcard = 'PNG (*.png)' ) as dlg:
             
@@ -443,7 +444,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                 
                 path = dlg.GetPath()
                 
-                payload = ClientSerialisable.LoadFromPng( path )
+                payload = ClientSerialisable.LoadFromPNG( path )
                 
                 try:
                     
@@ -479,13 +480,13 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         file_seed_cache.AddFileSeeds( file_seeds )
         
     
-    def _ExportToPng( self ):
+    def _ExportToPNG( self ):
         
         payload = self._GetExportableSourcesString()
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
             
-            panel = ClientGUISerialisable.PngExportPanel( dlg, payload )
+            panel = ClientGUISerialisable.PNGExportPanel( dlg, payload )
             
             dlg.SetPanel( panel )
             
@@ -678,7 +679,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             submenu = QW.QMenu( menu )
 
             ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPng )
+            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPNG )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
             
@@ -686,7 +687,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         submenu = QW.QMenu( menu )
 
         ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
-        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPng )
+        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPNG )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
         

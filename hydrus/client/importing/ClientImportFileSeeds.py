@@ -123,7 +123,7 @@ class FileImportJob( object ):
     
     def GenerateHashAndStatus( self ):
         
-        HydrusImageHandling.ConvertToPngIfBmp( self._temp_path )
+        HydrusImageHandling.ConvertToPNGIfBMP( self._temp_path )
         
         self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
         

@@ -1260,14 +1260,6 @@ def ClearLayout( layout, delete_widgets = False ):
         layout.removeItem( item )
         
     
-def ListWidgetGetStringSelection( widget ):
-    
-    for i in range( widget.count() ):
-
-        if widget.item( i ).isSelected(): return widget.item( i ).text()
-
-    return None
-    
 def GetClientData( widget, idx ):
     
     if isinstance( widget, QW.QComboBox ):
@@ -1339,15 +1331,6 @@ def ListWidgetGetStrings( widget ):
         strings.append( widget.item( i ).text() )
         
     return strings
-
-
-def ListWidgetIndexForString( widget, string ):
-    
-    for i in range( widget.count() ):
-        
-        if widget.item( i ).text() == string: return i
-
-    return -1
 
 
 def ListWidgetIsSelected( widget, idx ):
@@ -1599,8 +1582,8 @@ class UIActionSimulator:
         ev1 = QG.QKeyEvent( QC.QEvent.KeyPress, key, QC.Qt.NoModifier, text = text )
         ev2 = QG.QKeyEvent( QC.QEvent.KeyRelease, key, QC.Qt.NoModifier, text = text )
         
-        QW.QApplication.postEvent( widget, ev1 )
-        QW.QApplication.postEvent( widget, ev2 )
+        QW.QApplication.instance().postEvent( widget, ev1 )
+        QW.QApplication.instance().postEvent( widget, ev2 )
         
 
 class AboutBox( QW.QDialog ):
@@ -2141,17 +2124,30 @@ class DirDialog( QW.QFileDialog ):
 
 class FileDialog( QW.QFileDialog ):
     
-    def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFile, defaultFile = None, wildcard = None ):
-
+    def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFile, default_filename = None, default_directory = None, wildcard = None, defaultSuffix = None ):
+        
         QW.QFileDialog.__init__( self, parent )
-
+        
         if message is not None: self.setWindowTitle( message )
-
+        
         self.setAcceptMode( acceptMode )
-
+        
         self.setFileMode( fileMode )
         
-        if defaultFile: self.setDirectory( defaultFile )
+        if default_directory is not None:
+            
+            self.setDirectory( default_directory )
+            
+        
+        if defaultSuffix is not None:
+            
+            self.setDefaultSuffix( defaultSuffix )
+            
+        
+        if default_filename is not None:
+            
+            self.selectFile( default_filename )
+            
         
         if wildcard: self.setNameFilter( wildcard )
         

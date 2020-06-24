@@ -26,7 +26,7 @@ def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **k
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
+    menu_item.setText( HydrusText.ElideText( label, 128, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
@@ -51,7 +51,7 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
+    menu_item.setText( HydrusText.ElideText( label, 128, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
@@ -77,7 +77,7 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    elided_label = HydrusText.ElideText( label, 64, elide_center = True )
+    elided_label = HydrusText.ElideText( label, 128, elide_center = True )
     
     menu_item.setText( elided_label )
     
@@ -113,7 +113,7 @@ def AppendMenuLabel( menu, label, description = '' ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 64, elide_center = True ) )
+    menu_item.setText( HydrusText.ElideText( label, 128, elide_center = True ) )
     
     menu_item.setStatusTip( description )
     menu_item.setToolTip( description )

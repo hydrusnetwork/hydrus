@@ -11,6 +11,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.client import ClientData
 from hydrus.client import ClientThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client.importing import ClientImporting
@@ -1734,7 +1735,7 @@ class SubscriptionsManager( object ):
             message += os.linesep * 2
             message += '{} not runnable: {}'.format( HydrusData.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( cannot_run ) )
             message += os.linesep * 2
-            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, HydrusData.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
+            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, ClientData.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
             
             HydrusData.ShowText( message )
             

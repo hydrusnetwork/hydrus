@@ -8,6 +8,7 @@ import traceback
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientDownloading
 from hydrus.client import ClientFiles
 from hydrus.client import ClientRatings
@@ -626,7 +627,7 @@ class ServiceRemote( Service ):
         
         if not HydrusData.TimeHasPassed( self._no_requests_until ):
             
-            raise HydrusExceptions.InsufficientCredentialsException( self._no_requests_reason + ' - next request ' + HydrusData.TimestampToPrettyTimeDelta( self._no_requests_until ) )
+            raise HydrusExceptions.InsufficientCredentialsException( self._no_requests_reason + ' - next request ' + ClientData.TimestampToPrettyTimeDelta( self._no_requests_until ) )
             
         
         if including_bandwidth:
@@ -839,7 +840,7 @@ class ServiceRestricted( ServiceRemote ):
             
         else:
             
-            s = HydrusData.TimestampToPrettyTimeDelta( self._next_account_sync )
+            s = ClientData.TimestampToPrettyTimeDelta( self._next_account_sync )
             
         
         return 'next account sync ' + s
@@ -1894,14 +1895,23 @@ class ServiceRepository( ServiceRestricted ):
             
             if self._is_mostly_caught_up is None:
                 
-                next_begin = self._metadata.GetNextUpdateBegin()
-                
-                # haven't synced new metadata, so def not caught up
-                if next_begin < two_weeks_ago:
+                if not self._metadata.HasDoneInitialSync():
                     
                     self._is_mostly_caught_up = False
                     
                     return self._is_mostly_caught_up
+                    
+                else:
+                    
+                    next_begin = self._metadata.GetNextUpdateBegin()
+                    
+                    # haven't synced new metadata, so def not caught up
+                    if next_begin < two_weeks_ago:
+                        
+                        self._is_mostly_caught_up = False
+                        
+                        return self._is_mostly_caught_up
+                        
                     
                 
             else:

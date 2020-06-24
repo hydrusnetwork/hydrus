@@ -428,15 +428,13 @@ class Page( QW.QSplitter ):
         
         self._management_panel = ClientGUIManagement.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
         
-        file_service_key = self._management_controller.GetKey( 'file_service' )
-        
         self._preview_panel = QW.QFrame( self._search_preview_split )
         self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
         self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key )
         
-        self._media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, file_service_key, [] )
+        self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
         vbox = QP.VBoxLayout( margin = 0 )
         
@@ -460,7 +458,6 @@ class Page( QW.QSplitter ):
         self._search_preview_split._handle_event_filter = QP.WidgetEventFilter( self._search_preview_split.handle( 1 ) )
         self._search_preview_split._handle_event_filter.EVT_LEFT_DCLICK( self.EventPreviewUnsplit )
         
-        self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
         self._controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
         
         self._ConnectMediaPanelSignals()
@@ -471,11 +468,12 @@ class Page( QW.QSplitter ):
         self._media_panel.refreshQuery.connect( self.RefreshQuery )
         self._media_panel.focusMediaChanged.connect( self._preview_canvas.SetMedia )
         self._media_panel.focusMediaCleared.connect( self._preview_canvas.ClearMedia )
+        self._media_panel.statusTextChanged.connect( self._SetPrettyStatus )
         
         self._management_panel.ConnectMediaPanelSignals( self._media_panel )
         
     
-    def _SetPrettyStatus( self, status ):
+    def _SetPrettyStatus( self, status: str ):
         
         self._pretty_status = status
         
@@ -2473,11 +2471,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
         
-        if self.window().isMinimized():
-            
-            return None
-            
-        
         current_page = self.currentWidget()
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
@@ -2802,7 +2795,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             def qt_finish( page, media_results ):
                 
-                if not page:
+                if not QP.isValid( page ):
                     
                     return
                     

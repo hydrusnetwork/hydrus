@@ -852,6 +852,7 @@
 							<li>file_ids : (a list of numerical file ids)</li>
 							<li>hashes : (a list of hexadecimal SHA256 hashes)</li>
 							<li>only_return_identifiers : true or false (optional, defaulting to false)</li>
+							<li>detailed_url_information : true or false (optional, defaulting to false)</li>
 						</ul>
 					</li>
 					<p>You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and <b>the file_ids you search for must have been in the most recent search result</b>.</p>
@@ -961,6 +962,29 @@
 						<li>3 - petitioned</li>
 					</ul>
 					<p>Note that since JSON Object keys must be strings, these status numbers are strings, not ints.</p>
+					<p>If you add detailed_url_information=true, a new entry, 'detailed_known_urls', will be added for each file, with a list of the same structure as /add_urls/get_url_info. This may be an expensive request if you are querying thousands of files at once.</p>
+					<p>For example:</p>
+						<ul>
+							<li>
+<pre>"detailed_known_urls" : [
+	{
+		"normalised_url": "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
+		"url_type": 0,
+		"url_type_string": "post url",
+		"match_name": "gelbooru file page",
+		"can_parse": True
+	},
+	{
+		"normalised_url": "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+		"url_type": 5,
+		"url_type_string": "unknown url",
+		"match_name": "unknown url",
+		"can_parse": False
+	}
+]</pre>
+							</li>
+						</ul>
+					
 				</ul>
 			</div>
 			<div class="apiborder" id="get_files_file">

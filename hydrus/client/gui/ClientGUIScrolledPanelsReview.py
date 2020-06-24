@@ -888,7 +888,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     def qt_code( job_key ):
         
-        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, controller.gui.SaveAndClose )
+        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, controller.Exit )
         
         # no parent because this has to outlive the gui, obvs
         
@@ -1376,7 +1376,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Select the destination location for the Archive. Existing Archives are also ok, and will be appended to.'
         
-        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptSave, defaultFile = 'archive.db' ) as dlg:
+        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptSave, default_filename = 'archive.db' ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
@@ -2090,7 +2090,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                payload = ClientSerialisable.LoadFromPng( path )
+                payload = ClientSerialisable.LoadFromPNG( path )
                 
             except Exception as e:
                 

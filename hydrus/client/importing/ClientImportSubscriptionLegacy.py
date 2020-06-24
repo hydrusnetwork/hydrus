@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientDownloading
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImporting
@@ -243,7 +244,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                s = HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
+                s = ClientData.TimestampToPrettyTimeDelta( self._next_check_time )
                 
             
             if self._paused:

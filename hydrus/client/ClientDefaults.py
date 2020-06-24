@@ -499,7 +499,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
         
         try:
             
-            payload = ClientSerialisable.LoadFromPng( path )
+            payload = ClientSerialisable.LoadFromPNG( path )
             
             obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
             

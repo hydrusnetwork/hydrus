@@ -1990,6 +1990,14 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def HasDoneInitialSync( self ):
+        
+        with self._lock:
+            
+            return self._next_update_due != 0
+            
+        
+    
     def HasUpdateHash( self, update_hash ):
         
         with self._lock:

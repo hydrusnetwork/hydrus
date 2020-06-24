@@ -357,6 +357,17 @@ def ShowTextClient( text ):
     
     HG.client_controller.pub( 'message', job_key )
     
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, show_seconds = True ):
+    
+    if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
+        
+        return HydrusData.ConvertTimestampToPrettyTime( timestamp )
+        
+    else:
+        
+        return HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, show_seconds = show_seconds )
+        
+    
 class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
