@@ -133,6 +133,18 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'getting_started_subscriptions.html' ) )
+        
+        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        
+        #
+        
         self._name = QW.QLineEdit( self )
         self._delay_st = ClientGUICommon.BetterStaticText( self )
         
@@ -178,39 +190,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._file_limits_panel = ClientGUICommon.StaticBox( self, 'file limits' )
-        
-        message = '''****Subscriptions are not for large one-time syncs****
-
-tl;dr: Do not change the checker options or file limits until you really know what you are doing. There are good technical reasons for it, and you can screw yourself.
-
-Normally, a subscription starts at a site's newest files and searches until it reaches the end of results or starts to see files it saw in a previous check (having 'caught up' to where it was before). It will stop early if it finds enough new files to hit the file limits here. Unless you have a very special reason, it is important to keep these file limit numbers low. Being automated, it is good to have some brakes to stop them if something goes wrong.
-
-You want a few initial files so the sub has some data to work with, but not too much that the first sync takes ages. You want a limit on regular checks in case a site changes its URL format (say from artistname.deviantart.com to deviantart.com/artistname) or changes its markup or otherwise starts delivering unusual results, and the subscription may not realise it is seeing the old urls as new. If the periodic limit is 100, this is no big deal--you'll likely get a popup message out of it and might need to update the respective downloader--but if it were 60000 (or infinite, and the site were somehow serving you random/full results!), you could run into a huge problem completely by accident.
-
-Subscription sync searches are also 'fragile' (they cannot pause/resume the gallery pagewalk, only completely cancel), so it is best if they are short--say, no more than five pages. It is better for a sub to regularly pick up a small number of new files than trying to catch up in a giant rush.
-
-If you want to get all of an artist's files from a site, use the manual gallery download page first. Check you have the right search text and it all works correctly there, and then once that big queue is fully downloaded, start a new sub with the same settings to continue checking for anything posted in future.'''
-        
-        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.global_pixmaps().help, QW.QMessageBox.information, None, 'Information', message )
-        
-        help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about file limits -->', QG.QColor( 0, 0, 255 ) )
-        
-        message = '''****Hitting the normal/periodic limit may or may not be a big deal****
-
-If one of your subscriptions hits the file limit just doing a normal sync, you will get a little popup telling you. It is likely because of:
-
-1) The query has not run in a while, or many new files were suddenly posted, so the backlog of to-be-synced files has built up.
-
-2) The site has changed how it formats file post urls, so the subscription thinks it is seeing new files when it truly is not.
-
-If 1 is true, you might want to increase its periodic limit a little, or speed up its checking times, and fill in whatever gap of files you missing with a manual download page.
-
-But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--the maintainer for the site's download parser (hydrus dev or whoever), would be interested in knowing what has happened so they can roll out a fix.'.'''
-        
-        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.global_pixmaps().help, QW.QMessageBox.information, None, 'Information', message )
-        
-        help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about hitting the normal file limit -->', QG.QColor( 0, 0, 255 ) )
+        self._file_limits_panel = ClientGUICommon.StaticBox( self, 'synchronisation' )
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -226,6 +206,8 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         self._periodic_file_limit = QP.MakeQSpinBox( self._file_limits_panel, min=1, max=limits_max )
         self._periodic_file_limit.setToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
+        
+        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
         
         self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'presentation' )
         
@@ -255,7 +237,6 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         show_downloader_options = True
         
-        self._checker_options = ClientGUIImport.CheckerOptionsButton( self, checker_options, update_callable = self._CheckerOptionsUpdated )
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
         self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options, allow_default_selection = True )
         
@@ -294,9 +275,9 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         gridbox = ClientGUICommon.WrapInGrid( self._file_limits_panel, rows )
         
-        self._file_limits_panel.Add( help_hbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._file_limits_panel.Add( help_hbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._file_limits_panel.Add( ClientGUICommon.BetterStaticText( self._file_limits_panel, label = 'Don\'t change these values unless you know what you are doing!' ), CC.FLAGS_CENTER )
         self._file_limits_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_limits_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -326,13 +307,13 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._name,self,'name: '), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -544,7 +525,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         
     
-    def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
+    def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
         
         missing_query_headers = [ query_header for query_header in query_headers if query_header.GetQueryLogContainerName() not in self._names_to_edited_query_log_containers ]
         
@@ -922,7 +903,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryFailed( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _RetryFailed( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         for query_header in query_headers:
             
@@ -958,7 +939,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryIgnored( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _RetryIgnored( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         for query_header in query_headers:
             
@@ -1155,7 +1136,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, subscriptions: typing.Iterable[ ClientImportSubscriptions.Subscription ], subs_are_globally_paused: bool = False ):
+    def __init__( self, parent: QW.QWidget, subscriptions: typing.Collection[ ClientImportSubscriptions.Subscription ], subs_are_globally_paused: bool = False ):
         
         subscriptions = [ subscription.Duplicate() for subscription in subscriptions ]
         
@@ -1542,7 +1523,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
+    def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
         
         missing_query_headers = [ query_header for query_header in query_headers if query_header.GetQueryLogContainerName() not in self._names_to_edited_query_log_containers ]
         

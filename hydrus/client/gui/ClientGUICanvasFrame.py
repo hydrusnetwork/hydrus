@@ -4,6 +4,7 @@ from qtpy import QtCore as QC
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICanvas
 from hydrus.client.gui import ClientGUIMediaControls
@@ -74,54 +75,53 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
         self._canvas_window.PauseMedia()
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'exit_application':
+            if action == CAC.SIMPLE_EXIT_APPLICATION:
                 
                 HG.client_controller.gui.TryToExit()
                 
-            elif action == 'exit_application_force_maintenance':
+            elif action == CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE:
                 
                 HG.client_controller.gui.TryToExit( force_shutdown_maintenance = True )
                 
-            elif action == 'restart_application':
+            elif action == CAC.SIMPLE_RESTART_APPLICATION:
                 
                 HG.client_controller.gui.TryToExit( restart = True )
                 
-            elif action == 'hide_to_system_tray':
+            elif action == CAC.SIMPLE_HIDE_TO_SYSTEM_TRAY:
                 
                 HG.client_controller.gui.HideToSystemTray()
                 
-            elif action == 'close_media_viewer':
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER:
                 
                 self.close()
                 
-            elif action == 'switch_between_fullscreen_borderless_and_regular_framed_window':
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW:
                 
                 self.FullscreenSwitch()
                 
-            elif action == 'flip_darkmode':
+            elif action == CAC.SIMPLE_FLIP_DARKMODE:
                 
                 HG.client_controller.gui.FlipDarkmode()
                 
-            elif action == 'global_audio_mute':
+            elif action == CAC.SIMPLE_GLOBAL_AUDIO_MUTE:
                 
                 ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, True )
                 
-            elif action == 'global_audio_unmute':
+            elif action == CAC.SIMPLE_GLOBAL_AUDIO_UNMUTE:
                 
                 ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, False )
                 
-            elif action == 'global_audio_mute_flip':
+            elif action == CAC.SIMPLE_GLOBAL_AUDIO_MUTE_FLIP:
                 
                 ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
                 

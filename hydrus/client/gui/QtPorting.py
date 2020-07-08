@@ -13,8 +13,8 @@ if not 'QT_API' in os.environ:
 
         os.environ[ 'QT_API' ] = 'pyside2'
         
-    except ImportError:
-
+    except ImportError as e:
+        
         pass
         
 
@@ -2128,7 +2128,10 @@ class FileDialog( QW.QFileDialog ):
         
         QW.QFileDialog.__init__( self, parent )
         
-        if message is not None: self.setWindowTitle( message )
+        if message is not None:
+            
+            self.setWindowTitle( message )
+            
         
         self.setAcceptMode( acceptMode )
         
@@ -2149,7 +2152,10 @@ class FileDialog( QW.QFileDialog ):
             self.selectFile( default_filename )
             
         
-        if wildcard: self.setNameFilter( wildcard )
+        if wildcard:
+            
+            self.setNameFilter( wildcard )
+            
         
         if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             

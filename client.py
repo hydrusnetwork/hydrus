@@ -15,6 +15,10 @@ try:
     import argparse
     import traceback
     
+    from hydrus.core import HydrusBoot
+    
+    HydrusBoot.AddBaseDirToEnvPath()
+    
     # initialise Qt here, important it is done early
     from hydrus.client.gui import QtPorting as QP
     
@@ -96,8 +100,6 @@ try:
         
         HydrusPaths.SetEnvTempDir( result.temp_dir )
         
-    
-    HydrusPaths.AddBaseDirToEnvPath()
     
     from hydrus.core import HydrusData
     from hydrus.core import HydrusLogger

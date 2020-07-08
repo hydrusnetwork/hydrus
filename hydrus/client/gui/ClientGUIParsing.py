@@ -3481,7 +3481,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
 
 It will download the result of a query that might look something like this:
 
-http://www.file-lookup.com/form.php?q=getsometags&md5=[md5-in-hex]
+https://www.file-lookup.com/form.php?q=getsometags&md5=[md5-in-hex]
 
 And pass that html to a number of 'parsing children' that will each look through it in turn and try to find tags.'''
         

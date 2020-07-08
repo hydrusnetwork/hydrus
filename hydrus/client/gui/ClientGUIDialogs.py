@@ -387,11 +387,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
-        internal_ip = '127.0.0.1'
-        
-        internal_port = self._service.GetPort()
-        
-        url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.hex()
+        url = self._service.GetInternalShareURL( self._share_key )
         
         HG.client_controller.pub( 'clipboard', 'text', url )
         
@@ -421,8 +417,8 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self._shortcuts = ClientGUICommon.RegexButton( self )
         
-        self._regex_intro_link = ClientGUICommon.BetterHyperLink( self, 'a good regex introduction', 'http://www.aivosto.com/vbtips/regex.html' )
-        self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practice', 'http://regexr.com/3cvmf' )
+        self._regex_intro_link = ClientGUICommon.BetterHyperLink( self, 'a good regex introduction', 'https://www.aivosto.com/vbtips/regex.html' )
+        self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practice', 'https://regexr.com/3cvmf' )
         
         self._ok = QW.QPushButton( 'OK', self )
         self._ok.clicked.connect( self.EventOK )
@@ -509,7 +505,7 @@ class DialogInputNamespaceRegex( Dialog ):
     
 class DialogInputTags( Dialog ):
     
-    def __init__( self, parent, service_key, tags, message = '' ):
+    def __init__( self, parent, service_key, tags, expand_parents = True, message = '' ):
         
         Dialog.__init__( self, parent, 'input tags' )
         
@@ -517,9 +513,9 @@ class DialogInputTags( Dialog ):
         
         self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key )
         
-        expand_parents = True
+        self._expand_parents = expand_parents
         
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, self._expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )
@@ -543,7 +539,11 @@ class DialogInputTags( Dialog ):
         
         if message != '':
             
-            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,message), CC.FLAGS_EXPAND_PERPENDICULAR )
+            st = ClientGUICommon.BetterStaticText( self, message )
+            
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -577,7 +577,11 @@ class DialogInputTags( Dialog ):
         if len( tags ) > 0:
             
             self._tags.EnterTags( tags )
-            self._tags.AddTags( parents )
+            
+            if self._expand_parents:
+                
+                self._tags.AddTags( parents )
+                
             
         
     

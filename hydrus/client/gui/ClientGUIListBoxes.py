@@ -39,7 +39,7 @@ class BetterQListWidget( QW.QListWidget ):
             
         
     
-    def _GetDataIndices( self, datas: typing.Iterable[ object ] ) -> typing.List[ int ]:
+    def _GetDataIndices( self, datas: typing.Collection[ object ] ) -> typing.List[ int ]:
         
         indices = []
         
@@ -120,7 +120,7 @@ class BetterQListWidget( QW.QListWidget ):
         self.addItem( item )
         
     
-    def DeleteData( self, datas: typing.Iterable[ object ] ):
+    def DeleteData( self, datas: typing.Collection[ object ] ):
         
         indices = self._GetDataIndices( datas )
         
@@ -191,7 +191,7 @@ class BetterQListWidget( QW.QListWidget ):
         return data
         
     
-    def SelectData( self, datas: typing.Iterable[ object ] ):
+    def SelectData( self, datas: typing.Collection[ object ] ):
         
         list_widget_items = self._GetListWidgetItems()
         

@@ -2,6 +2,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -193,14 +194,13 @@ class EditSingleCtrlPanel( EditPanel ):
         return self._control.value()
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             

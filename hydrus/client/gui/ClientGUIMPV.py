@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIMedia
@@ -347,37 +348,36 @@ class mpvWidget( QW.QWidget ):
         self._player.pause = False
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'pause_media':
+            if action == CAC.SIMPLE_PAUSE_MEDIA:
                 
                 self.Pause()
                 
-            elif action == 'pause_play_media':
+            elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
                 self.PausePlay()
                 
-            elif action == 'open_file_in_external_program':
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
                 if self._media is not None:
                     
                     ClientGUIMedia.OpenExternally( self._media )
                     
                 
-            elif action == 'close_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
                 
                 self.window().close()
                 
-            elif action == 'launch_media_viewer' and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
                 
                 self.launchMediaViewer.emit()
                 

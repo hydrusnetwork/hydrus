@@ -37,6 +37,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             initial_search_urls = []
             
         
+        initial_search_urls = HydrusData.DedupeList( initial_search_urls )
+        
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._creation_time = HydrusData.GetNow()

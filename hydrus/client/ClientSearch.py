@@ -1920,46 +1920,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         service_type = service.GetServiceType()
                         
-                        pretty_value = str( value )
-                        
-                        if service_type == HC.LOCAL_RATING_LIKE:
-                            
-                            if value == 0:
-                                
-                                pretty_value = 'dislike'
-                                
-                            elif value == 1:
-                                
-                                pretty_value = 'like'
-                                
-                            
-                        elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                            
-                            if isinstance( value, float ):
-                                
-                                allow_zero = service.AllowZero()
-                                num_stars = service.GetNumStars()
-                                
-                                if allow_zero:
-                                    
-                                    star_range = num_stars
-                                    
-                                else:
-                                    
-                                    star_range = num_stars - 1
-                                    
-                                
-                                pretty_x = int( round( value * star_range ) )
-                                pretty_y = num_stars
-                                
-                                if not allow_zero:
-                                    
-                                    pretty_x += 1
-                                    
-                                
-                                pretty_value = HydrusData.ConvertValueRangeToPrettyString( pretty_x, pretty_y )
-                                
-                            
+                        pretty_value = service.ConvertRatingToString( value )
                         
                         base += ' for ' + service.GetName() + ' ' + operator + ' ' + pretty_value
                         

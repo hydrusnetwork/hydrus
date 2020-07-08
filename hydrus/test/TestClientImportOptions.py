@@ -578,6 +578,10 @@ class TestTagImportOptions( unittest.TestCase ):
         
         self.assertEqual( blacklist.Filter( some_tags ), some_tags )
         
+        whitelist = default_tag_import_options.GetTagWhitelist()
+        
+        self.assertEqual( whitelist, [] )
+        
         self.assertEqual( default_tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), {} )
         
         #

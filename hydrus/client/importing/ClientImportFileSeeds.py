@@ -355,9 +355,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.__hash__() != other.__hash__()
         
     
-    def _CheckTagsBlacklist( self, tags, tag_import_options: ClientImportOptions.TagImportOptions ):
+    def _CheckTagsVeto( self, tags, tag_import_options: ClientImportOptions.TagImportOptions ):
         
-        tag_import_options.CheckBlacklist( tags )
+        tag_import_options.CheckTagsVeto( tags )
         
     
     def _GetSerialisableInfo( self ):
@@ -526,7 +526,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def CheckPreFetchMetadata( self, tag_import_options: ClientImportOptions.TagImportOptions ):
         
-        self._CheckTagsBlacklist( self._tags, tag_import_options )
+        self._CheckTagsVeto( self._tags, tag_import_options )
         
     
     def DownloadAndImportRawFile( self, file_url: str, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False ):
@@ -2007,7 +2007,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddFileSeeds( self, file_seeds: typing.Iterable[ FileSeed ] ):
+    def AddFileSeeds( self, file_seeds: typing.Collection[ FileSeed ] ):
         
         if len( file_seeds ) == 0:
             
@@ -2392,7 +2392,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def InsertFileSeeds( self, index: int, file_seeds: typing.Iterable[ FileSeed ] ):
+    def InsertFileSeeds( self, index: int, file_seeds: typing.Collection[ FileSeed ] ):
         
         if len( file_seeds ) == 0:
             
@@ -2431,7 +2431,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return len( new_file_seeds )
         
     
-    def NotifyFileSeedsUpdated( self, file_seeds: typing.Iterable[ FileSeed ] ):
+    def NotifyFileSeedsUpdated( self, file_seeds: typing.Collection[ FileSeed ] ):
         
         with self._lock:
             
@@ -2457,7 +2457,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self.NotifyFileSeedsUpdated( file_seeds_to_delete )
         
     
-    def RemoveFileSeedsByStatus( self, statuses_to_remove: typing.Iterable[ int ] ):
+    def RemoveFileSeedsByStatus( self, statuses_to_remove: typing.Collection[ int ] ):
         
         with self._lock:
             

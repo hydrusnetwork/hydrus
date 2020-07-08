@@ -14,6 +14,7 @@ from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
 from hydrus.client.media import ClientMedia
@@ -342,7 +343,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
 class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     TEST_RESULT_DEFAULT = 'Enter a tag here to test if it passes the current filter:'
-    TEST_RESULT_BLACKLIST_DEFAULT = 'Enter a tag here to test if it passes the current filter in a tag import options blacklist (siblings tested, unnamespaced rules match namespaced tags):'
+    TEST_RESULT_BLACKLIST_DEFAULT = 'Enter a tag here to test if it passes the blacklist (siblings tested, unnamespaced rules match namespaced tags):'
     
     def __init__( self, parent, tag_filter, only_show_blacklist = False, namespaces = None, message = None ):
         
@@ -370,6 +371,15 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._load_favourite = ClientGUICommon.BetterButton( self, 'load', self._LoadFavourite )
         self._save_favourite = ClientGUICommon.BetterButton( self, 'save', self._SaveFavourite )
         self._delete_favourite = ClientGUICommon.BetterButton( self, 'delete', self._DeleteFavourite )
+        
+        #
+        
+        self._show_all_panels_button = ClientGUICommon.BetterButton( self, 'show other panels', self._ShowAllPanels )
+        self._show_all_panels_button.setToolTip( 'This shows the whitelist and advanced panels, in case you want to craft a clever blacklist with \'except\' rules.' )
+        
+        show_the_button = self._only_show_blacklist and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        self._show_all_panels_button.setVisible( show_the_button )
         
         #
         
@@ -408,11 +418,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._test_result_st.setWordWrap( True )
         
-        self._test_result_blacklist_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_BLACKLIST_DEFAULT )
-        self._test_result_blacklist_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
-        
-        self._test_result_blacklist_st.setWordWrap( True )
-        
         self._test_input = QW.QPlainTextEdit( self )
         
         #
@@ -439,6 +444,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_SMALL_INDENT )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._show_all_panels_button, CC.FLAGS_LONE_BUTTON )
         QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -446,7 +452,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         test_text_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( test_text_vbox, self._test_result_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( test_text_vbox, self._test_result_blacklist_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
@@ -1014,6 +1019,17 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _ShowAllPanels( self ):
+        
+        self._whitelist_panel.setVisible( True )
+        self._advanced_panel.setVisible( True )
+        
+        self._notebook.addTab( self._whitelist_panel, 'whitelist' )
+        self._notebook.addTab( self._advanced_panel, 'advanced' )
+        
+        self._show_all_panels_button.setVisible( False )
+        
+    
     def _ShowHelp( self ):
         
         help = 'Here you can set rules to filter tags for one purpose or another. The default is typically to permit all tags. Check the current filter summary text at the bottom-left of the panel to ensure you have your logic correct.'
@@ -1272,49 +1288,88 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if test_input == '':
             
-            normal_text = self.TEST_RESULT_DEFAULT
-            blacklist_text = self.TEST_RESULT_BLACKLIST_DEFAULT
+            if self._only_show_blacklist:
+                
+                test_result_text = self.TEST_RESULT_BLACKLIST_DEFAULT
+                
+            else:
+                
+                test_result_text = self.TEST_RESULT_DEFAULT
+                
+            
+            self._test_result_st.setObjectName( '' )
             
         else:
             
+            test_tags = HydrusText.DeserialiseNewlinedTexts( test_input )
+            
+            test_tags = HydrusTags.CleanTags( test_tags )
+            
             tag_filter = self.GetValue()
             
-            if tag_filter.TagOK( test_input ):
+            if self._only_show_blacklist:
                 
-                normal_text = 'tag passes!'
+                results = []
                 
-                self._test_result_st.setObjectName( 'HydrusValid' )
-                
-            else:
-                
-                normal_text = 'tag blocked!'
-                
-                self._test_result_st.setObjectName( 'HydrusInvalid' )
-                
-            
-            sibling_tags = HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, test_input )
-            
-            passes = False not in ( tag_filter.TagOK( sibling_tag, apply_unnamespaced_rules_to_namespaced_tags = True ) for sibling_tag in sibling_tags )
-            
-            if passes:
-                
-                blacklist_text = 'in a tag import options blacklist, tag passes!'
-                
-                self._test_result_blacklist_st.setObjectName( 'HydrusValid' )
+                for test_tag in test_tags:
+                    
+                    sibling_tags = HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, test_tag )
+                    
+                    results.append( False not in ( tag_filter.TagOK( sibling_tag, apply_unnamespaced_rules_to_namespaced_tags = True ) for sibling_tag in sibling_tags ) )
+                    
                 
             else:
                 
-                blacklist_text = 'in a tag import options blacklist, tag blocked!'
+                results = [ tag_filter.TagOK( test_tag ) for test_tag in test_tags ]
                 
-                self._test_result_blacklist_st.setObjectName( 'HydrusInvalid' )
+            
+            all_good = False not in results
+            all_bad = True not in results
+            
+            if len( results ) == 1:
+                
+                if all_good:
+                    
+                    test_result_text = 'tag passes!'
+                    
+                    self._test_result_st.setObjectName( 'HydrusValid' )
+                    
+                else:
+                    
+                    test_result_text = 'tag blocked!'
+                    
+                    self._test_result_st.setObjectName( 'HydrusInvalid' )
+                    
+                
+            else:
+                
+                if all_good:
+                    
+                    test_result_text = 'all pass!'
+                    
+                    self._test_result_st.setObjectName( 'HydrusValid' )
+                    
+                elif all_bad:
+                    
+                    test_result_text = 'all blocked!'
+                    
+                    self._test_result_st.setObjectName( 'HydrusInvalid' )
+                    
+                else:
+                    
+                    c = collections.Counter()
+                    
+                    c.update( results )
+                    
+                    test_result_text = '{} pass, {} blocked!'.format( HydrusData.ToHumanInt( c[ True ] ), HydrusData.ToHumanInt( c[ False ] ) )
+                    
+                    self._test_result_st.setObjectName( 'HydrusInvalid' )
+                    
                 
             
         
-        self._test_result_st.setText( normal_text )
+        self._test_result_st.setText( test_result_text )
         self._test_result_st.style().polish( self._test_result_st )
-        
-        self._test_result_blacklist_st.setText( blacklist_text )
-        self._test_result_blacklist_st.style().polish( self._test_result_blacklist_st )
         
     
     def EventSimpleBlacklistNamespaceCheck( self, index ):
@@ -1611,22 +1666,21 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'manage_file_tags':
+            if action == CAC.SIMPLE_MANAGE_FILE_TAGS:
                 
                 self._OKParent()
                 
-            elif action == 'focus_media_viewer':
+            elif action == CAC.SIMPLE_FOCUS_MEDIA_VIEWER:
                 
                 tlws = ClientGUIFunctions.GetTLWParents( self )
                 
@@ -1646,7 +1700,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
-            elif action == 'set_search_focus':
+            elif action == CAC.SIMPLE_SET_SEARCH_FOCUS:
                 
                 self._SetSearchFocus()
                 
@@ -2465,22 +2519,21 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.okSignal.emit()
             
         
-        def ProcessApplicationCommand( self, command ):
+        def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
             
             command_processed = True
             
-            command_type = command.GetCommandType()
             data = command.GetData()
             
-            if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            if command.IsSimpleCommand():
                 
                 action = data
                 
-                if action == 'set_search_focus':
+                if action == CAC.SIMPLE_SET_SEARCH_FOCUS:
                     
                     self.SetTagBoxFocus()
                     
-                elif action in ( 'show_and_focus_manage_tags_favourite_tags', 'show_and_focus_manage_tags_related_tags', 'show_and_focus_manage_tags_file_lookup_script_tags', 'show_and_focus_manage_tags_recent_tags' ):
+                elif action in ( CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS ):
                     
                     self._suggested_tags.TakeFocusForUser( action )
                     
@@ -3098,7 +3151,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            with QP.FileDialog( self, 'Set the export path.', default_filename = 'parents.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
+            with QP.FileDialog( self, 'Set the export path.', default_filename = 'parents.txt', acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
@@ -3961,7 +4014,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            with QP.FileDialog( self, 'Set the export path.', default_filename = 'siblings.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
+            with QP.FileDialog( self, 'Set the export path.', default_filename = 'siblings.txt', acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     

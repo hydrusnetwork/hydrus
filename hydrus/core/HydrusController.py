@@ -184,6 +184,11 @@ class HydrusController( object ):
             
         
     
+    def _PublishShutdownSubtext( self, text ):
+        
+        pass
+        
+    
     def _Read( self, action, *args, **kwargs ):
         
         result = self.db.Read( action, *args, **kwargs )
@@ -689,6 +694,8 @@ class HydrusController( object ):
             self.db.Shutdown()
             
             while not self.db.LoopIsFinished():
+                
+                self._PublishShutdownSubtext( 'waiting for db to finish up\u2026' )
                 
                 time.sleep( 0.1 )
                 

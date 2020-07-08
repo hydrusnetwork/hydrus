@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
@@ -19,25 +20,25 @@ from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import QtPorting as QP
 
-def FilterSuggestedPredicatesForMedia( predicates: typing.List[ ClientSearch.Predicate ], media: typing.Iterable[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
+def FilterSuggestedPredicatesForMedia( predicates: typing.List[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
     
     tags = [ predicate.GetValue() for predicate in predicates ]
     
-    filtered_tags = FilterSuggestedTagsForMedia( tags, media, service_key )
+    filtered_tags = FilterSuggestedTagsForMedia( tags, medias, service_key )
     
     predicates = [ predicate for predicate in predicates if predicate.GetValue() in filtered_tags ]
     
     return predicates
     
-def FilterSuggestedTagsForMedia( tags: typing.List[ str ], media: typing.Iterable[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
+def FilterSuggestedTagsForMedia( tags: typing.List[ str ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
     
     tags_filtered_set = set( tags )
     
-    ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, service_key, ClientTags.TAG_DISPLAY_STORAGE )
+    ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( medias, service_key, ClientTags.TAG_DISPLAY_STORAGE )
     
     current_tags_to_count.update( pending_tags_to_count )
     
-    num_media = len( media )
+    num_media = len( medias )
     
     for ( tag, count ) in current_tags_to_count.items():
         
@@ -744,19 +745,19 @@ class SuggestedTagsPanel( QW.QWidget ):
     
     def TakeFocusForUser( self, command ):
         
-        if command == 'show_and_focus_manage_tags_favourite_tags':
+        if command == CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS:
             
             panel = self._favourite_tags
             
-        elif command == 'show_and_focus_manage_tags_related_tags':
+        elif command == CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS:
             
             panel = self._related_tags
             
-        elif command == 'show_and_focus_manage_tags_file_lookup_script_tags':
+        elif command == CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS:
             
             panel = self._file_lookup_script_tags
             
-        elif command == 'show_and_focus_manage_tags_recent_tags':
+        elif command == CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS:
             
             panel = self._recent_tags
             

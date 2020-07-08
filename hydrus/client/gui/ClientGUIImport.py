@@ -256,8 +256,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
             
-            self._regex_intro_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'a good regex introduction', 'http://www.aivosto.com/vbtips/regex.html' )
-            self._regex_practise_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'regex practice', 'http://regexr.com/3cvmf' )
+            self._regex_intro_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'a good regex introduction', 'https://www.aivosto.com/vbtips/regex.html' )
+            self._regex_practise_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'regex practice', 'https://regexr.com/3cvmf' )
             
             #
             

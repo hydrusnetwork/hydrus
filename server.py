@@ -17,6 +17,10 @@ try:
     import traceback
     import threading
     
+    from hydrus.core import HydrusBoot
+    
+    HydrusBoot.AddBaseDirToEnvPath()
+    
     from hydrus.core import HydrusExceptions
     from hydrus.core import HydrusConstants as HC
     from hydrus.core import HydrusData
@@ -108,8 +112,6 @@ try:
         
         HydrusPaths.SetEnvTempDir( result.temp_dir )
         
-    
-    HydrusPaths.AddBaseDirToEnvPath()
     
     #
     

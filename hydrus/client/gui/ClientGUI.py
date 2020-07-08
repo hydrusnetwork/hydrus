@@ -30,6 +30,7 @@ from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientExporting
@@ -432,6 +433,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
+        self._controller.sub( self, 'DoFileStorageRebalance', 'do_file_storage_rebalance' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyClosedPage', 'notify_closed_page' )
@@ -1180,7 +1182,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     if value == 'file':
                         
-                        with QP.FileDialog( self, 'select where to save content', default_filename = 'result.html', acceptMode = QW.QFileDialog.AcceptSave ) as f_dlg:
+                        with QP.FileDialog( self, 'select where to save content', default_filename = 'result.html', acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile ) as f_dlg:
                             
                             if f_dlg.exec() == QW.QDialog.Accepted:
                                 
@@ -3237,7 +3239,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page_of_pages'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE_OF_PAGES))
             
             t += 0.25
             
@@ -3245,23 +3247,23 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_duplicate_filter_page'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE))
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_gallery_downloader_page'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE))
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE))
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE))
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE))
             
             return page_of_pages
             
@@ -3311,11 +3313,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.5
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_media_focus'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_MEDIA_FOCUS))
             
             t += 0.5
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, ClientData.ApplicationCommand(CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_search_focus'))
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_SEARCH_FOCUS))
             
             t += 0.5
             
@@ -3467,13 +3469,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _SynchronisedWaitSwitch( self ):
+    def _PausePlaySearch( self ):
         
         page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
-            page.SynchronisedWaitSwitch()
+            page.PausePlaySearch()
             
         
     
@@ -4074,6 +4076,28 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def DoFileStorageRebalance( self, job_key: ClientThreading.JobKey ):
+        
+        self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
+        
+        job_key.SetVariable( 'popup_title', 'rebalancing files' )
+        
+        self.setVisible( False )
+        
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( None, 'migrating files' ) as dlg:
+            
+            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.exec()
+            
+        
+        self.setVisible( True )
+        
+        self._MigrateDatabase()
+        
+    
     def EventFrameNewPage( self, event ):
         
         screen_position = QG.QCursor.pos()
@@ -4407,18 +4431,32 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
             
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self.FlipSubscriptionsPaused )
-            ClientGUIMenus.AppendSeparator( submenu )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self.FlipNetworkTrafficPaused )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self.FlipSubscriptionsPaused )
+            
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.subscriptions_manager.Wake )
+                
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
+            #
+            
             ClientGUIMenus.AppendSeparator( menu )
             
-            #
+            ClientGUIMenus.AppendMenuItem( menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+            
+            ClientGUIMenus.AppendSeparator( menu )
             
             submenu = QW.QMenu( menu )
             
@@ -4448,12 +4486,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 ClientGUIMenus.AppendSeparator( submenu )
                 
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+            ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
+            ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
             
-            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.subscriptions_manager.Wake )
-                
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -4464,47 +4503,41 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenu( submenu, clipboard_menu, 'watch clipboard for urls' )
             
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
-            
-            debug_menu = QW.QMenu( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
-            
-            ClientGUIMenus.AppendMenu( submenu, debug_menu, 'DEBUG' )
-            
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
             
             #
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
-            ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'downloader components' )
+            
+            #
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'DEBUG: do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'logins' )
             
             #
             
@@ -4656,7 +4689,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             site = ClientGUIMenus.AppendMenuBitmapItem( links, '8kun board', 'Open hydrus dev\'s 8kun board, where he makes release posts and other status updates.', CC.global_pixmaps().eight_kun, ClientPaths.LaunchURLInWebBrowser, 'https://8kun.top/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.global_pixmaps().twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_pixmaps().tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_pixmaps().tumblr, ClientPaths.LaunchURLInWebBrowser, 'https://hydrus.tumblr.com/' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_pixmaps().discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/wPHPCUZ' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_pixmaps().patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
             
@@ -5029,7 +5062,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE ) )
         
         #
         
@@ -5073,10 +5106,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         download_menu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_gallery_downloader_page' ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page' ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
         
         ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
         
@@ -5097,8 +5130,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         special_menu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page_of_pages' ) )
-        ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_duplicate_filter_page' ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
         
         ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
         
@@ -5302,18 +5335,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             return ( normalised_url, result_text )
             
+        except ( HydrusExceptions.URLClassException, HydrusExceptions.NetworkException ):
+            
+            raise
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.BadRequestException( str( e ) )
+            
         except Exception as e:
             
             HydrusData.PrintException( e )
             
-            if isinstance( e, HydrusExceptions.NetworkException ):
-                
-                raise e
-                
-            else:
-                
-                raise HydrusExceptions.ServerException( str( e ) )
-                
+            raise HydrusExceptions.ServerException( str( e ) )
             
         
     
@@ -5485,42 +5519,41 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.PresentImportedFilesToPage( hashes, page_name )
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'exit_application':
+            if action == CAC.SIMPLE_EXIT_APPLICATION:
                 
                 self.TryToExit()
                 
-            elif action == 'exit_application_force_maintenance':
+            elif action == CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE:
                 
                 self.TryToExit( force_shutdown_maintenance = True )
                 
-            elif action == 'restart_application':
+            elif action == CAC.SIMPLE_RESTART_APPLICATION:
                 
                 self.TryToExit( restart = True )
                 
-            elif action == 'hide_to_system_tray':
+            elif action == CAC.SIMPLE_HIDE_TO_SYSTEM_TRAY:
                 
                 self.HideToSystemTray()
                 
-            elif action == 'refresh':
+            elif action == CAC.SIMPLE_REFRESH:
                 
                 self._Refresh()
                 
-            elif action == 'refresh_all_pages':
+            elif action == CAC.SIMPLE_REFRESH_ALL_PAGES:
                 
                 self._notebook.RefreshAllPages()
                 
-            elif action == 'refresh_page_of_pages_pages':
+            elif action == CAC.SIMPLE_REFRESH_PAGE_OF_PAGES_PAGES:
                 
                 page = self._notebook.GetCurrentMediaPage()
                 
@@ -5531,87 +5564,87 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     parent.RefreshAllPages()
                     
                 
-            elif action == 'new_page':
+            elif action == CAC.SIMPLE_NEW_PAGE:
                 
                 self._notebook.ChooseNewPageForDeepestNotebook()
                 
-            elif action == 'new_page_of_pages':
+            elif action == CAC.SIMPLE_NEW_PAGE_OF_PAGES:
                 
                 self._notebook.NewPagesNotebook( on_deepest_notebook = True )
                 
-            elif action == 'new_duplicate_filter_page':
+            elif action == CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE:
                 
                 self._notebook.NewPageDuplicateFilter( on_deepest_notebook = True )
                 
-            elif action == 'new_gallery_downloader_page':
+            elif action == CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE:
                 
                 self._notebook.NewPageImportGallery( on_deepest_notebook = True )
                 
-            elif action == 'new_simple_downloader_page':
+            elif action == CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE:
                 
                 self._notebook.NewPageImportSimpleDownloader( on_deepest_notebook = True )
                 
-            elif action == 'new_url_downloader_page':
+            elif action == CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE:
                 
                 self._notebook.NewPageImportURLs( on_deepest_notebook = True )
                 
-            elif action == 'new_watcher_downloader_page':
+            elif action == CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE:
                 
                 self._notebook.NewPageImportMultipleWatcher( on_deepest_notebook = True )
                 
-            elif action == 'close_page':
+            elif action == CAC.SIMPLE_CLOSE_PAGE:
                 
                 self._notebook.CloseCurrentPage()
                 
-            elif action == 'unclose_page':
+            elif action == CAC.SIMPLE_UNCLOSE_PAGE:
                 
                 self._UnclosePage()
                 
-            elif action == 'check_all_import_folders':
+            elif action == CAC.SIMPLE_CHECK_ALL_IMPORT_FOLDERS:
                 
                 self._CheckImportFolder()
                 
-            elif action == 'flip_darkmode':
+            elif action == CAC.SIMPLE_FLIP_DARKMODE:
                 
                 self.FlipDarkmode()
                 
-            elif action == 'global_audio_mute':
+            elif action == CAC.SIMPLE_GLOBAL_AUDIO_MUTE:
                 
                 ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, True )
                 
-            elif action == 'global_audio_unmute':
+            elif action == CAC.SIMPLE_GLOBAL_AUDIO_UNMUTE:
                 
                 ClientGUIMediaControls.SetMute( ClientGUIMediaControls.AUDIO_GLOBAL, False )
                 
-            elif action == 'global_audio_mute_flip':
+            elif action == CAC.SIMPLE_GLOBAL_AUDIO_MUTE_FLIP:
                 
                 ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
                 
-            elif action == 'show_hide_splitters':
+            elif action == CAC.SIMPLE_SHOW_HIDE_SPLITTERS:
                 
                 self._ShowHideSplitters()
                 
-            elif action == 'synchronised_wait_switch':
+            elif action == CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH:
                 
-                self._SynchronisedWaitSwitch()
+                self._PausePlaySearch()
                 
-            elif action == 'set_media_focus':
+            elif action == CAC.SIMPLE_SET_MEDIA_FOCUS:
                 
                 self._SetMediaFocus()
                 
-            elif action == 'set_search_focus':
+            elif action == CAC.SIMPLE_SET_SEARCH_FOCUS:
                 
                 self._SetSearchFocus()
                 
-            elif action == 'redo':
+            elif action == CAC.SIMPLE_REDO:
                 
                 self._controller.pub( 'redo' )
                 
-            elif action == 'undo':
+            elif action == CAC.SIMPLE_UNDO:
                 
                 self._controller.pub( 'undo' )
                 
-            elif action == 'flip_debug_force_idle_mode_do_not_set_this':
+            elif action == CAC.SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS:
                 
                 self._SwitchBoolean( 'force_idle_mode' )
                 

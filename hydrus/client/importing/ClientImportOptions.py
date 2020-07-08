@@ -1136,15 +1136,20 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'Tag Import Options'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
-    def __init__( self, fetch_tags_even_if_url_recognised_and_file_already_in_db = False, fetch_tags_even_if_hash_recognised_and_file_already_in_db = False, tag_blacklist = None, service_keys_to_service_tag_import_options = None, is_default = False ):
+    def __init__( self, fetch_tags_even_if_url_recognised_and_file_already_in_db = False, fetch_tags_even_if_hash_recognised_and_file_already_in_db = False, tag_blacklist = None, tag_whitelist = None, service_keys_to_service_tag_import_options = None, is_default = False ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         if tag_blacklist is None:
             
             tag_blacklist = ClientTags.TagFilter()
+            
+        
+        if tag_whitelist is None:
+            
+            tag_whitelist = []
             
         
         if service_keys_to_service_tag_import_options is None:
@@ -1155,6 +1160,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db
         self._tag_blacklist = tag_blacklist
+        self._tag_whitelist = tag_whitelist
         self._service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options
         self._is_default = is_default
         
@@ -1179,12 +1185,12 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         serialisable_service_keys_to_service_tag_import_options = [ ( service_key.hex(), service_tag_import_options.GetSerialisableTuple() ) for ( service_key, service_tag_import_options ) in list(self._service_keys_to_service_tag_import_options.items()) if test_func( service_key ) ]
         
-        return ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, serialisable_service_keys_to_service_tag_import_options, self._is_default )
+        return ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, self._tag_whitelist, serialisable_service_keys_to_service_tag_import_options, self._is_default )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, serialisable_service_keys_to_service_tag_import_options, self._is_default ) = serialisable_info
+        ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, self._tag_whitelist, serialisable_service_keys_to_service_tag_import_options, self._is_default ) = serialisable_info
         
         self._tag_blacklist = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_blacklist )
         
@@ -1303,8 +1309,21 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             return ( 7, new_serialisable_info )
             
         
+        if version == 7:
+            
+            ( fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, serialisable_service_keys_to_service_tag_import_options, is_default ) = old_serialisable_info
+            
+            tag_whitelist = []
+            
+            new_serialisable_info = ( fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, tag_whitelist, serialisable_service_keys_to_service_tag_import_options, is_default )
+            
+            return ( 8, new_serialisable_info )
+            
+        
     
-    def CheckBlacklist( self, tags ):
+    def CheckTagsVeto( self, tags: typing.Collection[ str ] ):
+        
+        tags = set( tags )
         
         sibling_tags = set()
         
@@ -1319,11 +1338,23 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( ok_tags ) < len( test_tags ):
                 
-                bad_tags = set( test_tags ).difference( ok_tags )
+                bad_tags = test_tags.difference( ok_tags )
                 
                 bad_tags = HydrusTags.SortNumericTags( bad_tags )
                 
                 raise HydrusExceptions.VetoException( ', '.join( bad_tags ) + ' is blacklisted!' )
+                
+            
+        
+        if len( self._tag_whitelist ) > 0:
+            
+            all_tags = tags.union( sibling_tags )
+            
+            intersecting_tags = all_tags.intersection( self._tag_whitelist )
+            
+            if len( intersecting_tags ) == 0:
+                
+                raise HydrusExceptions.VetoException( 'did not pass the whitelist!' )
                 
             
         
@@ -1344,12 +1375,14 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         for ( service_key, service_tag_import_options ) in self._service_keys_to_service_tag_import_options.items():
             
+            service_parsed_tags = set( parsed_tags )
+            
             if service_key in external_service_keys_to_tags:
                 
-                parsed_tags = set( parsed_tags ).union( external_service_keys_to_tags[ service_key ] )
+                service_parsed_tags.update( external_service_keys_to_tags[ service_key ] )
                 
             
-            service_parsed_tags = siblings_manager.CollapseTags( service_key, parsed_tags )
+            service_parsed_tags = siblings_manager.CollapseTags( service_key, service_parsed_tags )
             service_parsed_tags = parents_manager.ExpandTags( service_key, service_parsed_tags )
             
             service_tags = service_tag_import_options.GetTags( service_key, status, media_result, service_parsed_tags )
@@ -1458,6 +1491,11 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     def GetTagBlacklist( self ):
         
         return self._tag_blacklist
+        
+    
+    def GetTagWhitelist( self ):
+        
+        return self._tag_whitelist
         
     
     def HasAdditionalTags( self ):

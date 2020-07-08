@@ -10,6 +10,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRatings
@@ -137,11 +138,20 @@ class ShortcutAwareToolTipMixin( object ):
                     
                     shortcut_strings = sorted( ( shortcut.ToString() for shortcut in shortcuts ) )
                     
+                    if name in ClientGUIShortcuts.shortcut_names_to_pretty_names:
+                        
+                        pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
+                        
+                    else:
+                        
+                        pretty_name = name
+                        
+                    
                     tt += os.linesep * 2
                     
                     tt += ', '.join( shortcut_strings )
                     tt += os.linesep
-                    tt += '({}->{})'.format( name, self._simple_shortcut_command )
+                    tt += '({}->{})'.format( pretty_name, CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
                     
                 
             else:
@@ -150,7 +160,7 @@ class ShortcutAwareToolTipMixin( object ):
                 
                 tt += 'no shortcuts set'
                 tt += os.linesep
-                tt += '({})'.format( self._simple_shortcut_command )
+                tt += '({})'.format( CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
                 
             
         
@@ -165,7 +175,7 @@ class ShortcutAwareToolTipMixin( object ):
             
         
     
-    def SetToolTipWithShortcuts( self, tt, simple_shortcut_command ):
+    def SetToolTipWithShortcuts( self, tt: str, simple_shortcut_command: int ):
         
         self._tt = tt
         self._simple_shortcut_command = simple_shortcut_command
@@ -1407,8 +1417,8 @@ class NoneableSpinCtrl( QW.QWidget ):
     def _HandleValueChanged( self, val ):
         
         self.valueChanged.emit()
-            
-            
+        
+    
     def EventCheckBox( self, state ):
         
         if self._checkbox.isChecked():
@@ -1808,12 +1818,19 @@ class RatingNumerical( QW.QWidget ):
             
             if self._allow_zero:
                 
-                rating = round( proportion_filled * self._num_stars ) / self._num_stars
+                stars = round( proportion_filled * self._num_stars )
                 
             else:
                 
-                rating = int( proportion_filled * self._num_stars ) / ( self._num_stars - 1 )
+                stars = int( proportion_filled * self._num_stars ) 
                 
+                if proportion_filled <= 1.0:
+                    
+                    stars += 1
+                    
+                
+            
+            rating = self._service.ConvertStarsToRating( stars )
             
             return rating
             

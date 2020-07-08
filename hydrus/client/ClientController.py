@@ -53,7 +53,6 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
-
 PubSubEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
 
 class PubSubEvent( QC.QEvent ):
@@ -145,6 +144,7 @@ class Controller( HydrusController.HydrusController ):
         self._qt_app_running = False
         self._is_booted = False
         self._program_is_shutting_down = False
+        self._restore_backup_path = None
         
         self._splash = None
         
@@ -224,6 +224,11 @@ class Controller( HydrusController.HydrusController ):
     def _GetUPnPServices( self ):
         
         return self.services_manager.GetServices( ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) )
+        
+    
+    def _PublishShutdownSubtext( self, text ):
+        
+        self.pub( 'splash_set_status_subtext', text )
         
     
     def _ReportShutdownDaemonsStatus( self ):
@@ -1222,22 +1227,9 @@ class Controller( HydrusController.HydrusController ):
         return text.lower()
         
     
-    def ProcessPubSub( self ):
-        
-        self.CallBlockingToQt( self.app, self._pubsub.Process )
-        
-        # this needs to be blocking in some way or the pubsub daemon goes nuts
-        #QW.QApplication.instance().postEvent( QW.QApplication.instance().pubsub_catcher, PubSubEvent( self._pubsub ) )
-        
-    
     def ProgramIsShuttingDown( self ):
         
         return self._program_is_shutting_down
-        
-    
-    def RefreshServices( self ):
-        
-        self.services_manager.RefreshServices()
         
     
     def pub( self, *args, **kwargs ):
@@ -1245,6 +1237,11 @@ class Controller( HydrusController.HydrusController ):
         HydrusController.HydrusController.pub( self, *args, **kwargs )
         
         QW.QApplication.instance().postEvent( QW.QApplication.instance().pubsub_catcher, PubSubEvent() )
+        
+    
+    def RefreshServices( self ):
+        
+        self.services_manager.RefreshServices()
         
     
     def ReleasePageKey( self, page_key ):
@@ -1307,24 +1304,10 @@ class Controller( HydrusController.HydrusController ):
                 
                 if result == QW.QDialog.Accepted:
                     
-                    def THREADRestart():
-                        
-                        while not self.db.LoopIsFinished():
-                            
-                            time.sleep( 0.1 )
-                            
-                        
-                        self.db.RestoreBackup( path )
-                        
-                        while not HG.shutdown_complete:
-                            
-                            time.sleep( 0.1 )
-                            
-                        
-                        HydrusData.RestartProcess()
-                        
-                    
-                    self.CallToThreadLongRunning( THREADRestart )
+                    self._restore_backup_path = path
+                    self._doing_fast_exit = False
+                    HG.do_idle_shutdown_work = False
+                    HG.restart = True
                     
                     self.Exit()
                     
@@ -1500,6 +1483,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     port = service.GetPort()
                     allow_non_local_connections = service.AllowsNonLocalConnections()
+                    use_https = service.UseHTTPS()
                     
                     if port is None:
                         
@@ -1507,6 +1491,17 @@ class Controller( HydrusController.HydrusController ):
                         
                     
                     try:
+                        
+                        if use_https:
+                            
+                            import twisted.internet.ssl
+                            
+                            ( ssl_cert_path, ssl_key_path ) = self.db.GetSSLPaths()
+                            
+                            sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
+                            
+                            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
+                            
                         
                         from hydrus.client import ClientLocalServer
                         
@@ -1523,7 +1518,14 @@ class Controller( HydrusController.HydrusController ):
                         
                         try:
                             
-                            ipv6_port = reactor.listenTCP( port, http_factory, interface = '::' )
+                            if use_https:
+                                
+                                ipv6_port = reactor.listenSSL( port, http_factory, context_factory, interface = '::' )
+                                
+                            else:
+                                
+                                ipv6_port = reactor.listenTCP( port, http_factory, interface = '::' )
+                                
                             
                         except Exception as e:
                             
@@ -1536,7 +1538,14 @@ class Controller( HydrusController.HydrusController ):
                         
                         try:
                             
-                            ipv4_port = reactor.listenTCP( port, http_factory )
+                            if use_https:
+                                
+                                ipv4_port = reactor.listenSSL( port, http_factory, context_factory )
+                                
+                            else:
+                                
+                                ipv4_port = reactor.listenTCP( port, http_factory )
+                                
                             
                         except:
                             
@@ -1795,6 +1804,8 @@ class Controller( HydrusController.HydrusController ):
             
             self._DestroySplash()
             
+            QP.CallAfter( QW.QApplication.quit )
+            
             return
             
         
@@ -1850,6 +1861,13 @@ class Controller( HydrusController.HydrusController ):
             self.pub( 'splash_set_title_text', 'shutting down db\u2026' )
             
             self.ShutdownModel()
+            
+            if self._restore_backup_path is not None:
+                
+                self.pub( 'splash_set_title_text', 'restoring backup\u2026' )
+                
+                self.db.RestoreBackup( self._restore_backup_path )
+                
             
             self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
             

@@ -265,8 +265,6 @@ def GetStars( service_key, rating_state, rating ):
         return ( STAR, 0 )
         
     
-    allow_zero = service.AllowZero()
-    
     shape = service.GetShape()
     
     num_stars = service.GetNumStars()
@@ -281,14 +279,7 @@ def GetStars( service_key, rating_state, rating ):
         
     else:
         
-        if allow_zero:
-            
-            num_stars_on = int( round( rating * num_stars ) )
-            
-        else:
-            
-            num_stars_on = int( round( rating * ( num_stars - 1 ) ) ) + 1
-            
+        num_stars_on = service.ConvertRatingToStars( rating )
         
         num_stars_off = num_stars - num_stars_on
         

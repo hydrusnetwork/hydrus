@@ -133,6 +133,22 @@ class FileViewingStatsManager( object ):
         
     
     @staticmethod
+    def STATICGenerateCombinedManager( sub_fvsms: typing.Iterable[ "FileViewingStatsManager" ] ):
+        
+        fvsm = FileViewingStatsManager.STATICGenerateEmptyManager()
+        
+        for sub_fvsm in sub_fvsms:
+            
+            fvsm.preview_views += sub_fvsm.preview_views
+            fvsm.preview_viewtime += sub_fvsm.preview_viewtime
+            fvsm.media_views += sub_fvsm.media_views
+            fvsm.media_viewtime += sub_fvsm.media_viewtime
+            
+        
+        return fvsm
+        
+    
+    @staticmethod
     def STATICGenerateEmptyManager():
         
         return FileViewingStatsManager( 0, 0, 0, 0 )

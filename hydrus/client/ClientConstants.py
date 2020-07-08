@@ -6,9 +6,6 @@ from hydrus.core import HydrusConstants as HC
 
 #
 
-APPLICATION_COMMAND_TYPE_SIMPLE = 0
-APPLICATION_COMMAND_TYPE_CONTENT = 1
-
 BLANK_PHASH = b'\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything else 0 means only significant part of dct was [0,0], which represents flat colour
 
 CAN_HIDE_MOUSE = True

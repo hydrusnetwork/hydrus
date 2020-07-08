@@ -105,6 +105,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         self._force_next_page_url_generation = False
         
+        self._run_token = HydrusData.GenerateKey()
+        
     
     def __eq__( self, other ):
         
@@ -118,7 +120,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self.url, self.created ).__hash__()
+        return ( self.url, self._run_token ).__hash__()
         
     
     def __ne__( self, other ):
@@ -214,6 +216,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     def SetReferralURL( self, referral_url ):
         
         self._referral_url = referral_url
+        
+    
+    def SetRunToken( self, run_token: bytes ):
+        
+        self._run_token = run_token
         
     
     def SetStatus( self, status, note = '', exception = None ):
@@ -380,6 +387,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 for sub_gallery_seed in sub_gallery_seeds:
                     
+                    sub_gallery_seed.SetRunToken( self._run_token )
                     sub_gallery_seed.SetFixedServiceKeysToTags( self._fixed_service_keys_to_tags )
                     
                 
@@ -452,6 +460,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         for next_gallery_seed in next_gallery_seeds:
                             
+                            next_gallery_seed.SetRunToken( self._run_token )
                             next_gallery_seed.SetFixedServiceKeysToTags( self._fixed_service_keys_to_tags )
                             
                         
@@ -650,11 +659,17 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             return 0
             
         
+        seen_urls = set()
         new_gallery_seeds = []
         
         with self._lock:
             
             for gallery_seed in gallery_seeds:
+                
+                if gallery_seed.url in seen_urls:
+                    
+                    continue
+                    
                 
                 if gallery_seed in self._gallery_seeds_to_indices:
                     
@@ -666,6 +681,8 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 self._gallery_seeds.append( gallery_seed )
                 
                 self._gallery_seeds_to_indices[ gallery_seed ] = len( self._gallery_seeds ) - 1
+                
+                seen_urls.add( gallery_seed.url )
                 
             
             self._SetStatusDirty()

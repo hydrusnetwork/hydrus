@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNATPunch
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientRatings
 from hydrus.client.gui import ClientGUICommon
@@ -107,18 +108,17 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'manage_file_ratings':
+            if action == CAC.SIMPLE_MANAGE_FILE_RATINGS:
                 
                 self.EventOK()
                 

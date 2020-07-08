@@ -17,12 +17,11 @@ import yaml
 import itertools
 import typing
 
+from hydrus.core import HydrusBoot
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
-
-ORIGINAL_PATH = None
 
 def default_dict_list(): return collections.defaultdict( list )
 
@@ -46,7 +45,7 @@ def BuildKeyToSetDict( pairs ):
     
 def CalculateScoreFromRating( count, rating ):
     
-    # http://www.evanmiller.org/how-not-to-sort-by-average-rating.html
+    # https://www.evanmiller.org/how-not-to-sort-by-average-rating.html
     
     positive = count * rating
     negative = count * ( 1.0 - rating )
@@ -683,9 +682,9 @@ def GetSubprocessEnv():
     
     env = os.environ.copy()
     
-    if ORIGINAL_PATH is not None:
+    if HydrusBoot.ORIGINAL_PATH is not None:
         
-        env[ 'PATH' ] = ORIGINAL_PATH
+        env[ 'PATH' ] = HydrusBoot.ORIGINAL_PATH
         
     
     if HC.RUNNING_FROM_FROZEN_BUILD:

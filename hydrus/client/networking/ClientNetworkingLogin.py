@@ -753,7 +753,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         # t-thanks, EU
         # this is cribbed from poking around here https://github.com/johanneszab/TumblThree/commit/3563d6cebf1a467151d6b8d6eee9806ddd6e6364
         
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', 'http://www.tumblr.com/' )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', 'https://www.tumblr.com/' )
         
         network_job.SetForLogin( True )
         
@@ -1009,7 +1009,9 @@ class LoginScriptHydrus( object ):
                 
             elif service.IsFunctional():
                 
-                service.DelayFutureRequests( 'Could not log in for unknown reason. Current service status: {}'.format( service.GetStatusString() ) )
+                ( is_ok, status_string ) = service.GetStatusInfo()
+                
+                service.DelayFutureRequests( 'Could not log in for unknown reason. Current service status: {}'.format( status_string ) )
                 
             
         except Exception as e:

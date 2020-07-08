@@ -871,7 +871,7 @@ class ManagementPanel( QW.QScrollArea ):
         pass
         
     
-    def SynchronisedWaitSwitch( self ):
+    def PausePlaySearch( self ):
         
         pass
         
@@ -928,6 +928,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._currently_refreshing_maintenance_numbers = False
         self._currently_refreshing_dupe_count_numbers = False
+        
+        self._have_done_first_fetch = False
         
         #
         
@@ -1398,12 +1400,19 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             page_name = 'preparation (needs work)'
             
+            if not self._have_done_first_fetch:
+                
+                self._main_notebook.SelectPage( self._main_left_panel )
+                
+            
         else:
             
             page_name = 'preparation'
             
         
         self._main_notebook.setTabText( 0, page_name )
+        
+        self._have_done_first_fetch = True
         
     
     def _UpdateBothFilesMatchButton( self ):
@@ -2389,7 +2398,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._query_input, self._query_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._query_input, self._query_input.setFocus, QC.Qt.OtherFocusReason )
         
     
     def Start( self ):
@@ -3182,7 +3191,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._watcher_url_input, self._watcher_url_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._watcher_url_input, self._watcher_url_input.setFocus, QC.Qt.OtherFocusReason )
         
     
     def Start( self ):
@@ -3778,7 +3787,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._url_input, self._url_input.setFocus, QC.Qt.OtherFocusReason)
+        HG.client_controller.CallAfterQtSafe( self._url_input, self._url_input.setFocus, QC.Qt.OtherFocusReason )
         
     
     def Start( self ):
@@ -4737,6 +4746,13 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
+    def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
+        
+        ManagementPanel.ConnectMediaPanelSignals( self, media_panel )
+        
+        media_panel.newMediaAdded.connect( self.PauseSearching )
+        
+    
     def SetFileServiceKey( self, service_key: bytes ):
         
         self._management_controller.SetKey( 'file_service', service_key )
@@ -4798,6 +4814,14 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
+    def PauseSearching( self ):
+        
+        if self._search_enabled:
+            
+            self._tag_autocomplete.PauseSearching()
+            
+        
+    
     def RefreshQuery( self ):
         
         self._RefreshQuery()
@@ -4812,7 +4836,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            HG.client_controller.CallAfterQtSafe( self._tag_autocomplete, self._tag_autocomplete.setFocus, QC.Qt.OtherFocusReason)
+            HG.client_controller.CallAfterQtSafe( self._tag_autocomplete, self._tag_autocomplete.setFocus, QC.Qt.OtherFocusReason )
             
         
     
@@ -4846,11 +4870,11 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def SynchronisedWaitSwitch( self ):
+    def PausePlaySearch( self ):
         
         if self._search_enabled:
             
-            self._tag_autocomplete.SynchronisedWaitSwitch()
+            self._tag_autocomplete.PausePlaySearch()
             
         
     

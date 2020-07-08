@@ -15,6 +15,8 @@ from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 
+SUBSCRIPTION_BANDWIDTH_OK_WINDOW = 90
+
 def GenerateQueryLogContainerName() -> str:
     
     return HydrusData.GenerateKey().hex()
@@ -291,9 +293,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         example_network_contexts = self._GetExampleNetworkContexts( example_url, subscription_name )
         
-        threshold = 90
-        
-        bandwidth_ok = bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
+        bandwidth_ok = bandwidth_manager.CanDoWork( example_network_contexts, threshold = SUBSCRIPTION_BANDWIDTH_OK_WINDOW )
         
         if HG.subscription_report_mode:
             
@@ -414,6 +414,11 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         example_network_contexts = self._GetExampleNetworkContexts( example_url, subscription_name )
         
         ( estimate, bandwidth_network_context ) = bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
+        
+        if estimate < SUBSCRIPTION_BANDWIDTH_OK_WINDOW:
+            
+            estimate = 0
+            
         
         return estimate
         

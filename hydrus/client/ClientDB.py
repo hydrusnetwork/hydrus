@@ -17,6 +17,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientAPI
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
@@ -678,12 +679,12 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusPaths.MirrorFile( source, dest )
                 
             
-            conf_files = [ 'mpv.conf' ]
+            additional_filenames = self._GetPossibleAdditionalDBFilenames()
             
-            for conf_file in conf_files:
+            for additional_filename in additional_filenames:
                 
-                source = os.path.join( self._db_dir, conf_file )
-                dest = os.path.join( path, conf_file )
+                source = os.path.join( self._db_dir, additional_filename )
+                dest = os.path.join( path, additional_filename )
                 
                 if os.path.exists( source ):
                     
@@ -5732,14 +5733,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    num_stars = service.GetNumStars()
+                    one_star_value = service.GetOneStarValue()
                     
-                    if service.AllowZero():
-                        
-                        num_stars += 1
-                        
-                    
-                    half_a_star_value = 1.0 / ( ( num_stars - 1 ) * 2 )
+                    half_a_star_value = one_star_value / 2
                     
                 
                 if isinstance( value, str ):
@@ -7813,6 +7809,15 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return None
+        
+    
+    def _GetPossibleAdditionalDBFilenames( self ):
+        
+        paths = HydrusDB.HydrusDB._GetPossibleAdditionalDBFilenames( self )
+        
+        paths.append( 'mpv.conf' )
+        
+        return paths
         
     
     def _GetRecentTags( self, service_key ):
@@ -13939,7 +13944,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if media_viewer_browser_shortcuts.GetCommand( right_up ) is None:
                         
-                        media_viewer_browser_shortcuts.SetCommand( right_up, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_menu' ) )
+                        media_viewer_browser_shortcuts.SetCommand( right_up, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SHOW_MENU ) )
                         
                         self._SetJSONDump( media_viewer_browser_shortcuts )
                         
@@ -13957,9 +13962,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 384:
             
-            close_media_viewer = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_media_viewer' )
-            keep_archive_filter = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' )
-            better_dupe_filter = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' )
+            close_media_viewer = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_CLOSE_MEDIA_VIEWER )
+            keep_archive_filter = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP )
+            better_dupe_filter = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER )
             
             existing_shortcut_names = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
             
@@ -14621,8 +14626,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     from hydrus.client.gui import ClientGUIShortcuts
                     
-                    delete_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'delete_file' )
-                    undelete_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'undelete_file' )
+                    delete_command = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DELETE_FILE )
+                    undelete_command = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_UNDELETE_FILE )
                     
                     for delete_key in ClientGUIShortcuts.DELETE_KEYS_HYDRUS:
                         
@@ -14850,6 +14855,50 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( [ 'nitter media parser', 'nitter retweet parser', 'nitter tweet parser (video from koto.reisen)', 'nitter tweet parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 402:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetNoneableInteger( 'disk_cache_maintenance_mb', None )
+                new_options.SetNoneableInteger( 'disk_cache_init_period', None )
+                
+                self._SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                pass # nbd
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'deviant art file extended_fetch parser' ] )
                 
                 #
                 
@@ -15491,7 +15540,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def RestoreBackup( self, path ):
         
-        for filename in list(self._db_filenames.values()):
+        for filename in self._db_filenames.values():
+            
+            HG.client_controller.pub( 'splash_set_status_text', filename )
             
             source = os.path.join( path, filename )
             dest = os.path.join( self._db_dir, filename )
@@ -15508,19 +15559,21 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusPaths.MergeFile( dest, dest + '.old' )
                 
             
-            conf_files = [ 'mpv.conf' ]
+        
+        additional_filenames = self._GetPossibleAdditionalDBFilenames()
+        
+        for additional_filename in additional_filenames:
             
-            for conf_file in conf_files:
+            source = os.path.join( path, additional_filename )
+            dest = os.path.join( self._db_dir, additional_filename )
+            
+            if os.path.exists( source ):
                 
-                source = os.path.join( path, conf_file )
-                dest = os.path.join( self._db_dir, conf_file )
-                
-                if os.path.exists( source ):
-                    
-                    HydrusPaths.MirrorFile( source, dest )
-                    
+                HydrusPaths.MirrorFile( source, dest )
                 
             
+        
+        HG.client_controller.pub( 'splash_set_status_text', 'media files' )
         
         client_files_source = os.path.join( path, 'client_files' )
         client_files_default = os.path.join( self._db_dir, 'client_files' )

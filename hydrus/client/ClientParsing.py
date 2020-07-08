@@ -2138,7 +2138,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_parsing_context = {}
             
-            example_parsing_context[ 'url' ] = 'http://example.com/posts/index.php?id=123456'
+            example_parsing_context[ 'url' ] = 'https://example.com/posts/index.php?id=123456'
             
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
@@ -2181,7 +2181,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_parsing_context = {}
             
-            example_parsing_context[ 'url' ] = 'http://example.com/posts/index.php?id=123456'
+            example_parsing_context[ 'url' ] = 'https://example.com/posts/index.php?id=123456'
             
             new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
             

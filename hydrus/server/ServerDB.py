@@ -2,7 +2,6 @@ import collections
 import hashlib
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusDB
-from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusPaths
@@ -86,31 +85,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._files_dir = os.path.join( db_dir, 'server_files' )
         
-        self._ssl_cert_filename = 'server.crt'
-        self._ssl_key_filename = 'server.key'
-        
-        self._ssl_cert_path = os.path.join( db_dir, self._ssl_cert_filename )
-        self._ssl_key_path = os.path.join( db_dir, self._ssl_key_filename )
+        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
         self._account_type_cache = {}
-        
-        # create ssl keys
-        
-        cert_here = os.path.exists( self._ssl_cert_path )
-        key_here = os.path.exists( self._ssl_key_path )
-        
-        if cert_here ^ key_here:
-            
-            raise Exception( 'While creating the server database, only one of the paths "{}" and "{}" existed. You can create a server db with these files already in place, but please either delete the existing file (to have hydrus generate its own pair) or find the other in the pair (to use your own).'.format( self._ssl_cert_path, self._ssl_key_path ) )
-            
-        elif not ( cert_here or key_here ):
-            
-            HydrusData.Print( 'Generating new cert/key files.' )
-            
-            HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
-            
-        
-        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
     
     def _AddAccountType( self, service_id, account_type ):
@@ -3410,10 +3387,5 @@ class DB( HydrusDB.HydrusDB ):
     def GetFilesDir( self ):
         
         return self._files_dir
-        
-    
-    def GetSSLPaths( self ):
-        
-        return ( self._ssl_cert_path, self._ssl_key_path )
         
     

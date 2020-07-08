@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUICore as CGC
@@ -213,15 +214,15 @@ shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any vide
 
 SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
 
-SHORTCUTS_GLOBAL_ACTIONS = [ 'global_audio_mute', 'global_audio_unmute', 'global_audio_mute_flip', 'exit_application', 'exit_application_force_maintenance', 'restart_application', 'hide_to_system_tray' ]
-SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'undelete_file', 'export_files', 'export_files_quick_auto_export', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_bmp_or_file_if_not_bmpable', 'copy_file', 'copy_path', 'copy_sha256_hash', 'copy_md5_hash', 'copy_sha1_hash', 'copy_sha512_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_set_alternate', 'duplicate_media_set_alternate_collections', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_focused_king', 'duplicate_media_set_same_quality', 'open_known_url' ]
-SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'pause_media', 'pause_play_media', 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode', 'close_media_viewer' ]
-SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous', 'pause_play_slideshow', 'show_menu', 'close_media_viewer' ]
-SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'refresh_all_pages', 'refresh_page_of_pages_pages', 'new_page', 'new_page_of_pages', 'new_duplicate_filter_page', 'new_gallery_downloader_page', 'new_url_downloader_page', 'new_simple_downloader_page', 'new_watcher_downloader_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders', 'flip_debug_force_idle_mode_do_not_set_this', 'show_and_focus_manage_tags_favourite_tags', 'show_and_focus_manage_tags_related_tags', 'show_and_focus_manage_tags_file_lookup_script_tags', 'show_and_focus_manage_tags_recent_tags', 'focus_media_viewer' ]
-SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better_and_delete_other', 'duplicate_filter_this_is_better_but_keep_both', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_false_positive', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back', 'close_media_viewer' ]
-SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archive_delete_filter_delete', 'archive_delete_filter_skip', 'archive_delete_filter_back', 'close_media_viewer' ]
-SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS = [ 'pause_media', 'pause_play_media', 'open_file_in_external_program', 'close_media_viewer' ]
-SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS = [ 'pause_media', 'pause_play_media', 'open_file_in_external_program', 'launch_media_viewer' ]
+SHORTCUTS_GLOBAL_ACTIONS = [ CAC.SIMPLE_GLOBAL_AUDIO_MUTE, CAC.SIMPLE_GLOBAL_AUDIO_UNMUTE, CAC.SIMPLE_GLOBAL_AUDIO_MUTE_FLIP, CAC.SIMPLE_EXIT_APPLICATION, CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE, CAC.SIMPLE_RESTART_APPLICATION, CAC.SIMPLE_HIDE_TO_SYSTEM_TRAY ]
+SHORTCUTS_MEDIA_ACTIONS = [ CAC.SIMPLE_MANAGE_FILE_TAGS, CAC.SIMPLE_MANAGE_FILE_RATINGS, CAC.SIMPLE_MANAGE_FILE_URLS, CAC.SIMPLE_MANAGE_FILE_NOTES, CAC.SIMPLE_ARCHIVE_FILE, CAC.SIMPLE_INBOX_FILE, CAC.SIMPLE_DELETE_FILE, CAC.SIMPLE_UNDELETE_FILE, CAC.SIMPLE_EXPORT_FILES, CAC.SIMPLE_EXPORT_FILES_QUICK_AUTO_EXPORT, CAC.SIMPLE_REMOVE_FILE_FROM_VIEW, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE, CAC.SIMPLE_LAUNCH_THE_ARCHIVE_DELETE_FILTER, CAC.SIMPLE_COPY_BMP, CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE, CAC.SIMPLE_COPY_FILE, CAC.SIMPLE_COPY_PATH, CAC.SIMPLE_COPY_SHA256_HASH, CAC.SIMPLE_COPY_MD5_HASH, CAC.SIMPLE_COPY_SHA1_HASH, CAC.SIMPLE_COPY_SHA512_HASH, CAC.SIMPLE_GET_SIMILAR_TO_EXACT, CAC.SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR, CAC.SIMPLE_GET_SIMILAR_TO_SIMILAR, CAC.SIMPLE_GET_SIMILAR_TO_SPECULATIVE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS, CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM, CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER, CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING, CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY, CAC.SIMPLE_OPEN_KNOWN_URL ]
+SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_MOVE_ANIMATION_TO_PREVIOUS_FRAME, CAC.SIMPLE_MOVE_ANIMATION_TO_NEXT_FRAME, CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW, CAC.SIMPLE_PAN_UP, CAC.SIMPLE_PAN_DOWN, CAC.SIMPLE_PAN_LEFT, CAC.SIMPLE_PAN_RIGHT, CAC.SIMPLE_PAN_TOP_EDGE, CAC.SIMPLE_PAN_BOTTOM_EDGE, CAC.SIMPLE_PAN_LEFT_EDGE, CAC.SIMPLE_PAN_RIGHT_EDGE, CAC.SIMPLE_PAN_VERTICAL_CENTER, CAC.SIMPLE_PAN_HORIZONTAL_CENTER, CAC.SIMPLE_ZOOM_IN, CAC.SIMPLE_ZOOM_OUT, CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM, CAC.SIMPLE_FLIP_DARKMODE, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
+SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ CAC.SIMPLE_VIEW_NEXT, CAC.SIMPLE_VIEW_FIRST, CAC.SIMPLE_VIEW_LAST, CAC.SIMPLE_VIEW_PREVIOUS, CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW, CAC.SIMPLE_SHOW_MENU, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
+SHORTCUTS_MAIN_GUI_ACTIONS = [ CAC.SIMPLE_REFRESH, CAC.SIMPLE_REFRESH_ALL_PAGES, CAC.SIMPLE_REFRESH_PAGE_OF_PAGES_PAGES, CAC.SIMPLE_NEW_PAGE, CAC.SIMPLE_NEW_PAGE_OF_PAGES, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE, CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH, CAC.SIMPLE_SET_MEDIA_FOCUS, CAC.SIMPLE_SHOW_HIDE_SPLITTERS, CAC.SIMPLE_SET_SEARCH_FOCUS, CAC.SIMPLE_UNCLOSE_PAGE, CAC.SIMPLE_CLOSE_PAGE, CAC.SIMPLE_REDO, CAC.SIMPLE_UNDO, CAC.SIMPLE_FLIP_DARKMODE, CAC.SIMPLE_CHECK_ALL_IMPORT_FOLDERS, CAC.SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS, CAC.SIMPLE_FOCUS_MEDIA_VIEWER ]
+SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER, CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_BUT_KEEP_BOTH, CAC.SIMPLE_DUPLICATE_FILTER_EXACTLY_THE_SAME, CAC.SIMPLE_DUPLICATE_FILTER_ALTERNATES, CAC.SIMPLE_DUPLICATE_FILTER_FALSE_POSITIVE, CAC.SIMPLE_DUPLICATE_FILTER_CUSTOM_ACTION, CAC.SIMPLE_DUPLICATE_FILTER_SKIP, CAC.SIMPLE_DUPLICATE_FILTER_BACK, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
+SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_DELETE, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
+SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
+SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_LAUNCH_MEDIA_VIEWER ]
 
 simple_shortcut_name_to_action_lookup = {}
 
@@ -471,7 +472,7 @@ def AncestorShortcutsHandlers( widget: QW.QWidget ):
     
     return shortcuts_handlers
     
-def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: typing.Optional[ QC.QEvent ] = None, child_tlw_classes_who_can_pass_up: typing.Optional[ typing.Iterable[ type ] ] = None ):
+def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: typing.Optional[ QC.QEvent ] = None, child_tlw_classes_who_can_pass_up: typing.Optional[ typing.Collection[ type ] ] = None ):
     
     do_focus_test = True
     
@@ -903,7 +904,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if serialisable_service_key is None:
                     
-                    command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, data )
+                    command = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, data )
                     
                 else:
                     
@@ -935,7 +936,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
                         continue
                         
                     
-                    command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, content_type, action, value ) )
+                    command = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, content_type, action, value ) )
                     
                 
                 shortcuts_to_commands[ shortcut ] = command
@@ -959,13 +960,13 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def GetShortcuts( self, simple_command ):
+    def GetShortcuts( self, simple_command: int ):
         
         shortcuts = []
         
         for ( shortcut, command ) in self._shortcuts_to_commands.items():
             
-            if command.GetCommandType() == CC.APPLICATION_COMMAND_TYPE_SIMPLE and command.GetData() == simple_command:
+            if command.IsSimpleCommand() and command.GetData() == simple_command:
                 
                 shortcuts.append( shortcut )
                 
@@ -1332,7 +1333,7 @@ class ShortcutsManager( QC.QObject ):
         return None
         
     
-    def GetNamesToShortcuts( self, simple_command: ClientData.ApplicationCommand ):
+    def GetNamesToShortcuts( self, simple_command: int ):
         
         names_to_shortcuts = {}
         

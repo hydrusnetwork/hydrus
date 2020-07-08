@@ -367,6 +367,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_number' ] = 3
         self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_time_delta' ] = 600
         
+        self._dictionary[ 'integers' ][ 'ac_read_list_height_num_chars' ] = 19
+        self._dictionary[ 'integers' ][ 'ac_write_list_height_num_chars' ] = 11
+        
         #
         
         self._dictionary[ 'keys' ] = {}
@@ -384,8 +387,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
         
-        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
-        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = None
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = None
         
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
         

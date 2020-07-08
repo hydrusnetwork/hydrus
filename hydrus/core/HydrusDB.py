@@ -1,6 +1,7 @@
 import distutils.version
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
@@ -24,11 +25,13 @@ def CheckCanVacuum( db_path, stop_time = None ):
     
     db_size = ( page_count - freelist_count ) * page_size
     
+    vacuum_estimate = int( db_size * 1.2 )
+    
     if stop_time is not None:
         
         approx_vacuum_speed_mb_per_s = 1048576 * 1
         
-        approx_vacuum_duration = db_size // approx_vacuum_speed_mb_per_s
+        approx_vacuum_duration = vacuum_estimate // approx_vacuum_speed_mb_per_s
         
         time_i_will_have_to_start = stop_time - approx_vacuum_duration
         
@@ -40,7 +43,7 @@ def CheckCanVacuum( db_path, stop_time = None ):
     
     ( db_dir, db_filename ) = os.path.split( db_path )
     
-    HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, db_size )
+    HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, vacuum_estimate )
     
 def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
     
@@ -132,6 +135,12 @@ class HydrusDB( object ):
         self._transaction_started = 0
         self._in_transaction = False
         self._transaction_contains_writes = False
+        
+        self._ssl_cert_filename = '{}.crt'.format( self._db_name )
+        self._ssl_key_filename = '{}.key'.format( self._db_name )
+        
+        self._ssl_cert_path = os.path.join( self._db_dir, self._ssl_cert_filename )
+        self._ssl_key_path = os.path.join( self._db_dir, self._ssl_key_filename )
         
         self._connection_timestamp = 0
         
@@ -411,6 +420,11 @@ class HydrusDB( object ):
     def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
         
         return HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
+        
+    
+    def _GetPossibleAdditionalDBFilenames( self ):
+        
+        return [ self._ssl_cert_filename, self._ssl_key_filename ]
         
     
     def _GetRowCount( self ):
@@ -802,6 +816,27 @@ class HydrusDB( object ):
             
         
         return total
+        
+    
+    def GetSSLPaths( self ):
+        
+        # create ssl keys
+        
+        cert_here = os.path.exists( self._ssl_cert_path )
+        key_here = os.path.exists( self._ssl_key_path )
+        
+        if cert_here ^ key_here:
+            
+            raise Exception( 'While creating the server database, only one of the paths "{}" and "{}" existed. You can create a db with these files already in place, but please either delete the existing file (to have hydrus generate its own pair) or find the other in the pair (to use your own).'.format( self._ssl_cert_path, self._ssl_key_path ) )
+            
+        elif not ( cert_here or key_here ):
+            
+            HydrusData.Print( 'Generating new cert/key files.' )
+            
+            HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+            
+        
+        return ( self._ssl_cert_path, self._ssl_key_path )
         
     
     def GetStatus( self ):

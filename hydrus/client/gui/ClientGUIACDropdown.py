@@ -601,6 +601,8 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._text_ctrl = QW.QLineEdit( self._text_input_panel )
         
+        self.setFocusProxy( self._text_ctrl )
+        
         self._UpdateBackgroundColour()
         
         self._last_attempted_dropdown_width = 0
@@ -656,8 +658,6 @@ class AutoCompleteDropdown( QW.QWidget ):
         self._dropdown_notebook = QW.QTabWidget( self._dropdown_window )
         
         #
-        
-        self._list_height_num_chars = 8
         
         self._search_results_list = self._InitSearchResultsList()
         
@@ -718,6 +718,8 @@ class AutoCompleteDropdown( QW.QWidget ):
         HG.client_controller.sub( self, 'DoDropdownHideShow', 'notify_page_change' )
         
         self._ScheduleResultsRefresh( 0.0 )
+        
+        HG.client_controller.CallLaterQtSafe( self, 0.05, self._DropdownHideShow )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -1198,7 +1200,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._dropdown_notebook.setCurrentIndex( new_index )
             
-            self._text_ctrl.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.OtherFocusReason )
             
         
     
@@ -1211,18 +1213,6 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._results_cache = results_cache
             
             self._SetResultsToList( results, parsed_autocomplete_text )
-            
-        
-    
-    def setFocus( self, focus_reason = QC.Qt.OtherFocusReason ):
-        
-        if HC.PLATFORM_MACOS:
-            
-            HG.client_controller.CallAfterQtSafe( self._text_ctrl, self._text_ctrl.setFocus, focus_reason )
-            
-        else:
-            
-            self._text_ctrl.setFocus( focus_reason )
             
         
     
@@ -1484,8 +1474,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._include_pending_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = tag_search_context.include_pending_tags )
         self._include_pending_tags.setToolTip( 'select whether to include pending tags in the search' )
         
-        self._synchronised = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate', start_on = synchronised )
-        self._synchronised.setToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
+        self._search_pause_play = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'searching immediately', off_label = 'search paused', start_on = synchronised )
+        self._search_pause_play.setToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
         
         self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'OR', self._AdvancedORInput )
         self._or_advanced.setToolTip( 'Advanced OR Search input.' )
@@ -1510,7 +1500,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         sync_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( sync_button_hbox, self._synchronised, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( sync_button_hbox, self._search_pause_play, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( sync_button_hbox, self._or_advanced, CC.FLAGS_VCENTER )
         QP.AddToLayout( sync_button_hbox, self._or_cancel, CC.FLAGS_VCENTER )
         QP.AddToLayout( sync_button_hbox, self._or_rewind, CC.FLAGS_VCENTER )
@@ -1533,7 +1523,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._include_current_tags.valueChanged.connect( self.SetIncludeCurrent )
         self._include_pending_tags.valueChanged.connect( self.SetIncludePending )
-        self._synchronised.valueChanged.connect( self.SetSynchronised )
+        self._search_pause_play.valueChanged.connect( self.SetSynchronised )
         
     
     def _AdvancedORInput( self ):
@@ -1739,23 +1729,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, height_num_chars = self._list_height_num_chars )
+        height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
+        
+        favs_list = ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, height_num_chars = height_num_chars )
         
         return favs_list
         
     
     def _InitSearchResultsList( self ):
         
-        if self._float_mode:
-            
-            self._list_height_num_chars = 19
-            
-        else:
-            
-            self._list_height_num_chars = 8
-            
+        height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
         
-        return ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        return ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, height_num_chars = height_num_chars )
         
     
     def _LoadFavouriteSearch( self, folder_name, name ):
@@ -1776,7 +1761,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._media_collect_widget.SetCollect( media_collect )
             
         
-        self._synchronised.SetOnOff( synchronised )
+        self._search_pause_play.SetOnOff( synchronised )
         
         self.blockSignals( False )
         
@@ -1887,7 +1872,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             under_construction_or_predicate = self._under_construction_or_predicate.Duplicate()
             
         
-        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, self._file_search_context.Duplicate(), self._synchronised.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
+        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, self._file_search_context.Duplicate(), self._search_pause_play.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
@@ -1972,7 +1957,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def IsSynchronised( self ):
         
-        return self._synchronised.IsOn()
+        return self._search_pause_play.IsOn()
+        
+    
+    def PauseSearching( self ):
+        
+        self._search_pause_play.SetOnOff( False )
         
     
     def SetFetchedResults( self, job_key: ClientThreading.JobKey, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, results_cache: ClientSearch.PredicateResultsCache, results: list ):
@@ -2029,9 +2019,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._SignalNewSearchState()
         
     
-    def SynchronisedWaitSwitch( self ):
+    def PausePlaySearch( self ):
         
-        self._synchronised.Flip()
+        self._search_pause_play.Flip()
         
     
     def ShowCancelSearchButton( self, show ):
@@ -2285,16 +2275,18 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_write_list_height_num_chars' )
+        
+        favs_list = ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, height_num_chars = height_num_chars )
         
         return favs_list
         
     
     def _InitSearchResultsList( self ):
         
-        self._list_height_num_chars = 8
+        height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_write_list_height_num_chars' )
         
-        return ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, height_num_chars = self._list_height_num_chars )
+        return ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, height_num_chars = height_num_chars )
         
     
     def _Paste( self ):

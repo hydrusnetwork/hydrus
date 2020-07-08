@@ -779,7 +779,7 @@ class Page( QW.QSplitter ):
         self._media_panel.setFocus( QC.Qt.OtherFocusReason )
         
     
-    def SetMediaResults( self, media_results ):
+    def SetInitialMediaResults( self, media_results ):
         
         if self._management_controller.IsImporter():
             
@@ -843,9 +843,9 @@ class Page( QW.QSplitter ):
             
         
     
-    def SynchronisedWaitSwitch( self ):
+    def PausePlaySearch( self ):
         
-        self._management_panel.SynchronisedWaitSwitch()
+        self._management_panel.PausePlaySearch()
         
     
     def Start( self ):
@@ -907,7 +907,7 @@ class Page( QW.QSplitter ):
                 return
                 
             
-            self.SetMediaResults( media_results )
+            self.SetInitialMediaResults( media_results )
             
         
         initial_media_results = []
@@ -2479,7 +2479,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         WARNING_TOTAL_PAGES = self._controller.new_options.GetInteger( 'total_pages_warning' )
-        MAX_TOTAL_PAGES = 200
+        MAX_TOTAL_PAGES = 500
         
         ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self._controller.gui.GetTotalPageCounts()
         

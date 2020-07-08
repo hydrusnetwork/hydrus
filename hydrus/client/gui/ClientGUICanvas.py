@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
@@ -543,27 +544,27 @@ class Canvas( QW.QWidget ):
         delta_x = 0
         delta_y = 0
         
-        if pan_type == 'pan_top_edge':
+        if pan_type == CAC.SIMPLE_PAN_TOP_EDGE:
             
             delta_y = - self._media_window_pos.y()
             
-        elif pan_type == 'pan_left_edge':
+        elif pan_type == CAC.SIMPLE_PAN_LEFT_EDGE:
             
             delta_x = - self._media_window_pos.x()
             
-        elif pan_type == 'pan_bottom_edge':
+        elif pan_type == CAC.SIMPLE_PAN_BOTTOM_EDGE:
             
             delta_y = my_size.height() - ( self._media_window_pos.y() + media_size.height() )
             
-        elif pan_type == 'pan_right_edge':
+        elif pan_type == CAC.SIMPLE_PAN_RIGHT_EDGE:
             
             delta_x = my_size.width() - ( self._media_window_pos.x() + media_size.width() )
             
-        elif pan_type == 'pan_vertical_center':
+        elif pan_type == CAC.SIMPLE_PAN_VERTICAL_CENTER:
             
             delta_y = ( my_size.height() / 2 ) - ( self._media_window_pos.y() + ( media_size.height() / 2 ) )
             
-        elif pan_type == 'pan_horizontal_center':
+        elif pan_type == CAC.SIMPLE_PAN_HORIZONTAL_CENTER:
             
             delta_x = ( my_size.width() / 2 ) - ( self._media_window_pos.x() + ( media_size.width() / 2 ) )
             
@@ -775,7 +776,7 @@ class Canvas( QW.QWidget ):
                     
                     child.activateWindow()
                     
-                    command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_search_focus' )
+                    command = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_SEARCH_FOCUS )
                     
                     panel.ProcessApplicationCommand( command )
                     
@@ -1400,7 +1401,7 @@ class Canvas( QW.QWidget ):
         self._PauseCurrentMedia()
         
     
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
             
@@ -1409,42 +1410,41 @@ class Canvas( QW.QWidget ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'manage_file_ratings':
+            if action == CAC.SIMPLE_MANAGE_FILE_RATINGS:
                 
                 self._ManageRatings()
                 
-            elif action == 'manage_file_tags':
+            elif action == CAC.SIMPLE_MANAGE_FILE_TAGS:
                 
                 self._ManageTags()
                 
-            elif action == 'manage_file_urls':
+            elif action == CAC.SIMPLE_MANAGE_FILE_URLS:
                 
                 self._ManageURLs()
                 
-            elif action == 'manage_file_notes':
+            elif action == CAC.SIMPLE_MANAGE_FILE_NOTES:
                 
                 self._ManageNotes()
                 
-            elif action == 'open_known_url':
+            elif action == CAC.SIMPLE_OPEN_KNOWN_URL:
                 
                 self._OpenKnownURL()
                 
-            elif action == 'archive_file':
+            elif action == CAC.SIMPLE_ARCHIVE_FILE:
                 
                 self._Archive()
                 
-            elif action == 'copy_bmp':
+            elif action == CAC.SIMPLE_COPY_BMP:
                 
                 self._CopyBMPToClipboard()
                 
-            elif action == 'copy_bmp_or_file_if_not_bmpable':
+            elif action == CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE:
                 
                 copied = self._CopyBMPToClipboard()
                 
@@ -1453,103 +1453,103 @@ class Canvas( QW.QWidget ):
                     self._CopyFileToClipboard()
                     
                 
-            elif action == 'copy_file':
+            elif action == CAC.SIMPLE_COPY_FILE:
                 
                 self._CopyFileToClipboard()
                 
-            elif action == 'copy_path':
+            elif action == CAC.SIMPLE_COPY_PATH:
                 
                 self._CopyPathToClipboard()
                 
-            elif action == 'copy_sha256_hash':
+            elif action == CAC.SIMPLE_COPY_SHA256_HASH:
                 
                 self._CopyHashToClipboard( 'sha256' )
                 
-            elif action == 'copy_md5_hash':
+            elif action == CAC.SIMPLE_COPY_MD5_HASH:
                 
                 self._CopyHashToClipboard( 'md5' )
                 
-            elif action == 'copy_sha1_hash':
+            elif action == CAC.SIMPLE_COPY_SHA1_HASH:
                 
                 self._CopyHashToClipboard( 'sha1' )
                 
-            elif action == 'copy_sha512_hash':
+            elif action == CAC.SIMPLE_COPY_SHA512_HASH:
                 
                 self._CopyHashToClipboard( 'sha512' )
                 
-            elif action == 'delete_file':
+            elif action == CAC.SIMPLE_DELETE_FILE:
                 
                 self._Delete()
                 
-            elif action == 'undelete_file':
+            elif action == CAC.SIMPLE_UNDELETE_FILE:
                 
                 self._Undelete()
                 
-            elif action == 'inbox_file':
+            elif action == CAC.SIMPLE_INBOX_FILE:
                 
                 self._Inbox()
                 
-            elif action == 'open_file_in_external_program':
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
                 self._OpenExternally()
                 
-            elif action == 'pan_up':
+            elif action == CAC.SIMPLE_PAN_UP:
                 
                 self._DoManualPan( 0, -1 )
                 
-            elif action == 'pan_down':
+            elif action == CAC.SIMPLE_PAN_DOWN:
                 
                 self._DoManualPan( 0, 1 )
                 
-            elif action == 'pan_left':
+            elif action == CAC.SIMPLE_PAN_LEFT:
                 
                 self._DoManualPan( -1, 0 )
                 
-            elif action == 'pan_right':
+            elif action == CAC.SIMPLE_PAN_RIGHT:
                 
                 self._DoManualPan( 1, 0 )
                 
-            elif action in ( 'pan_top_edge', 'pan_bottom_edge', 'pan_left_edge', 'pan_right_edge', 'pan_vertical_center', 'pan_horizontal_center' ):
+            elif action in ( CAC.SIMPLE_PAN_TOP_EDGE, CAC.SIMPLE_PAN_BOTTOM_EDGE, CAC.SIMPLE_PAN_LEFT_EDGE, CAC.SIMPLE_PAN_RIGHT_EDGE, CAC.SIMPLE_PAN_VERTICAL_CENTER, CAC.SIMPLE_PAN_HORIZONTAL_CENTER ):
                 
                 self._DoEdgePan( action )
                 
-            elif action == 'pause_media':
+            elif action == CAC.SIMPLE_PAUSE_MEDIA:
                 
                 self._PauseCurrentMedia()
                 
-            elif action == 'pause_play_media':
+            elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
                 self._PausePlayCurrentMedia()
                 
-            elif action == 'move_animation_to_previous_frame':
+            elif action == CAC.SIMPLE_MOVE_ANIMATION_TO_PREVIOUS_FRAME:
                 
                 self._media_container.GotoPreviousOrNextFrame( -1 )
                 
-            elif action == 'move_animation_to_next_frame':
+            elif action == CAC.SIMPLE_MOVE_ANIMATION_TO_NEXT_FRAME:
                 
                 self._media_container.GotoPreviousOrNextFrame( 1 )
                 
-            elif action == 'zoom_in':
+            elif action == CAC.SIMPLE_ZOOM_IN:
                 
                 self._ZoomIn()
                 
-            elif action == 'zoom_in_canvas_button':
+            elif action == CAC.SIMPLE_ZOOM_IN_VIEWER_CENTER:
                 
                 self._ZoomIn( zoom_center_type_override = ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
-            elif action == 'zoom_out':
+            elif action == CAC.SIMPLE_ZOOM_OUT:
                 
                 self._ZoomOut()
                 
-            elif action == 'zoom_out_canvas_button':
+            elif action == CAC.SIMPLE_ZOOM_OUT_VIEWER_CENTER:
                 
                 self._ZoomOut( zoom_center_type_override = ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
-            elif action == 'switch_between_100_percent_and_canvas_zoom':
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM:
                 
                 self._ZoomSwitch()
                 
-            elif action == 'switch_between_100_percent_and_canvas_zoom_canvas_button':
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
                 
                 self._ZoomSwitch( zoom_center_type_override = ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
@@ -1558,14 +1558,14 @@ class Canvas( QW.QWidget ):
                 command_processed = False
                 
             
-        elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+        elif command.IsContentCommand():
             
             if self._current_media is None:
                 
                 return
                 
             
-            command_processed = ClientGUIFunctions.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
+            command_processed = ClientGUIMediaActions.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
             
         else:
             
@@ -1779,7 +1779,7 @@ class CanvasPanel( Canvas ):
                 ClientGUIMenus.AppendMenuLabel( info_menu, line, line )
                 
             
-            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, self._current_media )
+            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
             
             ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
             
@@ -2422,7 +2422,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         CanvasWithDetails.mouseMoveEvent( self, event )
         
     
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
             
@@ -2431,14 +2431,13 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'close_media_viewer':
+            if action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER:
                 
                 self._TryToCloseWindow()
                 
@@ -3143,7 +3142,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
             
@@ -3152,46 +3151,45 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'duplicate_filter_this_is_better_and_delete_other':
+            if action == CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER:
                 
                 self._CurrentMediaIsBetter( delete_second = True )
                 
-            elif action == 'duplicate_filter_this_is_better_but_keep_both':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_BUT_KEEP_BOTH:
                 
                 self._CurrentMediaIsBetter( delete_second = False )
                 
-            elif action == 'duplicate_filter_exactly_the_same':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_EXACTLY_THE_SAME:
                 
                 self._MediaAreTheSame()
                 
-            elif action == 'duplicate_filter_alternates':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_ALTERNATES:
                 
                 self._MediaAreAlternates()
                 
-            elif action == 'duplicate_filter_false_positive':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_FALSE_POSITIVE:
                 
                 self._MediaAreFalsePositive()
                 
-            elif action == 'duplicate_filter_custom_action':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_CUSTOM_ACTION:
                 
                 self._DoCustomAction()
                 
-            elif action == 'duplicate_filter_skip':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_SKIP:
                 
                 self._SkipPair()
                 
-            elif action == 'duplicate_filter_back':
+            elif action == CAC.SIMPLE_DUPLICATE_FILTER_BACK:
                 
                 self._GoBack()
                 
-            elif action in ( 'view_first', 'view_last', 'view_previous', 'view_next' ):
+            elif action in ( CAC.SIMPLE_VIEW_FIRST, CAC.SIMPLE_VIEW_LAST, CAC.SIMPLE_VIEW_PREVIOUS, CAC.SIMPLE_VIEW_NEXT ):
                 
                 self._SwitchMedia()
                 
@@ -3749,7 +3747,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
             
@@ -3758,30 +3756,29 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action in ( 'archive_delete_filter_keep', 'archive_file' ):
+            if action in ( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP, CAC.SIMPLE_ARCHIVE_FILE ):
                 
                 self._Keep()
                 
-            elif action in ( 'archive_delete_filter_delete', 'delete_file' ):
+            elif action in ( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_DELETE, CAC.SIMPLE_DELETE_FILE ):
                 
                 self._Delete()
                 
-            elif action == 'archive_delete_filter_skip':
+            elif action == CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP:
                 
                 self._Skip()
                 
-            elif action == 'archive_delete_filter_back':
+            elif action == CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK:
                 
                 self._Back()
                 
-            elif action == 'launch_the_archive_delete_filter':
+            elif action == CAC.SIMPLE_LAUNCH_THE_ARCHIVE_DELETE_FILTER:
                 
                 self._TryToCloseWindow()
                 
@@ -3864,7 +3861,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
         
     
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
             
@@ -3873,30 +3870,29 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'remove_file_from_view':
+            if action == CAC.SIMPLE_REMOVE_FILE_FROM_VIEW:
                 
                 self._Remove()
                 
-            elif action == 'view_first':
+            elif action == CAC.SIMPLE_VIEW_FIRST:
                 
                 self._ShowFirst()
                 
-            elif action == 'view_last':
+            elif action == CAC.SIMPLE_VIEW_LAST:
                 
                 self._ShowLast()
                 
-            elif action == 'view_previous':
+            elif action == CAC.SIMPLE_VIEW_PREVIOUS:
                 
                 self._ShowPrevious()
                 
-            elif action == 'view_next':
+            elif action == CAC.SIMPLE_VIEW_NEXT:
                 
                 self._ShowNext()
                 
@@ -4091,7 +4087,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def ProcessApplicationCommand( self, command, canvas_key = None ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
         
         if canvas_key is not None and canvas_key != self._canvas_key:
             
@@ -4100,18 +4096,17 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'pause_play_slideshow':
+            if action == CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW:
                 
                 self._PausePlaySlideshow()
                 
-            elif action == 'show_menu':
+            elif action == CAC.SIMPLE_SHOW_MENU:
                 
                 self.ShowMenu()
                 
@@ -4166,7 +4161,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuLabel( info_menu, line, line )
                 
             
-            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, self._current_media )
+            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
             
             ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
             

@@ -235,6 +235,8 @@ class ReviewServicePanel( QW.QWidget ):
         
         self._service = service
         
+        self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshButton )
+        
         service_type = self._service.GetServiceType()
         
         subpanels = []
@@ -300,6 +302,8 @@ class ReviewServicePanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, self._refresh_button, CC.FLAGS_LONE_BUTTON )
+        
         for panel in subpanels:
             
             QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -308,6 +312,11 @@ class ReviewServicePanel( QW.QWidget ):
         vbox.addStretch( 1 )
         
         self.setLayout( vbox )
+        
+    
+    def _RefreshButton( self ):
+        
+        HG.client_controller.pub( 'service_updated', self._service )
         
     
     def EventImmediateSync( self, event ):
@@ -656,7 +665,16 @@ class ReviewServicePanel( QW.QWidget ):
                 
             else:
                 
-                url = 'http://127.0.0.1:{}/'.format( self._service.GetPort() )
+                if self._service.UseHTTPS():
+                    
+                    scheme = 'https'
+                    
+                else:
+                    
+                    scheme = 'http'
+                    
+                
+                url = '{}://127.0.0.1:{}/'.format( scheme, self._service.GetPort() )
                 
                 ClientPaths.LaunchURLInWebBrowser( url )
                 
@@ -865,9 +883,18 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._address.setText( host+':'+str(port) )
             
-            status = self._service.GetStatusString()
+            ( is_ok, status_string ) = self._service.GetStatusInfo()
             
-            self._functional.setText( status )
+            self._functional.setText( status_string )
+            
+            if is_ok:
+                
+                self._functional.setObjectName( '' )
+                
+            else:
+                
+                self._functional.setObjectName( 'HydrusWarning' )
+                
             
             bandwidth_summary = self._service.GetBandwidthCurrentMonthSummary()
             
@@ -986,9 +1013,18 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._title_and_expires_st.setText( title+' that '+expires_status )
             
-            account_status = account.GetStatusString()
+            ( is_ok, status_string ) = account.GetStatusInfo()
             
-            self._status_st.setText( account_status )
+            self._status_st.setText( status_string )
+            
+            if is_ok:
+                
+                self._status_st.setObjectName( '' )
+                
+            else:
+                
+                self._status_st.setObjectName( 'HydrusWarning' )
+                
             
             next_sync_status = self._service.GetNextAccountSyncStatus()
             
@@ -1848,8 +1884,6 @@ class ReviewServicePanel( QW.QWidget ):
         
         def _CopyInternalShareURL( self ):
             
-            internal_ip = '127.0.0.1'
-            
             internal_port = self._service.GetPort()
             
             if internal_port is None:
@@ -1861,7 +1895,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             for share_key in self._booru_shares.GetData( only_selected = True ):
                 
-                url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.hex()
+                url = self._service.GetInternalShareURL( share_key )
                 
                 urls.append( url )
                 
@@ -2176,11 +2210,24 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
+            
             self._clear_trash = ClientGUICommon.BetterButton( self, 'clear trash', self._ClearTrash )
+            self._clear_trash.setEnabled( False )
             
             #
             
-            self.Add( self._clear_trash, CC.FLAGS_LONE_BUTTON )
+            self._Refresh()
+            
+            #
+            
+            hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( hbox, self._clear_trash, CC.FLAGS_VCENTER )
+            
+            self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+            
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _ClearTrash( self ):
@@ -2206,8 +2253,44 @@ class ReviewServicePanel( QW.QWidget ):
                     HG.client_controller.pub( 'service_updated', service )
                     
                 
+                self._clear_trash.setEnabled( False )
+                
                 HG.client_controller.CallToThread( do_it, self._service )
                 
+            
+        
+        def _Refresh( self ):
+            
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
+            
+        
+        def ServiceUpdated( self, service ):
+            
+            if service.GetServiceKey() == self._service.GetServiceKey():
+                
+                self._service = service
+                
+                self._my_updater.Update()
+                
+            
+        
+        def THREADFetchInfo( self, service ):
+            
+            def qt_code( num_files ):
+                
+                if not self or not QP.isValid( self ):
+                    
+                    return
+                    
+                
+                self._clear_trash.setEnabled( num_files > 0 )
+                
+            
+            service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
+            
+            num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+            
+            QP.CallAfter( qt_code, num_files )
             
         
     

@@ -4,6 +4,7 @@ import os
 import threading
 import time
 import traceback
+import typing
 
 from qtpy import QtWidgets as QW
 
@@ -82,6 +83,7 @@ def GenerateDefaultServiceDictionary( service_type ):
             
         
         dictionary[ 'allow_non_local_connections' ] = allow_non_local_connections
+        dictionary[ 'use_https' ] = False
         
     
     if service_type in HC.RATINGS_SERVICES:
@@ -258,7 +260,7 @@ class Service( object ):
             
         
     
-    def GetStatusString( self ) -> str:
+    def GetStatusInfo( self ) -> typing.Tuple[ bool, str ]:
         
         with self._lock:
             
@@ -266,11 +268,11 @@ class Service( object ):
                 
                 self._CheckFunctional()
                 
-                return 'service is functional'
+                return ( True, 'service is functional' )
                 
             except Exception as e:
                 
-                return str( e )
+                return ( False, str( e ) )
                 
             
         
@@ -349,6 +351,7 @@ class ServiceLocalServerService( Service ):
         dictionary[ 'external_scheme_override' ] = self._external_scheme_override
         dictionary[ 'external_host_override' ] = self._external_host_override
         dictionary[ 'external_port_override' ] = self._external_port_override
+        dictionary[ 'use_https' ] = self._use_https
         
         return dictionary
         
@@ -367,6 +370,7 @@ class ServiceLocalServerService( Service ):
         self._external_scheme_override = dictionary[ 'external_scheme_override' ]
         self._external_host_override = dictionary[ 'external_host_override' ]
         self._external_port_override = dictionary[ 'external_port_override' ]
+        self._use_https = dictionary[ 'use_https' ]
         
         # this should support the same serverservice interface so we can just toss it at the regular serverengine and all the bandwidth will work ok
         
@@ -435,15 +439,28 @@ class ServiceLocalServerService( Service ):
             
         
     
+    def UseHTTPS( self ):
+        
+        with self._lock:
+            
+            return self._use_https
+            
+        
+    
 class ServiceLocalBooru( ServiceLocalServerService ):
     
     def GetExternalShareURL( self, share_key ):
         
-        if self._external_scheme_override is None:
+        if self._use_https:
+            
+            scheme = 'https'
+            
+        else:
             
             scheme = 'http'
             
-        else:
+        
+        if self._external_scheme_override is not None:
             
             scheme = self._external_scheme_override
             
@@ -483,6 +500,25 @@ class ServiceLocalBooru( ServiceLocalServerService ):
         return url
         
     
+    def GetInternalShareURL( self, share_key ):
+        
+        internal_ip = '127.0.0.1'
+        internal_port = self._port
+        
+        if self._use_https:
+            
+            scheme = 'https'
+            
+        else:
+            
+            scheme = 'http'
+            
+        
+        url = '{}://{}:{}/gallery?share_key={}'.format( scheme, internal_ip, internal_port, share_key.hex() )
+        
+        return url
+        
+    
 class ServiceClientAPI( ServiceLocalServerService ):
     
     pass
@@ -511,6 +547,11 @@ class ServiceLocalRating( Service ):
         self._colours = dict( dictionary[ 'colours' ] )
         
     
+    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+        
+        raise NotImplementedError()
+        
+    
     def GetColour( self, rating_state ):
         
         with self._lock:
@@ -529,7 +570,26 @@ class ServiceLocalRating( Service ):
     
 class ServiceLocalRatingLike( ServiceLocalRating ):
     
-    pass
+    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+        
+        if rating is None:
+            
+            return 'not set'
+            
+        elif isinstance( rating, float ):
+            
+            if rating < 0.5:
+                
+                return 'dislike'
+                
+            elif rating >= 0.5:
+                
+                return 'like'
+                
+            
+        
+        return 'unknown'
+        
     
 class ServiceLocalRatingNumerical( ServiceLocalRating ):
     
@@ -559,12 +619,71 @@ class ServiceLocalRatingNumerical( ServiceLocalRating ):
             
         
     
+    def ConvertRatingToStars( self, rating: float ) -> int:
+        
+        if self._allow_zero:
+            
+            stars = int( round( rating * self._num_stars ) )
+            
+        else:
+            
+            stars = int( round( rating * ( self._num_stars - 1 ) ) ) + 1
+            
+        
+        return stars
+        
+    
+    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+        
+        if rating is None:
+            
+            return 'not set'
+            
+        elif isinstance( rating, float ):
+            
+            rating_value = self.ConvertRatingToStars( rating )
+            rating_range = self._num_stars
+            
+            return HydrusData.ConvertValueRangeToPrettyString( rating_value, rating_range )
+            
+        
+        return 'unknown'
+        
+    
+    def ConvertStarsToRating( self, stars: int ) -> float:
+        
+        if self._allow_zero:
+            
+            rating = stars / self._num_stars
+            
+        else:
+            
+            rating = ( stars - 1 ) / ( self._num_stars - 1 )
+            
+        
+        return rating
+        
+    
     def GetNumStars( self ):
         
         with self._lock:
             
             return self._num_stars
             
+        
+    
+    def GetOneStarValue( self ):
+        
+        num_choices = self._num_stars
+        
+        if self._allow_zero:
+            
+            num_choices += 1
+            
+        
+        one_star_value = 1.0 / ( num_choices - 1 )
+        
+        return one_star_value
         
     
 class ServiceRemote( Service ):
@@ -846,7 +965,7 @@ class ServiceRestricted( ServiceRemote ):
         return 'next account sync ' + s
         
     
-    def GetStatusString( self ):
+    def GetStatusInfo( self ) -> typing.Tuple[ bool, str ]:
         
         with self._lock:
             
@@ -854,11 +973,11 @@ class ServiceRestricted( ServiceRemote ):
                 
                 self._CheckFunctional( including_account = False )
                 
-                return 'service is functional'
+                return ( True, 'service is functional' )
                 
             except Exception as e:
                 
-                return str( e )
+                return ( False, str( e ) )
                 
             
         

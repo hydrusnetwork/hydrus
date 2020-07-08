@@ -633,6 +633,8 @@ class TextAndPasteCtrl( QW.QWidget ):
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
         
+        self.setFocusProxy( self._text_input )
+        
         #
         
         hbox = QP.HBoxLayout()

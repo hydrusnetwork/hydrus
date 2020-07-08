@@ -1,12 +1,14 @@
 import collections
+import threading
+import typing
+import urllib
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
-import threading
-import urllib
 
 INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
 BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'update_hash' }
@@ -525,7 +527,7 @@ class Account( object ):
             
         
     
-    def GetStatusString( self ):
+    def GetStatusInfo( self ) -> typing.Tuple[ bool, str ]:
         
         with self._lock:
             
@@ -533,11 +535,11 @@ class Account( object ):
                 
                 self._CheckFunctional()
                 
-                return 'account is functional'
+                return ( True, 'account is functional' )
                 
             except Exception as e:
                 
-                return str( e )
+                return ( False, str( e ) )
                 
             
         

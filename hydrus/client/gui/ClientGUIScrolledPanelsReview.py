@@ -698,20 +698,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        job_key.SetVariable( 'popup_title', 'rebalancing files' )
+        HG.client_controller.pub( 'do_file_storage_rebalance', job_key )
         
-        self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
-        
-        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'migrating files' ) as dlg:
-            
-            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
-            
-        
-        self._Update()
+        self._OKParent()
         
     
     def _RemovePath( self, location ):
@@ -1376,7 +1365,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Select the destination location for the Archive. Existing Archives are also ok, and will be appended to.'
         
-        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptSave, default_filename = 'archive.db' ) as dlg:
+        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptSave, default_filename = 'archive.db', fileMode = QW.QFileDialog.AnyFile ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 

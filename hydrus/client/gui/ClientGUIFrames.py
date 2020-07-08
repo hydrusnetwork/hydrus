@@ -65,7 +65,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         filename = 'keys.txt'
         
-        with QP.FileDialog( self, acceptMode = QW.QFileDialog.AcceptSave, default_filename = filename ) as dlg:
+        with QP.FileDialog( self, acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile, default_filename = filename ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 

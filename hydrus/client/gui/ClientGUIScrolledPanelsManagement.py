@@ -20,6 +20,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMedia
 from hydrus.client import ClientRatings
@@ -1111,6 +1112,10 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._port = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, port_name, none_phrase = none_phrase, min = 1, max = 65535 )
                 
                 self._allow_non_local_connections = QW.QCheckBox( 'allow non-local connections', self._client_server_options_panel )
+                self._allow_non_local_connections.setToolTip( 'Allow other computers on the network to talk to use service. If unchecked, only localhost can talk to it.' )
+                
+                self._use_https = QW.QCheckBox( 'use https', self._client_server_options_panel )
+                self._use_https.setToolTip( 'Host the server using https instead of http. This uses a self-signed certificate, stored in your db folder, which is imperfect but better than straight http. Your software (e.g. web browser testing the Client API welcome page) may need to go through a manual \'approve this ssl certificate\' process before it can work. If you host your client on a real DNS domain and acquire your own signed certificate, you can replace the cert+key file pair with that.' )
                 
                 self._support_cors = QW.QCheckBox( 'support CORS headers', self._client_server_options_panel )
                 self._support_cors.setToolTip( 'Have this server support Cross-Origin Resource Sharing, which allows web browsers to access it off other domains. Turn this on if you want to access this service through a web-based wrapper (e.g. a booru wrapper) hosted on another domain.' )
@@ -1144,6 +1149,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._upnp.SetValue( dictionary[ 'upnp_port' ] )
                 
                 self._allow_non_local_connections.setChecked( dictionary[ 'allow_non_local_connections' ] )
+                self._use_https.setChecked( dictionary[ 'use_https' ] )
                 self._support_cors.setChecked( dictionary[ 'support_cors' ] )
                 self._log_requests.setChecked( dictionary[ 'log_requests' ] )
                 
@@ -1155,6 +1161,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._client_server_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._allow_non_local_connections, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._use_https, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._support_cors, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._log_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1189,6 +1196,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 dictionary_part[ 'port' ] = self._port.GetValue()
                 dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
                 dictionary_part[ 'allow_non_local_connections' ] = self._allow_non_local_connections.isChecked()
+                dictionary_part[ 'use_https' ] = self._use_https.isChecked()
                 dictionary_part[ 'support_cors' ] = self._support_cors.isChecked()
                 dictionary_part[ 'log_requests' ] = self._log_requests.isChecked()
                 dictionary_part[ 'external_scheme_override' ] = self._external_scheme_override.GetValue()
@@ -2635,40 +2643,53 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._main_gui_title = QW.QLineEdit( self )
+            self._main_gui_panel = ClientGUICommon.StaticBox( self, 'main window' )
             
-            self._confirm_client_exit = QW.QCheckBox( self )
+            self._main_gui_title = QW.QLineEdit( self._main_gui_panel )
             
-            self._always_show_iso_time = QW.QCheckBox( self )
+            self._confirm_client_exit = QW.QCheckBox( self._main_gui_panel )
+            
+            self._activate_window_on_tag_search_page_activation = QW.QCheckBox( self._main_gui_panel )
+            
+            tt = 'Middle-clicking one or more tags in a taglist will cause the creation of a new search page for those tags. If you do this from the media viewer or a child manage tags dialog, do you want to switch immediately to the main gui?'
+            
+            self._activate_window_on_tag_search_page_activation.setToolTip( tt )
+            
+            #
+            
+            self._popup_panel = ClientGUICommon.StaticBox( self, 'popup window toaster' )
+            
+            self._popup_message_character_width = QP.MakeQSpinBox( self._popup_panel, min = 16, max = 256 )
+            
+            self._popup_message_force_min_width = QW.QCheckBox( self._popup_panel )
+            
+            self._hide_message_manager_on_gui_iconise = QW.QCheckBox( self._popup_panel )
+            self._hide_message_manager_on_gui_iconise.setToolTip( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
+            
+            self._hide_message_manager_on_gui_deactive = QW.QCheckBox( self._popup_panel )
+            self._hide_message_manager_on_gui_deactive.setToolTip( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
+            
+            #
+            
+            self._misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
+            
+            self._always_show_iso_time = QW.QCheckBox( self._misc_panel )
             tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
             self._always_show_iso_time.setToolTip( tt )
             
-            self._autocomplete_float_main_gui = QW.QCheckBox( self )
-            self._autocomplete_float_frames = QW.QCheckBox( self )
-            
-            self._hide_preview = QW.QCheckBox( self )
-            
-            self._popup_message_character_width = QP.MakeQSpinBox( self, min=16, max=256 )
-            
-            self._popup_message_force_min_width = QW.QCheckBox( self )
-            
-            self._discord_dnd_fix = QW.QCheckBox( self )
+            self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._discord_dnd_fix.setToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
-            self._secret_discord_dnd_fix = QW.QCheckBox( self )
+            self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
             
-            self._hide_message_manager_on_gui_iconise = QW.QCheckBox( self )
-            self._hide_message_manager_on_gui_iconise.setToolTip( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
-            
-            self._hide_message_manager_on_gui_deactive = QW.QCheckBox( self )
-            self._hide_message_manager_on_gui_deactive.setToolTip( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
-            
-            self._notify_client_api_cookies = QW.QCheckBox( self )
+            self._notify_client_api_cookies = QW.QCheckBox( self._misc_panel )
             self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie information over the Client API.' )
             
-            self._use_qt_file_dialogs = QW.QCheckBox( self )
+            self._use_qt_file_dialogs = QW.QCheckBox( self._misc_panel )
             self._use_qt_file_dialogs.setToolTip( 'If you get crashes opening file/directory dialogs, try this.' )
+            
+            #
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
@@ -2685,12 +2706,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._confirm_client_exit.setChecked( HC.options[ 'confirm_client_exit' ] )
             
+            self._activate_window_on_tag_search_page_activation.setChecked( self._new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' ) )
+            
             self._always_show_iso_time.setChecked( self._new_options.GetBoolean( 'always_show_iso_time' ) )
-            
-            self._autocomplete_float_main_gui.setChecked( self._new_options.GetBoolean( 'autocomplete_float_main_gui' ) )
-            self._autocomplete_float_frames.setChecked( self._new_options.GetBoolean( 'autocomplete_float_frames' ) )
-            
-            self._hide_preview.setChecked( HC.options[ 'hide_preview' ] )
             
             self._popup_message_character_width.setValue( self._new_options.GetInteger( 'popup_message_character_width' ) )
             
@@ -2722,20 +2740,34 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
-            rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
-            rows.append( ( 'Autocomplete results float in main gui: ', self._autocomplete_float_main_gui ) )
-            rows.append( ( 'Autocomplete results float in other windows: ', self._autocomplete_float_frames ) )
-            rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
+            rows.append( ( 'Switch to main window when opening tag search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._main_gui_panel, rows )
+            
+            self._main_gui_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
             rows.append( ( 'Make a short-lived popup on cookie updates through the Client API: ', self._notify_client_api_cookies ) )
+            rows.append( ( 'BUGFIX: Hide the popup toaster when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
+            rows.append( ( 'BUGFIX: Hide the popup toaster when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._popup_panel, rows )
+            
+            self._popup_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
-            rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
-            rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            self._misc_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             text = 'Here you can override the current and default values for many frame and dialog sizing and positioning variables.'
             text += os.linesep
@@ -2747,7 +2779,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._main_gui_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._popup_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._misc_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
@@ -2793,10 +2827,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'always_show_iso_time', self._always_show_iso_time.isChecked() )
             
-            self._new_options.SetBoolean( 'autocomplete_float_main_gui', self._autocomplete_float_main_gui.isChecked() )
-            self._new_options.SetBoolean( 'autocomplete_float_frames', self._autocomplete_float_frames.isChecked() )
-            
-            HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
+            self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
             
             self._new_options.SetInteger( 'popup_message_character_width', self._popup_message_character_width.value() )
             
@@ -2832,43 +2863,41 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._default_gui_session = QW.QComboBox( self )
+            self._sessions_panel = ClientGUICommon.StaticBox( self, 'sessions' )
             
-            self._last_session_save_period_minutes = QP.MakeQSpinBox( self, min=1, max=1440 )
+            self._default_gui_session = QW.QComboBox( self._sessions_panel )
             
-            self._only_save_last_session_during_idle = QW.QCheckBox( self )
+            self._last_session_save_period_minutes = QP.MakeQSpinBox( self._sessions_panel, min = 1, max = 1440 )
+            
+            self._only_save_last_session_during_idle = QW.QCheckBox( self._sessions_panel )
             
             self._only_save_last_session_during_idle.setToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' )
             
-            self._number_of_gui_session_backups = QP.MakeQSpinBox( self, min=1, max=32 )
+            self._number_of_gui_session_backups = QP.MakeQSpinBox( self._sessions_panel, min = 1, max = 32 )
             
             self._number_of_gui_session_backups.setToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' )
             
-            self._default_new_page_goes = ClientGUICommon.BetterChoice( self )
+            #
+            
+            self._pages_panel = ClientGUICommon.StaticBox( self, 'pages' )
+            
+            self._default_new_page_goes = ClientGUICommon.BetterChoice( self._pages_panel )
             
             for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
                 
                 self._default_new_page_goes.addItem( CC.new_page_goes_string_lookup[ value], value )
                 
             
-            self._activate_window_on_tag_search_page_activation = QW.QCheckBox( self )
+            self._notebook_tabs_on_left = QW.QCheckBox( self._pages_panel )
             
-            tt = 'Middle-clicking one or more tags in a taglist will cause the creation of a new search page for those tags. If you do this from the media viewer or a child manage tags dialog, do you want to switch immediately to the main gui?'
+            self._total_pages_warning = QP.MakeQSpinBox( self._pages_panel, min=5, max=500 )
             
-            self._activate_window_on_tag_search_page_activation.setToolTip( tt )
-            
-            self._notebook_tabs_on_left = QW.QCheckBox( self )
-            
-            self._total_pages_warning = QP.MakeQSpinBox( self, min=5, max=200 )
-            
-            self._reverse_page_shift_drag_behaviour = QW.QCheckBox( self )
+            self._reverse_page_shift_drag_behaviour = QW.QCheckBox( self._pages_panel )
             self._reverse_page_shift_drag_behaviour.setToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
-            
-            self._set_search_focus_on_page_change = QW.QCheckBox( self )
             
             #
             
-            self._page_names_panel = ClientGUICommon.StaticBox( self, 'page tab names' )
+            self._page_names_panel = ClientGUICommon.StaticBox( self._pages_panel, 'page tab names' )
             
             self._max_page_name_chars = QP.MakeQSpinBox( self._page_names_panel, min=1, max=256 )
             self._elide_page_tab_names = QW.QCheckBox( self._page_names_panel )
@@ -2881,6 +2910,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._import_page_progress_display = QW.QCheckBox( self._page_names_panel )
+            
+            #
+            
+            self._controls_panel = ClientGUICommon.StaticBox( self, 'controls' )
+            
+            self._autocomplete_float_main_gui = QW.QCheckBox( self._controls_panel )
+            self._autocomplete_float_frames = QW.QCheckBox( self._controls_panel )
+            
+            self._ac_read_list_height_num_chars = QP.MakeQSpinBox( self._controls_panel, min = 1, max = 128 )
+            self._ac_write_list_height_num_chars = QP.MakeQSpinBox( self._controls_panel, min = 1, max = 128 )
+            
+            self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
+            
+            self._hide_preview = QW.QCheckBox( self._controls_panel )
             
             #
             
@@ -2915,8 +2958,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_new_page_goes.SetValue( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
-            self._activate_window_on_tag_search_page_activation.setChecked( self._new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' ) )
-            
             self._notebook_tabs_on_left.setChecked( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
             
             self._max_page_name_chars.setValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
@@ -2931,7 +2972,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._reverse_page_shift_drag_behaviour.setChecked( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
             
+            self._autocomplete_float_main_gui.setChecked( self._new_options.GetBoolean( 'autocomplete_float_main_gui' ) )
+            self._autocomplete_float_frames.setChecked( self._new_options.GetBoolean( 'autocomplete_float_frames' ) )
+            
+            self._ac_read_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_read_list_height_num_chars' ) )
+            self._ac_write_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_write_list_height_num_chars' ) )
+            
             self._set_search_focus_on_page_change.setChecked( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
+            
+            self._hide_preview.setChecked( HC.options[ 'hide_preview' ] )
             
             #
             
@@ -2941,14 +2990,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
             rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
             rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
-            rows.append( ( 'By default, put new page tabs on (requires restart): ', self._default_new_page_goes ) )
-            rows.append( ( 'When switching to a page, focus its input field (if any): ', self._set_search_focus_on_page_change ) )
-            rows.append( ( 'Switch to main window when opening tag search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
-            rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
-            rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
-            rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            sessions_gridbox = ClientGUICommon.WrapInGrid( self._sessions_panel, rows )
+            
+            self._sessions_panel.Add( sessions_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            rows = []
+            
+            rows.append( ( 'By default, put new page tabs on (requires restart): ', self._default_new_page_goes ) )
+            rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
+            rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
+            rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._pages_panel, rows )
             
             rows = []
             
@@ -2957,7 +3011,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
             rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
             
-            page_names_gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
             
             label = 'If you have enough pages in a row, left/right arrows will appear to navigate them back and forth.'
             label += os.linesep
@@ -2973,12 +3027,29 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_names_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self._page_names_panel.Add( page_names_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._page_names_panel.Add( page_names_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self._pages_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._pages_panel.Add( self._page_names_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Autocomplete results float in main gui: ', self._autocomplete_float_main_gui ) )
+            rows.append( ( 'Autocomplete results float in other windows: ', self._autocomplete_float_frames ) )
+            rows.append( ( '\'Read\' autocomplete list height: ', self._ac_read_list_height_num_chars ) )
+            rows.append( ( '\'Write\' autocomplete list height: ', self._ac_write_list_height_num_chars ) )
+            rows.append( ( 'When switching to a page, focus its text input field (if any): ', self._set_search_focus_on_page_change ) )
+            rows.append( ( 'Hide the bottom-left preview window: ', self._hide_preview ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
+            
+            self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._page_names_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._sessions_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._pages_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
@@ -2987,8 +3058,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'default_gui_session' ] = self._default_gui_session.currentText()
-            
-            self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
             
             self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.isChecked() )
             
@@ -3011,7 +3080,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.isChecked() )
             
+            self._new_options.SetBoolean( 'autocomplete_float_main_gui', self._autocomplete_float_main_gui.isChecked() )
+            self._new_options.SetBoolean( 'autocomplete_float_frames', self._autocomplete_float_frames.isChecked() )
+            
+            self._new_options.SetInteger( 'ac_read_list_height_num_chars', self._ac_read_list_height_num_chars.value() )
+            self._new_options.SetInteger( 'ac_write_list_height_num_chars', self._ac_write_list_height_num_chars.value() )
+            
             self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
+            
+            HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
             
         
     
@@ -4086,13 +4163,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ShowDiskCacheHelp( self ):
             
-            message = 'The hydrus database runs best on a drive with fast random access latency. Certain important operations can function up to 100 times faster when started raw from an SSD rather than an HDD.'
+            message = 'NO NEED TO USE THESE IF YOU RUN ON AN SSD.'
             message += os.linesep * 2
-            message += 'To get around this, the client populates a pre-boot and ongoing disk cache. By contiguously frontloading the database into memory, the most important functions do not need to wait on your disk for most of their work.'
+            message += 'The hydrus database runs best on a drive with fast random access latency. Certain important operations can function up to 100 times faster when started raw from an SSD rather than an HDD.'
             message += os.linesep * 2
-            message += 'If you tend to leave your client on in the background and have a slow drive but a lot of ram, you might like to pump these numbers up. 10s boot cache and 1024MB ongoing can really make a difference on, for instance, a slow laptop drive.'
+            message += 'If you are on an HDD, the client can populate a pre-boot and ongoing disk cache. By contiguously frontloading the database into memory, the most important functions do not need to wait on your disk for most of their work.'
             message += os.linesep * 2
-            message += 'If you run the database from an SSD, you can reduce or entirely eliminate these values, as the benefit is not so stark. 2s and 256MB is plenty.'
+            message += 'Try 2 to 10 seconds boot cache, and 256-512MB ongoing disk cache.'
             message += os.linesep * 2
             message += 'Unless you are testing, do not go crazy with this stuff. You can set 8192MB if you like, but there are diminishing (and potentially negative) returns.'
             
@@ -5498,22 +5575,21 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'manage_file_urls':
+            if action == CAC.SIMPLE_MANAGE_FILE_URLS:
                 
                 self._OKParent()
                 
-            elif action == 'set_search_focus':
+            elif action == CAC.SIMPLE_SET_SEARCH_FOCUS:
                 
                 self._SetSearchFocus()
                 

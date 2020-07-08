@@ -387,6 +387,8 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
+        urls = HydrusData.DedupeList( urls )
+        
         filtered_urls = [ url for url in urls if not gallery_seed_log.HasGalleryURL( url ) ]
         
         urls_to_add = urls

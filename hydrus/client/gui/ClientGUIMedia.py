@@ -13,6 +13,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaManagers
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -115,7 +116,7 @@ def CopyMediaURLClassURLs( medias, url_class ):
     
     HG.client_controller.pub( 'clipboard', 'text', urls_string )
     
-def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Iterable[ ClientMedia.MediaSingleton ] ):
+def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
     
     if len( flat_medias ) == 0:
         
@@ -322,7 +323,12 @@ def OpenMediaURLClassURLs( medias, url_class ):
     
     OpenURLs( urls )
     
-def AddFileViewingStatsMenu( menu, focus_media ):
+def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    if len( medias ) == 0:
+        
+        return
+        
     
     view_style = HG.client_controller.new_options.GetInteger( 'file_viewing_stats_menu_display' )
     
@@ -331,7 +337,16 @@ def AddFileViewingStatsMenu( menu, focus_media ):
         return
         
     
-    fvsm = focus_media.GetFileViewingStatsManager()
+    if len( medias ) == 1:
+        
+        ( media, ) = medias
+        
+        fvsm = media.GetFileViewingStatsManager()
+        
+    else:
+        
+        fvsm = ClientMediaManagers.FileViewingStatsManager.STATICGenerateCombinedManager( [ media.GetFileViewingStatsManager() for media in medias ] )
+        
     
     if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED:
         
@@ -566,7 +581,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
         
     
-def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: typing.Iterable[ ClientMedia.MediaSingleton ] ):
+def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
     
     # add test here for if media actually has stats, edit them, all that
     

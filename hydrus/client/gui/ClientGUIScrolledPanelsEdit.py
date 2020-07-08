@@ -15,6 +15,7 @@ from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
@@ -1963,18 +1964,17 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( names_to_notes, deletee_names )
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
-        command_type = command.GetCommandType()
         data = command.GetData()
         
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+        if command.IsSimpleCommand():
             
             action = data
             
-            if action == 'manage_file_notes':
+            if action == CAC.SIMPLE_MANAGE_FILE_NOTES:
                 
                 self._OKParent()
                 
@@ -3796,7 +3796,13 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += os.linesep * 2
         message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
         
-        self._tag_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
+        self._tag_blacklist_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
+        
+        self._tag_whitelist = list( tag_import_options.GetTagWhitelist() )
+        
+        self._tag_whitelist_button = ClientGUICommon.BetterButton( downloader_options_panel, 'whitelist', self._EditWhitelist )
+        
+        self._UpdateTagWhitelistLabel()
         
         self._services_vbox = QP.VBoxLayout()
         
@@ -3808,6 +3814,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
         self._InitialiseServices( tag_import_options )
+        
+        self._SetValue( tag_import_options )
         
         #
         
@@ -3840,7 +3848,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'fetch tags even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
         rows.append( ( 'fetch tags even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
-        rows.append( ( 'set file blacklist: ', self._tag_filter_button ) )
+        rows.append( ( 'set file blacklist: ', self._tag_blacklist_button ) )
+        rows.append( ( 'set file whitelist: ', self._tag_whitelist_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( downloader_options_panel, rows )
         
@@ -3876,6 +3885,23 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._is_default.clicked.connect( self._UpdateIsDefault )
         
         self._UpdateIsDefault()
+        
+    
+    def _EditWhitelist( self ):
+        
+        message = 'If you add tags here, then any file importing with these options must have at least one of these tags from the download source. You can mix it with a blacklist--both will apply in turn.'
+        message += os.linesep * 2
+        message += 'This is usually easier and faster to do just by adding tags to the downloader query (e.g. "artistname desired_tag"), so reserve this for downloaders that do not work on tags or where you want to whitelist multiple tags.'
+        
+        with ClientGUIDialogs.DialogInputTags( self, CC.COMBINED_TAG_SERVICE_KEY, list( self._tag_whitelist ), expand_parents = False, message = message ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                self._tag_whitelist = dlg.GetTags()
+                
+                self._UpdateTagWhitelistLabel()
+                
+            
         
     
     def _InitialiseServices( self, tag_import_options ):
@@ -3937,16 +3963,20 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._SetValue( default_tag_import_options )
         
     
-    def _SetValue( self, tag_import_options ):
+    def _SetValue( self, tag_import_options: ClientImportOptions.TagImportOptions ):
         
         self._is_default.setChecked( tag_import_options.IsDefault() )
         
-        self._tag_filter_button.SetValue( tag_import_options.GetTagBlacklist() )
+        self._tag_blacklist_button.SetValue( tag_import_options.GetTagBlacklist() )
+        
+        self._tag_whitelist = list( tag_import_options.GetTagWhitelist() )
+        
+        self._UpdateTagWhitelistLabel()
         
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
-        for ( service_key, panel ) in list(self._service_keys_to_service_tag_import_options_panels.items()):
+        for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items():
             
             service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
             
@@ -3989,6 +4019,20 @@ Please note that once you know what tags you like, you can (and should) set up t
             
         
     
+    def _UpdateTagWhitelistLabel( self ):
+        
+        if len( self._tag_whitelist ) == 0:
+            
+            label = 'no whitelist'
+            
+        else:
+            
+            label = 'whitelist of {} tags'.format( HydrusData.ToHumanInt( len( self._tag_whitelist ) ) )
+            
+        
+        self._tag_whitelist_button.setText( label )
+        
+    
     def GetValue( self ) -> ClientImportOptions.TagImportOptions:
         
         is_default = self._is_default.isChecked()
@@ -4004,9 +4048,10 @@ Please note that once you know what tags you like, you can (and should) set up t
             
             service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in list( self._service_keys_to_service_tag_import_options_panels.items() ) }
             
-            tag_blacklist = self._tag_filter_button.GetValue()
+            tag_blacklist = self._tag_blacklist_button.GetValue()
+            tag_whitelist = list( self._tag_whitelist )
             
-            tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+            tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
             
         
         return tag_import_options
