@@ -511,7 +511,7 @@ def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: Q
             
         
     
-    do_focus_test = False
+    do_focus_test = False # lmao, why this here? I guess it got turned off
     
     if do_focus_test:
         

@@ -32,6 +32,7 @@ from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -671,7 +672,7 @@ class Controller( HydrusController.HydrusController ):
                 self.gui.SaveAndClose()
                 
             
-        except Exception as e:
+        except Exception:
             
             self._ReportShutdownException()
             
@@ -721,6 +722,22 @@ class Controller( HydrusController.HydrusController ):
             
         
         return work_to_do
+        
+    
+    def GetMainTLW( self ):
+        
+        if self.gui is not None:
+            
+            return self.gui
+            
+        elif self._splash is not None:
+            
+            return self._splash
+            
+        else:
+            
+            return None
+            
         
     
     def GetMPVConfPath( self ):
@@ -796,6 +813,21 @@ class Controller( HydrusController.HydrusController ):
                 HydrusVideoHandling.FFMPEG_PATH = os.path.basename( HydrusVideoHandling.FFMPEG_PATH )
                 
             
+        
+        # important this happens before repair, as repair dialog has a column list lmao
+        
+        column_list_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_COLUMN_LIST_MANAGER )
+        
+        if column_list_manager is None:
+            
+            column_list_manager = ClientGUIListManager.ColumnListManager()
+            
+            column_list_manager._dirty = True
+            
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your list manager was missing on boot! I have recreated a new empty one with default settings. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
+        self.column_list_manager = column_list_manager
         
         self.pub( 'splash_set_status_subtext', 'client files' )
         
@@ -1378,6 +1410,15 @@ class Controller( HydrusController.HydrusController ):
                 self.pub( 'splash_set_status_subtext', 'services' )
                 
                 self.WriteSynchronous( 'dirty_services', dirty_services )
+                
+            
+            if self.column_list_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'column list manager' )
+                
+                self.WriteSynchronous( 'serialisable', self.column_list_manager )
+                
+                self.column_list_manager.SetClean()
                 
             
             if self.client_api_manager.IsDirty():

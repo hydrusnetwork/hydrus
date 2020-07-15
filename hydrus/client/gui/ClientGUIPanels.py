@@ -17,10 +17,11 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
@@ -453,9 +454,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             permissions_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( 'name', -1 ), ( 'basic permissions', 36 ), ( 'advanced permissions', 36 ) ]
-            
-            self._permissions_list = ClientGUIListCtrl.BetterListCtrl( permissions_list_panel, 'client_api_permissions', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            self._permissions_list = ClientGUIListCtrl.BetterListCtrl( permissions_list_panel, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, 10, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
             
             permissions_list_panel.SetListCtrl( self._permissions_list )
             
@@ -472,7 +471,7 @@ class ReviewServicePanel( QW.QWidget ):
             permissions_list_panel.AddButton( 'open client api base url', self._OpenBaseURL )
             permissions_list_panel.AddButton( 'copy api access key', self._CopyAPIAccessKey, enabled_only_on_single_selection = True )
             
-            self._permissions_list.Sort( 0 )
+            self._permissions_list.Sort()
             
             #
             
@@ -896,6 +895,8 @@ class ReviewServicePanel( QW.QWidget ):
                 self._functional.setObjectName( 'HydrusWarning' )
                 
             
+            self._functional.style().polish( self._functional )
+            
             bandwidth_summary = self._service.GetBandwidthCurrentMonthSummary()
             
             self._bandwidth_summary.setText( bandwidth_summary )
@@ -1025,6 +1026,8 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 self._status_st.setObjectName( 'HydrusWarning' )
                 
+            
+            self._status_st.style().polish( self._status_st )
             
             next_sync_status = self._service.GetNextAccountSyncStatus()
             
@@ -1561,9 +1564,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._ipfs_shares_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( 'multihash', 34 ), ( 'num files', 11 ), ( 'total size', 12 ), ( 'note', -1 ) ]
-            
-            self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, 'ipfs_shares', 12, 32, columns, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+            self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, CGLC.COLUMN_LIST_IPFS_SHARES.ID, 12, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
             
             self._ipfs_shares_panel.SetListCtrl( self._ipfs_shares )
             
@@ -1789,9 +1790,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             booru_share_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( 'name', -1 ), ( 'info', 36 ), ( 'expires', 12 ), ( 'files', 12 ) ]
-            
-            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_share_panel, 'local_booru_shares', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_share_panel, CGLC.COLUMN_LIST_LOCAL_BOORU_SHARES.ID, 10, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
             
             booru_share_panel.SetListCtrl( self._booru_shares )
             
@@ -2149,7 +2148,9 @@ class ReviewServicePanel( QW.QWidget ):
         
         def _MigrateTags( self ):
             
-            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'migrate tags' )
+            tlw = HG.client_controller.GetMainTLW()
+            
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'migrate tags' )
             
             panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._service.GetServiceKey() )
             

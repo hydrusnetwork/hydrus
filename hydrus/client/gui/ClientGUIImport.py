@@ -25,8 +25,6 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIGallerySeedLog
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -34,6 +32,9 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
@@ -234,9 +235,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             quick_namespaces_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._quick_namespaces_panel )
             
-            columns = [ ( 'namespace', 12 ), ( 'regex', -1 ) ]
-            
-            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( quick_namespaces_listctrl_panel, 'quick_namespaces', 4, 20, columns, self._ConvertQuickRegexDataToListCtrlTuples, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
+            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( quick_namespaces_listctrl_panel, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, 4, self._ConvertQuickRegexDataToListCtrlTuples, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
             
             quick_namespaces_listctrl_panel.SetListCtrl( self._quick_namespaces_list )
             
@@ -286,7 +285,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._quick_namespaces_list.AddDatas( quick_namespaces )
             
-            self._quick_namespaces_list.Sort( 0 )
+            self._quick_namespaces_list.Sort()
             
             for regex in regexes:
                 
@@ -849,9 +848,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', 24 ), ( 'path', -1 ), ( 'paused', 8 ), ( 'check period', 24 ) ]
-        
-        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, columns, self._ConvertImportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, 8, self._ConvertImportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         import_folders_panel.SetListCtrl( self._import_folders )
         
@@ -863,7 +860,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._import_folders.SetData( import_folders )
         
-        self._import_folders.Sort( 0 )
+        self._import_folders.Sort()
         
         #
         
@@ -1059,9 +1056,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._filename_tagging_options_box )
         
-        columns = [ ( 'filename tagging options services', -1 ) ]
-        
-        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, columns, self._ConvertFilenameTaggingOptionsToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, 5, self._ConvertFilenameTaggingOptionsToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
         
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         
@@ -1115,7 +1110,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._filename_tagging_options.AddDatas( list(good_tag_service_keys_to_filename_tagging_options.items()) )
         
-        self._filename_tagging_options.Sort( 0 )
+        self._filename_tagging_options.Sort()
         
         #
         
@@ -1527,9 +1522,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._service_key = service_key
             self._paths = paths
             
-            columns = [ ( '#', 4 ), ( 'path', 40 ), ( 'tags', -1 ) ]
-            
-            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 10, 40, columns, self._ConvertDataToListCtrlTuples )
+            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, self._ConvertDataToListCtrlTuples )
             
             self._paths_list.itemSelectionChanged.connect( self.EventItemSelected )
             

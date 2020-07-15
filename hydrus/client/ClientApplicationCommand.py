@@ -1,4 +1,3 @@
-from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions

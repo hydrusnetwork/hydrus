@@ -26,8 +26,6 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
@@ -35,6 +33,9 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITagSuggestions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -2195,7 +2196,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def do_it( tag_service_key, hashes ):
                 
-                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'tag migration' )
+                tlw = HG.client_controller.GetMainTLW()
+                
+                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'tag migration' )
                 
                 panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
                 
@@ -2726,13 +2729,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( '', 6 ), ( 'child', 25 ), ( 'parent', -1 ) ]
-            
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 8, 25, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             
             listctrl_panel.SetListCtrl( self._tag_parents )
             
-            self._tag_parents.Sort( 2 )
+            self._tag_parents.Sort()
             
             menu_items = []
             
@@ -3549,13 +3550,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( '', 6 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ]
-            
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 8, 40, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             
             listctrl_panel.SetListCtrl( self._tag_siblings )
             
-            self._tag_siblings.Sort( 2 )
+            self._tag_siblings.Sort()
             
             menu_items = []
             

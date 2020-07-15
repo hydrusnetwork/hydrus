@@ -233,7 +233,9 @@ def OpenURLs( urls ):
             message += ' This will take some time.'
             
         
-        result = ClientGUIDialogsQuick.GetYesNo( HG.client_controller.gui, message )
+        tlw = HG.client_controller.GetMainTLW()
+        
+        result = ClientGUIDialogsQuick.GetYesNo( tlw, message )
         
         if result != QW.QDialog.Accepted:
             

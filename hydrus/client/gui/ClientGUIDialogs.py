@@ -13,9 +13,9 @@ from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
 
 class Dialog( QP.Dialog ):
     

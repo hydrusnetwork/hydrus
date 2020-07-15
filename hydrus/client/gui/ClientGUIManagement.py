@@ -31,8 +31,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIResults
@@ -43,6 +41,9 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
@@ -1664,9 +1665,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._gallery_downloader_panel )
         
-        columns = [ ( 'query', -1 ), ( 'source', 11 ), ( 'f', 3 ), ( 's', 3 ), ( 'status', 8 ), ( 'items', 9 ), ( 'added', 8 ) ]
-        
-        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, 'gallery_importers', 4, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
+        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, 4, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
@@ -1685,7 +1684,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel.AddButton( 'set options to queries', self._SetOptionsToGalleryImports, enabled_only_on_selection = True )
         
-        self._gallery_importers_listctrl.Sort( 0 )
+        self._gallery_importers_listctrl.Sort()
         
         #
         
@@ -2352,7 +2351,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 ideal_rows = max( 4, ideal_rows )
                 ideal_rows = min( ideal_rows, 24 )
                 
-                self._gallery_importers_listctrl.GrowShrinkColumnsHeight( ideal_rows )
+                self._gallery_importers_listctrl.ForceHeight( ideal_rows )
                 
             else:
                 
@@ -2432,9 +2431,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        columns = [ ( 'subject', -1 ), ( 'f', 3 ), ( 'c', 3 ), ( 'status', 8 ), ( 'items', 9 ), ( 'added', 8 ) ]
-        
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 4, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, CGLC.COLUMN_LIST_WATCHERS.ID, 4, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
@@ -2454,7 +2451,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.AddButton( 'set options to watchers', self._SetOptionsToWatchers, enabled_only_on_selection = True )
         
-        self._watchers_listctrl.Sort( 3 )
+        self._watchers_listctrl.Sort()
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
         
@@ -3140,7 +3137,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 ideal_rows = max( 4, ideal_rows )
                 ideal_rows = min( ideal_rows, 24 )
                 
-                self._watchers_listctrl.GrowShrinkColumnsHeight( ideal_rows )
+                self._watchers_listctrl.ForceHeight( ideal_rows )
                 
             else:
                 

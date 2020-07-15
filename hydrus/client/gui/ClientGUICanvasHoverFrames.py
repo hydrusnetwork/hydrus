@@ -17,7 +17,6 @@ from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
@@ -27,6 +26,7 @@ from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
 
 class RatingLikeCanvas( ClientGUICommon.RatingLike ):
     

@@ -13,6 +13,7 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
 from hydrus.client import ClientManagers
+from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
@@ -245,6 +246,8 @@ class Controller( object ):
         self._writes = collections.defaultdict( list )
         
         self._managers = {}
+        
+        self.column_list_manager = ClientGUIListManager.ColumnListManager()
         
         self.services_manager = ClientManagers.ServicesManager( self )
         self.client_files_manager = ClientFiles.ClientFilesManager( self )
@@ -524,6 +527,11 @@ class Controller( object ):
     def GetFilesDir( self ):
         
         return self._server_files_dir
+        
+    
+    def GetMainTLW( self ):
+        
+        return self.win
         
     
     def GetNewOptions( self ):

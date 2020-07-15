@@ -977,7 +977,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
         
-        self.tabBarDoubleClicked.connect( self._RenamePage )
+        self.tabBar().tabDoubleLeftClicked.connect( self._RenamePage )
+        self.tabBar().tabMiddleClicked.connect( self._ClosePage )
         
         self._previous_page_index = -1
         
@@ -1014,6 +1015,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     def _UpdatePreviousPageIndex( self ):
         
         self._previous_page_index = self.currentIndex()
+        
     
     def _ChooseNewPage( self, insertion_index = None ):
         

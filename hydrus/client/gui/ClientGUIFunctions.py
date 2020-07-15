@@ -39,6 +39,13 @@ def ColourIsGreyish( colour: QG.QColor ):
     
     return it_is_greyish
     
+def ConvertPixelsToTextWidth( window, pixels ):
+    
+    twenty_chars_in_pixels = int( window.fontMetrics().boundingRect( 20 * 'x' ).width() * MAGIC_TEXT_PADDING )
+    one_char_in_pixels = twenty_chars_in_pixels / 20
+    
+    return round( pixels / one_char_in_pixels )
+    
 def ConvertTextToPixels( window, char_dimensions ):
     
     ( char_cols, char_rows ) = char_dimensions

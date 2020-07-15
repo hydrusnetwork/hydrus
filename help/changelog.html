@@ -8,6 +8,103 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 404</h3></li>
+				<ul>
+					<li>column lists:</li>
+					<li>all multi-column lists across the program now remember the widths of their columns when they are next recreated</li>
+					<li>the last column of any list is now universally the 'stretching' column, which should correctly initialise with its preferred/previous size, but also grows and shrinks with the parent window</li>
+					<li>while all lists retain their initial rows height, and those in the gallery and watcher management panels will continue to grow and shrink in a fixed way, all lists in dialog windows can now be shrunk down to four rows</li>
+					<li>the minimum size of any column is now much smaller, about three characters</li>
+					<li>all column headers now tooltip their name</li>
+					<li>lists should be better about sizing in non-100% OS UI scalings</li>
+					<li>the lists that are automatically sorted (e.g. the download pages, and manage subs) now remember the last sort you gave them</li>
+					<li>future plans, now within reach:</li>
+					<li>all lists will sort, sort arrows will appear on the header, and sort will be faster</li>
+					<li>columns will be rearrangeable</li>
+					<li>columns will be hide/showable, and initially hidden complicated columns will be available</li>
+					<li>there will be some, maybe optional, capability to have lists sync live, so if you edit one, the others do the same</li>
+					<li>num rows height memory, maybe--we'll see how the above shakes out first</li>
+					<li>boring code changes:</li>
+					<li>moved list code to a new sub-module</li>
+					<li>wrote a status object for column list current columns, widths, and sort, and plugged it into list code</li>
+					<li>wrote a manager to handle column statuses, and plugged it into the main controller and db</li>
+					<li>wrote definitions for every list (66 or so different lists!) and all their columns, and unified width, name, default sort, and future hideabality and default hide/show status to that one easy to edit and extend location</li>
+					<li>rewrote list column and sort initialisation to work off the new status object and added hooks for list sorting and column resizing to save new status back</li>
+					<li>rewrote every list column instantiation to use the new system</li>
+					<li>numerous misc column list code cleanup</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>double middle-clicking on the page tab bar should now correctly close two tabs in a row (rather than opening the rename page dialog on the second)</li>
+					<li>entering an odd number of hex characters into system:hash no longer causes an error. this will be changed in future to properly highlight and explain badly pasted or incorrect-length hashes in future</li>
+					<li>the new red text for non-functional status texts in review services now properly re-colours itself between normal/red when an error or resolution occurs while the panel is open</li>
+					<li>hydrus now knows if it is running in the Haiku operating system and has preliminary platform specificity. if you are interested in helping to get hydrus running properly in Haiku, please join in with github issue #358</li>
+					<li>cleaned up a mix of smaller code, unused variables and imports and so on</li>
+				</ul>
+				<li><h3>version 403</h3></li>
+				<ul>
+					<li>shortcuts:</li>
+					<li>shortcuts have a backend update this week. a bunch of hacky stuff is now cleaner behind the scenes, and the related UI has some cleanup as well</li>
+					<li>converted all 100-odd simple shortcut commands from hacky text ids to a proper enumerated id system, and across every single instance across the program</li>
+					<li>wrote nicer descriptive labels for all simple shortcuts. gone is 'focus_media_viewer', now is 'keyboard focus: to the media viewer'</li>
+					<li>if you have no like/dislike or numerical services, the respective application command edit panels now say so and do not allow an ok action</li>
+					<li>like/dislike rating sub-panels now start with 'like' checked</li>
+					<li>when a like/dislike or numerical rating sub-panel is set to 'remove', the action dropdown is set to 'set' (rather than flip) and is disabled, as is the numerical slider</li>
+					<li>application commands now state better "3/5" information about rating actions, rating than the underlying "0.6" float implementation</li>
+					<li>all application commands existing in shortcuts or elsewhere are updated to the new enumerated id system</li>
+					<li>refactored ApplicationCommand (the side of shortcuts that holds the actual action to be done) and its edit UI to new separate files</li>
+					<li>completely refactored the application command edit panel, pulling the simple/tag/rating sub-panels into their own decoupled classes, simplifying the tangle and permitting easier future expansion</li>
+					<li>rearranged some application command functions and contant definitions to more appropriate locations</li>
+					<li>improved how application commands are interrogated by the objects that process them</li>
+					<li>added plenty of type hinting around application command processing code</li>
+					<li>cleaned up a bunch of shortcut and application command code, including some wx->Qt updates as well</li>
+					<li>.</li>
+					<li>menu and UI cleanup:</li>
+					<li>removed an old wx hack that prohibited last-second ui updates. the exit splash screen now reports final db shutdown info</li>
+					<li>if a service or account is currently non-functional (e.g. all repositories are paused), the appropriate status text is now in red</li>
+					<li>if there is work to do the first time a duplicate page is opened or looked at, it now moves to the 'preparation' tab</li>
+					<li>doing a 'migrate database' file migration now temp-closes the migrate db dialog and hides the main gui while it goes on</li>
+					<li>brushed up the tag filter ui a bit--now only one of the tag_filter/blacklist test phrases only show up, in the appropriate context, and the test text input now supports multiple newline-separated tags (e.g. if you want to paste a bunch)</li>
+					<li>every panel on review services now has a refresh button to force an update</li>
+					<li>the 'clear trash' button on the trash review services panel is now disabled when there is nothing to clear</li>
+					<li>updated edit subscription panel to point to the main html help and brushed up that help to talk about file limits more, also the earlier downloader help has a little section to highlight subscriptions and their use</li>
+					<li>reworked the 'restore from db backup' command--it is now integrated into client shutdown proper, and reports its basic restore progress to the exit splash screen</li>
+					<li>reorganised the 'network' menu. manage subs is now up top, downloader submenus are now split better into high-level vs component-level, and login stuff is pulled to its own submenu</li>
+					<li>put 'network traffic' at the top of the network->pause menu</li>
+					<li>rearranged some of the 'gui' and 'gui pages' option pages and tucked everything into box sections for clarity</li>
+					<li>the search pause/play button on search page tag autocomplete now has a simpler 'search paused' label when paused. the code has a similar nomenclature change, and eventually this will turn into a simple pause/play icon button or similar</li>
+					<li>fixed some weirdness with floating autocomplete dropdowns sometimes not appearing on dialogs on first load</li>
+					<li>fixed some focus logic so set-focus calls on downloader pages should work again on the query input text box and elsewhere</li>
+					<li>unified all numerical rating->stars and stars->rating calculations across the program. this may have fixed some edge-case bugs</li>
+					<li>unified all rating string generation across the program</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the disk cache options under _options->speed and memory_ are now default off and force-set off for all users on update. as more users are on decent ssds where these options are of limited value (and sometimes negative value), I now only recommend them for users on HDDs</li>
+					<li>added two options for autocomplete results list height to 'gui pages' option page, under the new 'controls' section</li>
+					<li>fixed a critical issue where the client api could duplicate-add tags with url imports to multiple services. the potential service duplicate cascade order was pseudorandom and particular to a client. thanks to a user for figuring this issue out (issue #317)</li>
+					<li>added a 'tag whitelist' to downloader tag import options. its edit button is below the blacklist. when there are no tags in the list, it does nothing, but if tags are added, then files that do not have at least one of the given tags at the download source will not be imported. for instance, if you have a username-based downloader (where you can't add more tags to the query to filter serverside), and you only want their metroid content, you can now filter it simply hydrusside (issue #279)</li>
+					<li>if you are both in advanced mode and a mad lad, the basic blacklist tag filter now allows you to show the 'whitelist' and 'advanced' panels again, if you have a complicated blacklist to set</li>
+					<li>the local booru and client api now support the same https as the hydrus server, using self-signed certificates stored in the db directory. just set the checkbox in manage services and you should be good. self-signed certificates are free and will work on a server hosted off an IP address, but they are imperfect. they are also likely to require special permission to be accepted by the web browser or whatever you want to talk to the https service. however, if you host your client from a real DNS domain and have your own fully signed cert+key files, you can swap them in no problem</li>
+					<li>local booru and client api urls adjust scheme for the new option, and unified and cleaned up how booru share urls are generated internally</li>
+					<li>the way cert+key files are generated is moved from server code to common hydrus code</li>
+					<li>cleaned up how additional db files like certificate files and the mpv conf are managed for backup/restore operations</li>
+					<li>cleaned up some ancient http urls to https. mostly stuff like the regex tutorial links</li>
+					<li>when files are appended to a regular search page (e.g. from a subscription publish to an existing page, or from a mouse drag and drop), the search context will now pause. this is to stop accidental F5 or mass refresh signals wiping out the changed page</li>
+					<li>to break advanced-case gallery search loops, gallery url jobs now have a 'run' identity token. galleries pass their token down to 'next page' or 'sub-gallery' urls they generate, meaning all urls of a particular search run share the same url. gallery logs now ignore to-be-added urls that already exist for their token, terminating loops. new tokens are generated if a search is restarted or similar, meaning duplicate urls can exist in a gallery log, just not from the same starting point (issue #302)</li>
+					<li>improved simple gallery url deduplication in several stages of the downloader pipeline</li>
+					<li>when right-clicking on multiple thumbs, the info lines off the top menu item now list the files' combined viewtimes (this previously only showed when one file was selected)</li>
+					<li>fixed some error reporting problems with adding urls to import via the client api--some url class exceptions were being converted from 400 to 500 errors unintentionally</li>
+					<li>a new stylesheet, 'Hydracula', is added to the default install. check it out under options->style. thank you to a user for contributing this</li>
+					<li>subscriptions are better about calculating a 90 second forgiveness window for bandwidth rules. they should schedule and startup more effectively, and the edit subscriptions and single edit subscription panels should also no longer show bandwidth delays below the next 90s, which are often a technical situation of regular work breaks that are better ignored for the purposes of the dialog</li>
+					<li>went back up to pyinstaller 3.6 again on windows, as 3.5 caused its own Qt bindings dll problems. if you had trouble with 3.6 (401), let me know how this works for you, as there are additional dll-finding fixes included (issue #329)</li>
+					<li>fixed an issue where under some conditions, file save dialogs were only happy with filenames that already existed (issue #319)</li>
+					<li>fixed an issue with the 'client already running' system sometimes not closing the client process correctly when told to cancel the boot</li>
+					<li>bumped the 'space needed for vacuum' estimate up to 120% (was 100%) of estimated final file size, just to catch some edge cases</li>
+					<li>rolling out updated danbooru parsers that pull associable urls correctly, thank you to a user for this fix</li>
+					<li>rolling out an updated deviant art parser that finds some unusual file urls when other methods fail, thank you to another user for this fix (issue #295)</li>
+					<li>upgraded cloudscraper to 1.2.42</li>
+					<li>improved some type hinting</li>
+					<li>fixed up some unit tests for new command and rating data</li>
+				</ul>
 				<li><h3>version 402</h3></li>
 				<ul>
 					<li>in many situations--such as a search result that gives no results, or a search cancel, or a downloader page cleared of a highlight--pages will now report a special status text rather than '0 files', such as 'no results for this search' or 'search cancelled!' (issue #277)</li>

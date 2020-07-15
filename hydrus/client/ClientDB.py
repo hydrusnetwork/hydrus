@@ -8,7 +8,6 @@ import psutil
 import random
 import re
 import sqlite3
-import stat
 import time
 import traceback
 import typing
@@ -23,12 +22,10 @@ from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
 from hydrus.client import ClientOptions
-from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
-from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -1903,6 +1900,12 @@ class DB( HydrusDB.HydrusDB ):
         tag_display_manager = ClientTags.TagDisplayManager()
         
         self._SetJSONDump( tag_display_manager )
+        
+        from hydrus.client.gui.lists import ClientGUIListManager
+        
+        column_list_manager = ClientGUIListManager.ColumnListManager()
+        
+        self._SetJSONDump( column_list_manager )
         
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
         
@@ -5379,7 +5382,6 @@ class DB( HydrusDB.HydrusDB ):
         tag_service_id = self._GetServiceId( tag_service_key )
         
         file_service = self._GetService( file_service_id )
-        tag_service = self._GetService( tag_service_id )
         
         file_service_type = file_service.GetServiceType()
         
@@ -7071,7 +7073,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             HydrusDB.CheckCanVacuum( db_path, stop_time = stop_time )
                             
-                        except Exception as e:
+                        except Exception:
                             
                             continue
                             
@@ -8974,7 +8976,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
             
         except:
             
@@ -11765,8 +11767,6 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
         file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
-        
-        repository_service_ids = self._GetServiceIds( HC.REPOSITORIES )
         
         # master
         
@@ -14918,6 +14918,29 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 403:
+            
+            try:
+                
+                result = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_COLUMN_LIST_MANAGER )
+                
+                if result is None:
+                    
+                    from hydrus.client.gui.lists import ClientGUIListManager
+                    
+                    column_list_manager = ClientGUIListManager.ColumnListManager()
+                    
+                    self._SetJSONDump( column_list_manager )
+                    
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                raise Exception( 'Could not initialise the column list manager! Please let hydrus dev know. Error was written to log, it also follows: {}{}'.format( os.linesep * 2, e ) )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -15248,10 +15271,6 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        ( old_dictionary_string, ) = self._c.execute( 'SELECT dictionary_string FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
-        
-        old_dictionary = HydrusSerialisable.CreateFromString( old_dictionary_string )
-        
         dictionary_string = dictionary.DumpToString()
         
         self._c.execute( 'UPDATE services SET name = ?, dictionary_string = ? WHERE service_id = ?;', ( name, dictionary_string, service_id ) )
@@ -15404,8 +15423,6 @@ class DB( HydrusDB.HydrusDB ):
                         HydrusData.Print( 'vacuum failed:' )
                         
                         HydrusData.ShowException( e )
-                        
-                        size = os.path.getsize( db_path )
                         
                         text = 'An attempt to vacuum the database failed.'
                         text += os.linesep * 2

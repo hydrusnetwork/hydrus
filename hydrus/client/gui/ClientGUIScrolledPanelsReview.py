@@ -41,7 +41,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIPanels
@@ -50,6 +49,8 @@ from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -94,9 +95,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( info_panel )
         
-        columns = [ ( 'location', -1 ), ( 'portable?', 11 ), ( 'free space', 12 ), ( 'current usage', 24 ), ( 'weight', 8 ), ( 'ideal usage', 24 ) ]
-        
-        self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, 'db_migration_locations', 8, 36, columns, self._ConvertLocationToListCtrlTuples )
+        self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, self._ConvertLocationToListCtrlTuples )
         self._current_media_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         
         self._current_media_locations_listctrl.Sort()
@@ -770,7 +769,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _SelectPathToAdd( self ):
         
-        with QP.DirDialog( self, 'Select the location' ) as dlg:
+        with QP.DirDialog( self, 'Select location' ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
@@ -783,7 +782,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _SetThumbnailLocation( self ):
         
-        with QP.DirDialog( self ) as dlg:
+        with QP.DirDialog( self, 'Select thumbnail location' ) as dlg:
             
             if self._ideal_thumbnails_location_override is not None:
                 
@@ -1744,9 +1743,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = QW.QCheckBox( 'show all', self )
         self._history_time_delta_none.clicked.connect( self.EventTimeDeltaChanged )
         
-        columns = [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 15 ), ( 'search distance', 17 ), ( 'this month', 12 ), ( 'uses non-default rules', 24 ), ( 'blocked?', 10 ) ]
-        
-        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, columns, self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, 20, self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
         
         self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
         
@@ -1773,7 +1770,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._history_time_delta_threshold.SetValue( last_review_bandwidth_search_distance )
             
         
-        self._bandwidths.Sort( 0 )
+        self._bandwidths.Sort()
         
         self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, self._Update )
         
@@ -2472,9 +2469,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         jobs_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._current_work_panel )
         
-        columns = [ ( 'job type', -1 ), ( 'scheduled jobs', 16 ) ]
-        
-        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrl( jobs_listctrl_panel, 'file maintenance jobs', 8, 48, columns, self._ConvertJobTypeToListCtrlTuples )
+        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrl( jobs_listctrl_panel, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, 8, self._ConvertJobTypeToListCtrlTuples )
         
         jobs_listctrl_panel.SetListCtrl( self._jobs_listctrl )
         
@@ -2945,9 +2940,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( '#', 4 ), ( 'path', -1 ), ( 'filetype', 16 ), ( 'size', 10 ) ]
-        
-        self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'input_local_files', 12, 98, columns, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
+        self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, 12, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
         
         listctrl_panel.SetListCtrl( self._paths_list )
         
@@ -3762,9 +3755,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'position', 20 ), ( 'url', -1 ), ( 'status', 40 ), ( 'current speed', 8 ), ( 'progress', 12 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network jobs review', 20, 30, columns, self._ConvertDataToListCtrlTuples )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, 20, self._ConvertDataToListCtrlTuples )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -3774,7 +3765,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._list_ctrl.Sort( 0 )
+        self._list_ctrl.Sort()
         
         self._RefreshSnapshot()
         
@@ -3825,9 +3816,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'network context', -1 ), ( 'cookies', 9 ), ( 'expires', 28 ) ]
-        
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_sessions', 32, 34, columns, self._ConvertNetworkContextToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Review )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, 32, self._ConvertNetworkContextToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Review )
         
         self._listctrl.Sort()
         
@@ -4054,9 +4043,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'value', 32 ), ( 'domain', 20 ), ( 'path', 8 ), ( 'expires', 28 ) ]
-        
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_session', 8, 18, columns, self._ConvertCookieToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, 8, self._ConvertCookieToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._listctrl.Sort()
         
@@ -4398,9 +4385,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', 24 ), ( 'type', 20 ), ( 'current job', -1 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'threads review', 20, 30, columns, self._ConvertDataToListCtrlTuples )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, 20, self._ConvertDataToListCtrlTuples )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -4410,7 +4395,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._list_ctrl.Sort( 0 )
+        self._list_ctrl.Sort()
         
         self._RefreshSnapshot()
         

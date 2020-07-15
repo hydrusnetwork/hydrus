@@ -8,11 +8,12 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.core import HydrusText
 
 class StringConverterButton( ClientGUICommon.BetterButton ):
@@ -199,9 +200,9 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( self._key_name, 20 ), ( 'matching', -1 ) ]
+        column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.KEY : self._key_name }
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_string_match', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -213,7 +214,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         
         self._listctrl.AddDatas( list(initial_dict.items()) )
         
-        self._listctrl.Sort( 0 )
+        self._listctrl.Sort()
         
         #
         
@@ -371,7 +372,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
 class StringToStringDictControl( QW.QWidget ):
     
-    listCtrlChanged = QC.Signal()
+    columnListContentsChanged = QC.Signal()
     
     def __init__( self, parent, initial_dict: typing.Dict[ str, str ], min_height = 10, key_name = 'key', value_name = 'value', allow_add_delete = True, edit_keys = True ):
         
@@ -384,12 +385,12 @@ class StringToStringDictControl( QW.QWidget ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( self._key_name, 20 ), ( self._value_name, -1 ) ]
-        
         use_simple_delete = allow_add_delete
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = use_simple_delete, activation_callback = self._Edit )
-        self._listctrl.listCtrlChanged.connect( self.listCtrlChanged )
+        column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_VALUE.KEY : self._key_name }
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = use_simple_delete, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
+        self._listctrl.columnListContentsChanged.connect( self.columnListContentsChanged )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -409,7 +410,7 @@ class StringToStringDictControl( QW.QWidget ):
         
         self._listctrl.AddDatas( list(initial_dict.items()) )
         
-        self._listctrl.Sort( 0 )
+        self._listctrl.Sort()
         
         #
         
@@ -536,9 +537,9 @@ class StringToStringMatchDictControl( QW.QWidget ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( self._key_name, 20 ), ( 'matching', -1 ) ]
+        column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.KEY : self._key_name }
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_string_match', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -550,7 +551,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
         
         self._listctrl.AddDatas( initial_dict.items() )
         
-        self._listctrl.Sort( 0 )
+        self._listctrl.Sort()
         
         #
         

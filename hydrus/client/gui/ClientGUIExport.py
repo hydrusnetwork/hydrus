@@ -17,13 +17,14 @@ from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -33,9 +34,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'paused', 8 ), ( 'period', 16 ), ( 'phrase', 20 ) ]
-        
-        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self._export_folders_panel, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self._export_folders_panel, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, 6, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         self._export_folders_panel.SetListCtrl( self._export_folders )
         
@@ -47,7 +46,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders.AddDatas( export_folders )
         
-        self._export_folders.Sort( 0 )
+        self._export_folders.Sort()
         
         vbox = QP.VBoxLayout()
         
@@ -439,11 +438,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.setMinimumSize( QC.QSize( 220, 300 ) )
         
-        columns = [ ( 'number', 8 ), ( 'filetype', 20 ), ( 'expected path', -1 ) ]
+        self._paths = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, 24, self._ConvertDataToListCtrlTuples, use_simple_delete = True )
         
-        self._paths = ClientGUIListCtrl.BetterListCtrl( self, 'export_files', 24, 64, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True )
-        
-        self._paths.Sort( 0 )
+        self._paths.Sort()
         
         self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
         

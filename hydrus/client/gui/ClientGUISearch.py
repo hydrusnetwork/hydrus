@@ -1406,11 +1406,16 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
+        # replace this with a better 'cleanhashes( hash_type )' thing that checks length properly
+        # and have that then show in the plaintext above a red background or whatever when invalid hashes, with some text
+        
         hex_hashes_raw = self._hashes.toPlainText()
         
         hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
         
         hex_hashes = [ HydrusText.HexFilter( hex_hash ) for hex_hash in hex_hashes ]
+        
+        hex_hashes = [ hex_hash for hex_hash in hex_hashes if len( hex_hash ) % 2 == 0 ]
         
         hex_hashes = HydrusData.DedupeList( hex_hashes )
         

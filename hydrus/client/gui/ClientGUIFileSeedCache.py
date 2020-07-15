@@ -17,12 +17,13 @@ from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
 
@@ -39,15 +40,13 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on file_seed add/remove
         
-        columns = [ ( '#', 3 ), ( 'source', -1 ), ( 'status', 12 ), ( 'added', 23 ), ( 'last modified', 23 ), ( 'source time', 23 ), ( 'note', 20 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'file_seed_cache', 30, 30, columns, self._ConvertFileSeedToListCtrlTuples, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, 30, self._ConvertFileSeedToListCtrlTuples, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
         
         #
         
         self._list_ctrl.AddDatas( self._file_seed_cache.GetFileSeeds() )
         
-        self._list_ctrl.Sort( 0 )
+        self._list_ctrl.Sort()
         
         #
         

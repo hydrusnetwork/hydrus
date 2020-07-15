@@ -21,7 +21,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
@@ -29,8 +28,9 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing import ClientImportSubscriptionLegacy # keep this here so the serialisable stuff is registered, it has to be imported somewhere
@@ -158,9 +158,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        columns = [ ( 'name/query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ]
-        
-        self._query_headers = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 10, 20, columns, self._ConvertQueryHeaderToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditQuery )
+        self._query_headers = ClientGUIListCtrl.BetterListCtrl( queries_panel, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, 10, self._ConvertQueryHeaderToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._query_headers )
         
@@ -464,8 +462,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         pretty_next_check_time = query_header.GetNextCheckStatusString()
-        
-        checker_options = self._checker_options.GetValue()
         
         ( file_velocity, pretty_file_velocity ) = query_header.GetFileVelocityInfo()
         
@@ -1165,9 +1161,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'source', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'items', 13 ), ( 'paused', 8 ) ]
-        
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 12, 20, columns, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, 12, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
         
         subscriptions_panel.SetListCtrl( self._subscriptions )
         
@@ -1204,7 +1198,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions.AddDatas( subscriptions )
         
-        self._subscriptions.Sort( 0 )
+        self._subscriptions.Sort()
         
         #
         
@@ -1375,9 +1369,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         ( name, gug_key_and_name, query_headers, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
         
         pretty_site = gug_key_and_name[1]
-        
-        period = 100
-        pretty_period = 'fix this'
         
         if len( query_headers ) > 0:
             
@@ -1802,8 +1793,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             frame_key = 'edit_subscription_dialog'
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
-                
-                original_name = subscription.GetName()
                 
                 panel = EditSubscriptionPanel( dlg, subscription, self._names_to_edited_query_log_containers )
                 

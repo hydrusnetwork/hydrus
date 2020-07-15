@@ -3997,7 +3997,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if focused_is_local:
                 
-                show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
+                show_open_in_explorer = advanced_mode and ( HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS )
                 
                 if show_open_in_explorer:
                     

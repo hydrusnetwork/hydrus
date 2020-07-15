@@ -3,7 +3,6 @@ import json
 import os
 import threading
 import time
-import typing
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
@@ -41,8 +40,6 @@ class DataCache( object ):
             
             return
             
-        
-        deletee_data = self._keys_to_data[ key ]
         
         del self._keys_to_data[ key ]
         
@@ -1024,8 +1021,6 @@ class ThumbnailCache( object ):
     
     def MainLoop( self ):
         
-        last_paused = HydrusData.GetNowPrecise()
-        
         while not HydrusThreading.IsThreadShuttingDown():
             
             time.sleep( 0.00001 )
@@ -1040,8 +1035,6 @@ class ThumbnailCache( object ):
                 self._waterfall_event.wait( 1 )
                 
                 self._waterfall_event.clear()
-                
-                last_paused = HydrusData.GetNowPrecise()
                 
             
             start_time = HydrusData.GetNowPrecise()

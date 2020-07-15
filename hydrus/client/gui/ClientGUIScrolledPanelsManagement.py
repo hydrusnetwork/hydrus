@@ -32,8 +32,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIPanels
 from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -44,6 +42,9 @@ from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.networking import ClientNetworkingSessions
@@ -58,7 +59,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._deletee_account_type_keys_to_new_account_type_keys = {}
         
-        self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrl( self, 'account_types', 20, 20, [ ( 'title', -1 ) ], self._ConvertAccountTypeToTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, 20, self._ConvertAccountTypeToTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
@@ -238,9 +239,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        columns = [ ( 'type', 20 ), ( 'name', -1 ), ( 'deletable', 12 ) ]
-        
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( self, 'manage_services', 25, 20, columns, self._ConvertServiceToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit)
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, 25, self._ConvertServiceToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
         menu_items = []
         
@@ -261,7 +260,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listctrl.AddDatas( self._original_services )
         
-        self._listctrl.Sort( 0 )
+        self._listctrl.Sort()
         
         #
         
@@ -2276,9 +2275,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._web_browser_path = QW.QLineEdit( mime_panel )
             
-            columns = [ ( 'filetype', 20 ), ( 'launch path', -1 ) ]
-            
-            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, columns, self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
+            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, 15, self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
             
             #
             
@@ -2296,7 +2293,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._mime_launch_listctrl.AddDatas( [ ( mime, launch_path ) ] )
                 
             
-            self._mime_launch_listctrl.Sort( 0 )
+            self._mime_launch_listctrl.Sort()
             
             #
             
@@ -2693,7 +2690,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
-            self._frame_locations = ClientGUIListCtrl.BetterListCtrl( frame_locations_panel, 'frame_locations', 15, 20, [ ( 'name', -1 ), ( 'remember size', 12 ), ( 'remember position', 12 ), ( 'last size', 12 ), ( 'last position', 12 ), ( 'default gravity', 12 ), ( 'default position', 12 ), ( 'maximised', 12 ), ( 'fullscreen', 12 ) ], data_to_tuples_func = lambda x: (self._GetPrettyFrameLocationInfo( x ), self._GetPrettyFrameLocationInfo( x )), activation_callback = self.EditFrameLocations )
+            self._frame_locations = ClientGUIListCtrl.BetterListCtrl( frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, data_to_tuples_func = lambda x: (self._GetPrettyFrameLocationInfo( x ), self._GetPrettyFrameLocationInfo( x )), activation_callback = self.EditFrameLocations )
             
             self._frame_locations_edit_button = QW.QPushButton( 'edit', frame_locations_panel )
             self._frame_locations_edit_button.clicked.connect( self.EditFrameLocations )
@@ -3449,7 +3446,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._media_viewer_panel )
             
-            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, 'media_viewer_options', 20, 20, [ ( 'filetype', 21 ), ( 'media show action', 20 ), ( 'preview show action', 20 ), ( 'zoom info', -1 ) ], data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
             
             media_viewer_list_panel.SetListCtrl( self._media_viewer_options )
             
@@ -5080,9 +5077,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._deletee_service_keys = []
         
-        columns = [ ( 'port', 10 ), ( 'name', -1 ), ( 'type', 30 ) ]
-        
-        self._services_listctrl = ClientGUIListCtrl.BetterListCtrl( self, 'services', 20, 20, columns, data_to_tuples_func = self._ConvertServiceToTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._services_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_SERVICES.ID, 20, data_to_tuples_func = self._ConvertServiceToTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         menu_items = []
         
@@ -5646,9 +5641,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         st = ClientGUICommon.BetterStaticText( self, text )
         st.setWordWrap( True )
         
-        columns = [ ( 'missing location', -1 ), ( 'expected subdirectory', 23 ), ( 'correct location', 36 ), ( 'now ok?', 9 ) ]
-        
-        self._locations = ClientGUIListCtrl.BetterListCtrl( self, 'repair_locations', 12, 36, columns, self._ConvertPrefixToListCtrlTuples, activation_callback = self._SetLocations )
+        self._locations = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, 12, self._ConvertPrefixToListCtrlTuples, activation_callback = self._SetLocations )
         
         self._set_button = ClientGUICommon.BetterButton( self, 'set correct location', self._SetLocations )
         self._add_button = ClientGUICommon.BetterButton( self, 'add a possibly correct location (let the client figure out what it contains)', self._AddLocation )
@@ -5659,14 +5652,14 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._locations.AddDatas( [ prefix for ( incorrect_location, prefix ) in missing_locations ] )
         
-        self._locations.Sort( 0 )
+        self._locations.Sort()
         
         #
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._locations, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._locations, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._set_button, CC.FLAGS_LONE_BUTTON )
         QP.AddToLayout( vbox, self._add_button, CC.FLAGS_LONE_BUTTON )
         
