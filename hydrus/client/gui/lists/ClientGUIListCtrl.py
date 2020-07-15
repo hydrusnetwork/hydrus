@@ -16,6 +16,8 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListStatus
 
 def SafeNoneInt( value ):
     
@@ -27,17 +29,27 @@ def SafeNoneStr( value ):
     
 class BetterListCtrl( QW.QTreeWidget ):
     
-    listCtrlChanged = QC.Signal()
+    columnListContentsChanged = QC.Signal()
+    columnListStatusChanged = QC.Signal()
     
-    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, activation_callback = None, style = None ):           
+    def __init__( self, parent, column_list_type, height_num_chars, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, activation_callback = None, style = None, column_types_to_name_overrides = None ):           
         
         QW.QTreeWidget.__init__( self, parent )
         
+        self._column_list_type = column_list_type
+        
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = HG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        
         self.setAlternatingRowColors( True )
-        self.setColumnCount( len(columns) )
+        self.setColumnCount( self._column_list_status.GetColumnCount() )
         self.setSortingEnabled( False ) # Keeping the custom sort implementation. It would be better to use Qt's native sorting in the future so sort indicators are displayed on the headers as expected.
         self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
         self.setRootIsDecorated( False )
+        
+        self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
+        
+        self._initial_height_num_chars = height_num_chars
+        self._forced_height_num_chars = None
         
         self._data_to_tuples_func = data_to_tuples_func
         
@@ -45,16 +57,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._menu_callable = None
         
-        self._sort_column = 0
-        self._sort_asc = True
-        
-        # eventually have it look up 'name' in some options somewhere and see previous height, width, and column selection
-        # this thing should deal with missing entries but also have some filtered defaults for subs listctrl, which will have a bunch of possible columns
+        ( self._sort_column_type, self._sort_asc ) = self._column_list_status.GetSort()
         
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        sizing_column_initial_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
+        # old way
+        '''
+        #sizing_column_initial_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
         total_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
         
         resize_column = 1
@@ -85,12 +95,61 @@ class BetterListCtrl( QW.QTreeWidget ):
         #self.setColumnWidth( resize_column - 1, sizing_column_initial_width )
         #self.header().setStretchLastSection( True )
         
-        # hydev looked at this problem. the real answer I think will be to move to column size memory and let the last section resize
-        # start with decent values and then we can remember whatever the user ends up liking later. this will be simpler
-        
         self.setMinimumWidth( total_width )
+        '''
+        main_tlw = HG.client_controller.GetMainTLW()
         
-        self.GrowShrinkColumnsHeight( height_num_chars )
+        # if last section is set too low, for instance 3, the column seems unable to every shrink from initial (expanded to fill space) size
+        #  _    _  ___  _    _    __     __   ___  
+        # ( \/\/ )(  _)( \/\/ )  (  )   (  ) (   \ 
+        #  \    /  ) _) \    /    )(__  /__\  ) ) )
+        #   \/\/  (___)  \/\/    (____)(_)(_)(___/ 
+        #
+        
+        MIN_SECTION_SIZE_CHARS = 3
+        MIN_LAST_SECTION_SIZE_CHARS = 10
+        
+        self._min_section_size = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_SECTION_SIZE_CHARS )
+        self._min_last_section_size = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_LAST_SECTION_SIZE_CHARS )
+        
+        self.header().setMinimumSectionSize( self._min_section_size )
+        
+        last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
+            
+            self.headerItem().setData( i, QC.Qt.UserRole, column_type )
+            
+            if column_types_to_name_overrides is not None and column_type in column_types_to_name_overrides:
+                
+                name = column_types_to_name_overrides[ column_type ]
+                
+            else:
+                
+                name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
+                
+            
+            self.headerItem().setText( i, name )
+            self.headerItem().setToolTip( i, name )
+            
+            if i == last_column_index:
+                
+                width_chars = MIN_LAST_SECTION_SIZE_CHARS
+                
+            else:
+                
+                width_chars = self._column_list_status.GetColumnWidth( column_type )
+                
+            
+            # ok this is a pain in the neck issue, but fontmetrics changes afte widget init. I guess font gets styled on top afterwards
+            # this means that if I use this window's fontmetrics here, in init, then it is different later on, and we get creeping growing columns lmao
+            # several other places in the client are likely affected in different ways by this also!
+            width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
+            
+            self.setColumnWidth( i, width_pixels )
+            
+        
+        self.header().setStretchLastSection( True )
         
         self._delete_key_callback = delete_key_callback
         self._activation_callback = activation_callback
@@ -99,8 +158,13 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
         self.itemDoubleClicked.connect( self.EventItemActivated )
         
+        self.header().setSectionsMovable( False ) # can only turn this on when we move from data/sort tuples
+        # self.header().setFirstSectionMovable( True ) # same
         self.header().setSectionsClickable( True )
         self.header().sectionClicked.connect( self.EventColumnClick )
+        
+        #self.header().sectionMoved.connect( self._DoStatusChanged ) # same
+        self.header().sectionResized.connect( self._SectionsResized )
         
     
     def _AddDataInfo( self, data_info ):
@@ -133,6 +197,52 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._indices_to_data_info[ index ] = data_info
         self._data_to_indices[ data ] = index
+        
+    
+    def _SectionsResized( self, logical_index, old_size, new_size ):
+        
+        visual_index = self.header().visualIndex( logical_index )
+        
+        self._DoStatusChanged()
+        
+    
+    def _DoStatusChanged( self ):
+        
+        self._column_list_status = self._GenerateCurrentStatus()
+        
+        HG.client_controller.column_list_manager.SaveStatus( self._column_list_status )
+        
+    
+    def _GenerateCurrentStatus( self ) -> ClientGUIListStatus.ColumnListStatus:
+        
+        status = ClientGUIListStatus.ColumnListStatus()
+        
+        status.SetColumnListType( self._column_list_type )
+        
+        main_tlw = HG.client_controller.GetMainTLW()
+        
+        columns = []
+        
+        header = self.header()
+        
+        for visual_index in range( header.count() ):
+            
+            logical_index = header.logicalIndex( visual_index )
+            
+            column_type = self.headerItem().data( logical_index, QC.Qt.UserRole )
+            width_pixels = header.sectionSize( logical_index )
+            shown = not header.isSectionHidden( logical_index )
+            
+            width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
+            
+            columns.append( ( column_type, width_chars, shown ) )
+            
+        
+        status.SetColumns( columns )
+        
+        status.SetSort( self._sort_column_type, self._sort_asc )
+        
+        return status
         
     
     def _GetDisplayAndSortTuples( self, data ):
@@ -199,13 +309,15 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def _SortDataInfo( self ):
         
+        sort_column_index = self._column_list_status.GetColumnIndexFromType( self._sort_column_type )
+        
         data_infos = list( self._indices_to_data_info.values() )
         
         def sort_key( data_info ):
             
             ( data, display_tuple, sort_tuple ) = data_info
             
-            return ( sort_tuple[ self._sort_column ], sort_tuple ) # add the sort tuple to get secondary sorting
+            return ( sort_tuple[ sort_column_index ], sort_tuple ) # add the sort tuple to get secondary sorting
             
         
         data_infos.sort( key = sort_key, reverse = not self._sort_asc )
@@ -271,7 +383,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
             
         
-        self.listCtrlChanged.emit()
+        self.columnListContentsChanged.emit()
         
     
     def AddMenuCallable( self, menu_callable ):
@@ -311,7 +423,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._RecalculateIndicesAfterDelete()
         
-        self.listCtrlChanged.emit()
+        self.columnListContentsChanged.emit()
         
     
     def DeleteSelected( self ):
@@ -335,23 +447,27 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._RecalculateIndicesAfterDelete()
         
-        self.listCtrlChanged.emit()
+        self.columnListContentsChanged.emit()
         
     
     def EventColumnClick( self, col ):
         
-        if col == self._sort_column:
+        sort_column_type = self._column_list_status.GetColumnTypeFromIndex( col )
+        
+        if sort_column_type == self._sort_column_type:
             
             self._sort_asc = not self._sort_asc
             
         else:
             
-            self._sort_column = col
+            self._sort_column_type = sort_column_type
             
             self._sort_asc = True
             
         
         self._SortAndRefreshRows()
+        
+        self._DoStatusChanged()
         
     
     def EventItemActivated( self, item, column ):
@@ -385,6 +501,21 @@ class BetterListCtrl( QW.QTreeWidget ):
         QP.CallAfter( self._ShowMenu )
         
     
+    def ForceHeight( self, rows ):
+        
+        self._forced_height_num_chars = rows
+        
+        self.updateGeometry()
+        
+        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
+        
+        #existing_min_width = self.minimumWidth()
+        
+        #( width_gumpf, ideal_client_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
+        
+        #QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
+        
+    
     def GetData( self, only_selected = False ):
         
         if only_selected:
@@ -412,17 +543,6 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
         return result
-        
-    
-    def GrowShrinkColumnsHeight( self, ideal_rows ):
-        
-        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
-        
-        existing_min_width = self.minimumWidth()
-        
-        ( width_gumpf, ideal_client_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
-        
-        QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
         
     
     def HasData( self, data: object ):
@@ -491,7 +611,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._SortAndRefreshRows()
         
-        self.listCtrlChanged.emit()
+        self.columnListContentsChanged.emit()
         
     
     def ShowDeleteSelectedDialog( self ):
@@ -506,21 +626,99 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def Sort( self, col = None, asc = None ):
+    def minimumSizeHint( self ):
         
-        if col is not None:
+        width = 0
+        
+        for i in range( self.columnCount() - 1 ):
             
-            self._sort_column = col
+            width += self.columnWidth( i )
             
         
-        if asc is not None:
+        width += self._min_last_section_size
+        
+        width += self.frameWidth() * 2
+        
+        if self._forced_height_num_chars is None:
             
-            self._sort_asc = asc
+            min_num_rows = 4
+            
+        else:
+            
+            min_num_rows = self._forced_height_num_chars
+            
+        
+        # + 2 for header and * 1.25 for magic
+        ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( min_num_rows + 2 ) * 1.25 ) ) )
+        
+        min_size_hint = QC.QSize( width, height )
+        
+        return min_size_hint
+        
+    
+    def sizeHint( self ):
+        
+        # still have an issue here where if the list gets populated with a bunch of stuff and hence gets a vertical scrollbar, it doesn't account for that
+        # something like change this to viewportSizehint and/or doing updateGeometry on add data, if that isn't already done when scrollbars added?
+        
+        width = 0
+        
+        for i in range( self.columnCount() - 1 ):
+            
+            width += self.columnWidth( i )
+            
+        
+        #
+        
+        # we use the last value saved to options for this column. not what it currently is, but what user saw last
+        # this might be from a few milliseconds ago, or last time dialog was open. main thing is this is a _sensible_ value for this column, to inform panels and so on
+        
+        last_column_type = self._column_list_status.GetColumnTypes()[-1]
+        
+        last_column_chars = self._column_list_status.GetColumnWidth( last_column_type )
+        
+        main_tlw = HG.client_controller.GetMainTLW()
+        
+        width += ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, last_column_chars )
+        
+        #
+        
+        width += self.frameWidth() * 2
+        
+        if self._forced_height_num_chars is None:
+            
+            num_rows = self._initial_height_num_chars
+            
+        else:
+            
+            num_rows = self._forced_height_num_chars
+            
+        
+        # + 2 for header and * 1.25 for magic
+        ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( num_rows + 2 ) * 1.25 ) ) )
+        
+        size_hint = QC.QSize( width, height )
+        
+        return size_hint
+        
+    
+    def Sort( self, sort_column_type = None, sort_asc = None ):
+        
+        if sort_column_type is not None:
+            
+            self._sort_column_type = sort_column_type
+            
+        
+        if sort_asc is not None:
+            
+            self._sort_asc = sort_asc
             
         
         self._SortAndRefreshRows()
         
-        self.listCtrlChanged.emit()
+        self.columnListContentsChanged.emit()
+        
+        self._DoStatusChanged()
         
     
     def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None ):
@@ -535,6 +733,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
         sort_data_has_changed = False
+        sort_index = self._column_list_status.GetColumnIndexFromType( self._sort_column_type )
         
         for data in datas:
             
@@ -552,7 +751,7 @@ class BetterListCtrl( QW.QTreeWidget ):
                     
                     ( existing_data, existing_display_tuple, existing_sort_tuple ) = existing_data_info
                     
-                    if sort_tuple[ self._sort_column ] != existing_sort_tuple[ self._sort_column ]: # this does not govern secondary sorts, but let's not spam sorts m8
+                    if sort_tuple[ sort_index ] != existing_sort_tuple[ sort_index ]: # this does not govern secondary sorts, but let's not spam sorts m8
                         
                         sort_data_has_changed = True
                         
@@ -564,7 +763,7 @@ class BetterListCtrl( QW.QTreeWidget ):
                 
             
         
-        self.listCtrlChanged.emit()
+        self.columnListContentsChanged.emit()
         
         return sort_data_has_changed
     

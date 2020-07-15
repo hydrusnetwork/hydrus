@@ -358,7 +358,10 @@ class FilePickerCtrl( QW.QWidget ):
         
 
 class TabBar( QW.QTabBar ):
-
+    
+    tabDoubleLeftClicked = QC.Signal( int )
+    tabMiddleClicked = QC.Signal( int )
+    
     def __init__( self, parent = None ):
         
         QW.QTabBar.__init__( self, parent )
@@ -401,8 +404,38 @@ class TabBar( QW.QTabBar ):
             
             self._last_clicked_global_pos = event.globalPos()
             
+        elif event.button() == QC.Qt.MiddleButton:
+            
+            index = self.tabAt( event.pos() )
+            
+            if index != -1:
+                
+                self.tabMiddleClicked.emit( index )
+                
+                return
+                
+            
         
         QW.QTabBar.mousePressEvent( self, event )
+        
+    
+    def mouseDoubleClickEvent( self, event ):
+        
+        if event.button() == QC.Qt.LeftButton:
+            
+            index = self.tabAt( event.pos() )
+            
+            if index != -1:
+                
+                self.tabDoubleLeftClicked.emit( index )
+                
+            
+            QW.QTabBar.mouseDoubleClickEvent( self, event )
+            
+        else:
+            
+            self.tabMiddleClicked.emit( index )
+            
         
     
     def dragEnterEvent(self, event):

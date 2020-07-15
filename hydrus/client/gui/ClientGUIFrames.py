@@ -14,8 +14,9 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         if key_type == 'registration': title = 'Registration Keys'
         elif key_type == 'access': title = 'Access Keys'
         
-        # have to give it a parent so we won't get garbage collected, use the main gui
-        ClientGUITopLevelWindows.Frame.__init__( self, HG.client_controller.gui, HG.client_controller.PrepStringForDisplay( title ) )
+        tlw = HG.client_controller.GetMainTLW()
+        
+        ClientGUITopLevelWindows.Frame.__init__( self, tlw, HG.client_controller.PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys

@@ -29,8 +29,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIMPV
@@ -39,6 +37,9 @@ from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -351,9 +352,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'url class', -1 ), ( 'url type', 12 ), ( 'defaults set?', 15 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'default_tag_import_options', 15, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -368,7 +367,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl.AddDatas( eligible_url_classes )
         
-        self._list_ctrl.Sort( 1 )
+        self._list_ctrl.Sort()
         
         #
         
@@ -942,9 +941,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        columns = [ ( 'downloader', -1 ), ( 'show in main selector list?', 29 ) ]
-        
-        self._gug_display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_display_list_ctrl_panel, 'gug_keys_to_display', 15, 36, columns, self._ConvertGUGDisplayDataToListCtrlTuples, activation_callback = self._EditGUGDisplay )
+        self._gug_display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_display_list_ctrl_panel, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, 15, self._ConvertGUGDisplayDataToListCtrlTuples, activation_callback = self._EditGUGDisplay )
         
         self._gug_display_list_ctrl_panel.SetListCtrl( self._gug_display_list_ctrl )
         
@@ -956,9 +953,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( media_viewer_urls_panel )
         
-        columns = [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'display on media viewer?', 36 ) ]
-        
-        self._url_display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._url_display_list_ctrl_panel, 'url_class_keys_to_display', 15, 36, columns, self._ConvertURLDisplayDataToListCtrlTuples, activation_callback = self._EditURLDisplay )
+        self._url_display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._url_display_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, 15, self._ConvertURLDisplayDataToListCtrlTuples, activation_callback = self._EditURLDisplay )
         
         self._url_display_list_ctrl_panel.SetListCtrl( self._url_display_list_ctrl )
         
@@ -979,7 +974,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_display_list_ctrl.AddDatas( listctrl_data )
         
-        self._gug_display_list_ctrl.Sort( 1 )
+        self._gug_display_list_ctrl.Sort()
         
         #
         
@@ -994,7 +989,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_display_list_ctrl.AddDatas( listctrl_data )
         
-        self._url_display_list_ctrl.Sort( 1 )
+        self._url_display_list_ctrl.Sort()
         
         self._show_unmatched_urls_in_media_viewer.setChecked( show_unmatched_urls_in_media_viewer )
         
@@ -1166,9 +1161,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( tag_services_panel )
         
-        columns = [ ( 'service name', 24 ), ( 'action', 36 ), ( 'tags merged', -1 ) ]
-        
-        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrl( tag_services_listctrl_panel, 'duplicate_action_options_tag_services', 5, 36, columns, self._ConvertTagDataToListCtrlTuple, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrl( tag_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_ACTION_OPTIONS_TAG_SERVICES.ID, 5, self._ConvertTagDataToListCtrlTuple, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
         
         tag_services_listctrl_panel.SetListCtrl( self._tag_service_actions )
         
@@ -1182,9 +1175,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rating_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( rating_services_panel )
         
-        columns = [ ( 'service name', -1 ), ( 'action', 36 ) ]
-        
-        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrl( rating_services_listctrl_panel, 'duplicate_action_options_rating_services', 5, 24, columns, self._ConvertRatingDataToListCtrlTuple, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
+        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrl( rating_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_ACTION_OPTIONS_RATING_SERVICES.ID, 5, self._ConvertRatingDataToListCtrlTuple, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
         
         rating_services_listctrl_panel.SetListCtrl( self._rating_service_actions )
         
@@ -2278,9 +2269,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'gug name', 24 ), ( 'available?', 20 ) ]
-        
-        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, 'ngug_gugs', 30, 74, columns, self._ConvertGUGDataToListCtrlTuples, use_simple_delete = True )
+        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUG_GUGS.ID, 30, self._ConvertGUGDataToListCtrlTuples, use_simple_delete = True )
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
@@ -2302,7 +2291,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl.AddDatas( gug_keys_and_names )
         
-        self._gug_list_ctrl.Sort( 0 )
+        self._gug_list_ctrl.Sort()
         
         #
         
@@ -2423,9 +2412,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        columns = [ ( 'name', 24 ), ( 'example url', -1 ), ( 'gallery url class?', 20 ) ]
-        
-        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, 'gugs', 30, 74, columns, self._ConvertGUGToListCtrlTuples, delete_key_callback = self._DeleteGUG, activation_callback = self._EditGUG )
+        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_GUGS.ID, 30, self._ConvertGUGToListCtrlTuples, delete_key_callback = self._DeleteGUG, activation_callback = self._EditGUG )
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
@@ -2441,9 +2428,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._ngug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        columns = [ ( 'name', 24 ), ( 'gugs', -1 ), ( 'missing gugs', 14 ) ]
-        
-        self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._ngug_list_ctrl_panel, 'ngugs', 20, 64, columns, self._ConvertNGUGToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditNGUG )
+        self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._ngug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUGS.ID, 20, self._ConvertNGUGToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditNGUG )
         
         self._ngug_list_ctrl_panel.SetListCtrl( self._ngug_list_ctrl )
         
@@ -2461,13 +2446,13 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl.AddDatas( single_gugs )
         
-        self._gug_list_ctrl.Sort( 0 )
+        self._gug_list_ctrl.Sort()
         
         ngugs = [ gug for gug in gugs if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
         
         self._ngug_list_ctrl.AddDatas( ngugs )
         
-        self._ngug_list_ctrl.Sort( 0 )
+        self._ngug_list_ctrl.Sort()
         
         #
         
@@ -3183,9 +3168,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'context', 24 ), ( 'header', 30 ), ( 'approved?', 12 ), ( 'reason', -1 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network_contexts_custom_headers', 15, 40, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, 15, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -3194,7 +3177,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
-        self._list_ctrl.Sort( 0 )
+        self._list_ctrl.Sort()
         
         #
         
@@ -3407,9 +3390,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'regex phrase', 24 ), ( 'description', -1 ) ]
-        
-        self._regexes = ClientGUIListCtrl.BetterListCtrl( regex_listctrl_panel, 'regex_favourites', 8, 48, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._regexes = ClientGUIListCtrl.BetterListCtrl( regex_listctrl_panel, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, 8, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         regex_listctrl_panel.SetListCtrl( self._regexes )
         
@@ -4696,9 +4677,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
-        columns = [ ( 'key', 14 ), ( 'value', -1 ) ]
-        
-        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_listctrl_panel, 'url_class_path_components', 5, 45, columns, self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_listctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.ID, 5, self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
         
         parameters_listctrl_panel.SetListCtrl( self._parameters )
         
@@ -5475,9 +5454,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', 36 ), ( 'type', 20 ), ( 'example (normalised) url', -1 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_classes', 15, 40, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASSES.ID, 15, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -5493,7 +5470,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl.AddDatas( url_classes )
         
-        self._list_ctrl.Sort( 0 )
+        self._list_ctrl.Sort()
         
         #
         
@@ -5672,17 +5649,13 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        columns = [ ( 'url class', -1 ), ( 'api url class', 36 ) ]
-        
-        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._notebook, 'url_class_api_pairs', 10, 36, columns, self._ConvertAPIPairDataToListCtrlTuples )
+        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._notebook, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, 10, self._ConvertAPIPairDataToListCtrlTuples )
         
         #
         
         self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        columns = [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'parser', 36 ) ]
-        
-        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_class_keys_to_parser_keys', 24, 36, columns, self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
+        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, 24, self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
         
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
@@ -5696,7 +5669,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._api_pairs_list_ctrl.AddDatas( api_pairs )
         
-        self._api_pairs_list_ctrl.Sort( 0 )
+        self._api_pairs_list_ctrl.Sort()
         
         # anything that goes to an api url will be parsed by that api's parser--it can't have its own
         api_pair_unparsable_url_classes = set()
@@ -5733,7 +5706,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parser_list_ctrl.AddDatas( listctrl_data )
         
-        self._parser_list_ctrl.Sort( 1 )
+        self._parser_list_ctrl.Sort()
         
         #
         

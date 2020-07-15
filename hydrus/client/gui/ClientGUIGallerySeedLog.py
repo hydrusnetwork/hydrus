@@ -15,12 +15,13 @@ from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImportGallerySeeds
 
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -38,15 +39,13 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on gallery_seed add/remove
         
-        columns = [ ( '#', 3 ), ( 'url', -1 ), ( 'status', 12 ), ( 'added', 23 ), ( 'last modified', 23 ), ( 'note', 20 ) ]
-        
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'gallery_seed_log', 30, 30, columns, self._ConvertGallerySeedToListCtrlTuples )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, 30, self._ConvertGallerySeedToListCtrlTuples )
         
         #
         
         self._list_ctrl.AddDatas( self._gallery_seed_log.GetGallerySeeds() )
         
-        self._list_ctrl.Sort( 0 )
+        self._list_ctrl.Sort()
         
         #
         

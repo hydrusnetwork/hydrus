@@ -20,13 +20,13 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListBoxes
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.external import LogicExpressionQueryParser
 
 def AppendLoadingPredicate( predicates ):
@@ -1575,15 +1575,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         else:
             
-            if self._under_construction_or_predicate is not None and not or_pred_in_broadcast:
-                
-                or_preds = list( self._under_construction_or_predicate.GetValue() )
-                
-                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
-                
-                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds ) }
-                
-            
             if or_pred_in_broadcast:
                 
                 or_preds = list( self._under_construction_or_predicate.GetValue() )
@@ -1594,6 +1585,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     predicates.extend( or_preds )
                     
+                
+            elif self._under_construction_or_predicate is not None:
+                
+                or_preds = list( self._under_construction_or_predicate.GetValue() )
+                
+                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
+                
+                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds ) }
                 
             
             self._under_construction_or_predicate = None

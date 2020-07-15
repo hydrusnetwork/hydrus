@@ -2450,7 +2450,9 @@ class ServiceIPFS( ServiceRemote ):
                 
                 from hydrus.client.gui import ClientGUIDialogs
                 
-                with ClientGUIDialogs.DialogSelectFromURLTree( HG.client_controller.gui, url_tree ) as dlg:
+                tlw = HG.client_controller.GetMainTLW()
+                
+                with ClientGUIDialogs.DialogSelectFromURLTree( tlw, url_tree ) as dlg:
                     
                     urls_good = False
                     

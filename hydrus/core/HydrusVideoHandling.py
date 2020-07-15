@@ -12,13 +12,13 @@ import subprocess
 FFMPEG_MISSING_ERROR_PUBBED = False
 FFMPEG_NO_CONTENT_ERROR_PUBBED = False
 
-if HC.PLATFORM_LINUX or HC.PLATFORM_MACOS:
-    
-    FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
-    
-elif HC.PLATFORM_WINDOWS:
+if HC.PLATFORM_WINDOWS:
     
     FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg.exe' )
+    
+else:
+    
+    FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
     
 if not os.path.exists( FFMPEG_PATH ):
     

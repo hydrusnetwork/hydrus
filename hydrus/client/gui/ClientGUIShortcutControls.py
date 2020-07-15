@@ -14,11 +14,12 @@ from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUIApplicationCommand
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 def ManageShortcuts( win: QW.QWidget ):
     
@@ -97,7 +98,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._shortcuts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._shortcuts = ClientGUIListCtrl.BetterListCtrl( self._shortcuts_panel, 'shortcuts', 20, 20, [ ( 'shortcut', 20 ), ( 'command', -1 ) ], data_to_tuples_func = self._ConvertSortTupleToPrettyTuple, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+        self._shortcuts = ClientGUIListCtrl.BetterListCtrl( self._shortcuts_panel, CGLC.COLUMN_LIST_SHORTCUTS.ID, 20, data_to_tuples_func = self._ConvertSortTupleToPrettyTuple, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
         
         self._shortcuts_panel.SetListCtrl( self._shortcuts )
         
@@ -131,7 +132,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._shortcuts.AddDatas( shortcuts )
         
-        self._shortcuts.Sort( 1 )
+        self._shortcuts.Sort()
         
         #
         
@@ -285,7 +286,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
-        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrl( reserved_panel, 'reserved_shortcuts', 6, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, activation_callback = self._EditReserved )
+        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrl( reserved_panel, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, 6, data_to_tuples_func = self._GetTuples, activation_callback = self._EditReserved )
         
         self._reserved_shortcuts.setMinimumSize( QC.QSize( 320, 200 ) )
         
@@ -296,7 +297,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         custom_panel = ClientGUICommon.StaticBox( self, 'custom user sets' )
         
-        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrl( custom_panel, 'custom_shortcuts', 6, 30, [ ( 'name', -1 ), ( 'number of shortcuts', 20 ) ], data_to_tuples_func = self._GetTuples, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrl( custom_panel, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, 6, data_to_tuples_func = self._GetTuples, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
         
         self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
@@ -314,7 +315,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._reserved_shortcuts.AddDatas( reserved_shortcuts )
         
-        self._reserved_shortcuts.Sort( 0 )
+        self._reserved_shortcuts.Sort()
         
         self._original_custom_names = set()
         
@@ -325,7 +326,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._original_custom_names.add( shortcuts.GetName() )
             
         
-        self._custom_shortcuts.Sort( 0 )
+        self._custom_shortcuts.Sort()
         
         #
         

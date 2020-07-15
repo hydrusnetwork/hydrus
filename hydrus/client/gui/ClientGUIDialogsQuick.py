@@ -168,7 +168,9 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
         try:
             
-            service_key = SelectFromList( HG.client_controller.gui, 'select service', choice_tuples )
+            tlw = HG.client_controller.GetMainTLW()
+            
+            service_key = SelectFromList( tlw, 'select service', choice_tuples )
             
             return service_key
             

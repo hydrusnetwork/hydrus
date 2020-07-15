@@ -28,19 +28,20 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 
-from hydrus.client.gui import QtPorting as QP
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -62,11 +63,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'type', 40 ) ]
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, 14, self._ConvertContentToListCtrlTuples, use_simple_delete = True )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'downloader_export', 14, 36, columns, self._ConvertContentToListCtrlTuples, use_simple_delete = True )
-        
-        self._listctrl.Sort( 1 )
+        self._listctrl.Sort()
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -1097,7 +1096,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._rule_type.currentIndexChanged.connect( self.EventTypeChanged )
         self._tag_name.textChanged.connect( self.EventVariableChanged )
-        self._tag_attributes.listCtrlChanged.connect( self.EventVariableChanged )
+        self._tag_attributes.columnListContentsChanged.connect( self.EventVariableChanged )
         self._tag_index.valueChanged.connect( self.EventVariableChanged )
         self._tag_depth.valueChanged.connect( self.EventVariableChanged )
         
@@ -1156,7 +1155,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateTypeControls()
         
-                          
+    
     def EventVariableChanged( self ):
         
         self._UpdateDescription()
@@ -2213,9 +2212,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         content_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'produces', 40 ) ]
-        
-        self._content_parsers = ClientGUIListCtrl.BetterListCtrl( content_parsers_panel, 'content_parsers', 6, 24, columns, self._ConvertContentParserToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._content_parsers = ClientGUIListCtrl.BetterListCtrl( content_parsers_panel, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, 6, self._ConvertContentParserToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         content_parsers_panel.SetListCtrl( self._content_parsers )
         
@@ -2349,7 +2346,7 @@ class EditNodes( QW.QWidget ):
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
-        self._nodes = ClientGUIListCtrl.BetterListCtrl( self, 'nodes', 20, 20, [ ( 'name', 16 ), ( 'node type', 11 ), ( 'produces', -1 ) ], self._ConvertNodeToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._nodes = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_NODES.ID, 20, self._ConvertNodeToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         
@@ -2931,9 +2928,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sub_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( sub_page_parsers_notebook_panel )
         
-        columns = [ ( 'name', 24 ), ( '\'post\' separation formula', 24 ), ( 'produces', -1 ) ]
-        
-        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrl( sub_page_parsers_panel, 'sub_page_parsers', 4, 36, columns, self._ConvertSubPageParserToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditSubPageParser )
+        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrl( sub_page_parsers_panel, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, 4, self._ConvertSubPageParserToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditSubPageParser )
         
         sub_page_parsers_panel.SetListCtrl( self._sub_page_parsers )
         
@@ -3279,9 +3274,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'example urls', 40 ), ( 'produces', 40 ) ]
-        
-        self._parsers = ClientGUIListCtrl.BetterListCtrl( parsers_panel, 'parsers', 20, 24, columns, self._ConvertParserToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._parsers = ClientGUIListCtrl.BetterListCtrl( parsers_panel, CGLC.COLUMN_LIST_PARSERS.ID, 20, self._ConvertParserToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         parsers_panel.SetListCtrl( self._parsers )
         
@@ -3727,7 +3720,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._scripts = ClientGUIListCtrl.BetterListCtrl( self, 'parsing_scripts', 20, 20, [ ( 'name', 20 ), ( 'query type', 11 ), ( 'script type', 11 ), ( 'produces', -1 ) ], self._ConvertScriptToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._scripts = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, 20, self._ConvertScriptToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         

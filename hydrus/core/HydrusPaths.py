@@ -357,6 +357,10 @@ def GetDefaultLaunchPath():
         
         return 'xdg-open "%path%"'
         
+    elif HC.PLATFORM_HAIKU:
+        
+        return 'open "%path%"'
+        
     
 def GetDevice( path ):
     
@@ -450,6 +454,10 @@ def LaunchDirectory( path ):
             elif HC.PLATFORM_LINUX:
                 
                 cmd = [ 'xdg-open', path ]
+                
+            elif HC.PLATFORM_HAIKU:
+                
+                cmd = [ 'open', path ]
                 
             
             # setsid call un-childs this new process
@@ -839,6 +847,10 @@ def OpenFileLocation( path ):
         elif HC.PLATFORM_LINUX:
             
             raise NotImplementedError( 'Linux cannot open file locations!' )
+            
+        elif HC.PLATFORM_HAIKU:
+            
+            raise NotImplementedError( 'Haiku cannot open file locations!' )
             
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )

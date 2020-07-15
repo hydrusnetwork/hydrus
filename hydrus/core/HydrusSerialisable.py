@@ -106,6 +106,8 @@ SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER = 87
 SERIALISABLE_TYPE_SUBSCRIPTION = 88
 SERIALISABLE_TYPE_FILE_SEED_CACHE_STATUS = 89
 SERIALISABLE_TYPE_SUBSCRIPTION_CONTAINER = 90
+SERIALISABLE_TYPE_COLUMN_LIST_STATUS = 91
+SERIALISABLE_TYPE_COLUMN_LIST_MANAGER = 92
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -298,7 +300,7 @@ class SerialisableDictionary( SerialisableBase, dict ):
         serialisable_key_simple_value_pairs = []
         serialisable_key_serialisable_value_pairs = []
         
-        for ( key, value ) in list(self.items()):
+        for ( key, value ) in self.items():
             
             if isinstance( key, SerialisableBase ):
                 

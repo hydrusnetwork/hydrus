@@ -12,10 +12,11 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientRatings
 from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 # Option Enums
 
@@ -291,9 +292,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'description', -1 ), ( 'internal ip', 17 ), ( 'internal port', 7 ), ( 'external port', 7 ), ( 'prototcol', 5 ), ( 'lease', 12 ) ]
-        
-        self._mappings_list_ctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'manage_upnp_mappings', 12, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Remove, activation_callback = self._Edit )
+        self._mappings_list_ctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Remove, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._mappings_list_ctrl )
         
@@ -325,7 +324,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._mappings = []
         
-        self._mappings_list_ctrl.Sort( 0 )
+        self._mappings_list_ctrl.Sort()
         
         self._started_external_ip_fetch = False
         

@@ -10,11 +10,12 @@ from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -24,9 +25,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         conversions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( '#', 3 ), ( 'conversion', 30 ), ( 'result', -1 ) ]
-        
-        self._conversions = ClientGUIListCtrl.BetterListCtrl( conversions_panel, 'string_converter_conversions', 7, 35, columns, self._ConvertConversionToListCtrlTuples, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
+        self._conversions = ClientGUIListCtrl.BetterListCtrl( conversions_panel, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, 7, self._ConvertConversionToListCtrlTuples, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
         
         conversions_panel.SetListCtrl( self._conversions )
         
@@ -56,7 +55,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._conversions.UpdateDatas() # to refresh, now they are all in the list
         
-        self._conversions.Sort( 0 )
+        self._conversions.Sort()
         
         #
         

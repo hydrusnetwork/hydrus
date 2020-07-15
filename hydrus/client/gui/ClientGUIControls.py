@@ -13,12 +13,13 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
@@ -28,9 +29,47 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'max allowed', 14 ), ( 'every', 16 ) ]
+        # example for later:
+        '''
+        def sort_call( desired_columns, rule ):
+            
+            ( bandwidth_type, time_delta, max_allowed ) = rule
+            
+            sort_time_delta = SafeNoneInt( time_delta )
+            
+            result = {}
+            
+            result[ CGLC.COLUMN_LIST_BANDWIDTH_RULES.MAX_ALLOWED ] = max_allowed
+            result[ CGLC.COLUMN_LIST_BANDWIDTH_RULES.EVERY ] = sort_time_delta
+            
+            return result
+            
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, columns, self._ConvertRuleToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        def display_call( desired_columns, rule ):
+            
+            ( bandwidth_type, time_delta, max_allowed ) = rule
+            
+            if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
+                
+                pretty_max_allowed = HydrusData.ToHumanBytes( max_allowed )
+                
+            elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
+                
+                pretty_max_allowed = '{} requests'.format( HydrusData.ToHumanInt( max_allowed ) )
+                
+            
+            pretty_time_delta = HydrusData.TimeDeltaToPrettyTimeDelta( time_delta )
+            
+            result = {}
+            
+            result[ CGLC.COLUMN_LIST_BANDWIDTH_RULES.MAX_ALLOWED ] = pretty_max_allowed
+            result[ CGLC.COLUMN_LIST_BANDWIDTH_RULES.EVERY ] = pretty_time_delta
+            
+            return result
+            
+'''
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_BANDWIDTH_RULES.ID, 8, self._ConvertRuleToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -42,7 +81,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         self._listctrl.AddDatas( bandwidth_rules.GetRules() )
         
-        self._listctrl.Sort( 0 )
+        self._listctrl.Sort()
         
         #
         

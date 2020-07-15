@@ -11,11 +11,12 @@ from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 
 class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -178,9 +179,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._favourite_searches_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'folder', 24 ), ( 'name', 24 ), ( 'search', -1 ), ( 'sort', 24 ), ( 'collect', 24 ) ]
-        
-        self._favourite_searches = ClientGUIListCtrl.BetterListCtrl( self._favourite_searches_panel, 'favourite_searches', 20, 72, columns, self._ConvertRowToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
+        self._favourite_searches = ClientGUIListCtrl.BetterListCtrl( self._favourite_searches_panel, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, 20, self._ConvertRowToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
         
         self._favourite_searches_panel.SetListCtrl( self._favourite_searches )
         
@@ -192,7 +191,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._favourite_searches.AddDatas( favourite_searches_rows )
         
-        self._favourite_searches.Sort( 0 )
+        self._favourite_searches.Sort()
         
         #
         

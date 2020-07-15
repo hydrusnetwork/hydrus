@@ -18,13 +18,14 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIListBoxes
-from hydrus.client.gui import ClientGUIListCtrl
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -256,9 +257,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'domain', 20 ), ( 'login script', -1 ), ( 'access given', 36 ), ( 'active?', 8 ), ( 'logged in now?', 28 ), ( 'validity', 28 ), ( 'recent error/delay?', 21 ) ]
-        
-        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, 'domains_to_login_info', 8, 36, columns, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 8, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
         
         self._domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
         
@@ -290,7 +289,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info.AddDatas( listctrl_data )
         
-        self._domains_and_login_info.Sort( 0 )
+        self._domains_and_login_info.Sort()
         
         #
         
@@ -1284,9 +1283,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         credential_definitions_panel = ClientGUIListCtrl.BetterListCtrlPanel( credential_definitions_box_panel )
         
-        columns = [ ( 'name', -1 ), ( 'type', 10 ), ( 'value', 16 ) ]
-        
-        self._credential_definitions = ClientGUIListCtrl.BetterListCtrl( credential_definitions_panel, 'credential_definitions', 4, 16, columns, self._ConvertCredentialDefinitionToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions )
+        self._credential_definitions = ClientGUIListCtrl.BetterListCtrl( credential_definitions_panel, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, 4, self._ConvertCredentialDefinitionToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions )
         
         credential_definitions_panel.SetListCtrl( self._credential_definitions )
         
@@ -1297,8 +1294,6 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         login_steps_box_panel = ClientGUICommon.StaticBox( self, 'login steps' )
-        
-        columns = [ ( 'name', -1 ), ( 'url', 56 ) ]
         
         self._login_steps = ClientGUIListBoxes.QueueListBox( login_steps_box_panel, 5, self._ConvertLoginStepToListBoxString, add_callable = self._AddLoginStep, edit_callable = self._EditLoginStep )
         
@@ -1314,9 +1309,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_domains_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( example_domains_info_box_panel )
         
-        columns = [ ( 'domain', -1 ), ( 'access type', 14 ), ( 'description', 40 ) ]
-        
-        self._example_domains_info = ClientGUIListCtrl.BetterListCtrl( example_domains_info_panel, 'example_domains_info', 6, 16, columns, self._ConvertExampleDomainInfoToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo )
+        self._example_domains_info = ClientGUIListCtrl.BetterListCtrl( example_domains_info_panel, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, 6, self._ConvertExampleDomainInfoToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo )
         
         example_domains_info_panel.SetListCtrl( self._example_domains_info )
         
@@ -1334,9 +1327,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( test_panel )
         
-        columns = [ ( 'step', -1 ), ( 'url', 36 ), ( 'result', 14 ) ]
-        
-        self._test_listctrl = ClientGUIListCtrl.BetterListCtrl( test_listctrl_panel, 'test_login_script_results', 6, 20, columns, self._ConvertTestResultToListCtrlTuples, activation_callback = self._ReviewTestResult )
+        self._test_listctrl = ClientGUIListCtrl.BetterListCtrl( test_listctrl_panel, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, 6, self._ConvertTestResultToListCtrlTuples, activation_callback = self._ReviewTestResult )
         
         test_listctrl_panel.SetListCtrl( self._test_listctrl )
         
@@ -1352,8 +1343,8 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         self._login_steps.AddDatas( login_script.GetLoginSteps() )
         self._example_domains_info.SetData( login_script.GetExampleDomainsInfo() )
         
-        self._credential_definitions.Sort( 0 )
-        self._example_domains_info.Sort( 0 )
+        self._credential_definitions.Sort()
+        self._example_domains_info.Sort()
         
         #
         
@@ -1886,9 +1877,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         login_scripts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'example domains', 40 ) ]
-        
-        self._login_scripts = ClientGUIListCtrl.BetterListCtrl( login_scripts_panel, 'login_scripts', 20, 24, columns, self._ConvertLoginScriptToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        self._login_scripts = ClientGUIListCtrl.BetterListCtrl( login_scripts_panel, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, 20, self._ConvertLoginScriptToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         login_scripts_panel.SetListCtrl( self._login_scripts )
         
@@ -1904,7 +1893,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._login_scripts.AddDatas( login_scripts )
         
-        self._login_scripts.Sort( 0 )
+        self._login_scripts.Sort()
         
         #
         
