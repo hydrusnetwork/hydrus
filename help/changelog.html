@@ -8,6 +8,46 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 405</h3></li>
+				<ul>
+					<li>tag search:</li>
+					<li>system:number of tags now supports namespaces, for example 'find files with two character tags'! (issue #280)</li>
+					<li>it also supports wildcard namespaces, as now do regular namespace search predicates. both run faster. "crea*:anything" is now possible</li>
+					<li>system:number of tags has been optimised, and in many cases is now ten to a hundred times faster</li>
+					<li>system:number of tags still does not support siblings, something I hope to start correcting as of v408</li>
+					<li>both tag existence (numtags =0 or greater than 0) and tag count database routines now respond quickly to 'cancel search' commands, so if you do run a slow query (a bare 'has creator tag' search on 'all known files' on the PTR, for instance), you can now back out quickly after the 'stop' button appears</li>
+					<li>note that 'system:number of character tags greater than 0' and '= 0' are equivalent to +/-character:anything, which will be swapped in if you enter these. also, +/-unnamespaced:anything can now appear</li>
+					<li>the program is a bit better about determining =0 and greater than 0 and less than 1 being 'none' and 'any but none', when it needs to determine optimisations and special labels</li>
+					<li>unfortunately, I am taking away the default value for system:num tags in the options page (edit: I am killing the whole panel now). this old ugly mess of stacked predicate edit panels works on ancient, difficult to update code, so I will retire it and replace it with a unified system that is easy to use, supports in-search system predicate editing, and keeps up with changes automatically</li>
+					<li>boring code changes here:</li>
+					<li>system:number of tags is now comfortable with redundancies--if you add >2 and >4, it now knows that >4 is the true lower bound (previously, the one used was random)</li>
+					<li>updated tag existence and tag count searches to take advantage of the tag cache when in a specific file domain (which is pretty much all the time), which should speed them up significantly</li>
+					<li>updated tag existence and tag count searches to more carefully plan their queries, speeding them up both in advantageous and difficult situations</li>
+					<li>cleaned up tag existence and tag count code significantly</li>
+					<li>updated all edit system predicate panels to return full predicate objects, a step towards decoupling them and allowing in-place system predicate editing</li>
+					<li>wrote a new number test object to hold and help with number range test values. num tags now uses it, and eventually all range predicates will too</li>
+					<li>the namespace existence search code ('anything' queries) is now folded into the new generalised tag existence search code</li>
+					<li>streamlined how the search context propagates through all database tag searching--now, most queries do not know or care about domain or current/pending status--they just iterate over n tables as determined by a specialised routine</li>
+					<li>added a handful of unit tests for the new namespace num tag searching</li>
+					<li>.</li>
+					<li>database repair:</li>
+					<li>the database menu has a new entry, 'repopulate truncated mappings tables', under the newly renamed 'check and repair' submenu, which will try its best to 'fix' a client.mappings.db file that has been truncated due to hard drive fault by repopulating from the local-file-only tag cache. do not run this unless you know you need to</li>
+					<li>the 'help my db is broke.txt' document has a full update pass. the language is clearer, common issues and questions are better addressed, two new recovery routines are added, a section on the stages after boot recovery (like the new repopulate job above) is added, and I added my stock 'now become a backup patrician' nag at the end</li>
+					<li>the debug routine to clear cached service info numbers is now moved to the 'regenerate' database menu. this thing fixes hanging incorrect 'pending' counts until I can fix it properly</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed an issue where when you pasted queries into a subscription, those that were already in the sub (and got the dialog saying so), were being added anyway! I believe this bug came in the last few weeks, after the data storage rewrite. please check your pasted-into subs for dupes</li>
+					<li>fixed tab double middle-click behaviour (so you can spam page close), which I thought I had fixed last week but actually messed up completely right at the end (issue #314)</li>
+					<li>cleaned up some more of the page tab event code--it was a mess all around. should all be on Qt now, no wx hacks</li>
+					<li>network jobs will no longer wait for and consume bandwidth start tokens while all network traffic is paused. all bandwidth competition now halts. (previously, they would continue to consume tokens according to current rules and then all rush to start as soon as traffic was resumed)</li>
+					<li>fixed some client booru/client api requests to correctly 404 on missing file results, rather than 500</li>
+					<li>cleaned up some file sort code and fixed the sort string conversion, which was rendering the opposite sort direction (asc/desc) in summary labels (e.g. on manage favourite searches)</li>
+					<li>cleaned up some ui layout stretching code, including some borked tag import options expand sizing</li>
+					<li>improved some button and padding layout definitions, and improved, slightly, the way the top-right media viewer hover window lays itself out and changes its size on media change</li>
+					<li>improved some review services layout. should be fewer weird heights and widths in unusual situations, and the new multi-column list fits better</li>
+					<li>the manage subs dialog now saves its changes to db more cleanly and atomically</li>
+					<li>updated the default derpibooru parser to pull species tags. ten points if you can guess what that is most of the time</li>
+				</ul>
 				<li><h3>version 404</h3></li>
 				<ul>
 					<li>column lists:</li>

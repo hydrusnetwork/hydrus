@@ -760,7 +760,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             current_query_texts = self._GetCurrentQueryTexts()
             
-            already_existing_query_texts = sorted( current_query_texts.intersection( query_texts ) )
+            already_existing_query_texts = sorted( set( current_query_texts ).intersection( query_texts ) )
             new_query_texts = sorted( set( query_texts ).difference( current_query_texts ) )
             
             if len( already_existing_query_texts ) > 0:
@@ -818,7 +818,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             query_headers = []
             
-            for query_text in query_texts:
+            for query_text in new_query_texts:
                 
                 query_header = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
                 

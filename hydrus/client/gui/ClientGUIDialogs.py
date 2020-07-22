@@ -1140,15 +1140,15 @@ class DialogTextEntry( Dialog ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._ok, CC.FLAGS_SMALL_INDENT )
-        QP.AddToLayout( hbox, self._cancel, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._cancel, CC.FLAGS_VCENTER )
         
         st_message = ClientGUICommon.BetterStaticText( self, message )
         st_message.setWordWrap( True )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, st_message, CC.FLAGS_BIG_INDENT )
+        QP.AddToLayout( vbox, st_message, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for button in button_choices:
             
@@ -1246,17 +1246,17 @@ class DialogYesYesNo( Dialog ):
         
         for yes_button in yes_buttons:
             
-            QP.AddToLayout( hbox, yes_button, CC.FLAGS_SMALL_INDENT )
+            QP.AddToLayout( hbox, yes_button, CC.FLAGS_VCENTER )
             
         
-        QP.AddToLayout( hbox, self._no, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._no, CC.FLAGS_VCENTER )
         
         vbox = QP.VBoxLayout()
         
         text = ClientGUICommon.BetterStaticText( self, message )
         text.setWordWrap( True )
         
-        QP.AddToLayout( vbox, text, CC.FLAGS_BIG_INDENT )
+        QP.AddToLayout( vbox, text, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.setLayout( vbox )

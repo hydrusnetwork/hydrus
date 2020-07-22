@@ -362,6 +362,9 @@ class TabBar( QW.QTabBar ):
     tabDoubleLeftClicked = QC.Signal( int )
     tabMiddleClicked = QC.Signal( int )
     
+    tabSpaceDoubleLeftClicked = QC.Signal()
+    tabSpaceDoubleMiddleClicked = QC.Signal()
+    
     def __init__( self, parent = None ):
         
         QW.QTabBar.__init__( self, parent )
@@ -398,15 +401,15 @@ class TabBar( QW.QTabBar ):
     
     def mousePressEvent( self, event ):
         
+        index = self.tabAt( event.pos() )
+        
         if event.button() == QC.Qt.LeftButton:
             
-            self._last_clicked_tab_index = self.tabAt( event.pos() )
+            self._last_clicked_tab_index = index
             
             self._last_clicked_global_pos = event.globalPos()
             
         elif event.button() == QC.Qt.MiddleButton:
-            
-            index = self.tabAt( event.pos() )
             
             if index != -1:
                 
@@ -421,21 +424,36 @@ class TabBar( QW.QTabBar ):
     
     def mouseDoubleClickEvent( self, event ):
         
+        index = self.tabAt( event.pos() )
+        
         if event.button() == QC.Qt.LeftButton:
             
-            index = self.tabAt( event.pos() )
-            
-            if index != -1:
+            if index == -1:
+                
+                self.tabSpaceDoubleLeftClicked.emit()
+                
+            else:
                 
                 self.tabDoubleLeftClicked.emit( index )
                 
             
-            QW.QTabBar.mouseDoubleClickEvent( self, event )
+            return
             
-        else:
+        elif event.button() == QC.Qt.MiddleButton:
             
-            self.tabMiddleClicked.emit( index )
+            if index == -1:
+                
+                self.tabSpaceDoubleMiddleClicked.emit()
+                
+            else:
+                
+                self.tabMiddleClicked.emit( index )
+                
             
+            return
+            
+        
+        QW.QTabBar.mouseDoubleClickEvent( self, event )
         
     
     def dragEnterEvent(self, event):
@@ -1006,19 +1024,16 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
     # Left all the original wx definitions of the flags as comments for future reference
     if flag is None or flag == CC.FLAGS_NONE:
         pass
-    elif flag == CC.FLAGS_SMALL_INDENT:
-        pass
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-    elif flag == CC.FLAGS_BIG_INDENT:
-        pass
-        #item.setContentsMargins( 10, 10, 10, 10 )
-        #wx.SizerFlags( 0 ).Border( wx.ALL, 10 )
     elif flag == CC.FLAGS_CENTER:
         layout.setAlignment( item, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter )
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-    elif flag == CC.FLAGS_EXPAND_PERPENDICULAR:
+    elif flag in ( CC.FLAGS_EXPAND_PERPENDICULAR, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR ):
+        
+        if flag == CC.FLAGS_EXPAND_SIZER_PERPENDICULAR:
+            
+            zero_border = True
+            
         
         if isinstance( item, QW.QWidget ):
             
@@ -1049,10 +1064,6 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         zero_border = True
         #item.setContentsMargins( 0, 0, 0, 0 )
         #wx.SizerFlags( 5 ).Center()
-    elif flag == CC.FLAGS_EXPAND_SIZER_PERPENDICULAR:
-        zero_border = True
-        #wx.SizerFlags( 0 ).Expand()
-        #item.setContentsMargins( 0, 0, 0, 0 )
     elif flag == CC.FLAGS_EXPAND_SIZER_BOTH_WAYS:
         zero_border = True
         
@@ -1073,12 +1084,10 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
         #wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
     elif flag == CC.FLAGS_LONE_BUTTON:
         layout.setAlignment( item, QC.Qt.AlignRight )
-        zero_border = True
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
     elif flag == CC.FLAGS_VCENTER:
         layout.setAlignment( item, QC.Qt.AlignVCenter )
-        zero_border = True
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
     elif flag == CC.FLAGS_SIZER_VCENTER:
@@ -1089,7 +1098,6 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
     elif flag == CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY:
         if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
         layout.setAlignment( item, QC.Qt.AlignVCenter )
-        zero_border = True
         #item.setContentsMargins( 2, 2, 2, 2 )
         #wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
     
@@ -1117,8 +1125,6 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
             
             layout.setStretchFactor( item, stretch_factor )
             
-        
-        
         
     
     if zero_border:

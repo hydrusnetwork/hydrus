@@ -951,6 +951,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         else:
             
             self.setTabPosition( QW.QTabWidget.North )
+            
         
         self._controller = controller
         
@@ -968,17 +969,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
         self._controller.sub( self, '_UpdatePageTabEliding', 'notify_new_options' )
         
-        self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventLeftDoubleClick )
-        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMiddleClick )
-        self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
-        self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
-        
         self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
         
         self.tabBar().tabDoubleLeftClicked.connect( self._RenamePage )
         self.tabBar().tabMiddleClicked.connect( self._ClosePage )
+        
+        self.tabBar().tabSpaceDoubleLeftClicked.connect( self.ChooseNewPage )
+        self.tabBar().tabSpaceDoubleMiddleClicked.connect( self.ChooseNewPage )
         
         self._previous_page_index = -1
         
@@ -1848,26 +1846,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self._ClosePage( selection, polite = polite )
         
     
-    def EventLeftDoubleClick( self, event ):
-        
-        position = event.pos()
-        
-        screen_pos = self.mapToGlobal( position )
-        
-        tab_pos = self.tabBar().mapFromGlobal( screen_pos )
-        
-        tab_index = self.tabBar().tabAt( tab_pos )
-        
-        if tab_index == -1:
-            
-            self.ChooseNewPage()
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -1887,31 +1865,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         notebook = self._GetNotebookFromScreenPosition( position )
         
         notebook._ShowMenu( position )
-        
-    
-    def EventMiddleClick( self, event ):
-        
-        if CGC.core().MenuIsOpen():
-            
-            return
-            
-        
-        position = event.pos()
-        
-        screen_pos = self.mapToGlobal( position )
-        
-        tab_pos = self.tabBar().mapFromGlobal( screen_pos )
-        
-        tab_index = self.tabBar().tabAt( tab_pos )
-        
-        if tab_index == -1:
-            
-            self.ChooseNewPage()    
-            
-        else:
-            
-            self._ClosePage( tab_index )
-            
         
     
     def EventNewPageFromScreenPosition( self, position ):

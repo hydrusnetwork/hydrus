@@ -204,6 +204,15 @@ class NetworkEngine( object ):
                 
                 return True
                 
+            
+            elif self._pause_all_new_network_traffic:
+                
+                job.SetStatus( 'all new network traffic is paused\u2026' )
+                
+                job.Sleep( 2 )
+                
+                return True
+                
             elif not job.TryToStartBandwidth():
                 
                 return True

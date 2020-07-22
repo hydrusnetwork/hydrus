@@ -263,6 +263,616 @@ def SortPredicates( predicates ):
     
     return predicates
 
+NUMBER_TEST_OPERATOR_LESS_THAN = 0
+NUMBER_TEST_OPERATOR_GREATER_THAN = 1
+NUMBER_TEST_OPERATOR_EQUAL = 2
+NUMBER_TEST_OPERATOR_APPROXIMATE = 3
+
+number_test_operator_to_str_lookup = {
+    NUMBER_TEST_OPERATOR_LESS_THAN : '<',
+    NUMBER_TEST_OPERATOR_GREATER_THAN : '>',
+    NUMBER_TEST_OPERATOR_EQUAL : '=',
+    NUMBER_TEST_OPERATOR_APPROXIMATE : '\u2248'
+}
+
+number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() }
+
+class NumberTest( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST
+    SERIALISABLE_NAME = 'Number Test'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, operator = NUMBER_TEST_OPERATOR_EQUAL, value = 1 ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.operator = operator
+        self.value = value
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, NumberTest ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self.operator, self.value ).__hash__()
+        
+    
+    def __repr__( self ):
+        
+        return '{} {}'.format( number_test_operator_to_str_lookup[ self.operator ], self.value )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self.operator, self.value )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self.operator, self.value ) = serialisable_info
+        
+    
+    def GetLambda( self ):
+        
+        if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
+            
+            return lambda x: x < self.value
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
+            
+            return lambda x: x > self.value
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
+            
+            return lambda x: x == self.value
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE:
+            
+            lower = self.value * 0.85
+            upper = self.value * 1.15
+            
+            return lambda x: lower < x < upper
+            
+        
+    
+    def IsAnythingButZero( self ):
+        
+        return self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN and self.value == 0
+        
+    
+    def IsZero( self ):
+        
+        actually_zero = self.operator == NUMBER_TEST_OPERATOR_EQUAL and self.value == 0
+        less_than_one = self.operator == NUMBER_TEST_OPERATOR_LESS_THAN and self.value == 1
+        
+        return actually_zero or less_than_one
+        
+    
+    def WantsZero( self ):
+        
+        return self.GetLambda()( 0 )
+        
+    
+    @staticmethod
+    def STATICCreateFromCharacters( operator_str: str, value: int ) -> "NumberTest":
+        
+        operator = number_test_str_to_operator_lookup[ operator_str ]
+        
+        return NumberTest( operator, value )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST ] = NumberTest
+
+class FileSystemPredicates( object ):
+    
+    def __init__( self, system_predicates, apply_implicit_limit = True ):
+        
+        self._has_system_everything = False
+        
+        self._inbox = False
+        self._archive = False
+        self._local = False
+        self._not_local = False
+        
+        self._common_info = {}
+        
+        self._limit = None
+        self._similar_to = None
+        
+        self._file_services_to_include_current = []
+        self._file_services_to_include_pending = []
+        self._file_services_to_exclude_current = []
+        self._file_services_to_exclude_pending = []
+        
+        self._ratings_predicates = []
+        
+        self._num_tags_predicates = []
+        
+        self._duplicate_count_predicates = []
+        
+        self._king_filter = None
+        
+        self._file_viewing_stats_predicates = []
+        
+        new_options = HG.client_controller.new_options
+        
+        for predicate in system_predicates:
+            
+            predicate_type = predicate.GetType()
+            value = predicate.GetValue()
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_EVERYTHING: self._has_system_everything = True
+            if predicate_type == PREDICATE_TYPE_SYSTEM_INBOX: self._inbox = True
+            if predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE: self._archive = True
+            if predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: self._not_local = True
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+                
+                ( operator, rule_type, rule, description ) = value
+                
+                if 'known_url_rules' not in self._common_info:
+                    
+                    self._common_info[ 'known_url_rules' ] = []
+                    
+                
+                self._common_info[ 'known_url_rules' ].append( ( operator, rule_type, rule ) )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
+                
+                has_audio = value
+                
+                self._common_info[ 'has_audio' ] = has_audio
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HASH:
+                
+                ( hashes, hash_type ) = value
+                
+                self._common_info[ 'hash' ] = ( hashes, hash_type )
+                
+            
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+                
+                if predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
+                    
+                    min_label = 'min_import_timestamp'
+                    max_label = 'max_import_timestamp'
+                    
+                elif predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
+                    
+                    min_label = 'min_modified_timestamp'
+                    max_label = 'max_modified_timestamp'
+                    
+                
+                ( operator, age_type, age_value ) = value
+                
+                if age_type == 'delta':
+                    
+                    ( years, months, days, hours ) = age_value
+                    
+                    age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                    
+                    now = HydrusData.GetNow()
+                    
+                    # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
+                    
+                    if operator == '<':
+                        
+                        self._common_info[ min_label ] = now - age
+                        
+                    elif operator == '>':
+                        
+                        self._common_info[ max_label ] = now - age
+                        
+                    elif operator == '\u2248':
+                        
+                        self._common_info[ min_label ] = now - int( age * 1.15 )
+                        self._common_info[ max_label ] = now - int( age * 0.85 )
+                        
+                    
+                elif age_type == 'date':
+                    
+                    ( year, month, day ) = age_value
+                    
+                    # convert this dt, which is in local time, to a gmt timestamp
+                    
+                    day_dt = datetime.datetime( year, month, day )
+                    timestamp = int( time.mktime( day_dt.timetuple() ) )
+                    
+                    if operator == '<':
+                        
+                        self._common_info[ max_label ] = timestamp
+                        
+                    elif operator == '>':
+                        
+                        self._common_info[ min_label ] = timestamp + 86400
+                        
+                    elif operator == '=':
+                        
+                        self._common_info[ min_label ] = timestamp
+                        self._common_info[ max_label ] = timestamp + 86400
+                        
+                    elif operator == '\u2248':
+                        
+                        self._common_info[ min_label ] = timestamp - 86400 * 30
+                        self._common_info[ max_label ] = timestamp + 86400 * 30
+                        
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
+                
+                mimes = value
+                
+                if isinstance( mimes, int ): mimes = ( mimes, )
+                
+                self._common_info[ 'mimes' ] = mimes
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
+                
+                ( operator, duration ) = value
+                
+                if operator == '<': self._common_info[ 'max_duration' ] = duration
+                elif operator == '>': self._common_info[ 'min_duration' ] = duration
+                elif operator == '=': self._common_info[ 'duration' ] = duration
+                elif operator == '\u2248':
+                    
+                    if duration == 0:
+                        
+                        self._common_info[ 'duration' ] = 0
+                        
+                    else:
+                        
+                        self._common_info[ 'min_duration' ] = int( duration * 0.85 )
+                        self._common_info[ 'max_duration' ] = int( duration * 1.15 )
+                        
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
+                
+                ( operator, framerate ) = value
+                
+                if operator == '<': self._common_info[ 'max_framerate' ] = framerate
+                elif operator == '>': self._common_info[ 'min_framerate' ] = framerate
+                elif operator == '=': self._common_info[ 'framerate' ] = framerate
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
+                
+                ( operator, num_frames ) = value
+                
+                if operator == '<': self._common_info[ 'max_num_frames' ] = num_frames
+                elif operator == '>': self._common_info[ 'min_num_frames' ] = num_frames
+                elif operator == '=': self._common_info[ 'num_frames' ] = num_frames
+                elif operator == '\u2248':
+                    
+                    if num_frames == 0:
+                        
+                        self._common_info[ 'num_frames' ] = 0
+                        
+                    else:
+                        
+                        self._common_info[ 'min_num_frames' ] = int( num_frames * 0.85 )
+                        self._common_info[ 'max_num_frames' ] = int( num_frames * 1.15 )
+                        
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
+                
+                ( operator, value, service_key ) = value
+                
+                self._ratings_predicates.append( ( operator, value, service_key ) )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
+                
+                ( operator, ratio_width, ratio_height ) = value
+                
+                if operator == '=': self._common_info[ 'ratio' ] = ( ratio_width, ratio_height )
+                elif operator == 'wider than':
+                    
+                    self._common_info[ 'min_ratio' ] = ( ratio_width, ratio_height )
+                    
+                elif operator == 'taller than':
+                    
+                    self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
+                    
+                elif operator == '\u2248':
+                    
+                    self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
+                    self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_SIZE:
+                
+                ( operator, size, unit ) = value
+                
+                size = size * unit
+                
+                if operator == '<': self._common_info[ 'max_size' ] = size
+                elif operator == '>': self._common_info[ 'min_size' ] = size
+                elif operator == '=': self._common_info[ 'size' ] = size
+                elif operator == '\u2248':
+                    
+                    self._common_info[ 'min_size' ] = int( size * 0.85 )
+                    self._common_info[ 'max_size' ] = int( size * 1.15 )
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+                
+                self._num_tags_predicates.append( predicate.Duplicate() )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+                
+                ( namespace, operator, num ) = value
+                
+                if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
+                elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
+                elif operator == '\u2248':
+                    
+                    self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
+                    self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
+                
+                ( operator, width ) = value
+                
+                if operator == '<': self._common_info[ 'max_width' ] = width
+                elif operator == '>': self._common_info[ 'min_width' ] = width
+                elif operator == '=': self._common_info[ 'width' ] = width
+                elif operator == '\u2248':
+                    
+                    if width == 0: self._common_info[ 'width' ] = 0
+                    else:
+                        
+                        self._common_info[ 'min_width' ] = int( width * 0.85 )
+                        self._common_info[ 'max_width' ] = int( width * 1.15 )
+                        
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
+                
+                ( operator, num_pixels, unit ) = value
+                
+                num_pixels = num_pixels * unit
+                
+                if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
+                elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
+                elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
+                elif operator == '\u2248':
+                    
+                    self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
+                    self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
+                
+                ( operator, height ) = value
+                
+                if operator == '<': self._common_info[ 'max_height' ] = height
+                elif operator == '>': self._common_info[ 'min_height' ] = height
+                elif operator == '=': self._common_info[ 'height' ] = height
+                elif operator == '\u2248':
+                    
+                    if height == 0: self._common_info[ 'height' ] = 0
+                    else:
+                        
+                        self._common_info[ 'min_height' ] = int( height * 0.85 )
+                        self._common_info[ 'max_height' ] = int( height * 1.15 )
+                        
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
+                
+                ( operator, num_notes ) = value
+                
+                if operator == '<': self._common_info[ 'max_num_notes' ] = num_notes
+                elif operator == '>': self._common_info[ 'min_num_notes' ] = num_notes
+                elif operator == '=': self._common_info[ 'num_notes' ] = num_notes
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME:
+                
+                ( operator, name ) = value
+                
+                if operator:
+                    
+                    label = 'has_note_names'
+                    
+                else:
+                    
+                    label = 'not_has_note_names'
+                    
+                
+                if label not in self._common_info:
+                    
+                    self._common_info[ label ] = set()
+                    
+                
+                self._common_info[ label ].add( name )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
+                
+                ( operator, num_words ) = value
+                
+                if operator == '<': self._common_info[ 'max_num_words' ] = num_words
+                elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
+                elif operator == '=': self._common_info[ 'num_words' ] = num_words
+                elif operator == '\u2248':
+                    
+                    if num_words == 0: self._common_info[ 'num_words' ] = 0
+                    else:
+                        
+                        self._common_info[ 'min_num_words' ] = int( num_words * 0.85 )
+                        self._common_info[ 'max_num_words' ] = int( num_words * 1.15 )
+                        
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_LIMIT:
+                
+                limit = value
+                
+                if self._limit is None:
+                    
+                    self._limit = limit
+                    
+                else:
+                    
+                    self._limit = min( limit, self._limit )
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+                
+                ( operator, current_or_pending, service_key ) = value
+                
+                if operator == True:
+                    
+                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_include_current.append( service_key )
+                    else: self._file_services_to_include_pending.append( service_key )
+                    
+                else:
+                    
+                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_exclude_current.append( service_key )
+                    else: self._file_services_to_exclude_pending.append( service_key )
+                    
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+                
+                ( hashes, max_hamming ) = value
+                
+                self._similar_to = ( hashes, max_hamming )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
+                
+                ( operator, num_relationships, dupe_type ) = value
+                
+                self._duplicate_count_predicates.append( ( operator, num_relationships, dupe_type ) )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
+                
+                king = value
+                
+                self._king_filter = king
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+                
+                ( view_type, viewing_locations, operator, viewing_value ) = value
+                
+                self._file_viewing_stats_predicates.append( ( view_type, viewing_locations, operator, viewing_value ) )
+                
+            
+        
+    
+    def GetDuplicateRelationshipCountPredicates( self ):
+        
+        return self._duplicate_count_predicates
+        
+    
+    def GetFileServiceInfo( self ):
+        
+        return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
+        
+    
+    def GetFileViewingStatsPredicates( self ):
+        
+        return self._file_viewing_stats_predicates
+        
+    
+    def GetKingFilter( self ):
+        
+        return self._king_filter
+        
+    
+    def GetLimit( self, apply_implicit_limit = True ):
+        
+        if self._limit is None and apply_implicit_limit:
+            
+            forced_search_limit = HG.client_controller.new_options.GetNoneableInteger( 'forced_search_limit' )
+            
+            return forced_search_limit
+            
+        
+        return self._limit
+        
+    
+    def GetNumTagsNumberTests( self ) -> typing.Dict[ str, typing.List[ NumberTest ] ]:
+        
+        namespaces_to_tests = collections.defaultdict( list )
+        
+        for predicate in self._num_tags_predicates:
+            
+            ( namespace, operator, value ) = predicate.GetValue()
+            
+            test = NumberTest.STATICCreateFromCharacters( operator, value )
+            
+            namespaces_to_tests[ namespace ].append( test )
+            
+        
+        return namespaces_to_tests
+        
+    
+    def GetSimpleInfo( self ):
+        
+        return self._common_info
+        
+    
+    def GetRatingsPredicates( self ):
+        
+        return self._ratings_predicates
+        
+    
+    def GetSimilarTo( self ):
+        
+        return self._similar_to
+        
+    
+    def HasSimilarTo( self ):
+        
+        return self._similar_to is not None
+        
+    
+    def HasSystemEverything( self ):
+        
+        return self._has_system_everything
+        
+    
+    def MustBeArchive( self ): return self._archive
+    
+    def MustBeInbox( self ): return self._inbox
+    
+    def MustBeLocal( self ): return self._local
+    
+    def MustNotBeLocal( self ): return self._not_local
+    
 SEARCH_TYPE_AND = 0
 SEARCH_TYPE_OR = 1
 
@@ -422,7 +1032,10 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def GetNamespacesToInclude( self ): return self._namespaces_to_include
     def GetORPredicates( self ): return self._or_predicates
     def GetPredicates( self ): return self._predicates
-    def GetSystemPredicates( self ): return self._system_predicates
+    def GetSystemPredicates( self ) -> FileSystemPredicates:
+        
+        return self._system_predicates
+        
     
     def GetTagSearchContext( self ):
         
@@ -663,498 +1276,11 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER ] = FavouriteSearchManager
 
-class FileSystemPredicates( object ):
-    
-    def __init__( self, system_predicates, apply_implicit_limit = True ):
-        
-        self._has_system_everything = False
-        
-        self._inbox = False
-        self._archive = False
-        self._local = False
-        self._not_local = False
-        
-        self._common_info = {}
-        
-        self._limit = None
-        self._similar_to = None
-        
-        self._file_services_to_include_current = []
-        self._file_services_to_include_pending = []
-        self._file_services_to_exclude_current = []
-        self._file_services_to_exclude_pending = []
-        
-        self._ratings_predicates = []
-        
-        self._duplicate_count_predicates = []
-        
-        self._king_filter = None
-        
-        self._file_viewing_stats_predicates = []
-        
-        new_options = HG.client_controller.new_options
-        
-        for predicate in system_predicates:
-            
-            predicate_type = predicate.GetType()
-            value = predicate.GetValue()
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_EVERYTHING: self._has_system_everything = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_INBOX: self._inbox = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE: self._archive = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: self._not_local = True
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
-                
-                ( operator, rule_type, rule, description ) = value
-                
-                if 'known_url_rules' not in self._common_info:
-                    
-                    self._common_info[ 'known_url_rules' ] = []
-                    
-                
-                self._common_info[ 'known_url_rules' ].append( ( operator, rule_type, rule ) )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
-                
-                has_audio = value
-                
-                self._common_info[ 'has_audio' ] = has_audio
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HASH:
-                
-                ( hashes, hash_type ) = value
-                
-                self._common_info[ 'hash' ] = ( hashes, hash_type )
-                
-            
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
-                
-                if predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
-                    
-                    min_label = 'min_import_timestamp'
-                    max_label = 'max_import_timestamp'
-                    
-                elif predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
-                    
-                    min_label = 'min_modified_timestamp'
-                    max_label = 'max_modified_timestamp'
-                    
-                
-                ( operator, age_type, age_value ) = value
-                
-                if age_type == 'delta':
-                    
-                    ( years, months, days, hours ) = age_value
-                    
-                    age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
-                    
-                    now = HydrusData.GetNow()
-                    
-                    # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
-                    
-                    if operator == '<':
-                        
-                        self._common_info[ min_label ] = now - age
-                        
-                    elif operator == '>':
-                        
-                        self._common_info[ max_label ] = now - age
-                        
-                    elif operator == '\u2248':
-                        
-                        self._common_info[ min_label ] = now - int( age * 1.15 )
-                        self._common_info[ max_label ] = now - int( age * 0.85 )
-                        
-                    
-                elif age_type == 'date':
-                    
-                    ( year, month, day ) = age_value
-                    
-                    # convert this dt, which is in local time, to a gmt timestamp
-                    
-                    day_dt = datetime.datetime( year, month, day )
-                    timestamp = int( time.mktime( day_dt.timetuple() ) )
-                    
-                    if operator == '<':
-                        
-                        self._common_info[ max_label ] = timestamp
-                        
-                    elif operator == '>':
-                        
-                        self._common_info[ min_label ] = timestamp + 86400
-                        
-                    elif operator == '=':
-                        
-                        self._common_info[ min_label ] = timestamp
-                        self._common_info[ max_label ] = timestamp + 86400
-                        
-                    elif operator == '\u2248':
-                        
-                        self._common_info[ min_label ] = timestamp - 86400 * 30
-                        self._common_info[ max_label ] = timestamp + 86400 * 30
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
-                
-                mimes = value
-                
-                if isinstance( mimes, int ): mimes = ( mimes, )
-                
-                self._common_info[ 'mimes' ] = mimes
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
-                
-                ( operator, duration ) = value
-                
-                if operator == '<': self._common_info[ 'max_duration' ] = duration
-                elif operator == '>': self._common_info[ 'min_duration' ] = duration
-                elif operator == '=': self._common_info[ 'duration' ] = duration
-                elif operator == '\u2248':
-                    
-                    if duration == 0:
-                        
-                        self._common_info[ 'duration' ] = 0
-                        
-                    else:
-                        
-                        self._common_info[ 'min_duration' ] = int( duration * 0.85 )
-                        self._common_info[ 'max_duration' ] = int( duration * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
-                
-                ( operator, framerate ) = value
-                
-                if operator == '<': self._common_info[ 'max_framerate' ] = framerate
-                elif operator == '>': self._common_info[ 'min_framerate' ] = framerate
-                elif operator == '=': self._common_info[ 'framerate' ] = framerate
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
-                
-                ( operator, num_frames ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_frames' ] = num_frames
-                elif operator == '>': self._common_info[ 'min_num_frames' ] = num_frames
-                elif operator == '=': self._common_info[ 'num_frames' ] = num_frames
-                elif operator == '\u2248':
-                    
-                    if num_frames == 0:
-                        
-                        self._common_info[ 'num_frames' ] = 0
-                        
-                    else:
-                        
-                        self._common_info[ 'min_num_frames' ] = int( num_frames * 0.85 )
-                        self._common_info[ 'max_num_frames' ] = int( num_frames * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
-                
-                ( operator, value, service_key ) = value
-                
-                self._ratings_predicates.append( ( operator, value, service_key ) )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
-                
-                ( operator, ratio_width, ratio_height ) = value
-                
-                if operator == '=': self._common_info[ 'ratio' ] = ( ratio_width, ratio_height )
-                elif operator == 'wider than':
-                    
-                    self._common_info[ 'min_ratio' ] = ( ratio_width, ratio_height )
-                    
-                elif operator == 'taller than':
-                    
-                    self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
-                    
-                elif operator == '\u2248':
-                    
-                    self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
-                    self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_SIZE:
-                
-                ( operator, size, unit ) = value
-                
-                size = size * unit
-                
-                if operator == '<': self._common_info[ 'max_size' ] = size
-                elif operator == '>': self._common_info[ 'min_size' ] = size
-                elif operator == '=': self._common_info[ 'size' ] = size
-                elif operator == '\u2248':
-                    
-                    self._common_info[ 'min_size' ] = int( size * 0.85 )
-                    self._common_info[ 'max_size' ] = int( size * 1.15 )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
-                
-                ( operator, num_tags ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_tags' ] = num_tags
-                elif operator == '=': self._common_info[ 'num_tags' ] = num_tags
-                elif operator == '>': self._common_info[ 'min_num_tags' ] = num_tags
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
-                
-                ( namespace, operator, num ) = value
-                
-                if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
-                elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
-                elif operator == '\u2248':
-                    
-                    self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
-                    self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
-                
-                ( operator, width ) = value
-                
-                if operator == '<': self._common_info[ 'max_width' ] = width
-                elif operator == '>': self._common_info[ 'min_width' ] = width
-                elif operator == '=': self._common_info[ 'width' ] = width
-                elif operator == '\u2248':
-                    
-                    if width == 0: self._common_info[ 'width' ] = 0
-                    else:
-                        
-                        self._common_info[ 'min_width' ] = int( width * 0.85 )
-                        self._common_info[ 'max_width' ] = int( width * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
-                
-                ( operator, num_pixels, unit ) = value
-                
-                num_pixels = num_pixels * unit
-                
-                if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
-                elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
-                elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
-                elif operator == '\u2248':
-                    
-                    self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
-                    self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
-                
-                ( operator, height ) = value
-                
-                if operator == '<': self._common_info[ 'max_height' ] = height
-                elif operator == '>': self._common_info[ 'min_height' ] = height
-                elif operator == '=': self._common_info[ 'height' ] = height
-                elif operator == '\u2248':
-                    
-                    if height == 0: self._common_info[ 'height' ] = 0
-                    else:
-                        
-                        self._common_info[ 'min_height' ] = int( height * 0.85 )
-                        self._common_info[ 'max_height' ] = int( height * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
-                
-                ( operator, num_notes ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_notes' ] = num_notes
-                elif operator == '>': self._common_info[ 'min_num_notes' ] = num_notes
-                elif operator == '=': self._common_info[ 'num_notes' ] = num_notes
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME:
-                
-                ( operator, name ) = value
-                
-                if operator:
-                    
-                    label = 'has_note_names'
-                    
-                else:
-                    
-                    label = 'not_has_note_names'
-                    
-                
-                if label not in self._common_info:
-                    
-                    self._common_info[ label ] = set()
-                    
-                
-                self._common_info[ label ].add( name )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
-                
-                ( operator, num_words ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_words' ] = num_words
-                elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
-                elif operator == '=': self._common_info[ 'num_words' ] = num_words
-                elif operator == '\u2248':
-                    
-                    if num_words == 0: self._common_info[ 'num_words' ] = 0
-                    else:
-                        
-                        self._common_info[ 'min_num_words' ] = int( num_words * 0.85 )
-                        self._common_info[ 'max_num_words' ] = int( num_words * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_LIMIT:
-                
-                limit = value
-                
-                if self._limit is None:
-                    
-                    self._limit = limit
-                    
-                else:
-                    
-                    self._limit = min( limit, self._limit )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
-                
-                ( operator, current_or_pending, service_key ) = value
-                
-                if operator == True:
-                    
-                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_include_current.append( service_key )
-                    else: self._file_services_to_include_pending.append( service_key )
-                    
-                else:
-                    
-                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_exclude_current.append( service_key )
-                    else: self._file_services_to_exclude_pending.append( service_key )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
-                
-                ( hashes, max_hamming ) = value
-                
-                self._similar_to = ( hashes, max_hamming )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
-                
-                ( operator, num_relationships, dupe_type ) = value
-                
-                self._duplicate_count_predicates.append( ( operator, num_relationships, dupe_type ) )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
-                
-                king = value
-                
-                self._king_filter = king
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
-                
-                ( view_type, viewing_locations, operator, viewing_value ) = value
-                
-                self._file_viewing_stats_predicates.append( ( view_type, viewing_locations, operator, viewing_value ) )
-                
-            
-        
-    
-    def GetDuplicateRelationshipCountPredicates( self ):
-        
-        return self._duplicate_count_predicates
-        
-    
-    def GetFileServiceInfo( self ):
-        
-        return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
-        
-    
-    def GetFileViewingStatsPredicates( self ):
-        
-        return self._file_viewing_stats_predicates
-        
-    
-    def GetKingFilter( self ):
-        
-        return self._king_filter
-        
-    
-    def GetLimit( self, apply_implicit_limit = True ):
-        
-        if self._limit is None and apply_implicit_limit:
-            
-            forced_search_limit = HG.client_controller.new_options.GetNoneableInteger( 'forced_search_limit' )
-            
-            return forced_search_limit
-            
-        
-        return self._limit
-        
-    
-    def GetSimpleInfo( self ):
-        
-        return self._common_info
-        
-    
-    def GetRatingsPredicates( self ):
-        
-        return self._ratings_predicates
-        
-    
-    def GetSimilarTo( self ):
-        
-        return self._similar_to
-        
-    
-    def HasSimilarTo( self ):
-        
-        return self._similar_to is not None
-        
-    
-    def HasSystemEverything( self ):
-        
-        return self._has_system_everything
-        
-    
-    def MustBeArchive( self ): return self._archive
-    
-    def MustBeInbox( self ): return self._inbox
-    
-    def MustBeLocal( self ): return self._local
-    
-    def MustNotBeLocal( self ): return self._not_local
-    
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, predicate_type: int = None, value: object = None, inclusive: bool = True, min_current_count: HC.noneable_int = 0, min_pending_count: HC.noneable_int = 0, max_current_count: HC.noneable_int = None, max_pending_count: HC.noneable_int = None ):
         
@@ -1187,11 +1313,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def __hash__( self ):
         
         return ( self._predicate_type, self._value, self._inclusive ).__hash__()
-        
-    
-    def __ne__( self, other ):
-        
-        return self.__hash__() != other.__hash__()
         
     
     def __repr__( self ):
@@ -1350,6 +1471,24 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+                
+                ( operator, num ) = serialisable_value
+                
+                namespace = None
+                
+                serialisable_value = ( namespace, operator, num )
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 4, new_serialisable_info )
             
         
     
@@ -1687,19 +1826,42 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._value is not None:
                     
-                    ( operator, value ) = self._value
+                    ( namespace, operator, value ) = self._value
                     
-                    if operator == '>' and value == 0:
+                    number_test = NumberTest.STATICCreateFromCharacters( operator, value )
+                    
+                    if number_test.IsAnythingButZero():
                         
-                        base = 'has tags'
+                        if namespace is None:
+                            
+                            base = 'has tags'
+                            
+                        else:
+                            
+                            # shouldn't see this, as it'll be converted to a namespace pred, but here anyway
+                            base = 'has {} tags'.format( ClientTags.RenderNamespaceForUser( namespace ) )
+                            
                         
-                    elif operator == '=' and value == 0:
+                    elif number_test.IsZero():
                         
-                        base = 'untagged'
+                        if namespace is None:
+                            
+                            base = 'untagged'
+                            
+                        else:
+                            
+                            # shouldn't see this, as it'll be converted to a namespace pred, but here anyway
+                            base = 'no {} tags'.format( ClientTags.RenderNamespaceForUser( namespace ) )
+                            
                         
                     else:
                         
-                        base += ' ' + operator + ' ' + HydrusData.ToHumanInt( value )
+                        if namespace is not None:
+                            
+                            base = 'number of {} tags'.format( ClientTags.RenderNamespaceForUser( namespace ) )
+                            
+                        
+                        base += ' {} {}'.format( operator, HydrusData.ToHumanInt( value ) )
                         
                     
                 
@@ -2141,7 +2303,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             if not self._inclusive: base = '-'
             else: base = ''
             
-            anything_tag = HydrusTags.CombineTag( namespace, '*anything*' )
+            pretty_namespace = ClientTags.RenderNamespaceForUser( namespace )
+            
+            anything_tag = HydrusTags.CombineTag( pretty_namespace, '*anything*' )
             
             anything_tag = ClientTags.RenderTag( anything_tag, render_for_user )
             
@@ -2416,11 +2580,6 @@ class ParsedAutocompleteText( object ):
         search_text = self._GetSearchText( False )
         
         if len( search_text ) == 0:
-            
-            return False
-            
-        
-        if self.IsExplicitWildcard() and SubtagIsEmpty( search_text ):
             
             return False
             

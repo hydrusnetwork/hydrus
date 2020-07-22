@@ -269,11 +269,16 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
         
         media_result = HG.client_controller.local_booru_manager.GetMediaResult( share_key, hash )
         
-        mime = media_result.GetMime()
-        
-        client_files_manager = HG.client_controller.client_files_manager
-        
-        path = client_files_manager.GetFilePath( hash, mime )
+        try:
+            
+            mime = media_result.GetMime()
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
         
@@ -493,6 +498,11 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
         else:
             
             path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+            
+        
+        if not os.path.exists( path ):
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that thumbnail!' )
             
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = response_context_mime, path = path )
@@ -1327,7 +1337,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
         
         # newest first
-        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), sort_asc = CC.SORT_DESC )
+        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), sort_order = CC.SORT_DESC )
         
         hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by )
         
@@ -1437,7 +1447,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         except HydrusExceptions.DataMissing as e:
             
-            raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers was missing!' )
+            raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers did not exist in the database!' )
             
         
         body_dict = {}

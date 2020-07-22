@@ -54,7 +54,6 @@ def GetClientDefaultOptions():
     system_predicates[ 'height' ] = ( '=', 1080 )
     system_predicates[ 'limit' ] = 600
     system_predicates[ 'mime' ] = HC.IMAGES
-    system_predicates[ 'num_tags' ] = ( '<', 4 )
     system_predicates[ 'ratio' ] = ( '=', 16, 9 )
     system_predicates[ 'size' ] = ( '<', 200, 1024 )
     system_predicates[ 'width' ] = ( '=', 1920 )
@@ -685,7 +684,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
     
     synchronised = True
-    media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_asc = CC.SORT_DESC )
+    media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
     media_collect = None
     
     rows.append( ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) )

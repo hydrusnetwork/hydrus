@@ -1075,9 +1075,15 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '<', 2 ) )
         
         self.assertEqual( p.ToString(), 'system:number of tags < 2' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( 'character', '<', 2 ) )
+        
+        self.assertEqual( p.ToString(), 'system:number of character tags < 2' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         

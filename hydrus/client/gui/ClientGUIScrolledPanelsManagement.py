@@ -1521,7 +1521,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
         self._listbook.AddPage( 'audio', 'audio', self._AudioPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system tray', 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
+        #self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
@@ -1583,7 +1583,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -1697,7 +1697,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, coloursets_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -1858,7 +1858,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, general, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -2058,8 +2058,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, watchers, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -2166,7 +2165,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -2209,7 +2208,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_system_predicate_limit = ClientGUISearch.PanelPredicateSystemLimit( self )
             self._file_system_predicate_mime = ClientGUISearch.PanelPredicateSystemMime( self )
             self._file_system_predicate_num_pixels = ClientGUISearch.PanelPredicateSystemNumPixels( self )
-            self._file_system_predicate_num_tags = ClientGUISearch.PanelPredicateSystemNumTags( self )
             self._file_system_predicate_num_words = ClientGUISearch.PanelPredicateSystemNumWords( self )
             self._file_system_predicate_ratio = ClientGUISearch.PanelPredicateSystemRatio( self )
             self._file_system_predicate_similar_to = ClientGUISearch.PanelPredicateSystemSimilarTo( self )
@@ -2228,13 +2226,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_num_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -2253,7 +2250,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             system_predicates[ 'limit' ] = self._file_system_predicate_limit.GetInfo()
             system_predicates[ 'mime' ] = self._file_system_predicate_mime.GetInfo()
             system_predicates[ 'num_pixels' ] = self._file_system_predicate_num_pixels.GetInfo()
-            system_predicates[ 'num_tags' ] = self._file_system_predicate_num_tags.GetInfo()
             system_predicates[ 'num_words' ] = self._file_system_predicate_num_words.GetInfo()
             system_predicates[ 'ratio' ] = self._file_system_predicate_ratio.GetInfo()
             system_predicates[ 'size' ] = self._file_system_predicate_size.GetInfo()
@@ -3047,7 +3043,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._sessions_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._pages_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -3129,7 +3125,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -3321,7 +3317,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._vacuum_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -4147,7 +4143,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -4418,7 +4414,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -5112,7 +5108,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._services_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.widget().setLayout( vbox )
         

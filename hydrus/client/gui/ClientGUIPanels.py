@@ -242,61 +242,61 @@ class ReviewServicePanel( QW.QWidget ):
         
         subpanels = []
         
-        subpanels.append( self._ServicePanel( self, service ) )
+        subpanels.append( ( self._ServicePanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
         
         if service_type in HC.REMOTE_SERVICES:
             
-            subpanels.append( self._ServiceRemotePanel( self, service ) )
+            subpanels.append( ( self._ServiceRemotePanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if service_type in HC.RESTRICTED_SERVICES:
             
-            subpanels.append( self._ServiceRestrictedPanel( self, service ) )
+            subpanels.append( ( self._ServiceRestrictedPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if service_type in HC.FILE_SERVICES:
             
-            subpanels.append( self._ServiceFilePanel( self, service ) )
+            subpanels.append( ( self._ServiceFilePanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if self._service.GetServiceKey() == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
             
-            subpanels.append( self._ServiceCombinedLocalFilesPanel( self, service ) )
+            subpanels.append( ( self._ServiceCombinedLocalFilesPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if self._service.GetServiceKey() == CC.TRASH_SERVICE_KEY:
             
-            subpanels.append( self._ServiceTrashPanel( self, service ) )
+            subpanels.append( ( self._ServiceTrashPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if service_type in HC.REAL_TAG_SERVICES:
             
-            subpanels.append( self._ServiceTagPanel( self, service ) )
+            subpanels.append( ( self._ServiceTagPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if service_type in HC.RATINGS_SERVICES:
             
-            subpanels.append( self._ServiceRatingPanel( self, service ) )
+            subpanels.append( ( self._ServiceRatingPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if service_type in HC.REPOSITORIES:
             
-            subpanels.append( self._ServiceRepositoryPanel( self, service ) )
+            subpanels.append( ( self._ServiceRepositoryPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if service_type == HC.IPFS:
             
-            subpanels.append( self._ServiceIPFSPanel( self, service ) )
+            subpanels.append( ( self._ServiceIPFSPanel( self, service ), CC.FLAGS_EXPAND_BOTH_WAYS ) )
             
         
         if service_type == HC.LOCAL_BOORU:
             
-            subpanels.append( self._ServiceLocalBooruPanel( self, service ) )
+            subpanels.append( ( self._ServiceLocalBooruPanel( self, service ), CC.FLAGS_EXPAND_BOTH_WAYS ) )
             
         
         if service_type == HC.CLIENT_API_SERVICE:
             
-            subpanels.append( self._ServiceClientAPIPanel( self, service ) )
+            subpanels.append( ( self._ServiceClientAPIPanel( self, service ), CC.FLAGS_EXPAND_BOTH_WAYS ) )
             
         
         #
@@ -305,12 +305,22 @@ class ReviewServicePanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, self._refresh_button, CC.FLAGS_LONE_BUTTON )
         
-        for panel in subpanels:
+        saw_both_ways = False
+        
+        for ( panel, flags ) in subpanels:
             
-            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            if flags == CC.FLAGS_EXPAND_BOTH_WAYS:
+                
+                saw_both_ways = True
+                
+            
+            QP.AddToLayout( vbox, panel, flags )
             
         
-        vbox.addStretch( 1 )
+        if not saw_both_ways:
+            
+            vbox.addStretch( 1 )
+            
         
         self.setLayout( vbox )
         
@@ -844,8 +854,10 @@ class ReviewServicePanel( QW.QWidget ):
             self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._address = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
-            self._functional = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            self._functional = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_summary = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            
+            self._functional.setWordWrap( True )
             
             self._bandwidth_panel = QW.QWidget( self )
             
@@ -951,6 +963,8 @@ class ReviewServicePanel( QW.QWidget ):
             self._status_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
             self._next_sync_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
             self._bandwidth_summary = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+            
+            self._status_st.setWordWrap( True )
             
             self._bandwidth_panel = QW.QWidget( self )
             
@@ -1564,7 +1578,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._ipfs_shares_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, CGLC.COLUMN_LIST_IPFS_SHARES.ID, 12, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+            self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, CGLC.COLUMN_LIST_IPFS_SHARES.ID, 6, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
             
             self._ipfs_shares_panel.SetListCtrl( self._ipfs_shares )
             

@@ -128,7 +128,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         
@@ -323,7 +323,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             QP.AddToLayout( vbox, self._display_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._tao_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
@@ -438,11 +438,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._import_favourite, CC.FLAGS_SMALL_INDENT )
-        QP.AddToLayout( hbox, self._export_favourite, CC.FLAGS_SMALL_INDENT )
-        QP.AddToLayout( hbox, self._load_favourite, CC.FLAGS_SMALL_INDENT )
-        QP.AddToLayout( hbox, self._save_favourite, CC.FLAGS_SMALL_INDENT )
-        QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._import_favourite, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._export_favourite, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._load_favourite, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._save_favourite, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_VCENTER )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         QP.AddToLayout( vbox, self._show_all_panels_button, CC.FLAGS_LONE_BUTTON )

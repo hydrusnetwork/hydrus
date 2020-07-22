@@ -536,7 +536,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._example_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
             
             self.widget().setLayout( vbox )
             

@@ -3846,7 +3846,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._services_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._specific_options_panel.setLayout( vbox )
         
@@ -3856,8 +3856,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, help_button, CC.FLAGS_LONE_BUTTON )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         

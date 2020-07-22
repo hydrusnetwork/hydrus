@@ -2065,7 +2065,7 @@ class CanvasWithDetails( Canvas ):
             
             if len( like_services ) > 0:
                 
-                current_y += 20
+                current_y += 18
                 
             
             numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
@@ -2080,7 +2080,7 @@ class CanvasWithDetails( Canvas ):
                 
                 ClientRatings.DrawNumerical( painter, my_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
                 
-                current_y += 20
+                current_y += 18
                 
             
             # icons
@@ -2128,7 +2128,7 @@ class CanvasWithDetails( Canvas ):
                 
                 QP.DrawText( painter, my_width - text_size.width() - 3, current_y, remote_string )
                 
-                current_y += text_size.height() + 4
+                current_y += text_size.height()
                 
             
             # urls
@@ -2143,7 +2143,7 @@ class CanvasWithDetails( Canvas ):
                 
                 QP.DrawText( painter, my_width - text_size.width() - 3, current_y, display_string )
                 
-                current_y += text_size.height() + 4
+                current_y += text_size.height() + 2
                 
             
             # top-middle

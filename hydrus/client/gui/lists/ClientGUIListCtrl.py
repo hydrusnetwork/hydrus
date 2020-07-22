@@ -99,7 +99,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         '''
         main_tlw = HG.client_controller.GetMainTLW()
         
-        # if last section is set too low, for instance 3, the column seems unable to every shrink from initial (expanded to fill space) size
+        # if last section is set too low, for instance 3, the column seems unable to ever shrink from initial (expanded to fill space) size
         #  _    _  ___  _    _    __     __   ___  
         # ( \/\/ )(  _)( \/\/ )  (  )   (  ) (   \ 
         #  \    /  ) _) \    /    )(__  /__\  ) ) )
@@ -225,13 +225,23 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         header = self.header()
         
-        for visual_index in range( header.count() ):
+        num_columns = header.count()
+        
+        last_column_index = num_columns - 1
+        
+        for visual_index in range( num_columns ):
             
             logical_index = header.logicalIndex( visual_index )
             
             column_type = self.headerItem().data( logical_index, QC.Qt.UserRole )
             width_pixels = header.sectionSize( logical_index )
             shown = not header.isSectionHidden( logical_index )
+            
+            # might need to update this to be 'last non-hidden section', rather than 'last 'visual' section'
+            if visual_index == last_column_index and self.verticalScrollBar().isVisible():
+                
+                width_pixels += self.verticalScrollBar().width()
+                
             
             width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
             

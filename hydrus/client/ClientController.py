@@ -320,7 +320,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'result', result )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException, HydrusExceptions.CancelledException ) as e:
                 
                 job_key.SetErrorException( e )
                 

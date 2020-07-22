@@ -590,9 +590,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( hbox, st, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, st, CC.FLAGS_CENTER )
             
             panel.setLayout( hbox )
             
@@ -614,9 +612,9 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         QP.AddToLayout( navigation_button_hbox, self._back_a_pair, CC.FLAGS_VCENTER )
         QP.AddToLayout( navigation_button_hbox, self._previous_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( navigation_button_hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+        navigation_button_hbox.addStretch( 1 )
         QP.AddToLayout( navigation_button_hbox, self._index_text, CC.FLAGS_VCENTER )
-        QP.AddToLayout( navigation_button_hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+        navigation_button_hbox.addStretch( 1 )
         QP.AddToLayout( navigation_button_hbox, self._next_button, CC.FLAGS_VCENTER )
         QP.AddToLayout( navigation_button_hbox, self._skip_a_pair, CC.FLAGS_VCENTER )
         
@@ -690,7 +688,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         my_height = my_size.height()
         
         my_ideal_width = int( parent_width * 0.2 )
-        my_ideal_height = self.minimumSizeHint().height()
+        my_ideal_height = self.sizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
@@ -792,9 +790,9 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._info_text.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
         
         self._PopulateLeftButtons()
-        QP.AddToLayout( self._top_hbox, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._top_hbox.addStretch( 1 )
         self._PopulateCenterButtons()
-        QP.AddToLayout( self._top_hbox, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._top_hbox.addStretch( 1 )
         self._PopulateRightButtons()
         
         vbox = QP.VBoxLayout()
@@ -1249,7 +1247,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
-        QP.AddToLayout( icon_hbox, (16,16), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        icon_hbox.addStretch( 1 )
         QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_VCENTER )
         QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_VCENTER )
         QP.AddToLayout( icon_hbox, self._notes_icon, CC.FLAGS_VCENTER )
@@ -1273,7 +1271,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         if len( like_services ) > 0:
             
-            QP.AddToLayout( like_hbox, ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            like_hbox.addStretch( 1 )
             
         
         for service in like_services:
@@ -1297,19 +1295,15 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             control = RatingNumericalCanvas( self, service_key, canvas_key )
             
-            hbox = QP.HBoxLayout( spacing = 0 )
+            QP.AddToLayout( vbox, control, CC.FLAGS_NONE )
             
-            QP.AddToLayout( hbox, ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            QP.AddToLayout( hbox, control, CC.FLAGS_NONE )
-            
-            QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.setAlignment( control, QC.Qt.AlignRight )
             
         
         QP.AddToLayout( vbox, self._icon_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_repos, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._urls_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        vbox.addStretch( 1 )
         self.setLayout( vbox )
         
         self._ResetData()
@@ -1351,7 +1345,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         my_ideal_width = int( parent_width * 0.2 )
         
-        my_ideal_height = self.minimumSizeHint().height()
+        my_ideal_height = self.sizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
@@ -1436,9 +1430,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                     
                     link = ClientGUICommon.BetterHyperLink( self, display_string, url )
                     
-                    QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    link.setAlignment( QC.Qt.AlignRight )
                     
-                    self.layout().addStretch( 1 )
+                    QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
             
@@ -1486,7 +1480,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             self._ResetData()
             
-            # minimumsize is not immediately updated without this
+            # size is not immediately updated without this
             self.layout().activate()
             
             self._SizeAndPosition( force = True )

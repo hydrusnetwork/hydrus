@@ -225,7 +225,7 @@ def GenerateRepositoryRepositoryUpdatesTableName( service_id ):
 def GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ):
     
     suffix = str( file_service_id ) + '_' + str( tag_service_id )
-    
+
     cache_files_table_name = 'external_caches.specific_files_cache_{}'.format( suffix )
     
     cache_current_mappings_table_name = 'external_caches.specific_current_mappings_cache_{}'.format( suffix )
@@ -5196,82 +5196,9 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromNamespace( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace: str, include_siblings = False, hash_ids_table_name = None ):
+    def _GetHashIdsFromNamespaceIdsSubtagIds( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace_ids, subtag_ids, hash_ids_table_name = None ):
         
-        file_service_id = self._GetServiceId( file_service_key )
-        
-        tag_service_key = tag_search_context.service_key
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-        else:
-            
-            tag_service_id = self._GetServiceId( tag_service_key )
-            
-            search_tag_service_ids = [ tag_service_id ]
-            
-        
-        namespace_ids = self._GetNamespaceIdsFromWildcard( namespace )
-        
-        hash_ids = set()
-        
-        for namespace_id in namespace_ids:
-            
-            predicate_string = 'namespace_id = {}'.format( namespace_id )
-            
-            include_current_tags = tag_search_context.include_current_tags
-            include_pending_tags = tag_search_context.include_pending_tags
-            
-            tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
-            
-            tables = [ table + ' NATURAL JOIN tags' for table in tables ]
-            
-            if hash_ids_table_name is not None:
-                
-                tables = [ table + ' NATURAL JOIN {}'.format( hash_ids_table_name ) for table in tables ]
-                
-            
-            #
-            
-            for table in tables:
-                
-                select = 'SELECT hash_id FROM {} WHERE {};'.format( table, predicate_string )
-                
-                hash_ids.update( self._STI( self._c.execute( select ) ) )
-                
-            
-            if include_siblings:
-                
-                # fetch all tag_ids where this namespace is a terminator
-                # i.e. fetch all where it is 'better', recursively, and discount any chains where it is the 'worse'
-                
-                # for each of them, union the results of gethashidsfromtagids
-                
-                # OR maybe just wait for the better db sibling cache or a/c sibling-collapsed layer
-                
-                pass
-                
-            
-        
-        return hash_ids
-        
-    
-    def _GetHashIdsFromNamespaceIdsSubtagIds( self, file_service_key, tag_service_key, namespace_ids, subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
-        
-        file_service_id = self._GetServiceId( file_service_key )
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-        else:
-            
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
-            
-        
-        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
+        tables = self._GetMappingTables( file_service_key, tag_search_context )
         
         hash_ids = set()
         
@@ -5838,11 +5765,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None:
                     
-                    tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags )
+                    tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_search_context, tag )
                     
                 elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
                     
-                    tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = 'file_inbox' )
+                    tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_search_context, tag, hash_ids_table_name = 'file_inbox' )
                     
                 else:
                     
@@ -5850,7 +5777,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                        tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_search_context, tag, hash_ids_table_name = temp_table_name )
                         
                     
                 
@@ -5868,11 +5795,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None:
                     
-                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True )
+                    namespace_query_hash_ids = self._GetHashIdsThatHaveTags( file_service_key, tag_search_context, namespace = namespace, job_key = job_key )
                     
                 elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
                     
-                    namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True, hash_ids_table_name = 'file_inbox' )
+                    namespace_query_hash_ids = self._GetHashIdsThatHaveTags( file_service_key, tag_search_context, namespace = namespace, hash_ids_table_name = 'file_inbox', job_key = job_key )
                     
                 else:
                     
@@ -5880,7 +5807,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        namespace_query_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True, hash_ids_table_name = temp_table_name )
+                        namespace_query_hash_ids = self._GetHashIdsThatHaveTags( file_service_key, tag_search_context, namespace = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -5898,11 +5825,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None:
                     
-                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags )
+                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_search_context, wildcard )
                     
                 elif is_inbox and len( query_hash_ids ) == len( self._inbox_hash_ids ):
                     
-                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = 'file_inbox' )
+                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_search_context, wildcard, hash_ids_table_name = 'file_inbox' )
                     
                 else:
                     
@@ -5910,7 +5837,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                        wildcard_query_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_search_context, wildcard, hash_ids_table_name = temp_table_name )
                         
                     
                 
@@ -5951,7 +5878,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, self._GetHashIdsThatHaveTags( tag_service_key, include_current_tags, include_pending_tags ) )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self._GetHashIdsThatHaveTags( file_service_key, tag_search_context, job_key = job_key ) )
                 
             else:
                 
@@ -6067,7 +5994,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                unwanted_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_search_context, tag, hash_ids_table_name = temp_table_name )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -6084,7 +6011,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsFromNamespace( file_service_key, tag_search_context, namespace, include_siblings = True, hash_ids_table_name = temp_table_name )
+                unwanted_hash_ids = self._GetHashIdsThatHaveTags( file_service_key, tag_search_context, namespace = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -6101,7 +6028,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                unwanted_hash_ids = self._GetHashIdsFromWildcard( file_service_key, tag_search_context, wildcard, hash_ids_table_name = temp_table_name )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -6348,83 +6275,63 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        num_tags_zero = False
-        num_tags_nonzero = False
+        namespaces_to_tests = system_predicates.GetNumTagsNumberTests()
         
-        tag_predicates = []
-        
-        if 'min_num_tags' in simple_preds:
+        for ( namespace, number_tests ) in namespaces_to_tests.items():
             
-            min_num_tags = simple_preds[ 'min_num_tags' ]
+            is_zero = True in ( number_test.IsZero() for number_test in number_tests )
+            is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )
             
-            if min_num_tags == 0:
-                
-                num_tags_nonzero = True
-                
-            else:
-                
-                tag_predicates.append( lambda x: x > min_num_tags )
-                
+            specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
             
-        
-        if 'num_tags' in simple_preds:
+            lambdas = [ number_test.GetLambda() for number_test in specific_number_tests ]
             
-            num_tags = simple_preds[ 'num_tags' ]
+            megalambda = lambda x: False not in ( l( x ) for l in lambdas )
             
-            if num_tags == 0:
+            with HydrusDB.TemporaryIntegerTable( self._c, query_hash_ids, 'hash_id' ) as temp_table_name:
                 
-                num_tags_zero = True
+                self._AnalyzeTempTable( temp_table_name )
                 
-            else:
+                nonzero_tag_query_hash_ids = set()
+                nonzero_tag_query_hash_ids_populated = False
                 
-                tag_predicates.append( lambda x: x == num_tags )
+                if is_zero or is_anything_but_zero:
+                    
+                    nonzero_tag_query_hash_ids = self._GetHashIdsThatHaveTags( file_service_key, tag_search_context, hash_ids_table_name = temp_table_name, namespace = namespace, job_key = job_key )
+                    nonzero_tag_query_hash_ids_populated = True
+                    
+                    if is_zero:
+                        
+                        query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
+                        
+                    
+                    if is_anything_but_zero:
+                        
+                        query_hash_ids = intersection_update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
+                        
+                    
                 
-            
-        
-        if 'max_num_tags' in simple_preds:
-            
-            max_num_tags = simple_preds[ 'max_num_tags' ]
-            
-            if max_num_tags == 1:
+                if len( specific_number_tests ) > 0:
+                    
+                    hash_id_tag_counts = self._GetHashIdsNonZeroTagCounts( file_service_key, tag_search_context, temp_table_name, namespace = namespace, job_key = job_key )
+                    
+                    good_tag_count_hash_ids = { hash_id for ( hash_id, count ) in hash_id_tag_counts if megalambda( count ) }
+                    
+                    if megalambda( 0 ): # files with zero count are needed
+                        
+                        if not nonzero_tag_query_hash_ids_populated:
+                            
+                            nonzero_tag_query_hash_ids = { hash_id for ( hash_id, count ) in hash_id_tag_counts }
+                            
+                        
+                        zero_hash_ids = query_hash_ids.difference( nonzero_tag_query_hash_ids )
+                        
+                        good_tag_count_hash_ids.update( zero_hash_ids )
+                        
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, good_tag_count_hash_ids )
+                    
                 
-                num_tags_zero = True
-                
-            else:
-                
-                tag_predicates.append( lambda x: x < max_num_tags )
-                
-            
-        
-        tag_predicates_care_about_zero_counts = len( tag_predicates ) > 0 and False not in ( pred( 0 ) for pred in tag_predicates )
-        
-        if num_tags_zero or num_tags_nonzero or tag_predicates_care_about_zero_counts:
-            
-            nonzero_tag_query_hash_ids = self._GetHashIdsThatHaveTags( tag_service_key, include_current_tags, include_pending_tags, query_hash_ids )
-            
-            if num_tags_zero:
-                
-                query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
-                
-            elif num_tags_nonzero:
-                
-                query_hash_ids = intersection_update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
-                
-            
-        
-        if len( tag_predicates ) > 0:
-            
-            hash_id_tag_counts = self._GetHashIdsTagCounts( tag_service_key, include_current_tags, include_pending_tags, query_hash_ids )
-            
-            good_tag_count_hash_ids = { id for ( id, count ) in hash_id_tag_counts if False not in ( pred( count ) for pred in tag_predicates ) }
-            
-            if tag_predicates_care_about_zero_counts:
-                
-                zero_hash_ids = query_hash_ids.difference( nonzero_tag_query_hash_ids )
-                
-                good_tag_count_hash_ids.update( zero_hash_ids )
-                
-            
-            query_hash_ids = intersection_update_qhi( query_hash_ids, good_tag_count_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -6442,7 +6349,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_search_context, namespace, num, '>', hash_ids_table_name = temp_table_name )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -6456,7 +6363,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags, hash_ids_table_name = temp_table_name )
+                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_search_context, namespace, num, '<', hash_ids_table_name = temp_table_name )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -6506,20 +6413,9 @@ class DB( HydrusDB.HydrusDB ):
         return query_hash_ids
         
     
-    def _GetHashIdsFromSubtagIds( self, file_service_key, tag_service_key, subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
+    def _GetHashIdsFromSubtagIds( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, subtag_ids, hash_ids_table_name = None ):
         
-        file_service_id = self._GetServiceId( file_service_key )
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-        else:
-            
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
-            
-        
-        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
+        tables = self._GetMappingTables( file_service_key, tag_search_context )
         
         hash_ids = set()
         
@@ -6545,11 +6441,11 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromTag( self, file_service_key, tag_service_key, search_tag, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
+    def _GetHashIdsFromTag( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, search_tag, hash_ids_table_name = None ):
         
         siblings_manager = self._controller.tag_siblings_manager
         
-        tags = siblings_manager.GetAllSiblings( tag_service_key, search_tag )
+        tags = siblings_manager.GetAllSiblings( tag_search_context.service_key, search_tag )
         
         predicate_strings = []
         
@@ -6587,18 +6483,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        file_service_id = self._GetServiceId( file_service_key )
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-        else:
-            
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
-            
-        
-        tables = self._GetMappingTables( file_service_id, search_tag_service_ids, include_current_tags, include_pending_tags )
+        tables = self._GetMappingTables( file_service_key, tag_search_context )
         
         tables = [ table + ' NATURAL JOIN tags' for table in tables ]
         
@@ -6739,7 +6624,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
+    def _GetHashIdsFromWildcard( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, wildcard, hash_ids_table_name = None ):
         
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
         
@@ -6749,43 +6634,69 @@ class DB( HydrusDB.HydrusDB ):
             
             possible_namespace_ids = self._GetNamespaceIdsFromWildcard( namespace_wildcard )
             
-            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
+            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_search_context, possible_namespace_ids, possible_subtag_ids, hash_ids_table_name = hash_ids_table_name )
             
         else:
             
-            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
+            return self._GetHashIdsFromSubtagIds( file_service_key, tag_search_context, possible_subtag_ids, hash_ids_table_name = hash_ids_table_name )
             
         
     
-    def _GetHashIdsTagCounts( self, tag_service_key, include_current, include_pending, hash_ids ):
+    def _GetHashIdsNonZeroTagCounts( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, hash_ids_table_name, namespace = None, job_key = None ):
         
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+        if namespace is None:
             
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            namespace_ids = []
             
         else:
             
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            namespace_ids = self._GetNamespaceIdsFromWildcard( namespace )
             
         
-        table_names = []
+        with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as namespace_id_temp_table_name:
+            
+            # reason why I NATURAL JOIN each table rather than the UNION is based on previous hell with having query planner figure out a "( UNION ALL ) NATURAL JOIN stuff" situation
+            # although this sometimes makes certifiable 2KB ( 6 UNION * 3 table-join ) queries, it actually works fast
+            
+            self._AnalyzeTempTable( namespace_id_temp_table_name )
+            
+            tables = self._GetMappingTables( file_service_key, tag_search_context )
+            
+            tables = [ '{} NATURAL JOIN {}'.format( table, hash_ids_table_name ) for table in tables ]
+            
+            if namespace is not None:
+                
+                tables = [ '{} NATURAL JOIN tags NATURAL JOIN {}'.format( table, namespace_id_temp_table_name ) for table in tables ]
+                
+            
+            select_alls = [ 'SELECT * FROM {}'.format( table ) for table in tables ]
+            
+            union_all = '( {} )'.format( ' UNION ALL '.join( select_alls ) )
+            
+            query = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM {} GROUP BY hash_id;'.format( union_all )
+            
+            results = []
+            cursor = self._c.execute( query )
+            
+            group_of_results = cursor.fetchmany( 1000 )
+            
+            while len( group_of_results ) > 0:
+                
+                if job_key is not None and job_key.IsCancelled():
+                    
+                    return []
+                    
+                
+                results.extend( group_of_results )
+                
+                group_of_results = cursor.fetchmany( 1000 )
+                
+            
+            return results
+            
         
-        for search_tag_service_id in search_tag_service_ids:
-            
-            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-            
-            if include_current:
-                
-                table_names.append( current_mappings_table_name )
-                
-            
-            if include_pending:
-                
-                table_names.append( pending_mappings_table_name )
-                
-            
-        
-        # this is only fast because of the very simple union and the hash_id IN (blah). If you try to natural join to some table, it falls over.
+        # old method, now we are going full meme
+        '''
         
         if len( table_names ) == 0:
             
@@ -6799,72 +6710,97 @@ class DB( HydrusDB.HydrusDB ):
         hash_id_tag_counts = list( self._ExecuteManySelectSingleParam( select_statement, hash_ids ) )
         
         return hash_id_tag_counts
-        
+        '''
     
-    def _GetHashIdsThatHaveTags( self, tag_service_key, include_current, include_pending, hash_ids = None ):
+    def _GetHashIdsThatHaveTags( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace = None, hash_ids_table_name = None, job_key = None ):
         
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+        if namespace is None:
             
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            namespace_ids = []
             
         else:
             
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            namespace_ids = self._GetNamespaceIdsFromWildcard( namespace )
             
         
-        nonzero_tag_hash_ids = set()
-        
-        if hash_ids is None or len( hash_ids ) > 20000:
+        with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as namespace_id_temp_table_name:
             
-            for search_tag_service_id in search_tag_service_ids:
+            self._AnalyzeTempTable( namespace_id_temp_table_name )
+            
+            tag_service_key = tag_search_context.service_key
+            
+            tables = self._GetMappingTables( file_service_key, tag_search_context )
+            
+            nonzero_tag_hash_ids = set()
+            
+            if hash_ids_table_name is not None:
                 
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
-                if include_current:
-                    
-                    nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT DISTINCT hash_id FROM ' + current_mappings_table_name + ';' ) ) )
-                    
-                
-                if include_pending:
-                    
-                    nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT DISTINCT hash_id FROM ' + pending_mappings_table_name + ';' ) ) )
-                    
+                tables = [ '{} NATURAL JOIN {}'.format( table, hash_ids_table_name ) for table in tables ]
                 
             
-        else:
-            
-            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_table_name:
+            if namespace is not None:
                 
+                tables = [ '{} NATURAL JOIN tags NATURAL JOIN {}'.format( table, namespace_id_temp_table_name ) for table in tables ]
+                
+            
+            for table in tables:
+                
+                query = 'SELECT DISTINCT hash_id FROM {};'.format( table )
+                
+                nonzero_tag_hash_ids.update( self._STI( self._c.execute( query ) ) )
+                
+                if job_key is not None and job_key.IsCancelled():
+                    
+                    return set()
+                    
+                
+            
+            # old way of doing this when you have hash_ids. interesting way, seems to force the temp table index to do lookup, but now, with better analyse and table creation, probably useless
+            
+            '''
                 for search_tag_service_id in search_tag_service_ids:
                     
                     ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
                     
+                    if namespace is None:
+                        
+                        current_source = '{} WHERE hash_id = h'.format( current_mappings_table_name )
+                        pending_source = '{} WHERE hash_id = h'.format( pending_mappings_table_name )
+                        
+                    else:
+                        
+                        current_source = '{} NATURAL JOIN tags NATURAL JOIN {} WHERE hash_id = h'.format( current_mappings_table_name, namespace_id_temp_table_name )
+                        pending_source = '{} NATURAL JOIN tags NATURAL JOIN {} WHERE hash_id = h'.format( pending_mappings_table_name, namespace_id_temp_table_name )
+                        
+                    
+                    current_source
+                    
                     if include_current and include_pending:
                         
-                        nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT hash_id as h FROM ' + temp_table_name + ' WHERE EXISTS ( SELECT 1 FROM ' + current_mappings_table_name + ' WHERE hash_id = h ) OR EXISTS ( SELECT 1 FROM ' + pending_mappings_table_name + ' WHERE hash_id = h );' ) ) )
+                        nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT hash_id as h FROM {} WHERE EXISTS ( SELECT 1 FROM {} ) OR EXISTS ( SELECT 1 FROM {} );'.format( hash_ids_table_name, current_source, pending_source ) ) ) )
                         
                     elif include_current:
                         
-                        nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT hash_id as h FROM ' + temp_table_name + ' WHERE EXISTS ( SELECT 1 FROM ' + current_mappings_table_name + ' WHERE hash_id = h );' ) ) )
+                        nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT hash_id as h FROM {} WHERE EXISTS ( SELECT 1 FROM {} );'.format( hash_ids_table_name, current_source ) ) ) )
                         
                     elif include_pending:
                         
-                        nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT hash_id as h FROM ' + temp_table_name + ' WHERE EXISTS ( SELECT 1 FROM ' + pending_mappings_table_name + ' WHERE hash_id = h );' ) ) )
+                        nonzero_tag_hash_ids.update( self._STI( self._c.execute( 'SELECT hash_id as h FROM {} WHERE EXISTS ( SELECT 1 FROM {} );'.format( hash_ids_table_name, pending_source ) ) ) )
                         
                     
-                
+                '''
             
         
         return nonzero_tag_hash_ids
         
     
-    def _GetHashIdsThatHaveTagAsNum( self, file_service_key, tag_service_key, namespace, num, operator, include_current_tags, include_pending_tags, hash_ids_table_name = None ):
+    def _GetHashIdsThatHaveTagAsNum( self, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids_table_name = None ):
         
         possible_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM integer_subtags WHERE integer_subtag ' + operator + ' ' + str( num ) + ';' ) )
         
         if namespace == '':
             
-            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
+            return self._GetHashIdsFromSubtagIds( file_service_key, tag_search_context, possible_subtag_ids, hash_ids_table_name = hash_ids_table_name )
             
         else:
             
@@ -6872,7 +6808,7 @@ class DB( HydrusDB.HydrusDB ):
             
             possible_namespace_ids = { namespace_id }
             
-            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags, hash_ids_table_name = hash_ids_table_name )
+            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_search_context, possible_namespace_ids, possible_subtag_ids, hash_ids_table_name = hash_ids_table_name )
             
         
     
@@ -7037,81 +6973,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return ( locations_to_ideal_weights, abs_ideal_thumbnail_override_location )
-        
-    
-    def _GetMaintenanceDue( self, stop_time ):
-        
-        jobs_to_do = []
-        
-        # vacuum
-        
-        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
-        
-        if maintenance_vacuum_period_days is not None:
-            
-            stale_time_delta = maintenance_vacuum_period_days * 86400
-            
-            existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
-            
-            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
-            
-            due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
-            
-            possible_due_names = set()
-            
-            if len( due_names ) > 0:
-                
-                self._CloseDBCursor()
-                
-                try:
-                    
-                    for name in due_names:
-                        
-                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
-                        
-                        try:
-                            
-                            HydrusDB.CheckCanVacuum( db_path, stop_time = stop_time )
-                            
-                        except Exception:
-                            
-                            continue
-                            
-                        
-                        possible_due_names.add( name )
-                        
-                    
-                    possible_due_names = sorted( possible_due_names )
-                    
-                    if len( possible_due_names ) > 0:
-                        
-                        jobs_to_do.append( 'vacuum ' + ', '.join( possible_due_names ) )
-                        
-                    
-                finally:
-                    
-                    self._InitDBCursor()
-                    
-                
-            
-        
-        # analyze
-        
-        names_to_analyze = self._GetTableNamesDueAnalysis()
-        
-        if len( names_to_analyze ) > 0:
-            
-            jobs_to_do.append( 'analyze ' + HydrusData.ToHumanInt( len( names_to_analyze ) ) + ' tables' )
-            
-        
-        similar_files_due = self._PHashesMaintenanceDue()
-        
-        if similar_files_due:
-            
-            jobs_to_do.append( 'similar files work' )
-            
-        
-        return jobs_to_do
         
     
     def _GetJSONDump( self, dump_type ):
@@ -7313,7 +7174,94 @@ class DB( HydrusDB.HydrusDB ):
         return last_shutdown_work_time
         
     
-    def _GetMappingTables( self, file_service_id, tag_service_ids, include_current, include_pending ):
+    def _GetMaintenanceDue( self, stop_time ):
+        
+        jobs_to_do = []
+        
+        # vacuum
+        
+        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        
+        if maintenance_vacuum_period_days is not None:
+            
+            stale_time_delta = maintenance_vacuum_period_days * 86400
+            
+            existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
+            
+            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
+            
+            due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
+            
+            possible_due_names = set()
+            
+            if len( due_names ) > 0:
+                
+                self._CloseDBCursor()
+                
+                try:
+                    
+                    for name in due_names:
+                        
+                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                        
+                        try:
+                            
+                            HydrusDB.CheckCanVacuum( db_path, stop_time = stop_time )
+                            
+                        except Exception:
+                            
+                            continue
+                            
+                        
+                        possible_due_names.add( name )
+                        
+                    
+                    possible_due_names = sorted( possible_due_names )
+                    
+                    if len( possible_due_names ) > 0:
+                        
+                        jobs_to_do.append( 'vacuum ' + ', '.join( possible_due_names ) )
+                        
+                    
+                finally:
+                    
+                    self._InitDBCursor()
+                    
+                
+            
+        
+        # analyze
+        
+        names_to_analyze = self._GetTableNamesDueAnalysis()
+        
+        if len( names_to_analyze ) > 0:
+            
+            jobs_to_do.append( 'analyze ' + HydrusData.ToHumanInt( len( names_to_analyze ) ) + ' tables' )
+            
+        
+        similar_files_due = self._PHashesMaintenanceDue()
+        
+        if similar_files_due:
+            
+            jobs_to_do.append( 'similar files work' )
+            
+        
+        return jobs_to_do
+        
+    
+    def _GetMappingTables( self, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
+        
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_key = tag_search_context.service_key
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            
         
         current_tables = []
         pending_tables = []
@@ -7338,12 +7286,12 @@ class DB( HydrusDB.HydrusDB ):
         
         tables = []
         
-        if include_current:
+        if tag_search_context.include_current_tags:
             
             tables.extend( current_tables )
             
         
-        if include_pending:
+        if tag_search_context.include_pending_tags:
             
             tables.extend( pending_tables )
             
@@ -11981,6 +11929,73 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RepopulateMappingsFromCache( self, job_key = None ):
+        
+        BLOCK_SIZE = 10000
+        
+        num_rows_recovered = 0
+        
+        tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+        for tag_service_id in tag_service_ids:
+            
+            service = self._GetService( tag_service_id )
+            
+            name = service.GetName()
+            
+            ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( self._combined_local_file_service_id, tag_service_id )
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+            
+            ( num_to_do, ) = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( cache_files_table_name ) ).fetchone()
+            
+            select_statement = 'SELECT hash_id FROM {};'.format( cache_files_table_name )
+            
+            for ( i, group_of_hash_ids ) in enumerate( HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, select_statement, BLOCK_SIZE ) ):
+                
+                if job_key is not None:
+                    
+                    message = 'Doing "{}"\u2026: {}'.format( name, HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+                    message += os.linesep * 2
+                    message += 'Total rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) )
+                    
+                    job_key.SetVariable( 'popup_text_1', message )
+                    
+                    if job_key.IsCancelled():
+                        
+                        return
+                        
+                    
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, group_of_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    insert_template = 'INSERT OR IGNORE INTO {} ( tag_id, hash_id ) SELECT tag_id, hash_id FROM {} NATURAL JOIN {};'
+                    
+                    self._c.execute( insert_template.format( current_mappings_table_name, cache_current_mappings_table_name, temp_table_name ) )
+                    
+                    num_rows_recovered += self._GetRowCount()
+                    
+                    self._c.execute( insert_template.format( deleted_mappings_table_name, cache_deleted_mappings_table_name, temp_table_name ) )
+                    
+                    num_rows_recovered += self._GetRowCount()
+                    
+                    self._c.execute( insert_template.format( pending_mappings_table_name, cache_pending_mappings_table_name, temp_table_name ) )
+                    
+                    num_rows_recovered += self._GetRowCount()
+                    
+                
+            
+        
+        if job_key is not None:
+            
+            job_key.SetVariable( 'popup_text_1', 'Done! Rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) ) )
+            
+            job_key.Finish()
+            
+        
+    
     def _RepopulateAndUpdateTagSearchCache( self, status_hook: typing.Optional[ typing.Callable[ [ str ], None ] ] = None, do_fts = True, do_searchable = True, do_integers = True ):
         
         BLOCK_SIZE = 1000
@@ -12058,6 +12073,11 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
+            
+        
+        if status_hook is not None:
+            
+            status_hook( 'Done!' )
             
         
     
@@ -12323,6 +12343,39 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _SetJSONComplex( self,
+        overwrite_types_and_objs: typing.Optional[ typing.Tuple[ typing.Iterable[ int ], typing.Iterable[ HydrusSerialisable.SerialisableBase ] ] ] = None,
+        set_objs: typing.Optional[ typing.List[ HydrusSerialisable.SerialisableBase ] ] = None,
+        deletee_types_to_names: typing.Optional[ typing.Dict[ int, typing.Iterable[ str ] ] ] = None
+    ):
+        
+        if overwrite_types_and_objs is not None:
+            
+            ( dump_types, objs ) = overwrite_types_and_objs
+            
+            self._OverwriteJSONDumps( dump_types, objs )
+            
+        
+        if set_objs is not None:
+            
+            for obj in set_objs:
+                
+                self._SetJSONDump( obj )
+                
+            
+        
+        if deletee_types_to_names is not None:
+            
+            for ( dump_type, names ) in deletee_types_to_names.items():
+                
+                for name in names:
+                    
+                    self._DeleteJSONDumpNamed( dump_type, dump_name = name )
+                    
+                
+            
+        
+    
     def _SetJSONSimple( self, name, value ):
         
         if value is None:
@@ -12504,12 +12557,12 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _TryToSortHashIds( self, file_service_id, hash_ids, sort_by ):
+    def _TryToSortHashIds( self, file_service_id, hash_ids, sort_by: ClientMedia.MediaSort ):
         
         did_sort = False
         
         ( sort_metadata, sort_data ) = sort_by.sort_type
-        sort_asc = sort_by.sort_asc
+        sort_order = sort_by.sort_order
         
         query = None
         select_args_iterator = None
@@ -12715,7 +12768,7 @@ class DB( HydrusDB.HydrusDB ):
                     key = lambda row: -1 if row[1] is None else row[1]
                     
                 
-                reverse = sort_asc == CC.SORT_DESC
+                reverse = sort_order == CC.SORT_DESC
                 
             
         
@@ -14941,6 +14994,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 404:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'derpibooru.org file page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -15505,6 +15588,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
         elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
+        elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
         elif action == 'repopulate_tag_search_cache': self._RepopulateAndUpdateTagSearchCache( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
@@ -15515,8 +15599,9 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
-        elif action == 'serialisable_simple': self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisable': self._SetJSONDump( *args, **kwargs )
+        elif action == 'serialisable_atomic': self._SetJSONComplex( *args, **kwargs )
+        elif action == 'serialisable_simple': self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )
         elif action == 'set_password': self._SetPassword( *args, **kwargs )
         elif action == 'schedule_repository_update_file_maintenance': self._ScheduleRepositoryUpdateFileMaintenanceFromServiceKey( *args, **kwargs )

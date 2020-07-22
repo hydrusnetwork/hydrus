@@ -604,7 +604,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._rating_like_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_numerical_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_numerical_inc_dec_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         

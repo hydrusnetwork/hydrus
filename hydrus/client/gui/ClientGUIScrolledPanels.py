@@ -42,7 +42,7 @@ class ResizingScrolledPanel( QW.QScrollArea ):
         
         QW.QScrollArea.__init__( self, parent )
         
-        self.setWidget( QW.QWidget() )
+        self.setWidget( QW.QWidget( self ) )
         
         self.setWidgetResizable( True )
         

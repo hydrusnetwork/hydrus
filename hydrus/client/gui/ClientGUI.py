@@ -1572,7 +1572,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _DeleteServiceInfo( self ):
         
-        message = 'Are you sure you want to clear the cached service info? Rebuilding it may slow some GUI elements for a little while.'
+        message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
+        message += os.linesep * 2
+        message += 'Some GUI elements (review services, mainly) may be slow the next time they launch.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -2703,23 +2705,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = panel.GetValue()
                     
-                    for edited_query_log_container in edited_query_log_containers:
-                        
-                        HG.client_controller.Write( 'serialisable', edited_query_log_container )
-                        
-                    
-                    HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
-                    
-                    for deletee_query_log_container_name in deletee_query_log_container_names:
-                        
-                        HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, deletee_query_log_container_name )
-                        
-                    
-                    HG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions )
+                    return ( subscriptions, edited_query_log_containers, deletee_query_log_container_names )
                     
                 else:
                     
-                    HG.client_controller.subscriptions_manager.Wake()
+                    raise HydrusExceptions.CancelledException()
                     
                 
             
@@ -2777,11 +2767,24 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     try:
                         
-                        controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status )
+                        ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status )
+                        
+                        HG.client_controller.WriteSynchronous(
+                        'serialisable_atomic',
+                        overwrite_types_and_objs = ( [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions ),
+                        set_objs = edited_query_log_containers,
+                        deletee_types_to_names = { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER : deletee_query_log_container_names }
+                        )
+                        
+                        HG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions )
                         
                     except HydrusExceptions.QtDeadWindowException:
                         
                         pass
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        HG.client_controller.subscriptions_manager.Wake()
                         
                     
                 finally:
@@ -3100,6 +3103,28 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RepopulateMappingsTables( self ):
+        
+        message = 'WARNING: Do not run this for no reason!'
+        message += os.linesep * 2
+        message += 'If you have significant local tags (e.g. \'my tags\') storage, recently had a \'malformed\' client.mappings.db file, and have since gone through clone/repair and now have a truncated file, this routine will attempt to recover missing tags from the smaller tag cache stored in client.caches.db.'
+        message += os.linesep * 2
+        message += 'It can only recover tags for files currently stored by your client. It will take some time, during which the gui may hang. Once it is done, you probably want to regenerate your tag mappings cache, so that you are completely synced again.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'I have a reason to run this, let\'s do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetVariable( 'popup_text_title', 'repopulating mapping tables' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            self._controller.Write( 'repopulate_mappings_from_cache', job_key = job_key )
+            
+        
+    
     def _RepopulateTagSearchCache( self ):
         
         message = 'This will go through all the tag definitions in the database and make sure there is a correct fast-search record for it.'
@@ -3121,8 +3146,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             status_hook = lambda s: job_key.SetVariable( 'popup_text_1', s )
             
             self._controller.Write( 'repopulate_tag_search_cache', status_hook = status_hook )
-            
-            job_key.Delete( 3 )
             
         
     
@@ -4386,6 +4409,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
             ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
             ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
             
@@ -4399,11 +4425,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
+            ClientGUIMenus.AppendMenuItem( submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'check and repair' )
             
             submenu = QW.QMenu( menu )
             
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'repopulate and correct tag search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateTagSearchCache )
@@ -4793,7 +4821,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( memory_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
-            ClientGUIMenus.AppendMenuItem( memory_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )

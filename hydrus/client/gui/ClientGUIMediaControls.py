@@ -173,17 +173,17 @@ class VolumeControl( QW.QWidget ):
             
             if self._direction == 'down':
                 
-                QP.AddToLayout( vbox, self._specific_mute, CC.FLAGS_SMALL_INDENT )
-                QP.AddToLayout( vbox, self._volume, CC.FLAGS_SMALL_INDENT )
+                QP.AddToLayout( vbox, self._specific_mute, CC.FLAGS_CENTER )
+                QP.AddToLayout( vbox, self._volume, CC.FLAGS_CENTER )
                 
             else:
                 
-                QP.AddToLayout( vbox, self._volume, CC.FLAGS_SMALL_INDENT )
-                QP.AddToLayout( vbox, self._specific_mute, CC.FLAGS_SMALL_INDENT )
+                QP.AddToLayout( vbox, self._volume, CC.FLAGS_CENTER )
+                QP.AddToLayout( vbox, self._specific_mute, CC.FLAGS_CENTER )
                 
             
-            vbox.setAlignment( self._volume, QC.Qt.AlignHCenter )
-            vbox.setAlignment( self._specific_mute, QC.Qt.AlignHCenter )
+            #vbox.setAlignment( self._volume, QC.Qt.AlignHCenter )
+            #vbox.setAlignment( self._specific_mute, QC.Qt.AlignHCenter )
             
             self.setLayout( vbox )
             

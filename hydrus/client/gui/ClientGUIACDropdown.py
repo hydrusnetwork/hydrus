@@ -2499,7 +2499,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                             
                             ( namespace, subtag ) = HydrusTags.SplitTag( tag_string )
                             
-                            if '*' not in namespace and subtag == '*':
+                            if len( namespace ) > 0 and subtag == '*':
                                 
                                 row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
                                 

@@ -2548,20 +2548,20 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Media Sort'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, sort_type = None, sort_asc = None ):
+    def __init__( self, sort_type = None, sort_order = None ):
         
         if sort_type is None:
             
             sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
             
         
-        if sort_asc is None:
+        if sort_order is None:
             
-            sort_asc = CC.SORT_ASC
+            sort_order = CC.SORT_ASC
             
         
         self.sort_type = sort_type
-        self.sort_asc = sort_asc
+        self.sort_order = sort_order
         
     
     def _GetSerialisableInfo( self ):
@@ -2583,12 +2583,12 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             serialisable_sort_data = service_key.hex()
             
         
-        return ( sort_metatype, serialisable_sort_data, self.sort_asc )
+        return ( sort_metatype, serialisable_sort_data, self.sort_order )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( sort_metatype, serialisable_sort_data, self.sort_asc ) = serialisable_info
+        ( sort_metatype, serialisable_sort_data, self.sort_order ) = serialisable_info
         
         if sort_metatype == 'system':
             
@@ -2626,8 +2626,6 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
     
     def GetSortKeyAndReverse( self, file_service_key ):
-        
-        reverse = False
         
         ( sort_metadata, sort_data ) = self.sort_type
         
@@ -2897,7 +2895,43 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        return ( sort_key, self.sort_asc )
+        reverse = self.sort_order == CC.SORT_DESC
+        
+        return ( sort_key, reverse )
+        
+    
+    def GetSortOrderStrings( self ):
+        
+        ( sort_metatype, sort_data ) = self.sort_type
+        
+        if sort_metatype == 'system':
+            
+            sort_string_lookup = {}
+            
+            sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_FRAMERATE ] = ( 'slowest first', 'fastest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_FRAMES ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = ( 'ascending', 'descending', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = ( 'ascending', 'descending', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = ( 'ascending', 'descending', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = ( 'ascending', 'descending', CC.SORT_DESC )
+            
+            return sort_string_lookup[ sort_data ]
+            
+        else:
+            
+            return ( 'ascending', 'descending', CC.SORT_BY_INCIDENCE_DESC )
+            
         
     
     def GetSortTypeString( self ):
@@ -2937,49 +2971,15 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         return sort_string
         
     
-    def GetSortAscStrings( self ):
-        
-        ( sort_metatype, sort_data ) = self.sort_type
-        
-        if sort_metatype == 'system':
-            
-            sort_string_lookup = {}
-            
-            sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_FRAMERATE ] = ( 'slowest first', 'fastest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_FRAMES ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = ( 'ascending', 'descending', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = ( 'ascending', 'descending', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = ( 'ascending', 'descending', CC.SORT_DESC )
-            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = ( 'ascending', 'descending', CC.SORT_DESC )
-            
-            return sort_string_lookup[ sort_data ]
-            
-        else:
-            
-            return ( 'ascending', 'descending', CC.SORT_BY_INCIDENCE_DESC )
-            
-        
-    
     def ToString( self ):
         
         sort_type_string = self.GetSortTypeString()
         
-        ( asc_string, desc_string, sort_gumpf ) = self.GetSortAscStrings()
+        ( asc_string, desc_string, sort_gumpf ) = self.GetSortOrderStrings()
         
-        asc_desc_string = asc_string if self.sort_asc else desc_string
+        sort_order_string = asc_string if self.sort_order == CC.SORT_ASC else desc_string
         
-        return '{}, {}'.format( sort_type_string, asc_desc_string )
+        return '{}, {}'.format( sort_type_string, sort_order_string )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT ] = MediaSort

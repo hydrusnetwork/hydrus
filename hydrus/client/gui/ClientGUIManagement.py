@@ -1074,7 +1074,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, QW.QWidget( self._main_left_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 1 )
         
         self._main_left_panel.setLayout( vbox )
         
