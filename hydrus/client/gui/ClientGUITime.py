@@ -6,6 +6,7 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -130,7 +131,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, defaults_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -328,8 +329,8 @@ class TimeDeltaCtrl( QW.QWidget ):
             self._days = QP.MakeQSpinBox( self, min=0, max=3653, width = 50 )
             self._days.valueChanged.connect( self.EventChange )
             
-            QP.AddToLayout( hbox, self._days, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         if self._show_hours:
@@ -337,8 +338,8 @@ class TimeDeltaCtrl( QW.QWidget ):
             self._hours = QP.MakeQSpinBox( self, min=0, max=23, width = 45 )
             self._hours.valueChanged.connect( self.EventChange )
             
-            QP.AddToLayout( hbox, self._hours, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         if self._show_minutes:
@@ -346,8 +347,8 @@ class TimeDeltaCtrl( QW.QWidget ):
             self._minutes = QP.MakeQSpinBox( self, min=0, max=59, width = 45 )
             self._minutes.valueChanged.connect( self.EventChange )
             
-            QP.AddToLayout( hbox, self._minutes, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'minutes'), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._minutes, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'minutes'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         if self._show_seconds:
@@ -355,8 +356,8 @@ class TimeDeltaCtrl( QW.QWidget ):
             self._seconds = QP.MakeQSpinBox( self, min=0, max=59, width = 45 )
             self._seconds.valueChanged.connect( self.EventChange )
             
-            QP.AddToLayout( hbox, self._seconds, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'seconds'), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._seconds, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'seconds'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         if self._monthly_allowed:
@@ -364,8 +365,8 @@ class TimeDeltaCtrl( QW.QWidget ):
             self._monthly = QW.QCheckBox( self )
             self._monthly.clicked.connect( self.EventChange )
             
-            QP.AddToLayout( hbox, self._monthly, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,monthly_label), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._monthly, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,monthly_label), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         self.setLayout( hbox )
@@ -532,7 +533,7 @@ class VelocityCtrl( QW.QWidget ):
         
         hbox = QP.HBoxLayout( margin = 0 )
         
-        QP.AddToLayout( hbox, self._num, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
         
         mid_text = per_phrase
         
@@ -541,9 +542,9 @@ class VelocityCtrl( QW.QWidget ):
             mid_text = unit + ' ' + mid_text
             
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,mid_text), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,mid_text), CC.FLAGS_CENTER_PERPENDICULAR )
         
-        QP.AddToLayout( hbox, self._times, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._times, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         

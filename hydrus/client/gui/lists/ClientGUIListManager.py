@@ -1,5 +1,6 @@
-from hydrus.client.gui.lists import ClientGUIListStatus
 from hydrus.core import HydrusSerialisable
+
+from hydrus.client.gui.lists import ClientGUIListStatus
 
 class ColumnListManager( HydrusSerialisable.SerialisableBase ):
     

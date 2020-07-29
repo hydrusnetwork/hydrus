@@ -15,6 +15,17 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusDB
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+
 from hydrus.client import ClientAPI
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -35,16 +46,6 @@ from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
 
 #
 #                                𝓑𝓵𝓮𝓼𝓼𝓲𝓷𝓰𝓼 𝓸𝓯 𝓽𝓱𝓮 𝓢𝓱𝓻𝓲𝓷𝓮 𝓸𝓷 𝓽𝓱𝓲𝓼 𝓗𝓮𝓵𝓵 𝓒𝓸𝓭𝓮
@@ -2290,9 +2291,32 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
         
     
-    def _DeleteServiceInfo( self ):
+    def _DeleteServiceInfo( self, service_key = None, types_to_delete = None ):
         
-        self._c.execute( 'DELETE FROM service_info;' )
+        predicates = []
+        
+        if service_key is not None:
+            
+            service_id = self._GetServiceId( service_key )
+            
+            predicates.append( 'service_id = {}'.format( service_id ) )
+            
+        
+        if types_to_delete is not None:
+            
+            predicates.append( 'info_type IN {}'.format( HydrusData.SplayListForDB( types_to_delete ) ) )
+            
+        
+        if len( predicates ) > 0:
+            
+            predicates_string = ' WHERE {}'.format( ' AND '.join( predicates ) )
+            
+        else:
+            
+            predicates_string = ''
+            
+        
+        self._c.execute( 'DELETE FROM service_info{};'.format( predicates_string ) )
         
         self.pub_after_job( 'notify_new_pending' )
         

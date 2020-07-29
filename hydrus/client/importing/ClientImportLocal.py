@@ -2,6 +2,15 @@ import os
 import threading
 import time
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusThreading
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
@@ -11,14 +20,6 @@ from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusThreading
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     

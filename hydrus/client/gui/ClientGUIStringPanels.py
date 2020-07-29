@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUICommon

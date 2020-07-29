@@ -15,6 +15,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
@@ -29,7 +30,6 @@ from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUIStringPanels
@@ -82,7 +82,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -124,20 +124,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( gug.GetName(), gug, False ) for gug in choosable_gugs ]
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select gugs' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            gugs_to_include = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select gugs', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                gugs_to_include = panel.GetValue()
-                
-            else:
-                
-                return
-                
+            return
             
         
         gugs_to_include = self._FleshOutNGUGsWithGUGs( gugs_to_include )
@@ -166,20 +159,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( login_script.GetName(), login_script, False ) for login_script in choosable_login_scripts ]
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select login scripts' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            login_scripts_to_include = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select login scripts', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                login_scripts_to_include = panel.GetValue()
-                
-            else:
-                
-                return
-                
+            return
             
         
         self._listctrl.AddDatas( login_scripts_to_include )
@@ -193,20 +179,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( parser.GetName(), parser, False ) for parser in choosable_parsers ]
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select parsers' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            parsers_to_include = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select parsers to include', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                parsers_to_include = panel.GetValue()
-                
-            else:
-                
-                return
-                
+            return
             
         
         self._listctrl.AddDatas( parsers_to_include )
@@ -220,20 +199,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( url_class.GetName(), url_class, False ) for url_class in choosable_url_classes ]
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select url classes' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            url_classes_to_include = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select url classes to include', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                url_classes_to_include = panel.GetValue()
-                
-            else:
-                
-                return
-                
+            return
             
         
         url_classes_to_include = self._FleshOutURLClassesWithAPILinks( url_classes_to_include )
@@ -581,21 +553,21 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         udd_button_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( udd_button_vbox, self._move_formula_up, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, self._delete_formula, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, self._move_formula_down, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.addStretch( 1 )
+        QP.AddToLayout( udd_button_vbox, self._move_formula_up, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( udd_button_vbox, self._delete_formula, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( udd_button_vbox, self._move_formula_down, CC.FLAGS_CENTER_PERPENDICULAR )
+        udd_button_vbox.addStretch( 1 )
         
         formulae_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( formulae_hbox, self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( formulae_hbox, udd_button_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( formulae_hbox, udd_button_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         ae_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( ae_button_hbox, self._add_formula, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ae_button_hbox, self._edit_formula, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._add_formula, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ae_button_hbox, self._edit_formula, CC.FLAGS_CENTER_PERPENDICULAR )
         
         rows = []
         
@@ -622,7 +594,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -809,7 +781,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -1274,21 +1246,21 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         udd_button_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.addStretch( 1 )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_CENTER_PERPENDICULAR )
+        udd_button_vbox.addStretch( 1 )
         
         tag_rules_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( tag_rules_hbox, self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( tag_rules_hbox, udd_button_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( tag_rules_hbox, udd_button_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         ae_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_CENTER_PERPENDICULAR )
         
         rows = []
         
@@ -1316,7 +1288,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -1621,21 +1593,21 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         udd_button_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_VCENTER )
-        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.addStretch( 1 )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_CENTER_PERPENDICULAR )
+        udd_button_vbox.addStretch( 1 )
         
         parse_rules_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( parse_rules_hbox, self._parse_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( parse_rules_hbox, udd_button_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( parse_rules_hbox, udd_button_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         ae_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_CENTER_PERPENDICULAR )
         
         rows = []
         
@@ -1662,7 +1634,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -2075,7 +2047,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -2375,15 +2347,15 @@ class EditNodes( QW.QWidget ):
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._duplicate_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._duplicate_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._nodes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -3067,7 +3039,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -3768,15 +3740,15 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._export_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._import_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._duplicate_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._export_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._import_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._duplicate_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._scripts, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         
         self.widget().setLayout( vbox )
         
@@ -4060,8 +4032,8 @@ class ScriptManagementControl( QW.QWidget ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._link_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._link_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         main_panel.Add( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
         main_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -4271,9 +4243,9 @@ class TestPanel( QW.QWidget ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._example_data_raw_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._fetch_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._fetch_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -4540,8 +4512,8 @@ class TestPanelPageParser( TestPanel ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._example_data_post_conversion_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._copy_button_post_conversion, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._refresh_post_conversion_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._copy_button_post_conversion, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._refresh_post_conversion_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -4670,8 +4642,8 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._example_data_post_separation_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._copy_button_post_separation, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._refresh_post_separation_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._copy_button_post_separation, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._refresh_post_separation_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         

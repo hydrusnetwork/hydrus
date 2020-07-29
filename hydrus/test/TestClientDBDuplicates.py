@@ -1,15 +1,18 @@
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDB
-from hydrus.client.importing import ClientImportOptions
-from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client import ClientSearch
+import os
+import time
+import unittest
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-import os
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDB
+from hydrus.client import ClientSearch
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing import ClientImportFileSeeds
+
 from hydrus.test import TestController
-import time
-import unittest
 
 class TestClientDBDuplicates( unittest.TestCase ):
     

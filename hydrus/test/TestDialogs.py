@@ -1,11 +1,14 @@
+import unittest
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-import unittest
-from hydrus.core import HydrusGlobals as HG
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
 from hydrus.client.gui import QtPorting as QP
 
 def HitButton( button ):

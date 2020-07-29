@@ -1,10 +1,6 @@
 import os
 import re
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientPaths
-from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
@@ -12,6 +8,11 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientPaths
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 

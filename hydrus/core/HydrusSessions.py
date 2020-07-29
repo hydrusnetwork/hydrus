@@ -1,7 +1,8 @@
 import collections
-from hydrus.core import HydrusExceptions
 import hashlib
 import threading
+
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 

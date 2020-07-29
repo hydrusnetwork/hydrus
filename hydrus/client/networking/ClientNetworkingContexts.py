@@ -1,8 +1,9 @@
 import os
 
-from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
+from hydrus.client import ClientConstants as CC
 
 class NetworkContext( HydrusSerialisable.SerialisableBase ):
     

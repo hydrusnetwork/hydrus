@@ -8,6 +8,16 @@ import typing
 
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNATPunch
+from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDownloading
@@ -18,15 +28,6 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNATPunch
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
 
 def GenerateDefaultServiceDictionary( service_type ):
     

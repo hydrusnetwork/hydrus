@@ -3,6 +3,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -116,11 +117,31 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
             
         
     
-def SelectFromListButtons( win, title, choice_tuples ):
+def SelectFromListButtons( win, title, choice_tuples, message = '' ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, hide_buttons = True ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditSelectFromListButtonsPanel( dlg, choice_tuples )
+        panel = ClientGUIScrolledPanelsEdit.EditSelectFromListButtonsPanel( dlg, choice_tuples, message = message )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            result = panel.GetValue()
+            
+            return result
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
+            
+        
+    
+def SelectMultipleFromList( win, title, choice_tuples ):
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
         
         dlg.SetPanel( panel )
         

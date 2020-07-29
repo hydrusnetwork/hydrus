@@ -10,6 +10,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
@@ -29,6 +30,10 @@ canvas_str_lookup = {}
 canvas_str_lookup[ CANVAS_MEDIA_VIEWER ] = 'media viewer'
 canvas_str_lookup[ CANVAS_PREVIEW ] = 'preview'
 
+def AddGridboxStretchSpacer( layout: QW.QGridLayout ):
+    
+    layout.addItem( QW.QSpacerItem( 10, 10, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed ) )
+    
 def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     gridbox = QP.GridLayout( cols = 2 )
@@ -37,15 +42,15 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
         
         gridbox.setColumnStretch( 0, 1 )
         
-        text_flags = CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY # Trying to expand both ways nixes the center. This seems to work right.
-        control_flags = CC.FLAGS_VCENTER
-        sizer_flags = CC.FLAGS_SIZER_VCENTER
+        text_flags = CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH # Trying to expand both ways nixes the center. This seems to work right.
+        control_flags = CC.FLAGS_CENTER_PERPENDICULAR
+        sizer_flags = CC.FLAGS_CENTER_PERPENDICULAR
         
     else:
         
         gridbox.setColumnStretch( 1, 1 )
         
-        text_flags = CC.FLAGS_VCENTER
+        text_flags = CC.FLAGS_ON_LEFT
         control_flags = CC.FLAGS_NONE
         sizer_flags = CC.FLAGS_EXPAND_SIZER_BOTH_WAYS
         
@@ -97,7 +102,7 @@ def WrapInText( control, parent, text, colour = None ):
         QP.SetForegroundColour( st, colour )
         
     
-    QP.AddToLayout( hbox, st, CC.FLAGS_VCENTER )
+    QP.AddToLayout( hbox, st, CC.FLAGS_CENTER_PERPENDICULAR )
     QP.AddToLayout( hbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
     
     return hbox
@@ -684,9 +689,9 @@ class AlphaColourControl( QW.QWidget ):
         
         hbox = QP.HBoxLayout( spacing = 5 )
         
-        QP.AddToLayout( hbox, self._colour_picker, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, BetterStaticText(self,'alpha:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._alpha_selector, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._colour_picker, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, BetterStaticText(self,'alpha:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._alpha_selector, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1304,54 +1309,6 @@ class MenuButton( BetterButton ):
         self._menu_items = menu_items
         
     
-class NetworkContextButton( BetterButton ):
-    
-    def __init__( self, parent, network_context, limited_types = None, allow_default = True ):
-        
-        BetterButton.__init__( self, parent, network_context.ToString(), self._Edit )
-        
-        self._network_context = network_context
-        self._limited_types = limited_types
-        self._allow_default = allow_default
-        
-    
-    def _Edit( self ):
-        
-        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit network context' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextPanel( dlg, self._network_context, limited_types = self._limited_types, allow_default = self._allow_default )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                self._network_context = panel.GetValue()
-                
-                self._Update()
-                
-            
-        
-    
-    def _Update( self ):
-        
-        self.setText( self._network_context.ToString() )
-        
-    
-    def GetValue( self ):
-        
-        return self._network_context
-        
-    
-    def SetValue( self, network_context ):
-        
-        self._network_context = network_context
-        
-        self._Update()
-        
-    
 class NoneableSpinCtrl( QW.QWidget ):
 
     valueChanged = QC.Signal()
@@ -1388,23 +1345,23 @@ class NoneableSpinCtrl( QW.QWidget ):
         
         if len( message ) > 0:
             
-            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
-        QP.AddToLayout( hbox, self._one, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._one, CC.FLAGS_CENTER_PERPENDICULAR )
         
         if self._num_dimensions == 2:
             
-            QP.AddToLayout( hbox, BetterStaticText(self,'x'), CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._two, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,'x'), CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._two, CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         if self._unit is not None:
             
-            QP.AddToLayout( hbox, BetterStaticText(self,self._unit), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,self._unit), CC.FLAGS_CENTER_PERPENDICULAR )
         
         
-        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1518,11 +1475,11 @@ class NoneableTextCtrl( QW.QWidget ):
         
         if len( message ) > 0:
             
-            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         QP.AddToLayout( hbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         

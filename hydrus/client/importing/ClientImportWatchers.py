@@ -1,6 +1,11 @@
 import threading
 import time
 
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientTags
@@ -9,10 +14,6 @@ from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.networking import ClientNetworkingJobs
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusSerialisable
 
 class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     
@@ -1165,13 +1166,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 return self._no_work_until_reason + ' - ' + 'next check ' + ClientData.TimestampToPrettyTimeDelta( self._next_check_time )
                 
-            elif self._watcher_status != '':
+            elif self._watcher_status != '' or self._file_status != '':
                 
-                return self._watcher_status
-                
-            elif self._file_status != '':
-                
-                return self._file_status
+                return 'working'
                 
             else:
                 

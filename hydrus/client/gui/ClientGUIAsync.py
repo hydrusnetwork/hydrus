@@ -2,6 +2,7 @@ import threading
 
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client.gui import QtPorting as QP
 
 class AsyncQtUpdater( object ):

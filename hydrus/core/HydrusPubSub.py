@@ -1,7 +1,8 @@
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 import threading
 import weakref
+
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 class HydrusPubSub( object ):

@@ -2,6 +2,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -94,7 +95,7 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         text.setWordWrap( True )
         
         QP.AddToLayout( vbox, text )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         
         self.widget().setLayout( vbox )
         

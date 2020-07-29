@@ -1,11 +1,12 @@
 import hashlib
+import unittest
+
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSessions
-import unittest
-from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 
 class TestSessions( unittest.TestCase ):
     

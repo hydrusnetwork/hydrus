@@ -20,9 +20,6 @@ except Exception as e: # ImportError wasn't enough here as Linux went up the sho
     pass
     
 
-from hydrus.client import ClientFiles
-from hydrus.client import ClientImageHandling
-from hydrus.client import ClientVideoHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -30,6 +27,10 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusVideoHandling
+
+from hydrus.client import ClientFiles
+from hydrus.client import ClientImageHandling
+from hydrus.client import ClientVideoHandling
 
 def FrameIndexOutOfRange( index, range_start, range_end ):
     

@@ -1,7 +1,8 @@
 import typing
 
-from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.core import HydrusSerialisable
+
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 
 class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
     

@@ -1,7 +1,8 @@
+import os
+
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-import os
 
 def GetAllHashes( file_type ):
     

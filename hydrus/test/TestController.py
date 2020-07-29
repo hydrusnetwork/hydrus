@@ -6,26 +6,38 @@ import tempfile
 import time
 import traceback
 import unittest
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+
 from hydrus.core import HydrusConstants as HC
-from hydrus.client import ClientConstants as CC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusPubSub
+from hydrus.core import HydrusSessions
+from hydrus.core import HydrusThreading
+
 from hydrus.client import ClientAPI
+from hydrus.client import ClientCaches
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
+from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
+from hydrus.client import ClientServices
+from hydrus.client import ClientTags
+from hydrus.client import ClientThreading
+from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.client import ClientServices
-from hydrus.client import ClientTags
-from hydrus.client import ClientThreading
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusPubSub
-from hydrus.core import HydrusSessions
-from hydrus.core import HydrusThreading
+
 from hydrus.test import TestClientAPI
 from hydrus.test import TestClientConstants
 from hydrus.test import TestClientDaemons
@@ -48,15 +60,6 @@ from hydrus.test import TestHydrusSerialisable
 from hydrus.test import TestHydrusServer
 from hydrus.test import TestHydrusSessions
 from hydrus.test import TestServerDB
-from hydrus.client import ClientCaches
-from hydrus.client import ClientOptions
-from hydrus.core import HydrusData
-from hydrus.core import HydrusPaths
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
-from hydrus.client.gui import QtPorting as QP
-
 
 DB_DIR = None
 

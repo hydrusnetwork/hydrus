@@ -2,10 +2,11 @@ import collections
 import threading
 import typing
 
-from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+
+from hydrus.client import ClientConstants as CC
 
 def ConvertTagSliceToString( tag_slice ):
     

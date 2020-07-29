@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
@@ -217,11 +218,11 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, self._max_allowed_bytes, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._max_allowed_requests, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._bandwidth_type, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' every '), CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._max_allowed_bytes, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._max_allowed_requests, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._bandwidth_type, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' every '), CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_CENTER_PERPENDICULAR )
             
             self.widget().setLayout( hbox )
             
@@ -285,8 +286,8 @@ class BytesControl( QW.QWidget ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._spin, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._unit, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._spin, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._unit, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -350,8 +351,8 @@ class NoneableBytesControl( QW.QWidget ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._bytes, CC.FLAGS_SIZER_VCENTER )
-        QP.AddToLayout( hbox, self._none_checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._bytes, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._none_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -453,7 +454,7 @@ class NetworkJobControl( QW.QFrame ):
         st_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( st_hbox, self._left_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( st_hbox, self._right_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( st_hbox, self._right_text, CC.FLAGS_CENTER_PERPENDICULAR )
         
         left_vbox = QP.VBoxLayout()
         
@@ -463,8 +464,8 @@ class NetworkJobControl( QW.QFrame ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -679,7 +680,7 @@ class TextAndPasteCtrl( QW.QWidget ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         

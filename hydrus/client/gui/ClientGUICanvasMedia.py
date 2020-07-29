@@ -8,11 +8,11 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientRendering
-from hydrus.client.media import ClientMedia
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
@@ -20,6 +20,7 @@ from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMedia
 
 def ShouldHaveAnimationBar( media, show_action ):
     

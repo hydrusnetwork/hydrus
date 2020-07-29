@@ -1,7 +1,9 @@
+import unittest
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+
 from hydrus.client import ClientParsing
-import unittest
 
 class TestStringConverter( unittest.TestCase ):
     

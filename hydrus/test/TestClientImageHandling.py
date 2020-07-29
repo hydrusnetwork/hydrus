@@ -1,8 +1,10 @@
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientImageHandling
-from hydrus.core import HydrusConstants as HC
 import os
 import unittest
+
+from hydrus.core import HydrusConstants as HC
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientImageHandling
 
 class TestImageHandling( unittest.TestCase ):
     

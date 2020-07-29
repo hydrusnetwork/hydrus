@@ -1,4 +1,6 @@
 import http.cookies
+import threading
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -8,8 +10,8 @@ from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusServerResources
+
 from hydrus.server import ServerFiles
-import threading
 
 class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
     

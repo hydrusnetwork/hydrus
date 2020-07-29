@@ -12,8 +12,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+
 from hydrus.client import ClientConstants as CC
-from hydrus.client.media import ClientMedia
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTags
@@ -24,6 +24,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMedia
 
 class BetterQListWidget( QW.QListWidget ):
     
@@ -301,24 +302,20 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         choice_tuples = [ ( self._data_to_pretty_callable( default ), default, selected ) for default in defaults ]
         
-        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select the defaults to add' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            defaults_to_add = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select the defaults to add', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                defaults_to_add = panel.GetValue()
-                
-                for default in defaults_to_add:
-                    
-                    self._AddData( default )
-                    
-                
+            return
+            
+        
+        for default in defaults_to_add:
+            
+            self._AddData( default )
             
         
         self.listBoxChanged.emit()
@@ -621,7 +618,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         button = ClientGUICommon.MenuButton( self, 'add defaults', import_menu_items )
         
-        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def AddImportExportButtons( self, permitted_object_types ):
@@ -646,14 +643,14 @@ class AddEditDeleteListBox( QW.QWidget ):
         import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPNG ) )
         
         button = ClientGUICommon.MenuButton( self, 'export', export_menu_items )
-        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         self._enabled_only_on_selection_buttons.append( button )
         
         button = ClientGUICommon.MenuButton( self, 'import', import_menu_items )
-        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         button = ClientGUICommon.BetterButton( self, 'duplicate', self._Duplicate )
-        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         self._enabled_only_on_selection_buttons.append( button )
         
         self._ShowHideButtons()
@@ -728,14 +725,14 @@ class QueueListBox( QW.QWidget ):
         
         buttons_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( buttons_vbox, self._up_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( buttons_vbox, self._delete_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( buttons_vbox, self._down_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttons_vbox, self._up_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( buttons_vbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( buttons_vbox, self._down_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, buttons_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, buttons_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         buttons_hbox = QP.HBoxLayout()
         
@@ -1200,7 +1197,7 @@ class ListBox( QW.QScrollArea ):
         
         self._Hit( shift, ctrl, hit_index )
         
-    
+
     def _Hit( self, shift, ctrl, hit_index ):
         
         hit_index = self._GetSafeHitIndex( hit_index )
@@ -1728,7 +1725,6 @@ class ListBox( QW.QScrollArea ):
 class ListBoxTags( ListBox ):
     
     ors_are_under_construction = False
-    has_counts = False
     
     can_spawn_new_windows = True
     
@@ -1803,14 +1799,22 @@ class ListBoxTags( ListBox ):
         
         if only_selected:
             
-            terms = self._selected_terms
+            if len( self._selected_terms ) > 1:
+                
+                # keep order
+                terms = [ term for term in self._ordered_terms if term in self._selected_terms ]
+                
+            else:
+                
+                terms = self._selected_terms
+                
             
         else:
             
             terms = self._ordered_terms
             
         
-        selected_copyable_tag_strings = set()
+        selected_copyable_tag_strings = []
         
         for term in terms:
             
@@ -1825,13 +1829,20 @@ class ListBoxTags( ListBox ):
                     tag = term.ToString( with_count = with_counts )
                     
                 
-                selected_copyable_tag_strings.add( tag )
+                selected_copyable_tag_strings.append( tag )
                 
             else:
                 
-                tag = str( term )
+                if self._HasCounts() and with_counts:
+                    
+                    tag = self._terms_to_texts[ term ]
+                    
+                else:
+                    
+                    tag = str( term )
+                    
                 
-                selected_copyable_tag_strings.add( tag )
+                selected_copyable_tag_strings.append( tag )
                 
             
         
@@ -1877,6 +1888,16 @@ class ListBoxTags( ListBox ):
             
         
         return texts_and_colours
+        
+    
+    def _GetTextFromTerm( self, term, with_count = True ):
+        
+        raise NotImplementedError()
+        
+    
+    def _HasCounts( self ):
+        
+        return False
         
     
     def _NewSearchPage( self ):
@@ -1958,8 +1979,6 @@ class ListBoxTags( ListBox ):
             
         
         texts = self._GetCopyableTagStrings( only_selected = only_selected, with_counts = with_counts )
-        
-        texts = HydrusTags.SortNumericTags( texts )
         
         if command == 'copy_selected_sub_terms':
             
@@ -2212,7 +2231,7 @@ class ListBoxTags( ListBox ):
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
                 
-                if self.has_counts:
+                if self._HasCounts():
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
                     
@@ -2351,31 +2370,38 @@ class ListBoxTags( ListBox ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
-                
-                def set_favourite_tags( favourite_tags ):
+                def set_favourite_tags( tag ):
+                    
+                    favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+                    
+                    if selected_tag in favourite_tags:
+                        
+                        favourite_tags.remove( tag )
+                        
+                    else:
+                        
+                        favourite_tags.append( tag )
+                        
                     
                     HG.client_controller.new_options.SetStringList( 'favourite_tags', favourite_tags )
                     
                     HG.client_controller.pub( 'notify_new_favourite_tags' )
                     
                 
+                favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+                
                 if selected_tag in favourite_tags:
-                    
-                    favourite_tags.remove( selected_tag )
                     
                     label = 'remove "{}" from favourites'.format( selected_tag )
                     description = 'Remove this tag from your favourites'
                     
                 else:
                     
-                    favourite_tags.append( selected_tag )
-                    
                     label = 'add "{}" to favourites'.format( selected_tag )
                     description = 'Add this tag from your favourites'
                     
                 
-                ClientGUIMenus.AppendMenuItem( menu, label, description, set_favourite_tags, favourite_tags )
+                ClientGUIMenus.AppendMenuItem( menu, label, description, set_favourite_tags, selected_tag )
                 
             
             if len( selected_actual_tags ) > 0 and self.can_spawn_new_windows:
@@ -2412,8 +2438,6 @@ class ListBoxTags( ListBox ):
         
     
 class ListBoxTagsPredicates( ListBoxTags ):
-    
-    has_counts = True
     
     def _CanHitIndex( self, index ):
         
@@ -2544,6 +2568,11 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
         
         return indices
+        
+    
+    def _HasCounts( self ):
+        
+        return True
         
     
     def _HasPredicate( self, predicate ):
@@ -3059,7 +3088,6 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
 class ListBoxTagsMedia( ListBoxTags ):
     
     render_for_user = True
-    has_counts = True
     
     def __init__( self, parent, tag_display_type, include_counts = True, show_sibling_description = False ):
         
@@ -3142,6 +3170,11 @@ class ListBoxTagsMedia( ListBoxTags ):
             
         
         return tag_string
+        
+    
+    def _HasCounts( self ):
+        
+        return self._include_counts
         
     
     def _RecalcStrings( self, limit_to_these_tags = None ):

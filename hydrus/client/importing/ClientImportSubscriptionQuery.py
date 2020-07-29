@@ -3,6 +3,7 @@ import typing
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.importing import ClientImporting
@@ -102,9 +103,6 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self._pretty_file_velocity = 'unknown'
         self._example_file_seed = None
         self._example_gallery_seed = None
-        
-        # a status cache, so we know number complete, unknown, ignored, etc...
-        # prob should have a new serialisable object for this mate
         
     
     def _DomainOK( self, domain_manager: ClientNetworkingDomain.NetworkDomainManager, example_url: typing.Optional[ str ] ):

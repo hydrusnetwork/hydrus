@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
@@ -603,8 +604,8 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._log_summary_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._gallery_seed_log_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._log_summary_st, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._gallery_seed_log_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         

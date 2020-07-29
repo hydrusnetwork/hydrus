@@ -1,9 +1,9 @@
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 import hashlib
 import io
 import numpy
 import numpy.core.multiarray # important this comes before cv!
+import struct
+import warnings
 
 try:
     
@@ -21,11 +21,12 @@ except:
 from PIL import _imaging
 from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
-import struct
+
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
-import warnings
 
 def EnableLoadTruncatedImages():
     

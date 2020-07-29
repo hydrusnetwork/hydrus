@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNATPunch
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientRatings
@@ -62,8 +63,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         buttonbox = QP.HBoxLayout()
         
-        QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_VCENTER )
-        QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -72,7 +73,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        QP.AddToLayout( vbox, buttonbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, buttonbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -310,7 +311,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._ok, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._ok, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         

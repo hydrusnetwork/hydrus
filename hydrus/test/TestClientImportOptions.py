@@ -1,19 +1,22 @@
+import collections
+import os
+import random
+import unittest
+
+from mock import patch
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientTags
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
-from hydrus.client import ClientTags
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-import collections
-import os
-import random
-import unittest
-from mock import patch
 
 class TestCheckerOptions( unittest.TestCase ):
     

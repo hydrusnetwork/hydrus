@@ -1,6 +1,12 @@
 import threading
 import time
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDownloading
 from hydrus.client.importing import ClientImportFileSeeds
@@ -8,11 +14,6 @@ from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.networking import ClientNetworkingJobs
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusSerialisable
 
 class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
@@ -474,29 +475,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetCurrentAction( self ):
-        
-        with self._lock:
-            
-            if self._file_status != '':
-                
-                return self._file_status
-                
-            elif self._gallery_status != '':
-                
-                return self._gallery_status
-                
-            elif not self._gallery_seed_log.WorkToDo() and not self._file_seed_cache.WorkToDo():
-                
-                return 'done!'
-                
-            else:
-                
-                return ''
-                
-            
-        
-    
     def GetFileImportOptions( self ):
         
         with self._lock:
@@ -613,6 +591,25 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._query
+            
+        
+    
+    def GetSimpleStatus( self ):
+        
+        with self._lock:
+            
+            if self._gallery_status != '' or self._file_status != '':
+                
+                return 'working'
+                
+            elif not self._gallery_seed_log.WorkToDo() and not self._file_seed_cache.WorkToDo():
+                
+                return 'DONE'
+                
+            else:
+                
+                return ''
+                
             
         
     

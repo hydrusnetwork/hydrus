@@ -12,6 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientSearch
@@ -27,6 +28,7 @@ from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+
 from hydrus.external import LogicExpressionQueryParser
 
 def AppendLoadingPredicate( predicates ):
@@ -622,7 +624,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._text_input_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( self._text_input_hbox, self._text_ctrl, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( self._text_input_hbox, self._text_ctrl, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         self._text_input_panel.setLayout( self._text_input_hbox )
         
@@ -1464,8 +1466,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._cancel_search_button.hide()
         
-        QP.AddToLayout( self._text_input_hbox, self._favourite_searches_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._text_input_hbox, self._cancel_search_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._text_input_hbox, self._favourite_searches_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._text_input_hbox, self._cancel_search_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         #
         
@@ -1501,9 +1503,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         sync_button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( sync_button_hbox, self._search_pause_play, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( sync_button_hbox, self._or_advanced, CC.FLAGS_VCENTER )
-        QP.AddToLayout( sync_button_hbox, self._or_cancel, CC.FLAGS_VCENTER )
-        QP.AddToLayout( sync_button_hbox, self._or_rewind, CC.FLAGS_VCENTER )
+        QP.AddToLayout( sync_button_hbox, self._or_advanced, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( sync_button_hbox, self._or_cancel, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( sync_button_hbox, self._or_rewind, CC.FLAGS_CENTER_PERPENDICULAR )
         
         button_hbox_2 = QP.HBoxLayout()
         
@@ -2033,8 +2035,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
 class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
-    has_counts = False
-    
     def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, initial_predicates = None ):
         
         if initial_predicates is None:
@@ -2143,6 +2143,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         return predicate.ToString( render_for_user = True )
         
     
+    def _HasCounts( self ):
+        
+        return False
+        
+    
     def _ProcessMenuPredicateEvent( self, command ):
         
         ( predicates, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
@@ -2212,7 +2217,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             self._paste_button.hide()
             
         
-        QP.AddToLayout( self._text_input_hbox, self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._text_input_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         

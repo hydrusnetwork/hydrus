@@ -7,16 +7,17 @@ import time
 import unicodedata
 import urllib.parse
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientParsing
-from hydrus.client import ClientThreading
-from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientParsing
+from hydrus.client import ClientThreading
+from hydrus.client.networking import ClientNetworkingContexts
 
 def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
     
@@ -342,7 +343,7 @@ def GetSearchURLs( url ):
         path = p.path
         params = ''
         query = p.query
-        fragment = ''
+        fragment = p.fragment
         
         if netloc.startswith( 'www' ):
             
@@ -1695,7 +1696,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 path = p.path
                 params = p.params
                 query = AlphabetiseQueryText( p.query )
-                fragment = p.fragment
+                fragment = ''
                 
                 r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
                 
@@ -2856,9 +2857,25 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
     SERIALISABLE_NAME = 'URL Class'
-    SERIALISABLE_VERSION = 8
+    SERIALISABLE_VERSION = 9
     
-    def __init__( self, name, url_class_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', path_components = None, parameters = None, api_lookup_converter = None, send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED, referral_url_converter = None, gallery_index_type = None, gallery_index_identifier = None, gallery_index_delta = 1, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+    def __init__(
+        self,
+        name: str,
+        url_class_key = None,
+        url_type = None,
+        preferred_scheme = 'https',
+        netloc = 'hostname.com',
+        path_components = None,
+        parameters = None,
+        api_lookup_converter = None,
+        send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED,
+        referral_url_converter = None,
+        gallery_index_type = None,
+        gallery_index_identifier = None,
+        gallery_index_delta = 1,
+        example_url = 'https://hostname.com/post/page.php?id=123456&s=view'
+    ):
         
         if url_class_key is None:
             
@@ -2913,6 +2930,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._alphabetise_get_parameters = True
         self._can_produce_multiple_files = False
         self._should_be_associated_with_files = True
+        self._keep_fragment = False
         
         self._path_components = path_components
         self._parameters = parameters
@@ -3038,12 +3056,16 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         serialisable_referral_url_converter = self._referral_url_converter.GetSerialisableTuple()
         
-        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
+        booleans = ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment )
+        
+        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
+        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
+        
+        ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment ) = booleans
         
         self._url_class_key = bytes.fromhex( serialisable_url_class_key )
         self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
@@ -3156,6 +3178,19 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 8, new_serialisable_info )
             
         
+        if version == 8:
+            
+            ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
+            
+            keep_fragment = False
+            
+            booleans = ( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+            
+            new_serialisable_info = ( serialisable_url_class_key, url_type, preferred_scheme, netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
+            
+            return ( 9, new_serialisable_info )
+            
+        
     
     def AlphabetiseGetParameters( self ):
         
@@ -3232,7 +3267,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         path = p.path
         query = p.query
         params = ''
-        fragment = ''
+        fragment = p.fragment
         
         if self._gallery_index_type == GALLERY_INDEX_TYPE_PATH_COMPONENT:
             
@@ -3352,7 +3387,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetURLBooleans( self ):
         
-        return ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files )
+        return ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment )
         
     
     def GetURLType( self ):
@@ -3405,7 +3440,15 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         scheme = self._preferred_scheme
         params = ''
-        fragment = ''
+        
+        if self._keep_fragment:
+            
+            fragment = p.fragment
+            
+        else:
+            
+            fragment = ''
+            
         
         if self.ClippingIsAppropriate():
             
@@ -3449,13 +3492,22 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._url_class_key = match_key
         
     
-    def SetURLBooleans( self, match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files ):
+    def SetURLBooleans(
+        self,
+        match_subdomains: bool,
+        keep_matched_subdomains: bool,
+        alphabetise_get_parameters: bool,
+        can_produce_multiple_files: bool,
+        should_be_associated_with_files: bool,
+        keep_fragment: bool
+    ):
         
         self._match_subdomains = match_subdomains
         self._keep_matched_subdomains = keep_matched_subdomains
         self._alphabetise_get_parameters = alphabetise_get_parameters
         self._can_produce_multiple_files = can_produce_multiple_files
         self._should_be_associated_with_files = should_be_associated_with_files
+        self._keep_fragment = keep_fragment
         
     
     def ShouldAssociateWithFiles( self ):

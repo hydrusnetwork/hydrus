@@ -1,8 +1,4 @@
 import gc
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusThreading
 import os
 import psutil
 import re
@@ -14,6 +10,11 @@ import subprocess
 import tempfile
 import threading
 import traceback
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusThreading
 
 TEMP_PATH_LOCK = threading.Lock()
 IN_USE_TEMP_PATHS = set()

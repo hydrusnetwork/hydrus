@@ -6,14 +6,6 @@ import traceback
 
 from twisted.web.static import File as FileResource
 
-from hydrus.client import ClientAPI
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
-from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client.media import ClientMedia
-from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -22,6 +14,15 @@ from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusServerResources
 from hydrus.core import HydrusTags
+
+from hydrus.client import ClientAPI
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.media import ClientMedia
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
 
 local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 

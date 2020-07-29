@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
@@ -721,8 +722,8 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._progress_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._file_seed_cache_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._progress_st, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._file_seed_cache_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         

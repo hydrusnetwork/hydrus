@@ -2,6 +2,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIFunctions
@@ -58,7 +59,7 @@ class OptionsPanelMimes( OptionsPanel ):
             
             self._general_mime_types_to_checkboxes[ general_mime_type ] = general_mime_checkbox
             
-            QP.AddToLayout( gridbox, general_mime_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, general_mime_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
             
             show_hide_button = ClientGUICommon.BetterButton( self, self.BUTTON_CURRENTLY_SHOWING, self._ButtonShowHide, general_mime_type )
             
@@ -68,7 +69,7 @@ class OptionsPanelMimes( OptionsPanel ):
             
             self._general_mime_types_to_buttons[ general_mime_type ] = show_hide_button
             
-            QP.AddToLayout( gridbox, show_hide_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, show_hide_button, CC.FLAGS_CENTER_PERPENDICULAR )
             
             vbox = QP.VBoxLayout()
             

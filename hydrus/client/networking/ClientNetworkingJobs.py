@@ -6,10 +6,6 @@ import traceback
 import time
 import urllib
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
-from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -17,6 +13,11 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusText
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
 
 try:
     
@@ -551,7 +552,21 @@ class NetworkJob( object ):
             try:
                 
                 is_firewall = cloudscraper.CloudScraper.is_Firewall_Blocked( response )
-                is_attemptable = cloudscraper.CloudScraper.is_reCaptcha_Challenge( response ) or cloudscraper.CloudScraper.is_IUAM_Challenge( response )
+                
+                if hasattr( cloudscraper.CloudScraper, 'is_reCaptcha_Challenge' ):
+                    
+                    is_captcha = getattr( cloudscraper.CloudScraper, 'is_reCaptcha_Challenge' )( response )
+                    
+                elif hasattr( cloudscraper.CloudScraper, 'is_Captcha_Challenge' ):
+                    
+                    is_captcha = getattr( cloudscraper.CloudScraper, 'is_Captcha_Challenge' )( response )
+                    
+                else:
+                    
+                    is_captcha = False
+                    
+                
+                is_attemptable = is_captcha or cloudscraper.CloudScraper.is_IUAM_Challenge( response )
                 
             except Exception as e:
                 
@@ -612,7 +627,20 @@ class NetworkJob( object ):
                     
                 except Exception as e:
                     
-                    if isinstance( e, cloudscraper.exceptions.CloudflareReCaptchaProvider ):
+                    if hasattr( cloudscraper.exceptions, 'CloudflareReCaptchaProvider' ):
+                        
+                        e_type_test = getattr( cloudscraper.exceptions, 'CloudflareReCaptchaProvider' )
+                        
+                    elif hasattr( cloudscraper.exceptions, 'CloudflareCaptchaProvider' ):
+                        
+                        e_type_test = getattr( cloudscraper.exceptions, 'CloudflareCaptchaProvider' )
+                        
+                    else:
+                        
+                        e_type_test = int
+                        
+                    
+                    if isinstance( e, e_type_test ):
                         
                         message = 'The page had a captcha, and hydrus does not yet plug cloudscraper into a captcha-solving service.'
                         

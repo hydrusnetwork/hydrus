@@ -1,3 +1,4 @@
+import collections
 import os
 import threading
 import time
@@ -13,6 +14,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
@@ -299,13 +301,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
         
-        self._control_panel.Add( gridbox, CC.FLAGS_LONE_BUTTON )
+        self._control_panel.Add( gridbox, CC.FLAGS_ON_RIGHT )
         
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._name,self,'name: '), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -734,7 +736,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _PasteQueries( self ):
         
-        message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Is that ok?'
+        message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Queries that are already in the subscription (with any combination of upper/lower case) will not be re-added. Is that ok?'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -745,7 +747,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            text = HG.client_controller.GetClipboardText()
+            pasted_text = HG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -756,89 +758,107 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            query_texts = HydrusText.DeserialiseNewlinedTexts( text )
-            
-            current_query_texts = self._GetCurrentQueryTexts()
-            
-            already_existing_query_texts = sorted( set( current_query_texts ).intersection( query_texts ) )
-            new_query_texts = sorted( set( query_texts ).difference( current_query_texts ) )
-            
-            if len( already_existing_query_texts ) > 0:
-                
-                if len( already_existing_query_texts ) > 50:
-                    
-                    message = '{} queries were already in the subscription, so they need not be added.'.format( HydrusData.ToHumanInt( len( already_existing_query_texts ) ) )
-                    
-                else:
-                    
-                    if len( already_existing_query_texts ) > 5:
-                        
-                        aeqt_separator = ', '
-                        
-                    else:
-                        
-                        aeqt_separator = os.linesep
-                        
-                    
-                    message = 'The queries:'
-                    message += os.linesep * 2
-                    message += aeqt_separator.join( already_existing_query_texts )
-                    message += os.linesep * 2
-                    message += 'Were already in the subscription, so they need not be added.'
-                    
-                
-                if len( new_query_texts ) > 0:
-                    
-                    if len( new_query_texts ) > 50:
-                        
-                        message = '{} queries were new and will be added.'.format( HydrusData.ToHumanInt( len( new_query_texts ) ) )
-                        
-                    else:
-                        
-                        if len( new_query_texts ) > 5:
-                            
-                            nqt_separator = ', '
-                            
-                        else:
-                            
-                            nqt_separator = os.linesep
-                            
-                        
-                        message += os.linesep * 2
-                        message += 'The queries:'
-                        message += os.linesep * 2
-                        message += nqt_separator.join( new_query_texts )
-                        message += os.linesep * 2
-                        message += 'Were new and will be added.'
-                        
-                    
-                
-                QW.QMessageBox.information( self, 'Information', message )
-                
-            
-            query_headers = []
-            
-            for query_text in new_query_texts:
-                
-                query_header = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
-                
-                query_header.SetQueryText( query_text )
-                
-                query_headers.append( query_header )
-                
-                query_log_container_name = query_header.GetQueryLogContainerName()
-                
-                query_log_container = ClientImportSubscriptionQuery.SubscriptionQueryLogContainer( query_log_container_name )
-                
-                self._names_to_edited_query_log_containers[ query_log_container_name ] = query_log_container
-                
-            
-            self._query_headers.AddDatas( query_headers )
+            pasted_query_texts = HydrusText.DeserialiseNewlinedTexts( pasted_text )
             
         except:
             
             QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
+        
+        current_query_texts_lower = { query_text.lower() for query_text in self._GetCurrentQueryTexts() }
+        
+        already_existing_query_texts = set()
+        new_query_texts = set()
+        
+        for query_text in pasted_query_texts:
+            
+            query_text_lower = query_text.lower()
+            
+            if query_text_lower in current_query_texts_lower:
+                
+                already_existing_query_texts.add( query_text )
+                
+            else:
+                
+                new_query_texts.add( query_text )
+                
+            
+        
+        already_existing_query_texts = sorted( already_existing_query_texts )
+        new_query_texts = sorted( new_query_texts )
+        
+        if len( already_existing_query_texts ) > 0:
+            
+            if len( already_existing_query_texts ) > 50:
+                
+                message = '{} queries were already in the subscription, so they need not be added.'.format( HydrusData.ToHumanInt( len( already_existing_query_texts ) ) )
+                
+            else:
+                
+                if len( already_existing_query_texts ) > 5:
+                    
+                    aeqt_separator = ', '
+                    
+                else:
+                    
+                    aeqt_separator = os.linesep
+                    
+                
+                message = 'The queries:'
+                message += os.linesep * 2
+                message += aeqt_separator.join( already_existing_query_texts )
+                message += os.linesep * 2
+                message += 'Were already in the subscription, so they need not be added.'
+                
+            
+            if len( new_query_texts ) > 0:
+                
+                if len( new_query_texts ) > 50:
+                    
+                    message = '{} queries were new and will be added.'.format( HydrusData.ToHumanInt( len( new_query_texts ) ) )
+                    
+                else:
+                    
+                    if len( new_query_texts ) > 5:
+                        
+                        nqt_separator = ', '
+                        
+                    else:
+                        
+                        nqt_separator = os.linesep
+                        
+                    
+                    message += os.linesep * 2
+                    message += 'The queries:'
+                    message += os.linesep * 2
+                    message += nqt_separator.join( new_query_texts )
+                    message += os.linesep * 2
+                    message += 'Were new and will be added.'
+                    
+                
+            
+            QW.QMessageBox.information( self, 'Information', message )
+            
+        
+        query_headers = []
+        
+        for query_text in new_query_texts:
+            
+            query_header = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
+            
+            query_header.SetQueryText( query_text )
+            
+            query_headers.append( query_header )
+            
+            query_log_container_name = query_header.GetQueryLogContainerName()
+            
+            query_log_container = ClientImportSubscriptionQuery.SubscriptionQueryLogContainer( query_log_container_name )
+            
+            self._names_to_edited_query_log_containers[ query_log_container_name ] = query_log_container
+            
+        
+        self._query_headers.AddDatas( query_headers )
+        
         
     
     def _PausePlay( self ):
@@ -1147,6 +1167,12 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._names_to_edited_query_log_containers = {}
         
+        self._gug_names_to_dupe_cased_query_texts = {}
+        self._subscriptions_to_dupe_cased_query_texts = {}
+        
+        self._gug_names_to_dupe_caseless_query_texts = {}
+        self._subscriptions_to_dupe_caseless_query_texts = {}
+        
         #
         
         menu_items = []
@@ -1159,40 +1185,42 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
-        subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        self._subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, 12, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( self._subscriptions_panel, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, 12, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
         
-        subscriptions_panel.SetListCtrl( self._subscriptions )
+        self._subscriptions_panel.SetListCtrl( self._subscriptions )
         
-        subscriptions_panel.AddButton( 'add', self.Add )
-        subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
-        subscriptions_panel.AddDeleteButton()
+        self._subscriptions_panel.AddButton( 'add', self.Add )
+        self._subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddDeleteButton()
         
-        subscriptions_panel.AddSeparator()
+        self._subscriptions_panel.AddSeparator()
         
-        subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptionLegacy.SubscriptionLegacy, ClientImportSubscriptions.SubscriptionContainer ), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
+        self._subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptionLegacy.SubscriptionLegacy, ClientImportSubscriptions.SubscriptionContainer ), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
         
-        subscriptions_panel.NewButtonRow()
+        self._subscriptions_panel.NewButtonRow()
         
-        subscriptions_panel.AddButton( 'merge', self.Merge, enabled_check_func = self._CanMerge )
-        subscriptions_panel.AddButton( 'separate', self.Separate, enabled_check_func = self._CanSeparate )
+        self._subscriptions_panel.AddButton( 'merge', self.Merge, enabled_check_func = self._CanMerge )
+        self._subscriptions_panel.AddButton( 'separate', self.Separate, enabled_check_func = self._CanSeparate )
+        self._subscriptions_panel.AddButton( 'deduplicate', self.DedupeAll, enabled_check_func = self._CanDedupeAll )
+        self._subscriptions_panel.AddButton( 'lowercase', self.LowerCaseQueries, enabled_check_func = self._CanLowerCaseQueries )
         
-        subscriptions_panel.AddSeparator()
+        self._subscriptions_panel.AddSeparator()
         
-        subscriptions_panel.AddButton( 'pause/resume', self.PauseResume, enabled_only_on_selection = True )
-        subscriptions_panel.AddButton( 'retry failed', self._STARTRetryFailed, enabled_check_func = self._CanRetryFailed )
-        subscriptions_panel.AddButton( 'retry ignored', self._STARTRetryIgnored, enabled_check_func = self._CanRetryIgnored )
-        subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
-        subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
+        self._subscriptions_panel.AddButton( 'pause/resume', self.PauseResume, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'retry failed', self._STARTRetryFailed, enabled_check_func = self._CanRetryFailed )
+        self._subscriptions_panel.AddButton( 'retry ignored', self._STARTRetryIgnored, enabled_check_func = self._CanRetryIgnored )
+        self._subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
+        self._subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
         
-        subscriptions_panel.AddButton( 'reset', self._STARTReset, enabled_check_func = self._CanReset )
+        self._subscriptions_panel.AddButton( 'reset', self._STARTReset, enabled_check_func = self._CanReset )
         
-        subscriptions_panel.NewButtonRow()
+        self._subscriptions_panel.NewButtonRow()
         
-        subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
-        subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
-        subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
+        self._subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
         
         #
         
@@ -1200,11 +1228,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions.Sort()
         
+        self._RegenDupeData()
+        
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
         if subs_are_globally_paused:
             
@@ -1216,7 +1246,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        QP.AddToLayout( vbox, subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -1282,12 +1312,26 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions.AddDatas( ( subscription, ) )
         
+        self._RegenDupeData()
+        
     
     def _CanCheckNow( self ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
         return True in ( subscription.CanCheckNow() for subscription in subscriptions )
+        
+    
+    def _CanDedupeAll( self ):
+        
+        return len( self._subscriptions_to_dupe_cased_query_texts ) > 0 or len( self._subscriptions_to_dupe_caseless_query_texts ) > 0
+        
+    
+    def _CanLowerCaseQueries( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanLowerCaseQueries() for subscription in subscriptions )
         
     
     def _CanMerge( self ):
@@ -1627,6 +1671,73 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _RegenDupeData( self ):
+        
+        self._gug_names_to_dupe_cased_query_texts = collections.defaultdict( set )
+        self._subscriptions_to_dupe_cased_query_texts = collections.defaultdict( set )
+        
+        gug_name_and_cased_query_text_count = collections.Counter()
+        gug_name_and_cased_query_text_to_subscriptions = collections.defaultdict( list )
+        
+        self._gug_names_to_dupe_caseless_query_texts = collections.defaultdict( set )
+        self._subscriptions_to_dupe_caseless_query_texts = collections.defaultdict( set )
+        
+        gug_name_and_caseless_query_text_count = collections.Counter()
+        gug_name_and_caseless_query_text_to_subscriptions = collections.defaultdict( list )
+        
+        for subscription in self._subscriptions.GetData():
+            
+            gug_name = subscription.GetGUGKeyAndName()[1]
+            
+            query_headers = subscription.GetQueryHeaders()
+            
+            for query_header in query_headers:
+                
+                query_text = query_header.GetQueryText()
+                
+                gug_name_and_cased_query_text_count[ ( gug_name, query_text ) ] += 1
+                gug_name_and_cased_query_text_to_subscriptions[ ( gug_name, query_text ) ].append( subscription )
+                
+                query_text_lower = query_text.lower()
+                
+                gug_name_and_caseless_query_text_count[ ( gug_name, query_text_lower ) ] += 1
+                gug_name_and_caseless_query_text_to_subscriptions[ ( gug_name, query_text_lower ) ].append( subscription )
+                
+            
+        
+        for ( ( gug_name, query_text ), count ) in gug_name_and_cased_query_text_count.items():
+            
+            if count <= 1:
+                
+                continue
+                
+            
+            self._gug_names_to_dupe_cased_query_texts[ gug_name ].add( query_text )
+            
+            for subscription in gug_name_and_cased_query_text_to_subscriptions[ ( gug_name, query_text ) ]:
+                
+                self._subscriptions_to_dupe_cased_query_texts[ subscription ].add( query_text )
+                
+            
+        
+        for ( ( gug_name, query_text_lower ), count ) in gug_name_and_caseless_query_text_count.items():
+            
+            if count <= 1:
+                
+                continue
+                
+            
+            self._gug_names_to_dupe_caseless_query_texts[ gug_name ].add( query_text_lower )
+            
+            for subscription in gug_name_and_caseless_query_text_to_subscriptions[ ( gug_name, query_text_lower ) ]:
+                
+                self._subscriptions_to_dupe_caseless_query_texts[ subscription ].add( query_text_lower )
+                
+            
+        
+        self._subscriptions_panel.UpdateButtons()
+        
+    
     def _STARTReset( self ):
         
         message = 'Resetting these subscriptions will delete all their remembered urls, meaning when they next run, they will try to download them all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'
@@ -1784,6 +1895,317 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions.UpdateDatas( subscriptions )
         
     
+    def DedupeAll( self ):
+        
+        # first, select if we are cased or caseless
+        
+        # can't do a nice 'yes, there are definitely more to do caseless here', as you can have aaA dupes that add to number deduped but don't increase the query text count
+        # for now, we won't bother to dive deeper into the data here, but it would be nice
+        
+        num_cased = sum( ( len( query_texts ) for query_texts in self._gug_names_to_dupe_cased_query_texts.items() ) )
+        num_caseless = sum( ( len( query_texts ) for query_texts in self._gug_names_to_dupe_caseless_query_texts.items() ) )
+        
+        can_do_cased = num_cased > 0
+        can_do_caseless = num_caseless > 0
+        
+        if can_do_cased and can_do_caseless:
+            
+            choice_tuples = [
+                ( 'do a normal upper/lower case deduplication', False, 'Dedupe "samus_aran" with "samus_aran" or "Samus_Aran". This is usually the best option to go with--most sites ignore case.' ),
+                ( 'only do exact text deduplication', True, 'Dedupe "samus_aran" with "samus_aran", but not "Samus_Aran". Usually not important, but some specific galleries may care about this.' )
+            ]
+            
+            message = 'Which kind of duplication are we going to do?'
+            
+            try:
+                
+                enforce_case = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Caseless or cased?', choice_tuples, message = message )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+        elif can_do_caseless:
+            
+            message = 'There are no exact text duplicates. Only upper/lower case deduplication is available, merging queries like "samus_aran" and "Samus_Aran". Is this ok?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+            enforce_case = False
+            
+        else:
+            
+            # this should never happen, and we should not have the situation where only cased can be done. if cased can, caseless can, riiiiiight?
+            
+            QW.QMessageBox.warning( self, 'Warning', 'There are no apparent duplicates, the dupe data will now be recalculated.' )
+            
+            self._RegenDupeData()
+            
+            return
+            
+        
+        # then select the downloader to dedupe for
+        
+        if enforce_case:
+            
+            gug_names_to_dupe_query_texts = self._gug_names_to_dupe_cased_query_texts
+            subscriptions_to_dupe_query_texts = self._subscriptions_to_dupe_cased_query_texts
+            
+        else:
+            
+            gug_names_to_dupe_query_texts = self._gug_names_to_dupe_caseless_query_texts
+            subscriptions_to_dupe_query_texts = self._subscriptions_to_dupe_caseless_query_texts
+            
+        
+        if len( gug_names_to_dupe_query_texts ) == 0:
+            
+            QW.QMessageBox.warning( self, 'Warning', 'There are no apparent duplicates, the dupe data will now be recalculated.' )
+            
+            self._RegenDupeData()
+            
+            return
+            
+        elif len( gug_names_to_dupe_query_texts ) == 1:
+            
+            ( gug_name, ) = gug_names_to_dupe_query_texts.keys()
+            
+        else:
+            
+            choice_tuples = []
+            
+            for ( gug_name, query_texts ) in gug_names_to_dupe_query_texts.items():
+                
+                label = '{} ({} duplicates)'.format( gug_name, HydrusData.ToHumanInt( len( query_texts ) ) )
+                
+                tooltip = ', '.join( sorted( query_texts ) )
+                
+                choice_tuples.append( ( label, gug_name, tooltip ) )
+                
+            
+            message = 'Multiple downloaders have duplicate queries. Which would you like to dedupe now?'
+            
+            try:
+                
+                gug_name = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which downloader to work on?', choice_tuples, message = message )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+        
+        subscriptions_we_will_be_deduping = [ subscription for subscription in subscriptions_to_dupe_query_texts if subscription.GetGUGKeyAndName()[1] == gug_name ]
+        
+        # now select which queries to dedupe
+        
+        potential_dupe_query_texts = gug_names_to_dupe_query_texts[ gug_name ]
+        
+        if len( potential_dupe_query_texts ) == 0:
+            
+            QW.QMessageBox.warning( self, 'Warning', 'Strangely, there are actually no apparent duplicates for this downloader, the dupe data will now be recalculated. Let hydev know about this, please.' )
+            
+            self._RegenDupeData()
+            
+            return
+            
+        elif len( potential_dupe_query_texts ) == 1:
+            
+            ( query_text, ) = potential_dupe_query_texts
+            
+            message = 'The downloader "{}" has a single duplicate query "{}". Is this ok to dedupe?'.format( gug_name, query_text )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+            query_texts_we_want_to_dedupe_now = potential_dupe_query_texts
+            
+        else:
+            
+            message = 'There are {} duplicate query texts for the downloader "{}". Would you like to dedupe them all, or select which to do?'.format( HydrusData.ToHumanInt( len( potential_dupe_query_texts ) ), gug_name )
+            
+            yes_tuples = []
+            
+            yes_tuples.append( ( 'do them all', 'all' ) )
+            yes_tuples.append( ( 'select which to do', 'select' ) )
+            
+            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                
+                if dlg.exec() != QW.QDialog.Accepted:
+                    
+                    return
+                    
+                else:
+                    
+                    value = dlg.GetValue()
+                    
+                    if value == 'all':
+                        
+                        query_texts_we_want_to_dedupe_now = potential_dupe_query_texts
+                        
+                    else:
+                        
+                        selected = True
+                        
+                        choice_tuples = [ ( query_text, query_text, selected ) for query_text in potential_dupe_query_texts ]
+                        
+                        try:
+                            
+                            query_texts_we_want_to_dedupe_now = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'Select which query texts to dedupe', choice_tuples )
+                            
+                        except HydrusExceptions.CancelledException:
+                            
+                            return
+                            
+                        
+                        if len( query_texts_we_want_to_dedupe_now ) == 0:
+                            
+                            return
+                            
+                        
+                    
+                
+            
+        
+        # we are now set on what we want to dedupe.
+        
+        keep_going = True
+        query_texts_we_want_to_dedupe_now = set( query_texts_we_want_to_dedupe_now )
+        
+        try:
+            
+            while keep_going:
+                
+                if enforce_case:
+                    
+                    subscriptions_to_dupe_query_texts = self._subscriptions_to_dupe_cased_query_texts
+                    
+                else:
+                    
+                    subscriptions_to_dupe_query_texts = self._subscriptions_to_dupe_caseless_query_texts
+                    
+                
+                # now select the master sub that will not dedupe
+                
+                subscriptions_to_dupe_query_texts_it_can_do = {}
+                
+                choice_tuples = []
+                
+                for subscription in subscriptions_we_will_be_deduping:
+                    
+                    sub_dupe_query_texts = subscriptions_to_dupe_query_texts[ subscription ]
+                    
+                    dupe_query_texts_it_can_do = set( sub_dupe_query_texts ).intersection( query_texts_we_want_to_dedupe_now )
+                    
+                    if len( dupe_query_texts_it_can_do ) == 0:
+                        
+                        continue # this doesn't have the queries we selected previously, or was cleared out in a previous loop
+                        
+                    
+                    subscriptions_to_dupe_query_texts_it_can_do[ subscription ] = dupe_query_texts_it_can_do
+                    
+                    if len( dupe_query_texts_it_can_do ) == len( query_texts_we_want_to_dedupe_now ):
+                        
+                        label = '{} (has all duplicate queries)'.format( subscription.GetName() )
+                        
+                    else:
+                        
+                        label = '{} (has {} duplicate queries)'.format( subscription.GetName(), HydrusData.ConvertValueRangeToPrettyString( len( dupe_query_texts_it_can_do ), len( query_texts_we_want_to_dedupe_now ) ) )
+                        
+                    
+                    choice_tuples.append( ( label, subscription, ', '.join( sorted( dupe_query_texts_it_can_do ) ) ) )
+                    
+                
+                if len( choice_tuples ) == 0:
+                    
+                    QW.QMessageBox.warning( self, 'Warning', 'Strangely, there are actually no subscriptions that can do dedupe work for the selected duplicates, the dupe data will now be recalculated. Let hydev know about this, please.' )
+                    
+                    return
+                    
+                elif len( choice_tuples ) == 1:
+                    
+                    master_subscription = choice_tuples[0][1]
+                    
+                    message = 'Subscription "{}" will now dedupe the queries within itself. Is this ok?'.format( master_subscription.GetName() )
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != QW.QDialog.Accepted:
+                        
+                        return
+                        
+                    
+                else:
+                    
+                    choice_tuples.sort( key = lambda c_t: c_t[1].GetName() )
+                    
+                    message = 'Which subscription is going to keep the queries? If the subscription cannot dedupe them all, you will be able to select another, to do the rest, in a moment.'
+                    
+                    try:
+                        
+                        master_subscription = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which sub to retain the queries on?', choice_tuples, message = message )
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        return
+                        
+                    
+                
+                # we are now good to go
+                
+                query_texts_our_master_can_do = subscriptions_to_dupe_query_texts_it_can_do[ master_subscription ]
+                
+                for subscription in subscriptions_we_will_be_deduping:
+                    
+                    if subscription == master_subscription:
+                        
+                        subscription.DedupeQueryTexts( query_texts_our_master_can_do, enforce_case = enforce_case )
+                        
+                    else:
+                        
+                        subscription.RemoveQueryTexts( query_texts_our_master_can_do, enforce_case = enforce_case )
+                        
+                    
+                
+                # can more work be done? if so, ask user if they want to keep going
+                
+                query_texts_we_want_to_dedupe_now.difference_update( query_texts_our_master_can_do )
+                
+                keep_going = False
+                
+                if len( query_texts_we_want_to_dedupe_now ) > 0:
+                    
+                    message = 'Dedupe was done. There are still {} queries that can be deduped between other subscriptions. Want to do them now?'.format( HydrusData.ToHumanInt( len( query_texts_we_want_to_dedupe_now ) ) )
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result == QW.QDialog.Accepted:
+                        
+                        keep_going = True
+                        
+                        self._RegenDupeData() # not actually needed, but let's work on current data mate
+                        
+                    
+                
+            
+        finally:
+            
+            self._subscriptions.UpdateDatas()
+            self._subscriptions.Sort()
+            
+            self._RegenDupeData()
+            
+        
+    
     def Edit( self ):
         
         subs_to_edit = self._subscriptions.GetData( only_selected = True )
@@ -1809,6 +2231,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     edited_subscription.SetNonDupeName( self._GetExistingNames() )
                     
                     self._subscriptions.AddDatas( ( edited_subscription, ) )
+                    
+                    self._RegenDupeData()
                     
                 elif dlg.WasCancelled():
                     
@@ -1838,6 +2262,25 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         deletee_query_log_container_names = self._existing_query_log_container_names.difference( required_query_log_container_names )
         
         return ( subscriptions, edited_query_log_containers, deletee_query_log_container_names )
+        
+    
+    def LowerCaseQueries( self ):
+        
+        message = 'This will convert the selected subscriptions\' queries to lowercase text. "Samus_Aran" will become "samus_aran". Most sites do not care about case, but it can help things stay neat.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == QW.QDialog.Accepted:
+            
+            subscriptions = self._subscriptions.GetData( only_selected = True )
+            
+            for subscription in subscriptions:
+                
+                subscription.LowerCaseQueries()
+                
+            
+            self._RegenDupeData()
+            
         
     
     def Merge( self ):
@@ -1942,6 +2385,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._subscriptions.AddDatas( ( merged_sub, ) )
                 
+            
+            self._RegenDupeData()
             
             self._subscriptions.Sort()
             
@@ -2063,20 +2508,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             choice_tuples = [ ( query_header.GetHumanName(), query_header, False ) for query_header in query_headers ]
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select the queries to extract' ) as dlg:
+            try:
                 
-                panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+                query_headers_to_extract = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select the queries to extract', choice_tuples )
                 
-                dlg.SetPanel( panel )
+            except HydrusExceptions.CancelledException:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    query_headers_to_extract = panel.GetValue()
-                    
-                else:
-                    
-                    return
-                    
+                return
                 
             
             if len( query_headers_to_extract ) == num_queries: # the madman selected them all
@@ -2191,6 +2629,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._subscriptions.AddDatas( ( final_subscription, ) )
             
+        
+        self._RegenDupeData()
         
         self._subscriptions.Sort()
         

@@ -1,15 +1,16 @@
 import distutils.version
+import os
+import queue
+import sqlite3
+import traceback
+import time
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
-import os
-import queue
-import sqlite3
-import traceback
-import time
 
 CONNECTION_REFRESH_TIME = 60 * 30
 

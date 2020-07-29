@@ -1,10 +1,12 @@
+import unittest
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
-from hydrus.core import HydrusConstants as HC
-import unittest
-from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 
 class TestManagers( unittest.TestCase ):
     

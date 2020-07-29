@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 406</h3></li>
+				<ul>
+					<li>subscription management:</li>
+					<li>the manage subscriptions dialog now has a 'deduplicate' button. it is enabled whenever your subs of a particular downloader contain duplicate queries. it launches a semi-bananas but thorough 4-step process to ask if you want to do upper/lower-case deduplication, then which downloader, then which queries, then which master sub(s) to retain the queries</li>
+					<li>subscription dedupe within the same sub keeps the query with the most files</li>
+					<li>the manage subscriptions dialog also now has a 'lowercase' button that coerces all queries of the selected subs to lowercase</li>
+					<li>when pasting a list of queries into a subscription, the 'already in sub' test is now caseless. pasting "Samus_Aran" into a sub already with "samus_aran" will not add anything</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>url classes now have a checkbox to keep fragment data (e.g. "#kwGFb3xhA3k8B") during URL normalisation. this data is not sent to the server and is not useful for almost all sites, but for sites like Mega, it contains useful clientside javascript navigation or access info if you open the URL in your browser</li>
+					<li>fixed video resolution parsing for some unusual SAR files. this stretches a video slightly, usually when the vid was created or converted with older analog tech (e.g. NTSC)</li>
+					<li>fixed rating system predicate label for 'rated/not rated'</li>
+					<li>the issue where miscounts in pending upload data would persist, sometimes leading to an annoying 'pending (13)' style menu that would not clear without debug action, is now fixed in a cheap way. on any upload action, this cached count is reset. a fix for the actual unusual miscount situation will have to come later</li>
+					<li>the different in-memory manager objects now save changes at different time intervals--lightweight things like favourite searches still save not long after any change, but column widths, network sessions, and bandwidth use now save only every ten minutes</li>
+					<li>I _may_ have fixed an issue with favourite tags not sticking correctly or resetting when added en masse via the tag right-click menu</li>
+					<li>I believe I fixed a rare but permanent ui hang on highlighting a gallery or watcher when that same downloader was spamming through a largely 'already in db/previously deleted' list</li>
+					<li>copying tags 'with counts' now works correctly for simple tag views (previously, it only worked for 'predicate' views)</li>
+					<li>copying tags now preserves the tag order as in the list (previously, it did a human sort)</li>
+					<li>to stop status-sorted gallery and watcher list entries bouncing around so much, they now just say 'working' in their status column when they are working. the highlight panel still reports granular file/gallery info. galleries also now say a more solid DONE when complete, to spot them more easily</li>
+					<li>the gallery and watcher search/checking column now includes stop status in sort</li>
+					<li>fixed the dowloader link in the help to https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders</li>
+					<li>added that same link to the Lain dowloader import panel's help button</li>
+					<li>updated cloudscraper to 1.2.46</li>
+					<li>updated cloudscraper interfacing code to adapt for new reCaptcha->Captcha object names</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>refactored downloader gui code to its own file</li>
+					<li>refactored network gui code to its own file</li>
+					<li>refactored service gui code to its own file</li>
+					<li>finished import reordering. now all files import in a cleaner order</li>
+					<li>further reworked all hydrus imports to be more breadth-first, loading core modules earlier and catching potential errors in nicer places</li>
+					<li>checkbox selection is now wrapped in the 'quick' dialog system, and all checkbox selections now use this single method</li>
+					<li>simplified and unified a variety of layout code, and fixing some odd layout expanding bugs</li>
+					<li>misc code cleanup</li>
+					<li>deleted some old unused ui code</li>
+				</ul>
 				<li><h3>version 405</h3></li>
 				<ul>
 					<li>tag search:</li>
@@ -19,8 +55,8 @@
 					<li>note that 'system:number of character tags greater than 0' and '= 0' are equivalent to +/-character:anything, which will be swapped in if you enter these. also, +/-unnamespaced:anything can now appear</li>
 					<li>the program is a bit better about determining =0 and greater than 0 and less than 1 being 'none' and 'any but none', when it needs to determine optimisations and special labels</li>
 					<li>unfortunately, I am taking away the default value for system:num tags in the options page (edit: I am killing the whole panel now). this old ugly mess of stacked predicate edit panels works on ancient, difficult to update code, so I will retire it and replace it with a unified system that is easy to use, supports in-search system predicate editing, and keeps up with changes automatically</li>
-					<li>boring code changes here:</li>
 					<li>system:number of tags is now comfortable with redundancies--if you add >2 and >4, it now knows that >4 is the true lower bound (previously, the one used was random)</li>
+					<li>boring code changes here:</li>
 					<li>updated tag existence and tag count searches to take advantage of the tag cache when in a specific file domain (which is pretty much all the time), which should speed them up significantly</li>
 					<li>updated tag existence and tag count searches to more carefully plan their queries, speeding them up both in advantageous and difficult situations</li>
 					<li>cleaned up tag existence and tag count code significantly</li>

@@ -9,17 +9,18 @@ from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
 
 if cv2.__version__.startswith( '2' ):
     

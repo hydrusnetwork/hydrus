@@ -23,9 +23,11 @@ import qtpy
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
+
 import math
-from collections import defaultdict
 import typing
+
+from collections import defaultdict
     
 if qtpy.PYQT5:
     
@@ -55,6 +57,7 @@ else:
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 
 def MonkeyPatchMissingMethods():
@@ -958,7 +961,7 @@ class GridLayout( QW.QGridLayout ):
         self.setContentsMargins( val, val, val, val )
         
     
-def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None ):
+def AddToLayout( layout, item, flag = None, alignment = None ):
 
     if isinstance( layout, GridLayout ):
         
@@ -1011,23 +1014,54 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
             
             return
         
-    if isinstance( item, QW.QWidget ):
-        
-        if sizePolicy is not None:
-            
-            item.setSizePolicy( sizePolicy[0], sizePolicy[1] )
     
-    expand_both_ways = flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
     zero_border = False
     
-    # This is kind of a mess right now, adjustments might be needed
-    # Left all the original wx definitions of the flags as comments for future reference
     if flag is None or flag == CC.FLAGS_NONE:
+        
         pass
-    elif flag == CC.FLAGS_CENTER:
-        layout.setAlignment( item, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
+        
+    elif flag in ( CC.FLAGS_CENTER, CC.FLAGS_ON_LEFT, CC.FLAGS_ON_RIGHT, CC.FLAGS_CENTER_PERPENDICULAR, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH ):
+        
+        if flag == CC.FLAGS_CENTER:
+            
+            alignment = QC.Qt.AlignVCenter | QC.Qt.AlignHCenter
+            
+        if flag == CC.FLAGS_ON_LEFT:
+            
+            alignment = QC.Qt.AlignLeft | QC.Qt.AlignVCenter
+            
+        elif flag == CC.FLAGS_ON_RIGHT:
+            
+            alignment = QC.Qt.AlignRight | QC.Qt.AlignVCenter
+            
+        elif flag in ( CC.FLAGS_CENTER_PERPENDICULAR, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH ):
+            
+            if isinstance( layout, QW.QHBoxLayout ):
+                
+                alignment = QC.Qt.AlignVCenter
+                
+            else:
+                
+                alignment = QC.Qt.AlignHCenter
+                
+            
+        
+        layout.setAlignment( item, alignment )
+        
+        if flag == CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH:
+            
+            if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
+                
+                layout.setStretchFactor( item, 5 )
+                
+            
+        
+        if isinstance( item, QW.QLayout ):
+            
+            zero_border = True
+            
+        
     elif flag in ( CC.FLAGS_EXPAND_PERPENDICULAR, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR ):
         
         if flag == CC.FLAGS_EXPAND_SIZER_PERPENDICULAR:
@@ -1051,57 +1085,12 @@ def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None 
             item.setSizePolicy( h_policy, v_policy )
             
         
-        #wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-        #item.setContentsMargins( 2, 2, 2, 2 )
-    elif flag == CC.FLAGS_EXPAND_DEPTH_ONLY:
-        #if isinstance( item, QW.QWidget ): item.setSizePolicy( item.sizePolicy().verticalPolicy(), QW.QSizePolicy.Expanding )
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-    elif flag == CC.FLAGS_SIZER_CENTER:
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
-        layout.setAlignment( item, QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
-        zero_border = True
-        #item.setContentsMargins( 0, 0, 0, 0 )
-        #wx.SizerFlags( 5 ).Center()
-    elif flag == CC.FLAGS_EXPAND_SIZER_BOTH_WAYS:
-        zero_border = True
+    elif flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE, CC.FLAGS_EXPAND_BOTH_WAYS_SHY ):
         
-        #item.setContentsMargins( 0, 0, 0, 0 )
-        
-        #wx.SizerFlags( 5 ).Expand()
-    elif flag == CC.FLAGS_EXPAND_SIZER_DEPTH_ONLY:
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
-        layout.setAlignment( item, QC.Qt.AlignVCenter )
-        zero_border = True
-        #item.setContentsMargins( 0, 0, 0, 0 )
-        #wx.SizerFlags( 5 ).Align( wx.ALIGN_CENTER_VERTICAL )
-    elif flag == CC.FLAGS_BUTTON_SIZER:
-        item.insertStretch( 0, 10 )
-        layout.setAlignment( item, QC.Qt.AlignRight )
-        zero_border = True
-        #item.setContentsMargins( 0, 0, 0, 0 )
-        #wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-    elif flag == CC.FLAGS_LONE_BUTTON:
-        layout.setAlignment( item, QC.Qt.AlignRight )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-    elif flag == CC.FLAGS_VCENTER:
-        layout.setAlignment( item, QC.Qt.AlignVCenter )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-    elif flag == CC.FLAGS_SIZER_VCENTER:
-        layout.setAlignment( item, QC.Qt.AlignVCenter )
-        zero_border = True
-        #item.setContentsMargins( 0, 0, 0, 0 )
-        #wx.SizerFlags( 0 ).Align( wx.ALIGN_CENTRE_VERTICAL )
-    elif flag == CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY:
-        if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ): layout.setStretchFactor( item, 5 )
-        layout.setAlignment( item, QC.Qt.AlignVCenter )
-        #item.setContentsMargins( 2, 2, 2, 2 )
-        #wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-    
-    if expand_both_ways:
+        if flag == CC.FLAGS_EXPAND_SIZER_BOTH_WAYS:
+            
+            zero_border = True
+            
         
         if isinstance( item, QW.QWidget ):
             

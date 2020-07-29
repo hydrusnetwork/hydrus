@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
@@ -50,11 +51,11 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         gridbox.setColumnStretch( 1, 1 )
         
         QP.AddToLayout( gridbox, self._check_running_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._running_status, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._running_status, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._check_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._nocopy_status, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._nocopy_status, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._enable_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, (20,20), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, (20,20), CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -303,7 +304,7 @@ class ReviewServicePanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._refresh_button, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._refresh_button, CC.FLAGS_ON_RIGHT )
         
         saw_both_ways = False
         
@@ -746,7 +747,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             #
             
-            self.Add( self._clear_deleted_files_record, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._clear_deleted_files_record, CC.FLAGS_ON_RIGHT )
             
         
         def _ClearDeletedFilesRecord( self ):
@@ -986,16 +987,16 @@ class ReviewServicePanel( QW.QWidget ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, self._refresh_account_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._copy_account_key_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._permissions_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._refresh_account_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._copy_account_key_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._permissions_button, CC.FLAGS_CENTER_PERPENDICULAR )
             
             self.Add( self._title_and_expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._next_sync_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._bandwidth_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+            self.Add( hbox, CC.FLAGS_ON_RIGHT )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1217,17 +1218,17 @@ class ReviewServicePanel( QW.QWidget ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, self._sync_remote_now_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._sync_processing_now_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._pause_play_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._reset_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._sync_remote_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._sync_processing_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._pause_play_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._reset_button, CC.FLAGS_CENTER_PERPENDICULAR )
             
             self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._is_mostly_caught_up_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+            self.Add( hbox, CC.FLAGS_ON_RIGHT )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -2072,7 +2073,7 @@ class ReviewServicePanel( QW.QWidget ):
             #
             
             self.Add( self._rating_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.Add( self._clear_deleted, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._clear_deleted, CC.FLAGS_ON_RIGHT )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -2155,7 +2156,7 @@ class ReviewServicePanel( QW.QWidget ):
             #
             
             self.Add( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.Add( self._tag_migration, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._tag_migration, CC.FLAGS_ON_RIGHT )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -2238,9 +2239,9 @@ class ReviewServicePanel( QW.QWidget ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, self._clear_trash, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._clear_trash, CC.FLAGS_CENTER_PERPENDICULAR )
             
-            self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+            self.Add( hbox, CC.FLAGS_ON_RIGHT )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             

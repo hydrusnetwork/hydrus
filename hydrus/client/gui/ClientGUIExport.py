@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
@@ -18,7 +19,6 @@ from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -310,7 +310,7 @@ If you select synchronise, be careful!'''
         phrase_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( phrase_hbox, self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( phrase_hbox, self._examples, CC.FLAGS_VCENTER )
+        QP.AddToLayout( phrase_hbox, self._examples, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -511,32 +511,32 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._open_location, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._open_location, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._export_path_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._update, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._examples, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._update, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._examples, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         txt_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( txt_hbox, self._export_tag_txts_services_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( txt_hbox, self._export_tag_txts, CC.FLAGS_VCENTER )
+        QP.AddToLayout( txt_hbox, self._export_tag_txts_services_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( txt_hbox, self._export_tag_txts, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, self._export_symlinks, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, txt_hbox, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, self._export, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._delete_files_after_export, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._export_symlinks, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, txt_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._export, CC.FLAGS_ON_RIGHT )
         
         self.widget().setLayout( vbox )
         
@@ -868,19 +868,18 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select tag services' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            neighbouring_txt_tag_service_keys = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select tag services', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                self._neighbouring_txt_tag_service_keys = panel.GetValue()
-                
-                HG.client_controller.new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
-                
+            return
             
+        
+        self._neighbouring_txt_tag_service_keys = neighbouring_txt_tag_service_keys
+        
+        HG.client_controller.new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
         
         if len( self._neighbouring_txt_tag_service_keys ) == 0:
             

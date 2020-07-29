@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMedia
 from hydrus.client import ClientRatings
@@ -131,7 +132,7 @@ class MediaCollectControl( QW.QWidget ):
         hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -244,7 +245,7 @@ class MediaSortControl( QW.QWidget ):
         hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._sort_type_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._sort_order_choice, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sort_order_choice, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -756,7 +757,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             hbox = QP.HBoxLayout()
             
             QP.AddToLayout( hbox, self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            QP.AddToLayout( hbox, self._ok, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
             
             self.setLayout( hbox )
             
@@ -859,9 +860,9 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._date, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -920,16 +921,16 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._years, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._months, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._days, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._hours, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -963,9 +964,9 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._date, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1015,16 +1016,16 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._years, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._months, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._days, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._hours, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1052,8 +1053,8 @@ class PanelPredicateSystemDuplicateKing( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._king, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._king, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1096,10 +1097,10 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num file relationships'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._dupe_type, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num file relationships'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._dupe_type, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1141,12 +1142,12 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:duration'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._duration_s, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'s'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._duration_ms, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'ms'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:duration'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._duration_s, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'s'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._duration_ms, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'ms'), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1178,10 +1179,10 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:file service:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._current_pending, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._file_service_key, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:file service:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._current_pending, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._file_service_key, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1220,10 +1221,10 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._value, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._value, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1273,10 +1274,10 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1318,10 +1319,10 @@ class PanelPredicateSystemFramerate( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:framerate' ), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._framerate, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'fps' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:framerate' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._framerate, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'fps' ), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1360,9 +1361,9 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash='), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._hash_type, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash='), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hash_type, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1409,9 +1410,9 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:note name'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._name, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:note name'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._name, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1452,9 +1453,9 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:height'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._height, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:height'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._height, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1484,10 +1485,10 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'exact url:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._exact_url, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'exact url:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._exact_url, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1538,10 +1539,10 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url with domain:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._domain, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url with domain:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._domain, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1590,10 +1591,10 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url that matches this regex:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._regex, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url that matches this regex:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._regex, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1663,10 +1664,10 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'url matching this class:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._url_classes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'url matching this class:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._url_classes, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1715,8 +1716,8 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:limit='), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._limit, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:limit='), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._limit, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1751,8 +1752,8 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:filetype' ), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._mimes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:filetype' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._mimes, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1792,10 +1793,10 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_pixels'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num_pixels, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._unit, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_pixels'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num_pixels, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._unit, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1826,9 +1827,9 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:number of frames' ), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num_frames, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:number of frames' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num_frames, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1865,10 +1866,10 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of tags: namespace:'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._namespace, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num_tags, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of tags: namespace:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._namespace, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num_tags, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1921,9 +1922,9 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of notes'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num_notes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of notes'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num_notes, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1957,9 +1958,9 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of words'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num_words, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of words'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num_words, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2004,11 +2005,11 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             self._like_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._like_rating_ctrls.append( rating_ctrl )
             
-            QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText(self,name), CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, rated_checkbox, CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, not_rated_checkbox, CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            QP.AddToLayout( gridbox, rating_ctrl, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText(self,name), CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( gridbox, rated_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( gridbox, not_rated_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+            ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+            QP.AddToLayout( gridbox, rating_ctrl, CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         #
@@ -2035,11 +2036,11 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             self._numerical_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._numerical_rating_ctrls_to_info[ rating_ctrl ] = choice
             
-            QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText(self,name), CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, rated_checkbox, CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, not_rated_checkbox, CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, choice, CC.FLAGS_VCENTER )
-            QP.AddToLayout( gridbox, rating_ctrl, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText(self,name), CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( gridbox, rated_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( gridbox, not_rated_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( gridbox, choice, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( gridbox, rating_ctrl, CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         #
@@ -2161,11 +2162,11 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:ratio'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._width, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._height, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:ratio'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._width, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._height, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2203,10 +2204,10 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar_to'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, QW.QLabel( '\u2248', self ), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar_to'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, QW.QLabel( '\u2248', self ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2250,9 +2251,9 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:filesize'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._bytes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:filesize'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._bytes, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2292,10 +2293,10 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:tag as number'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._namespace, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._num, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:tag as number'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._namespace, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2329,9 +2330,9 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:width'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._width, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:width'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._width, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         

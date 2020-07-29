@@ -2,6 +2,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusExceptions
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
@@ -66,7 +67,7 @@ class DialogThatTakesScrollablePanel( ClientGUITopLevelWindows.DialogThatResizes
         
         if buttonbox is not None:
             
-            QP.AddToLayout( vbox, buttonbox, CC.FLAGS_BUTTON_SIZER )
+            QP.AddToLayout( vbox, buttonbox, CC.FLAGS_ON_RIGHT )
             
         
         self.setLayout( vbox )
@@ -250,7 +251,7 @@ class FrameThatTakesScrollablePanel( ClientGUITopLevelWindows.FrameThatResizes )
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._panel )
-        QP.AddToLayout( vbox, self._ok, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._ok, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         

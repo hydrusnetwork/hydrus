@@ -2,20 +2,21 @@ import calendar
 import collections
 import datetime
 import http.client
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusSerialisable
 import json
 import psutil
 import socket
 import threading
 import urllib
-
 import urllib3
+
 from urllib3.exceptions import InsecureRequestWarning
 
 urllib3.disable_warnings( InsecureRequestWarning ) # stopping log-moaning when request sessions have verify = False
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 
 # The calendar portion of this works in GMT. A new 'day' or 'month' is calculated based on GMT time, so it won't tick over at midnight for most people.
 # But this means a server can pass a bandwidth object to a lad and everyone can agree on when a new day is.

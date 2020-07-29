@@ -1,13 +1,14 @@
 import re
 import os
 
-from hydrus.client import ClientApplicationCommand as CAC
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
+
+from hydrus.client import ClientApplicationCommand as CAC
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 
 def GetClientDefaultOptions():
     

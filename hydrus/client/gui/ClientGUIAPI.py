@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon

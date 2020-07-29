@@ -1,4 +1,6 @@
 import hashlib
+import os
+
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -11,7 +13,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
-import os
 
 # Mime
 

@@ -1,10 +1,12 @@
-from hydrus.external import hexagonitswfheader
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusThreading
 import os
 import subprocess
 import time
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusThreading
+
+from hydrus.external import hexagonitswfheader
 
 if HC.PLATFORM_LINUX:
     

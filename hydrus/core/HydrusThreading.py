@@ -1,15 +1,16 @@
 import bisect
 import collections
-from hydrus.core import HydrusExceptions
+import os
 import queue
 import random
 import subprocess
 import threading
 import time
 import traceback
+
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-import os
 
 NEXT_THREAD_CLEAROUT = 0
 

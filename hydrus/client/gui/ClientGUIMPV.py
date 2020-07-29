@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICommon

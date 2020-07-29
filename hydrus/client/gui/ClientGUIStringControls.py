@@ -4,6 +4,8 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUICommon
@@ -14,7 +16,6 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
-from hydrus.core import HydrusText
 
 class StringConverterButton( ClientGUICommon.BetterButton ):
     

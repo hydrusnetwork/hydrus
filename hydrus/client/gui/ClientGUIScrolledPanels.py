@@ -4,6 +4,7 @@ from qtpy import QtGui as QG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP

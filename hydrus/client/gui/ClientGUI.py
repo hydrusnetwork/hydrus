@@ -14,6 +14,7 @@ import traceback
 import cv2
 import PIL
 import sqlite3
+
 import qtpy
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -30,12 +31,10 @@ from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientExporting
-from hydrus.client.media import ClientMediaResult
-from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
@@ -48,6 +47,7 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDownloaders
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIExport
 from hydrus.client.gui import ClientGUIFrames
@@ -58,9 +58,11 @@ from hydrus.client.gui import ClientGUIManagement
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
+from hydrus.client.gui import ClientGUINetwork
 from hydrus.client.gui import ClientGUIPages
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIPopupMessages
+from hydrus.client.gui import ClientGUIServices
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
@@ -74,6 +76,8 @@ from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMediaResult
+from hydrus.client.networking import ClientNetworkingContexts
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
 
@@ -248,6 +252,27 @@ def THREADUploadPending( service_key ):
         raise
         
     finally:
+        
+        if service_type == HC.TAG_REPOSITORY:
+            
+            types_to_clear = (
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS
+            )
+            
+        elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
+            
+            types_to_clear = (
+                HC.SERVICE_INFO_NUM_PENDING_FILES,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES
+            )
+            
+        
+        HG.client_controller.Write( 'delete_service_info', service_key, types_to_clear )
         
         HG.currently_uploading_pending = False
         HG.client_controller.pub( 'notify_new_pending' )
@@ -2114,7 +2139,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageAccountTypesPanel( dlg, service_key )
+            panel = ClientGUIServices.ManageAccountTypesPanel( dlg, service_key )
             
             dlg.SetPanel( panel )
             
@@ -2168,7 +2193,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             show_unmatched_urls_in_media_viewer = HG.client_controller.new_options.GetBoolean( 'show_unmatched_urls_in_media_viewer' )
             
-            panel = ClientGUIScrolledPanelsEdit.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display, show_unmatched_urls_in_media_viewer )
+            panel = ClientGUIDownloaders.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display, show_unmatched_urls_in_media_viewer )
             
             dlg.SetPanel( panel )
             
@@ -2290,7 +2315,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             gugs = domain_manager.GetGUGs()
             
-            panel = ClientGUIScrolledPanelsEdit.EditGUGsPanel( dlg, gugs )
+            panel = ClientGUIDownloaders.EditGUGsPanel( dlg, gugs )
             
             dlg.SetPanel( panel )
             
@@ -2463,7 +2488,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
             
-            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextCustomHeadersPanel( dlg, network_contexts_to_custom_header_dicts )
+            panel = ClientGUINetwork.EditNetworkContextCustomHeadersPanel( dlg, network_contexts_to_custom_header_dicts )
             
             dlg.SetPanel( panel )
             
@@ -2579,7 +2604,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageServerServicesPanel( dlg, service_key )
+            panel = ClientGUIServices.ManageServerServicesPanel( dlg, service_key )
             
             dlg.SetPanel( panel )
             
@@ -2599,7 +2624,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsManagement.ManageClientServicesPanel( dlg )
+                panel = ClientGUIServices.ManageClientServicesPanel( dlg )
                 
                 dlg.SetPanel( panel )
                 
@@ -2854,7 +2879,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             url_classes = domain_manager.GetURLClasses()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLClassesPanel( dlg, url_classes )
+            panel = ClientGUIDownloaders.EditURLClassesPanel( dlg, url_classes )
             
             dlg.SetPanel( panel )
             
@@ -2882,7 +2907,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             url_class_keys_to_parser_keys = domain_manager.GetURLClassKeysToParserKeys()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLClassLinksPanel( dlg, self._controller.network_engine, url_classes, parsers, url_class_keys_to_parser_keys )
+            panel = ClientGUIDownloaders.EditURLClassLinksPanel( dlg, self._controller.network_engine, url_classes, parsers, url_class_keys_to_parser_keys )
             
             dlg.SetPanel( panel )
             
@@ -3172,7 +3197,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
         
-        panel = ClientGUIScrolledPanelsReview.ReviewAllBandwidthPanel( frame, self._controller )
+        panel = ClientGUINetwork.ReviewAllBandwidthPanel( frame, self._controller )
         
         frame.SetPanel( panel )
         
@@ -3190,7 +3215,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review network jobs' )
         
-        panel = ClientGUIScrolledPanelsReview.ReviewNetworkJobs( frame, self._controller )
+        panel = ClientGUINetwork.ReviewNetworkJobs( frame, self._controller )
         
         frame.SetPanel( panel )
         
@@ -3199,7 +3224,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review session cookies' )
         
-        panel = ClientGUIScrolledPanelsReview.ReviewNetworkSessionsPanel( frame, self._controller.network_engine.session_manager )
+        panel = ClientGUINetwork.ReviewNetworkSessionsPanel( frame, self._controller.network_engine.session_manager )
         
         frame.SetPanel( panel )
         
@@ -3208,7 +3233,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
         
-        panel = ClientGUIScrolledPanelsReview.ReviewServicesPanel( frame, self._controller )
+        panel = ClientGUIServices.ReviewServicesPanel( frame, self._controller )
         
         frame.SetPanel( panel )
         
@@ -6269,8 +6294,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             try:
                 
                 idle_shutdown_action = self._controller.options[ 'idle_shutdown' ]
-                
-                shutdown_work_ok_by_options = idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST )
                 
                 last_shutdown_work_time = self._controller.Read( 'last_shutdown_work_time' )
                 

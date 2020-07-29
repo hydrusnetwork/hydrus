@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
@@ -1368,7 +1369,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, credential_definitions_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, login_steps_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )

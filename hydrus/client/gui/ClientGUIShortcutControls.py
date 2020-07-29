@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -72,8 +73,8 @@ class EditShortcutAndCommandPanel( ClientGUIScrolledPanels.EditPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._shortcut_panel, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, '\u2192' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._shortcut_panel, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, '\u2192' ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._command_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( hbox )
@@ -138,9 +139,9 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         action_buttons = QP.HBoxLayout()
         
-        QP.AddToLayout( action_buttons, self._add, CC.FLAGS_VCENTER )
-        QP.AddToLayout( action_buttons, self._edit, CC.FLAGS_VCENTER )
-        QP.AddToLayout( action_buttons, self._remove, CC.FLAGS_VCENTER )
+        QP.AddToLayout( action_buttons, self._add, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( action_buttons, self._edit, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( action_buttons, self._remove, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -158,7 +159,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         QP.AddToLayout( vbox, self._shortcuts_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, action_buttons, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, action_buttons, CC.FLAGS_ON_RIGHT )
         
         self.widget().setLayout( vbox )
         
@@ -332,19 +333,19 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._edit_reserved_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._restore_defaults_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._edit_reserved_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._restore_defaults_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         reserved_panel.Add( self._reserved_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        reserved_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        reserved_panel.Add( button_hbox, CC.FLAGS_ON_RIGHT )
         
         #
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._edit_custom_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._edit_custom_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         custom_panel_message = 'Custom shortcuts are advanced. They apply to the media viewer and must be turned on to take effect.'
         
@@ -353,13 +354,13 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         custom_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         custom_panel.Add( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        custom_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        custom_panel.Add( button_hbox, CC.FLAGS_ON_RIGHT )
         
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_button, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, help_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -573,9 +574,9 @@ class ShortcutWidget( QW.QWidget ):
         
         gridbox.setColumnStretch( 1, 1 )
         
-        QP.AddToLayout( gridbox, self._mouse_radio, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._mouse_radio, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._keyboard_radio, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._keyboard_radio, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -675,8 +676,8 @@ class MouseShortcutWidget( QW.QWidget ):
         
         layout = QP.HBoxLayout()
         
-        QP.AddToLayout( layout, self._button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( layout, self._press_or_release, CC.FLAGS_VCENTER )
+        QP.AddToLayout( layout, self._button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( layout, self._press_or_release, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( layout )
         

@@ -5,9 +5,6 @@ import threading
 import time
 import typing
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
-from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -15,6 +12,10 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientTags
 
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
@@ -2080,15 +2081,26 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         service = HG.client_controller.services_manager.GetService( service_key )
                         
-                        service_type = service.GetServiceType()
+                        name = service.GetName()
                         
-                        pretty_value = service.ConvertRatingToString( value )
-                        
-                        base += ' for ' + service.GetName() + ' ' + operator + ' ' + pretty_value
+                        if value == 'rated':
+                            
+                            base = 'has {} rating'.format( name )
+                            
+                        elif value == 'not rated':
+                            
+                            base = 'no {} rating'.format( name )
+                            
+                        else:
+                            
+                            pretty_value = service.ConvertRatingToString( value )
+                            
+                            base += ' for {} {} {}'.format( service.GetName(), operator, pretty_value )
+                            
                         
                     except HydrusExceptions.DataMissing:
                         
-                        base = 'system:unknown rating service system predicate'
+                        base = 'unknown rating service system predicate'
                         
                     
                 

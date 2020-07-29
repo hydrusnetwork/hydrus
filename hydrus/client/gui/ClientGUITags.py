@@ -14,6 +14,7 @@ from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
@@ -425,7 +426,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
         if message is not None:
             
@@ -438,14 +439,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._import_favourite, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._export_favourite, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._load_favourite, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._save_favourite, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._import_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._export_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._load_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._save_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
-        QP.AddToLayout( vbox, self._show_all_panels_button, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._show_all_panels_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -456,8 +457,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, test_text_vbox, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._test_input, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, test_text_vbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._test_input, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -825,9 +826,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( button_hbox, self._advanced_blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( button_hbox, add_blacklist_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, delete_blacklist_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, blacklist_everything_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, add_blacklist_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, delete_blacklist_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, blacklist_everything_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         blacklist_panel.Add( self._advanced_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
         blacklist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -837,8 +838,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( button_hbox, self._advanced_whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( button_hbox, self._advanced_add_whitelist_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, delete_whitelist_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._advanced_add_whitelist_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, delete_whitelist_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         whitelist_panel.Add( self._advanced_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
         whitelist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -889,7 +890,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         left_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( left_vbox, self._simple_blacklist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( left_vbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
+        left_vbox.addStretch( 1 )
         QP.AddToLayout( left_vbox, self._simple_blacklist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         right_vbox = QP.VBoxLayout()
@@ -946,7 +947,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         left_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( left_vbox, self._simple_whitelist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( left_vbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
+        left_vbox.addStretch( 1 )
         QP.AddToLayout( left_vbox, self._simple_whitelist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         right_vbox = QP.VBoxLayout()
@@ -1851,13 +1852,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             button_hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( button_hbox, self._remove_tags, CC.FLAGS_VCENTER )
-            QP.AddToLayout( button_hbox, self._do_siblings_and_parents, CC.FLAGS_VCENTER )
-            QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_VCENTER )
-            QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_SIZER_CENTER )
+            QP.AddToLayout( button_hbox, self._remove_tags, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( button_hbox, self._do_siblings_and_parents, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER )
             
-            self._tags_box_sorter.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+            self._tags_box_sorter.Add( button_hbox, CC.FLAGS_ON_RIGHT )
             
             vbox = QP.VBoxLayout()
             
@@ -2794,7 +2795,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._add, CC.FLAGS_LONE_BUTTON )
+            QP.AddToLayout( vbox, self._add, CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             QP.AddToLayout( vbox, input_box )
             
@@ -3598,9 +3599,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             new_sibling_box = QP.VBoxLayout()
             
-            QP.AddToLayout( new_sibling_box, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
+            new_sibling_box.addStretch( 1 )
             QP.AddToLayout( new_sibling_box, self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( new_sibling_box, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
+            new_sibling_box.addStretch( 1 )
             
             text_box = QP.HBoxLayout()
             
@@ -3618,7 +3619,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._add, CC.FLAGS_LONE_BUTTON )
+            QP.AddToLayout( vbox, self._add, CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( vbox, text_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             QP.AddToLayout( vbox, input_box )
             

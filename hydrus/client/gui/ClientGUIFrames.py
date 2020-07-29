@@ -3,6 +3,7 @@ import os
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
@@ -47,8 +48,8 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._save_to_file, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, self._done, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._save_to_file, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._done, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         

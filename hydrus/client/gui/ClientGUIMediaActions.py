@@ -3,16 +3,17 @@ import typing
 
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientTags
 from hydrus.client.media import ClientMedia
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.ApplicationCommand, media: typing.Collection[ ClientMedia.Media ] ):
     

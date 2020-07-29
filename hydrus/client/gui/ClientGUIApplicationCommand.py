@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIACDropdown
@@ -58,13 +59,13 @@ class RatingLikeSubPanel( QW.QWidget ):
         
         ratings_like_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( ratings_like_hbox, self._service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( ratings_like_hbox, self._ratings_like_like, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ratings_like_hbox, self._ratings_like_dislike, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ratings_like_hbox, self._ratings_like_remove, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ratings_like_hbox, self._service_keys, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( ratings_like_hbox, self._ratings_like_like, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ratings_like_hbox, self._ratings_like_dislike, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ratings_like_hbox, self._ratings_like_remove, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, ratings_like_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, ratings_like_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
         
@@ -169,12 +170,12 @@ class RatingNumericalSubPanel( QW.QWidget ):
         
         ratings_numerical_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( ratings_numerical_hbox, self._service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( ratings_numerical_hbox, self._ratings_numerical_slider, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ratings_numerical_hbox, self._ratings_numerical_remove, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ratings_numerical_hbox, self._service_keys, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( ratings_numerical_hbox, self._ratings_numerical_slider, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ratings_numerical_hbox, self._ratings_numerical_remove, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, ratings_numerical_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, ratings_numerical_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
         
@@ -302,8 +303,8 @@ class RatingNumericalIncDecSubPanel( QW.QWidget ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._ratings_numerical_incdec, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._service_keys, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._ratings_numerical_incdec, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -424,15 +425,15 @@ class TagSubPanel( QW.QWidget ):
         tag_sub_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( tag_sub_vbox, self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( tag_sub_vbox, self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( tag_sub_vbox, self._tag_input, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         tag_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( tag_hbox, self._service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( tag_hbox, self._service_keys, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( tag_hbox, tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         QP.AddToLayout( vbox, self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, tag_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.setLayout( vbox )
         

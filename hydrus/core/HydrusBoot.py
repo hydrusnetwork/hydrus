@@ -6,7 +6,7 @@ ORIGINAL_PATH = None
 
 def AddBaseDirToEnvPath():
     
-    # this is a thing to get mpv working, loading the dll/so from the base dir using ctypes
+    # doing it separate and early here is a thing to get mpv (and others) working with a frozen build, helping load the dll/so from the base dir using ctypes
     
     if 'PATH' in os.environ:
         

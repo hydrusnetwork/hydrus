@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDragDrop
@@ -837,7 +838,7 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _AddButton( self, button, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
         
-        QP.AddToLayout( self._buttonbox, button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttonbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         if enabled_only_on_selection:
             
@@ -863,24 +864,20 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         choice_tuples = [ ( default.GetName(), default, selected ) for default in defaults ]
         
-        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui import ClientGUIDialogsQuick
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'select the defaults to add' ) as dlg:
+        try:
             
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            defaults_to_add = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select the defaults to add', choice_tuples )
             
-            dlg.SetPanel( panel )
+        except HydrusExceptions.CancelledException:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                defaults_to_add = panel.GetValue()
-                
-                for default in defaults_to_add:
-                    
-                    add_callable( default )
-                    
-                
+            return
+            
+        
+        for default in defaults_to_add:
+            
+            add_callable( default )
             
         
         self._listctrl.Sort()
@@ -1307,12 +1304,12 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def AddSeparator( self ):
         
-        self._buttonbox.insertStretch( -1, 1 )
+        self._buttonbox.addSpacing( 12 )
         
     
     def AddWindow( self, window ):
         
-        QP.AddToLayout( self._buttonbox, window, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttonbox, window, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def EventContentChanged( self, parent, first, last ):
@@ -1358,7 +1355,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._buttonbox = QP.HBoxLayout()
         
-        QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_ON_RIGHT )
         
     
     def SetListCtrl( self, listctrl ):
@@ -1366,7 +1363,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._listctrl = listctrl
         
         QP.AddToLayout( self._vbox, self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( self._vbox )
         

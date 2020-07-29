@@ -1,9 +1,10 @@
 import typing
 
-from hydrus.client.media import ClientMediaManagers
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
+from hydrus.client.media import ClientMediaManagers
 
 class MediaResult( object ):
     

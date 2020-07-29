@@ -13,6 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientTags
@@ -300,23 +301,23 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._regexes_panel.Add( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._regexes_panel.Add( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._regexes_panel.Add( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.Add( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.Add( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.Add( self._regex_shortcuts, CC.FLAGS_ON_RIGHT )
+            self._regexes_panel.Add( self._regex_intro_link, CC.FLAGS_ON_RIGHT )
+            self._regexes_panel.Add( self._regex_practise_link, CC.FLAGS_ON_RIGHT )
             
             #
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, QW.QLabel( '# base/step: ', self._num_panel ), CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._num_base, CC.FLAGS_VCENTER )
-            QP.AddToLayout( hbox, self._num_step, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, QW.QLabel( '# base/step: ', self._num_panel ), CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._num_base, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._num_step, CC.FLAGS_CENTER_PERPENDICULAR )
             
             self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, QW.QLabel( '# namespace: ', self._num_panel ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, QW.QLabel( '# namespace: ', self._num_panel ), CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( hbox, self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -591,11 +592,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             txt_hbox = QP.HBoxLayout()
             
             QP.AddToLayout( txt_hbox, self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( txt_hbox, txt_files_help_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( txt_hbox, txt_files_help_button, CC.FLAGS_CENTER_PERPENDICULAR )
             
             filename_hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( filename_hbox, self._filename_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( filename_hbox, self._filename_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( filename_hbox, self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self._checkboxes_panel.Add( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -607,7 +608,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
                 ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
                 
-                QP.AddToLayout( hbox, dir_checkbox, CC.FLAGS_VCENTER )
+                QP.AddToLayout( hbox, dir_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
                 QP.AddToLayout( hbox, dir_namespace_textctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._checkboxes_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1143,19 +1144,19 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox.setColumnStretch( 1, 1 )
         
-        QP.AddToLayout( gridbox, QW.QLabel( 'when a file imports successfully: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file imports successfully: ', self._file_box ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        QP.AddToLayout( gridbox, QW.QLabel( 'when a file is already in the db: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file is already in the db: ', self._file_box ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        QP.AddToLayout( gridbox, QW.QLabel( 'when a file has previously been deleted from the db: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file has previously been deleted from the db: ', self._file_box ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        QP.AddToLayout( gridbox, QW.QLabel( 'when a file fails to import: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file fails to import: ', self._file_box ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1730,8 +1731,8 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._gallery_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._gallery_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._gallery_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._gallery_pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._gallery_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1741,8 +1742,8 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._files_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._file_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._files_pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2290,8 +2291,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._files_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._file_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._files_pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         imports_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2301,13 +2302,13 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         hbox_1 = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox_1, self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox_1, self._checking_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox_1, self._file_velocity_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox_1, self._checking_pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox_2 = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox_2, self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox_2, self._check_now_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox_2, self._watcher_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox_2, self._check_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         checker_panel.Add( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         checker_panel.Add( hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )

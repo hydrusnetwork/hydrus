@@ -7,11 +7,6 @@ import time
 
 from qtpy import QtWidgets as QW
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientImageHandling
-from hydrus.client import ClientPaths
-from hydrus.client import ClientThreading
-from hydrus.client.gui import QtPorting as QP
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -21,6 +16,12 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientImageHandling
+from hydrus.client import ClientPaths
+from hydrus.client import ClientThreading
+from hydrus.client.gui import QtPorting as QP
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
 REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1

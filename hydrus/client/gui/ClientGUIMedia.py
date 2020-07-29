@@ -11,13 +11,14 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
-from hydrus.client.media import ClientMedia
-from hydrus.client.media import ClientMediaManagers
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaManagers
 
 def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.List[ ClientMedia.Media ] ):
     

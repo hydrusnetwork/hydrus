@@ -5,12 +5,13 @@ import time
 import traceback
 import typing
 
-from hydrus.client.gui import QtPorting as QP
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
+
+from hydrus.client.gui import QtPorting as QP
 
 class JobKey( object ):
     

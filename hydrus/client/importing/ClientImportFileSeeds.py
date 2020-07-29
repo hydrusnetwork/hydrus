@@ -7,15 +7,6 @@ import traceback
 import typing
 import urllib.parse
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
-from hydrus.client import ClientImageHandling
-from hydrus.client import ClientParsing
-from hydrus.client import ClientPaths
-from hydrus.client import ClientTags
-from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportOptions
-from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -25,6 +16,16 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientImageHandling
+from hydrus.client import ClientParsing
+from hydrus.client import ClientPaths
+from hydrus.client import ClientTags
+from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportOptions
+from hydrus.client.networking import ClientNetworkingDomain
 
 class FileImportJob( object ):
     
@@ -643,7 +644,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if status == CC.STATUS_UNKNOWN:
             
-            for ( hash_type, found_hash ) in list(self._hashes.items()):
+            for ( hash_type, found_hash ) in self._hashes.items():
                 
                 ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash, prefix = 'hash recognised' )
                 
@@ -2329,33 +2330,33 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             eligible_file_seeds = [ file_seed for file_seed in self._file_seeds if file_seed.HasHash() ]
             
-            file_seed_hashes = [ file_seed.GetHash() for file_seed in eligible_file_seeds ]
+        
+        file_seed_hashes = [ file_seed.GetHash() for file_seed in eligible_file_seeds ]
+        
+        inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
+        
+        hashes = []
+        hashes_seen = set()
+        
+        for file_seed in eligible_file_seeds:
             
-            inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
+            hash = file_seed.GetHash()
             
-            hashes = []
-            hashes_seen = set()
-            
-            for file_seed in eligible_file_seeds:
+            if hash in hashes_seen:
                 
-                hash = file_seed.GetHash()
-                
-                if hash in hashes_seen:
-                    
-                    continue
-                    
-                
-                in_inbox = hash in inbox_hashes
-                
-                if file_seed.ShouldPresent( file_import_options, in_inbox = in_inbox ):
-                    
-                    hashes.append( hash )
-                    hashes_seen.add( hash )
-                    
+                continue
                 
             
-            return hashes
+            in_inbox = hash in inbox_hashes
             
+            if file_seed.ShouldPresent( file_import_options, in_inbox = in_inbox ):
+                
+                hashes.append( hash )
+                hashes_seen.add( hash )
+                
+            
+        
+        return hashes
         
     
     def GetStatus( self ):

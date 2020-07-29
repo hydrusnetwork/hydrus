@@ -1,3 +1,11 @@
+import os
+import requests
+import time
+import traceback
+
+import twisted.internet.ssl
+from twisted.internet import threads, reactor, defer
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusController
 from hydrus.core import HydrusData
@@ -6,14 +14,10 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
-import os
+
 from hydrus.server import ServerDB
 from hydrus.server import ServerServer
-import requests
-import time
-import traceback
-import twisted.internet.ssl
-from twisted.internet import threads, reactor, defer
+
 
 def ProcessStartingAction( db_dir, action ):
     

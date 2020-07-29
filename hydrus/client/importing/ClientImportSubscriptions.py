@@ -11,6 +11,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+
 from hydrus.client import ClientData
 from hydrus.client import ClientThreading
 from hydrus.client import ClientConstants as CC
@@ -980,6 +981,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return True in ( query_header.CanCheckNow() for query_header in self._query_headers )
         
     
+    def CanLowerCaseQueries( self ):
+        
+        return True in ( query_header.GetQueryText() != query_header.GetQueryText().lower() for query_header in self._query_headers )
+        
+    
     def CanReset( self ):
         
         return True in ( not query_header.IsInitialSync() for query_header in self._query_headers )
@@ -1008,6 +1014,47 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self.ScrubDelay()
+        
+    
+    def DedupeQueryTexts( self, dedupe_query_texts: typing.Iterable[ str ], enforce_case: bool = True ):
+        
+        if not enforce_case:
+            
+            dedupe_query_texts = { query_text.lower() for query_text in dedupe_query_texts }
+            
+        
+        query_headers = list( self._query_headers )
+        
+        # order query headers by biggest first
+        query_headers.sort( key = lambda q_h: q_h.GetFileSeedCacheStatus().GetFileSeedCount(), reverse = True )
+        
+        query_texts_seen = set()
+        
+        deduped_query_headers = []
+        
+        for query_header in query_headers:
+            
+            query_text = query_header.GetQueryText()
+            
+            if not enforce_case:
+                
+                query_text = query_text.lower()
+                
+            
+            if query_text in dedupe_query_texts:
+                
+                if query_text in query_texts_seen:
+                    
+                    continue
+                    
+                
+            
+            query_texts_seen.add( query_text )
+            
+            deduped_query_headers.append( query_header )
+            
+        
+        self._query_headers = deduped_query_headers
         
     
     def GetAllQueryLogContainerNames( self ) -> typing.Set[ str ]:
@@ -1140,6 +1187,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return result
         
     
+    def LowerCaseQueries( self ):
+        
+        for query_header in self._query_headers:
+            
+            query_text = query_header.GetQueryText()
+            query_text_lower = query_text.lower()
+            
+            if query_text != query_text_lower:
+                
+                query_header.SetQueryText( query_text_lower )
+                
+            
+        
+    
     def Merge( self, mergees: typing.Iterable[ "Subscription" ] ):
         
         unmerged = []
@@ -1164,6 +1225,23 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def PauseResume( self ):
         
         self._paused = not self._paused
+        
+    
+    def RemoveQueryTexts( self, removee_query_texts: typing.Iterable[ str ], enforce_case: bool = True ):
+        
+        if not enforce_case:
+            
+            removee_query_texts = { query_text.lower() for query_text in removee_query_texts }
+            
+        
+        if enforce_case:
+            
+            self._query_headers = [ query_header for query_header in self._query_headers if query_header.GetQueryText() not in removee_query_texts ]
+            
+        else:
+            
+            self._query_headers = [ query_header for query_header in self._query_headers if query_header.GetQueryText().lower() not in removee_query_texts ]
+            
         
     
     def Reset( self ):

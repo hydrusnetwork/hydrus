@@ -1,13 +1,14 @@
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusText
-from hydrus.core import HydrusThreading
 import os
 import socket
 import subprocess
 import threading
 import traceback
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusText
+from hydrus.core import HydrusThreading
 
 # new stuff starts here
 

@@ -13,6 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
@@ -1046,16 +1047,16 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         distance_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( distance_hbox, ClientGUICommon.BetterStaticText(self._searching_panel,label='search distance: '), CC.FLAGS_VCENTER )
+        QP.AddToLayout( distance_hbox, ClientGUICommon.BetterStaticText(self._searching_panel,label='search distance: '), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( distance_hbox, self._search_distance_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( distance_hbox, self._search_distance_spinctrl, CC.FLAGS_VCENTER )
+        QP.AddToLayout( distance_hbox, self._search_distance_spinctrl, CC.FLAGS_CENTER_PERPENDICULAR )
         
         gridbox_2 = QP.GridLayout( cols = 2 )
         
         gridbox_2.setColumnStretch( 0, 1 )
         
         QP.AddToLayout( gridbox_2, self._num_searched, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( gridbox_2, self._search_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox_2, self._search_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._searching_panel.Add( self._eligible_files, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._searching_panel.Add( distance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1065,10 +1066,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._refresh_maintenance_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._refresh_maintenance_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._help_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._refresh_maintenance_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._refresh_maintenance_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._help_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -1082,8 +1083,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         text_and_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( text_and_button_hbox, self._num_potential_duplicates, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( text_and_button_hbox, self._refresh_dupe_counts_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( text_and_button_hbox, self._num_potential_duplicates, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( text_and_button_hbox, self._refresh_dupe_counts_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         rows = []
         
@@ -1573,7 +1574,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.Add( self._pause_button, CC.FLAGS_ON_RIGHT )
         self._import_queue_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1712,7 +1713,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         input_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( input_hbox, self._query_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( input_hbox, self._cog_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( input_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._gallery_downloader_panel.Add( self._gallery_importers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gallery_importers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1869,21 +1870,22 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             pretty_gallery_paused = HG.client_controller.new_options.GetString( 'stop_character' )
             
+            sort_gallery_paused = -1
+            
         elif gallery_paused:
             
             pretty_gallery_paused = HG.client_controller.new_options.GetString( 'pause_character' )
+            
+            sort_gallery_paused = 0
             
         else:
             
             pretty_gallery_paused = ''
             
-        
-        status = gallery_import.GetCurrentAction()
-        
-        if status == '':
+            sort_gallery_paused = 1
             
-            status = gallery_import.GetGalleryStatus()
-            
+        
+        status = gallery_import.GetSimpleStatus()
         
         pretty_status = status
         
@@ -1900,7 +1902,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
-        sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress, added )
+        sort_tuple = ( query_text, pretty_source, files_paused, sort_gallery_paused, status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -2648,13 +2650,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             pretty_checking_paused = HG.client_controller.new_options.GetString( 'stop_character' )
             
+            sort_checking_paused = -1
+            
         elif checking_paused:
             
             pretty_checking_paused = HG.client_controller.new_options.GetString( 'pause_character' )
             
+            sort_checking_paused = 0
+            
         else:
             
             pretty_checking_paused = ''
+            
+            sort_checking_paused = 1
             
         
         file_seed_cache_status = watcher.GetFileSeedCache().GetStatus()
@@ -2679,7 +2687,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
         display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
-        sort_tuple = ( subject, files_paused, checking_paused, watcher_status, progress, added )
+        sort_tuple = ( subject, files_paused, sort_checking_paused, watcher_status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -3277,8 +3285,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._pause_files_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._current_action, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._pause_files_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3286,24 +3294,24 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         queue_buttons_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( queue_buttons_vbox, self._advance_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( queue_buttons_vbox, self._delete_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( queue_buttons_vbox, self._delay_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( queue_buttons_vbox, self._advance_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( queue_buttons_vbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( queue_buttons_vbox, self._delay_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         queue_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( queue_hbox, self._pending_jobs_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( queue_hbox, queue_buttons_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( queue_hbox, queue_buttons_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         formulae_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( formulae_hbox, self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( formulae_hbox, self._formula_cog, CC.FLAGS_VCENTER )
+        QP.AddToLayout( formulae_hbox, self._formula_cog, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._parser_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( hbox, self._pause_queue_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._parser_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._pause_queue_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._simple_parsing_jobs_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._simple_parsing_jobs_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3689,7 +3697,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        self._url_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        self._url_panel.Add( self._pause_button, CC.FLAGS_ON_RIGHT )
         self._url_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3852,8 +3860,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-            QP.AddToLayout( hbox, button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, st, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+            QP.AddToLayout( hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
             
             content_type_hboxes.append( hbox )
             
@@ -3911,14 +3919,14 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         check_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( check_hbox, check_all, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( check_hbox, flip_selected, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( check_hbox, check_none, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( check_hbox, check_all, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( check_hbox, flip_selected, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( check_hbox, check_none, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         sort_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( sort_hbox, self._sort_by_left, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        QP.AddToLayout( sort_hbox, self._sort_by_right, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( sort_hbox, self._sort_by_left, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( sort_hbox, self._sort_by_right, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         self._petition_panel.Add( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._num_files_to_show, CC.FLAGS_EXPAND_PERPENDICULAR )

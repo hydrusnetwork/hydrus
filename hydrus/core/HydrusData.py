@@ -1,6 +1,7 @@
 import collections
 import cProfile
 import io
+import itertools
 import os
 import pstats
 import psutil
@@ -13,9 +14,8 @@ import sys
 import threading
 import time
 import traceback
-import yaml
-import itertools
 import typing
+import yaml
 
 from hydrus.core import HydrusBoot
 from hydrus.core import HydrusConstants as HC

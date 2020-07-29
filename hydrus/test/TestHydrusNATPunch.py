@@ -1,6 +1,7 @@
-from hydrus.core import HydrusNATPunch
 import random
 import unittest
+
+from hydrus.core import HydrusNATPunch
 
 class TestNATPunch( unittest.TestCase ):
     

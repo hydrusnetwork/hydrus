@@ -3,8 +3,6 @@ import random
 import threading
 import time
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientThreading
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -14,6 +12,9 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientThreading
 
 class GlobalMaintenanceJobInterface( object ):
     

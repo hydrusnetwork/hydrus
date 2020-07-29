@@ -12,6 +12,17 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusController
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetworking
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusVideoHandling
+
 from hydrus.client import ClientAPI
 from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
@@ -39,16 +50,6 @@ from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusController
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetworking
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusThreading
-from hydrus.core import HydrusVideoHandling
 
 if not HG.twisted_is_broke:
     
@@ -696,6 +697,7 @@ class Controller( HydrusController.HydrusController ):
         if not clipboard_text:
             
             raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
+            
         
         return clipboard_text
         
@@ -1088,9 +1090,12 @@ class Controller( HydrusController.HydrusController ):
         
         self.files_maintenance_manager.Start()
         
-        job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjects )
+        job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjectsImportant )
         job.WakeOnPubSub( 'important_dirt_to_clean' )
-        self._daemon_jobs[ 'save_dirty_objects' ] = job
+        self._daemon_jobs[ 'save_dirty_objects_important' ] = job
+        
+        job = self.CallRepeating( 0.0, 600.0, self.SaveDirtyObjectsInfrequent )
+        self._daemon_jobs[ 'save_dirty_objects_infrequent' ] = job
         
         job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
         job.ShouldDelayOnWakeup( True )
@@ -1399,7 +1404,7 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def SaveDirtyObjects( self ):
+    def SaveDirtyObjectsImportant( self ):
         
         with HG.dirty_object_lock:
             
@@ -1412,15 +1417,6 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
             
-            if self.column_list_manager.IsDirty():
-                
-                self.pub( 'splash_set_status_subtext', 'column list manager' )
-                
-                self.WriteSynchronous( 'serialisable', self.column_list_manager )
-                
-                self.column_list_manager.SetClean()
-                
-            
             if self.client_api_manager.IsDirty():
                 
                 self.pub( 'splash_set_status_subtext', 'client api manager' )
@@ -1428,15 +1424,6 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'serialisable', self.client_api_manager )
                 
                 self.client_api_manager.SetClean()
-                
-            
-            if self.network_engine.bandwidth_manager.IsDirty():
-                
-                self.pub( 'splash_set_status_subtext', 'bandwidth manager' )
-                
-                self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
-                
-                self.network_engine.bandwidth_manager.SetClean()
                 
             
             if self.network_engine.domain_manager.IsDirty():
@@ -1457,15 +1444,6 @@ class Controller( HydrusController.HydrusController ):
                 self.network_engine.login_manager.SetClean()
                 
             
-            if self.network_engine.session_manager.IsDirty():
-                
-                self.pub( 'splash_set_status_subtext', 'session manager' )
-                
-                self.WriteSynchronous( 'serialisable', self.network_engine.session_manager )
-                
-                self.network_engine.session_manager.SetClean()
-                
-            
             if self.favourite_search_manager.IsDirty():
                 
                 self.pub( 'splash_set_status_subtext', 'favourite searches manager' )
@@ -1482,6 +1460,39 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'serialisable', self.tag_display_manager )
                 
                 self.tag_display_manager.SetClean()
+                
+            
+        
+    
+    def SaveDirtyObjectsInfrequent( self ):
+        
+        with HG.dirty_object_lock:
+            
+            if self.column_list_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'column list manager' )
+                
+                self.WriteSynchronous( 'serialisable', self.column_list_manager )
+                
+                self.column_list_manager.SetClean()
+                
+            
+            if self.network_engine.bandwidth_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'bandwidth manager' )
+                
+                self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
+                
+                self.network_engine.bandwidth_manager.SetClean()
+                
+            
+            if self.network_engine.session_manager.IsDirty():
+                
+                self.pub( 'splash_set_status_subtext', 'session manager' )
+                
+                self.WriteSynchronous( 'serialisable', self.network_engine.session_manager )
+                
+                self.network_engine.session_manager.SetClean()
                 
             
         
@@ -1692,7 +1703,8 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'splash_set_status_subtext', '' )
             
-            self.SaveDirtyObjects()
+            self.SaveDirtyObjectsImportant()
+            self.SaveDirtyObjectsInfrequent()
             
         
         HydrusController.HydrusController.ShutdownModel( self )

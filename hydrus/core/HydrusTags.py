@@ -1,8 +1,9 @@
 import collections
-from hydrus.core import HydrusConstants as HC
 import os
-from hydrus.core import HydrusExceptions
 import re
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 
 def CensorshipMatch( tag, censorships ):

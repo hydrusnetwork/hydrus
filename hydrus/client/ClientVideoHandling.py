@@ -2,11 +2,12 @@ import numpy.core.multiarray # important this comes before cv!
 
 import cv2
 
-from hydrus.client import ClientImageHandling
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+
+from hydrus.client import ClientImageHandling
 
 if cv2.__version__.startswith( '2' ):
     

@@ -8,10 +8,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client.media import ClientMedia
 from hydrus.client import ClientRatings
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICommon
@@ -27,6 +27,7 @@ from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.media import ClientMedia
 
 class RatingLikeCanvas( ClientGUICommon.RatingLike ):
     
@@ -604,24 +605,24 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         top_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( top_button_hbox, self._trash_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( top_button_hbox, self._cog_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( top_button_hbox, close_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( top_button_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( top_button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( top_button_hbox, close_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         navigation_button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( navigation_button_hbox, self._back_a_pair, CC.FLAGS_VCENTER )
-        QP.AddToLayout( navigation_button_hbox, self._previous_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, self._back_a_pair, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( navigation_button_hbox, self._previous_button, CC.FLAGS_CENTER_PERPENDICULAR )
         navigation_button_hbox.addStretch( 1 )
-        QP.AddToLayout( navigation_button_hbox, self._index_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
         navigation_button_hbox.addStretch( 1 )
-        QP.AddToLayout( navigation_button_hbox, self._next_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( navigation_button_hbox, self._skip_a_pair, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, self._next_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( navigation_button_hbox, self._skip_a_pair, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, navigation_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, top_button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, top_button_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, command_button_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._comparison_statements_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -781,7 +782,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._current_index_string = ''
         
         self._top_hbox = QP.HBoxLayout()
-        self._top_hbox.setContentsMargins( 0, 0, 0, 2 )
         
         self._title_text = ClientGUICommon.BetterStaticText( self, 'title', ellipsize_end = True )
         self._info_text = ClientGUICommon.BetterStaticText( self, 'info', ellipsize_end = True )
@@ -862,17 +862,17 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().undelete, HG.client_controller.pub, 'canvas_undelete', self._canvas_key )
         self._undelete_button.setToolTip( 'undelete' )
         
-        QP.AddToLayout( self._top_hbox, self._archive_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._trash_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._delete_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._undelete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._undelete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _PopulateLeftButtons( self ):
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _PopulateRightButtons( self ):
@@ -918,16 +918,16 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.setToolTip( 'close' )
         
-        QP.AddToLayout( self._top_hbox, self._zoom_text, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, zoom_in, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, zoom_out, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._volume_control, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, drag_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, close, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._zoom_text, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, zoom_in, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, zoom_out, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, drag_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, close, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _ResetArchiveButton( self ):
@@ -1164,14 +1164,14 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().previous, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK ), self._canvas_key )
         self._back_button.SetToolTipWithShortcuts( 'back', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK )
         
-        QP.AddToLayout( self._top_hbox, self._back_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._back_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         CanvasHoverFrameTop._PopulateLeftButtons( self )
         
         self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP ), self._canvas_key )
         self._skip_button.SetToolTipWithShortcuts( 'skip', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP )
         
-        QP.AddToLayout( self._top_hbox, self._skip_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._skip_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _ResetArchiveButton( self ):
@@ -1192,9 +1192,9 @@ class CanvasHoverFrameTopNavigable( CanvasHoverFrameTop ):
         self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_VIEW_NEXT ), self._canvas_key )
         self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
         
-        QP.AddToLayout( self._top_hbox, self._previous_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_VCENTER )
-        QP.AddToLayout( self._top_hbox, self._next_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._previous_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._next_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
@@ -1204,14 +1204,14 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_FILTER_BACK ), self._canvas_key )
         self._first_button.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
         
-        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         CanvasHoverFrameTopNavigable._PopulateLeftButtons( self )
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_FILTER_SKIP ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
         
-        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
@@ -1221,14 +1221,14 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_VIEW_FIRST ), self._canvas_key )
         self._first_button.SetToolTipWithShortcuts( 'first', CAC.SIMPLE_VIEW_FIRST )
         
-        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         CanvasHoverFrameTopNavigable._PopulateLeftButtons( self )
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_VIEW_LAST ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'last', CAC.SIMPLE_VIEW_LAST )
         
-        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 class CanvasHoverFrameTopRight( CanvasHoverFrame ):
@@ -1248,9 +1248,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
         icon_hbox.addStretch( 1 )
-        QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_VCENTER )
-        QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_VCENTER )
-        QP.AddToLayout( icon_hbox, self._notes_icon, CC.FLAGS_VCENTER )
+        QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( icon_hbox, self._notes_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._icon_panel.setLayout( icon_hbox )
         

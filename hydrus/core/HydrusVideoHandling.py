@@ -1,13 +1,14 @@
+import numpy
+import os
+import re
+import subprocess
+
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
-import numpy
-import os
-import re
-import subprocess
 
 FFMPEG_MISSING_ERROR_PUBBED = False
 FFMPEG_NO_CONTENT_ERROR_PUBBED = False
@@ -672,7 +673,7 @@ def ParseFFMPEGVideoResolution( lines ):
         
         resolution = list(map(int, line[match.start():match.end()-1].split('x')))
         
-        sar_match = re.search( " SAR [0-9]*:[0-9]* ", line )
+        sar_match = re.search( "[\\[\\s]SAR [0-9]*:[0-9]* ", line )
         
         if sar_match is not None:
             

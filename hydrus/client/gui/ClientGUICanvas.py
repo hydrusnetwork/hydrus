@@ -11,11 +11,11 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
-from hydrus.client.media import ClientMedia
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRatings
 from hydrus.client import ClientTags
@@ -38,6 +38,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMedia
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1

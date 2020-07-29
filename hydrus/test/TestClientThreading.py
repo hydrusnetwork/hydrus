@@ -1,7 +1,9 @@
-from hydrus.client import ClientThreading
-from hydrus.core import HydrusGlobals as HG
 import time
 import unittest
+
+from hydrus.core import HydrusGlobals as HG
+
+from hydrus.client import ClientThreading
 
 def do_read_job( rwlock, result_list, name ):
     

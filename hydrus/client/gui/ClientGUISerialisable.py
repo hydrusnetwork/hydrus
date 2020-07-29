@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIFunctions

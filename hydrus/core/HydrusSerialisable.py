@@ -1,4 +1,3 @@
-from hydrus.core import HydrusData
 import json
 import zlib
 
@@ -15,6 +14,9 @@ except: # ImportError wasn't enough here as Linux went up the shoot with a __ver
     
     print( 'Could not import lz4--nbd.' )
     
+
+from hydrus.core import HydrusData
+
 SERIALISABLE_TYPE_BASE = 0
 SERIALISABLE_TYPE_BASE_NAMED = 1
 SERIALISABLE_TYPE_SHORTCUT_SET = 2

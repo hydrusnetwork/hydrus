@@ -1,4 +1,18 @@
+import time
+import unittest
+
+from httmock import all_requests, urlmatch, HTTMock, response
+from mock import patch
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNetworking
+
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientParsing
+from hydrus.client import ClientServices
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
@@ -6,18 +20,8 @@ from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.client import ClientParsing
-from hydrus.client import ClientServices
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusNetworking
+
 from hydrus.test import TestController
-import time
-import unittest
-from hydrus.core import HydrusGlobals as HG
-from httmock import all_requests, urlmatch, HTTMock, response
-from mock import patch
 
 # some gumpf
 GOOD_RESPONSE = bytes( range( 256 ) )
@@ -232,6 +236,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
+        keep_fragment = False
         
         path_components = []
         
@@ -260,7 +265,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files )
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Matches( example_url ), True )
         self.assertEqual( url_class.Matches( bad_url ), False )
@@ -277,7 +282,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files )
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( unnormalised_good_url_2 ), unnormalised_good_url_2 )
         
@@ -289,7 +294,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files )
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), None )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), None )
@@ -308,7 +313,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files )
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
@@ -319,10 +324,53 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files )
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), converted_referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
+        
+        # fragment test
+        
+        name = 'mega test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'mega.nz'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = True
+        should_be_associated_with_files = True
+        
+        path_components = []
+        
+        path_components.append( ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'file', example_string = 'file' ), None ) )
+        path_components.append( ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY ), None ) )
+        
+        parameters = {}
+        
+        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://mega.nz/file/KxJHVKhT#0JPvygZDQcjBHrTWWECaDyNfXAFDyNZyE3Uonif5j-w'
+        
+        keep_fragment = False
+        
+        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        self.assertEqual( url_class.Normalise( example_url ), 'https://mega.nz/file/KxJHVKhT' )
+        
+        keep_fragment = True
+        
+        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        self.assertEqual( url_class.Normalise( example_url ), example_url )
         
     
 class TestNetworkingEngine( unittest.TestCase ):

@@ -6,14 +6,15 @@ import typing
 
 from qtpy import QtGui as QG
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
-from hydrus.client import ClientSearch
-from hydrus.client import ClientServices
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
+from hydrus.client import ClientSearch
+from hydrus.client import ClientServices
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -1070,7 +1071,7 @@ class TagSiblingsManager( object ):
             
             other_sibling_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, sibling, predicate.IsInclusive() ) for sibling in other_siblings ]
             
-            
+        
         return ( ideal_sibling_predicate, other_sibling_predicates )
         
     

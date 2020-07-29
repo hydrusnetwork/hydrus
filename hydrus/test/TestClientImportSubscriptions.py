@@ -1,3 +1,6 @@
+import unittest
+
+from httmock import all_requests
 
 from hydrus.client import ClientDefaults
 from hydrus.client.networking import ClientNetworking
@@ -5,9 +8,8 @@ from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
+
 from hydrus.test import TestController
-import unittest
-from httmock import all_requests
 
 MISSING_RESPONSE = '404, bad result'
 ERROR_RESPONSE = '500, it done broke'

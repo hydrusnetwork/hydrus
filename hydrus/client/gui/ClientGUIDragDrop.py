@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 

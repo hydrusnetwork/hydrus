@@ -1,9 +1,11 @@
-from hydrus.core import HydrusConstants as HC
 import random
 import unittest
+
+from mock import patch
+
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNetworking
-from mock import patch
 
 now = HydrusData.GetNow()
 

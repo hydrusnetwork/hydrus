@@ -3,14 +3,15 @@ import itertools
 import threading
 import typing
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
 
 class DuplicatesManager( object ):
     

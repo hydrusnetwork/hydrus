@@ -8,6 +8,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICommon

@@ -8,6 +8,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUIFrames
@@ -176,20 +177,20 @@ class DialogGenerateNewAccounts( Dialog ):
         
         ctrl_box = QP.HBoxLayout()
         
-        QP.AddToLayout( ctrl_box, ClientGUICommon.BetterStaticText(self,'generate'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( ctrl_box, self._num, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ctrl_box, self._account_types, CC.FLAGS_VCENTER )
-        QP.AddToLayout( ctrl_box, ClientGUICommon.BetterStaticText(self,'accounts, to expire in'), CC.FLAGS_VCENTER )
-        QP.AddToLayout( ctrl_box, self._lifetime, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ctrl_box, ClientGUICommon.BetterStaticText(self,'generate'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ctrl_box, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ctrl_box, self._account_types, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ctrl_box, ClientGUICommon.BetterStaticText(self,'accounts, to expire in'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( ctrl_box, self._lifetime, CC.FLAGS_CENTER_PERPENDICULAR )
         
         b_box = QP.HBoxLayout()
-        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -327,12 +328,12 @@ class DialogInputLocalBooruShare( Dialog ):
         QP.AddToLayout( timeout_box, self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         link_box = QP.HBoxLayout()
-        QP.AddToLayout( link_box, self._copy_internal_share_link, CC.FLAGS_VCENTER )
-        QP.AddToLayout( link_box, self._copy_external_share_link, CC.FLAGS_VCENTER )
+        QP.AddToLayout( link_box, self._copy_internal_share_link, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( link_box, self._copy_external_share_link, CC.FLAGS_CENTER_PERPENDICULAR )
         
         b_box = QP.HBoxLayout()
-        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -344,8 +345,8 @@ class DialogInputLocalBooruShare( Dialog ):
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, link_box, CC.FLAGS_BUTTON_SIZER )
-        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, link_box, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -438,12 +439,12 @@ class DialogInputNamespaceRegex( Dialog ):
         control_box = QP.HBoxLayout()
         
         QP.AddToLayout( control_box, self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( control_box, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( control_box, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( control_box, self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         b_box = QP.HBoxLayout()
-        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -451,10 +452,10 @@ class DialogInputNamespaceRegex( Dialog ):
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._shortcuts, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
-        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._shortcuts, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._regex_intro_link, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._regex_practise_link, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -532,8 +533,8 @@ class DialogInputTags( Dialog ):
         
         b_box = QP.HBoxLayout()
         
-        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -548,7 +549,7 @@ class DialogInputTags( Dialog ):
         
         QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._tag_autocomplete )
-        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -642,13 +643,13 @@ class DialogInputUPnPMapping( Dialog ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         b_box = QP.HBoxLayout()
-        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -777,22 +778,22 @@ class DialogModifyAccounts( Dialog ):
         
         account_types_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( account_types_hbox, self._account_types, CC.FLAGS_VCENTER )
-        QP.AddToLayout( account_types_hbox, self._account_types_ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( account_types_hbox, self._account_types, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( account_types_hbox, self._account_types_ok, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._account_types_panel.Add( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         add_to_expires_box = QP.HBoxLayout()
         
-        QP.AddToLayout( add_to_expires_box, QW.QLabel( 'add to expires: ', self._expiration_panel ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( add_to_expires_box, QW.QLabel( 'add to expires: ', self._expiration_panel ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( add_to_expires_box, self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( add_to_expires_box, self._add_to_expires_ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( add_to_expires_box, self._add_to_expires_ok, CC.FLAGS_CENTER_PERPENDICULAR )
         
         set_expires_box = QP.HBoxLayout()
         
-        QP.AddToLayout( set_expires_box, QW.QLabel( 'set expires to: ', self._expiration_panel ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( set_expires_box, QW.QLabel( 'set expires to: ', self._expiration_panel ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( set_expires_box, self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( set_expires_box, self._set_expires_ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( set_expires_box, self._set_expires_ok, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._expiration_panel.Add( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._expiration_panel.Add( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -805,7 +806,7 @@ class DialogModifyAccounts( Dialog ):
         QP.AddToLayout( vbox, self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._exit, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._exit, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -922,13 +923,13 @@ class DialogSelectFromURLTree( Dialog ):
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( button_hbox, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -1140,8 +1141,8 @@ class DialogTextEntry( Dialog ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._ok, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._ok, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         st_message = ClientGUICommon.BetterStaticText( self, message )
         st_message.setWordWrap( True )
@@ -1156,7 +1157,7 @@ class DialogTextEntry( Dialog ):
             
         
         QP.AddToLayout( vbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -1246,10 +1247,10 @@ class DialogYesYesNo( Dialog ):
         
         for yes_button in yes_buttons:
             
-            QP.AddToLayout( hbox, yes_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, yes_button, CC.FLAGS_CENTER_PERPENDICULAR )
             
         
-        QP.AddToLayout( hbox, self._no, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._no, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -1257,7 +1258,7 @@ class DialogYesYesNo( Dialog ):
         text.setWordWrap( True )
         
         QP.AddToLayout( vbox, text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         

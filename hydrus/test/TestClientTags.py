@@ -1,13 +1,15 @@
 import collections
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientManagers
-from hydrus.client.media import ClientMediaManagers
-from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
+import unittest
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-import unittest
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientManagers
+from hydrus.client import ClientSearch
+from hydrus.client import ClientTags
+from hydrus.client.media import ClientMediaManagers
 
 class TestMergeTagsManagers( unittest.TestCase ):
     

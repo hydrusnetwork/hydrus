@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientThreading
@@ -157,13 +158,13 @@ class PopupMessage( PopupWindow ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         yes_no_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( yes_no_hbox, self._yes, CC.FLAGS_VCENTER )
-        QP.AddToLayout( yes_no_hbox, self._no, CC.FLAGS_VCENTER )
+        QP.AddToLayout( yes_no_hbox, self._yes, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( yes_no_hbox, self._no, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -178,7 +179,7 @@ class PopupMessage( PopupWindow ):
         QP.AddToLayout( vbox, self._show_tb_button )
         QP.AddToLayout( vbox, self._tb_text )
         QP.AddToLayout( vbox, self._copy_tb_button )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
         
@@ -1264,10 +1265,10 @@ class PopupMessageSummaryBar( PopupWindow ):
         
         dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self._manager.DismissAll )
         
-        QP.AddToLayout( hbox, self._text, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, dismiss_all, CC.FLAGS_VCENTER )
-        QP.AddToLayout( hbox, self._expand_collapse, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._text, CC.FLAGS_CENTER_PERPENDICULAR )
+        hbox.addStretch( 1 )
+        QP.AddToLayout( hbox, dismiss_all, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._expand_collapse, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         

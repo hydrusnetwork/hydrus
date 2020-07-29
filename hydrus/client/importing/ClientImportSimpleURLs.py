@@ -3,6 +3,12 @@ import threading
 import time
 import urllib.parse
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientTags
 from hydrus.client.importing import ClientImporting
@@ -10,11 +16,6 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.networking import ClientNetworkingJobs
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusSerialisable
 
 class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
