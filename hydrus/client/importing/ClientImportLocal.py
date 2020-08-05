@@ -15,11 +15,11 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
+from hydrus.client.metadata import ClientTags
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     

@@ -6,7 +6,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
-from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICanvas
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts

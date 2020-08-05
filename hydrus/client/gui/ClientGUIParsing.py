@@ -1758,6 +1758,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, content_parser: ClientParsing.ContentParser, test_data: ClientParsing.ParsingTestData, permitted_content_types ):
         
+        self._original_content_parser = content_parser
+        
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         #
@@ -2171,6 +2173,22 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, sort_type = sort_type, sort_asc = sort_asc, additional_info = additional_info )
         
         return content_parser
+        
+    
+    def UserIsOKToCancel( self ):
+        
+        if self._original_content_parser.GetSerialisableTuple() != self.GetValue().GetSerialisableTuple():
+            
+            text = 'It looks like you have made changes to the content parser--are you sure you want to cancel?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            return result == QW.QDialog.Accepted
+            
+        else:
+            
+            return True
+            
         
     
 class EditContentParsersPanel( ClientGUICommon.StaticBox ):
@@ -3236,6 +3254,24 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, sub_page_parsers = sub_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
         
         return parser
+        
+    
+    def UserIsOKToCancel( self ):
+        
+        if self._original_parser.GetSerialisableTuple() != self.GetValue().GetSerialisableTuple():
+            
+            text = 'It looks like you have made changes to the parser--are you sure you want to cancel?'
+            text += os.linesep * 2
+            text += 'If this is a subsidiary page parser and you think you have made no changes, it might just be example test data, auto-populated from the parent, that changed.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            return result == QW.QDialog.Accepted
+            
+        else:
+            
+            return True
+            
         
     
 class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):

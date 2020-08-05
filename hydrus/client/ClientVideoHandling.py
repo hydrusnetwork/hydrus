@@ -7,8 +7,6 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 
-from hydrus.client import ClientImageHandling
-
 if cv2.__version__.startswith( '2' ):
     
     CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT

@@ -4,19 +4,13 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-
-from hydrus.client import ClientTags
 from hydrus.client.gui import QtPorting as QP
 
 def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
     
     tlw = win.window()
     
-    if win.isVisible() and tlw.isVisible():
+    if ( win.isVisible() and tlw.isVisible() ) or True:
         
         return win.mapToGlobal( pos )
         

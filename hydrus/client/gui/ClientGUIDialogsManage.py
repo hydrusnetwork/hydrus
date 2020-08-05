@@ -11,13 +11,14 @@ from hydrus.core import HydrusNATPunch
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientRatings
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.metadata import ClientRatings
 
 # Option Enums
 
@@ -160,7 +161,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 rating_state = ClientRatings.GetLikeStateFromMedia( self._media, service_key )
                 
-                control = ClientGUICommon.RatingLikeDialog( self, service_key )
+                control = ClientGUIRatings.RatingLikeDialog( self, service_key )
                 
                 control.SetRatingState( rating_state )
                 
@@ -226,7 +227,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
-                control = ClientGUICommon.RatingNumericalDialog( self, service_key )
+                control = ClientGUIRatings.RatingNumericalDialog( self, service_key )
                 
                 if rating_state != ClientRatings.SET:
                     

@@ -366,7 +366,7 @@ def ConvertTimestampToPrettyExpires( timestamp ):
         return 'unparseable time {}'.format( timestamp )
         
     
-def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = True ):
+def ConvertTimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = True ):
     
     if timestamp is None:
         
@@ -375,20 +375,20 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
     
     if include_24h_time:
         
-        phrase = '%Y/%m/%d %H:%M:%S'
+        phrase = '%Y-%m-%d %H:%M:%S'
         
     else:
         
-        phrase = '%Y/%m/%d'
+        phrase = '%Y-%m-%d'
         
     
     try:
         
-        if in_gmt:
+        if in_utc:
             
             struct_time = time.gmtime( timestamp )
             
-            phrase = phrase + ' GMT'
+            phrase = phrase + ' UTC'
             
         else:
             

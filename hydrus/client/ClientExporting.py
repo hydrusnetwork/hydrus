@@ -12,7 +12,7 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
+from hydrus.client.metadata import ClientTags
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 

@@ -12,7 +12,6 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientRatings
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
@@ -20,6 +19,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
@@ -28,12 +28,13 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientRatings
 
-class RatingLikeCanvas( ClientGUICommon.RatingLike ):
+class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
     
     def __init__( self, parent, service_key, canvas_key ):
         
-        ClientGUICommon.RatingLike.__init__( self, parent, service_key )
+        ClientGUIRatings.RatingLike.__init__( self, parent, service_key )
         
         self._canvas_key = canvas_key
         self._current_media = None
@@ -59,7 +60,7 @@ class RatingLikeCanvas( ClientGUICommon.RatingLike ):
             
             self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
             
-            ClientRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
+            ClientGUIRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
             
         
         self._dirty = False
@@ -140,11 +141,11 @@ class RatingLikeCanvas( ClientGUICommon.RatingLike ):
             
         
     
-class RatingNumericalCanvas( ClientGUICommon.RatingNumerical ):
+class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
 
     def __init__( self, parent, service_key, canvas_key ):
         
-        ClientGUICommon.RatingNumerical.__init__( self, parent, service_key )
+        ClientGUIRatings.RatingNumerical.__init__( self, parent, service_key )
         
         self._canvas_key = canvas_key
         self._current_media = None
@@ -163,7 +164,7 @@ class RatingNumericalCanvas( ClientGUICommon.RatingNumerical ):
     
     def _ClearRating( self ):
         
-        ClientGUICommon.RatingNumerical._ClearRating( self )
+        ClientGUIRatings.RatingNumerical._ClearRating( self )
         
         if self._current_media is not None:
             
@@ -185,7 +186,7 @@ class RatingNumericalCanvas( ClientGUICommon.RatingNumerical ):
             
             ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
             
-            ClientRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+            ClientGUIRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
             
         
         self._dirty = False
@@ -193,7 +194,7 @@ class RatingNumericalCanvas( ClientGUICommon.RatingNumerical ):
     
     def _SetRating( self, rating ):
         
-        ClientGUICommon.RatingNumerical._SetRating( self, rating )
+        ClientGUIRatings.RatingNumerical._SetRating( self, rating )
         
         if self._current_media is not None and rating is not None:
             
@@ -688,7 +689,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = int( parent_width * 0.2 )
+        my_ideal_width = max( int( parent_width * 0.2 ), self.sizeHint().width() )
         my_ideal_height = self.sizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
@@ -1233,9 +1234,11 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
     
 class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
-    def __init__( self, parent, my_canvas, canvas_key ):
+    def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key ):
         
         CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        
+        self._top_hover = top_hover
         
         vbox = QP.VBoxLayout()
         
@@ -1343,14 +1346,24 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = int( parent_width * 0.2 )
+        width_beside_top_hover = ClientGUIFunctions.ClientToScreen( parent_window, parent_window.rect().topRight() ).x() - ClientGUIFunctions.ClientToScreen( self._top_hover, self._top_hover.rect().bottomRight() ).x()
+        
+        my_ideal_width = max( self.sizeHint().width(), width_beside_top_hover )
         
         my_ideal_height = self.sizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        
         ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width - my_ideal_width ), 0 ) )
+        
+        top_hover_bottom_right = ClientGUIFunctions.ClientToScreen( self._top_hover, self._top_hover.rect().bottomRight() )
+        
+        if top_hover_bottom_right.x() > ideal_position.x():
+            
+            ideal_position.setY( top_hover_bottom_right.y() )
+            
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -1489,9 +1502,11 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
 class CanvasHoverFrameTags( CanvasHoverFrame ):
     
-    def __init__( self, parent, my_canvas, canvas_key ):
+    def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key ):
         
         CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        
+        self._top_hover = top_hover
         
         vbox = QP.VBoxLayout()
         

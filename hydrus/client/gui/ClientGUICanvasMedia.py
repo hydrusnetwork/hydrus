@@ -11,7 +11,6 @@ from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientRendering
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIFunctions

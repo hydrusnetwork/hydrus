@@ -39,7 +39,6 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
 from hydrus.client import ClientServices
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICommon
@@ -77,6 +76,7 @@ from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
@@ -1669,7 +1669,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
                 
-                gmt_time = HydrusData.ConvertTimestampToPrettyTime( timestamp, in_gmt = True )
+                gmt_time = HydrusData.ConvertTimestampToPrettyTime( timestamp, in_utc = True )
                 local_time = HydrusData.ConvertTimestampToPrettyTime( timestamp )
                 
                 text = 'File Hash: ' + hash.hex()
@@ -2824,7 +2824,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageTagDisplay( self ):
         
-        title = 'manage tag display'
+        title = 'manage tag display and search'
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
@@ -2866,6 +2866,33 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             dlg.SetPanel( panel )
             
             dlg.exec()
+            
+        
+    
+    def _ManageTagSiblingsApplication( self ):
+        
+        title = 'manage where tag siblings apply'
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+            
+            panel = ClientGUITags.EditTagSiblingsApplication( dlg, self._controller.tag_display_manager )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                tag_display_manager = panel.GetValue()
+                
+                tag_display_manager.SetDirty()
+                
+                self._controller.tag_display_manager = tag_display_manager
+                
+                # have to actually recompute siblings here
+                # based on actual changes
+                # this needs db work as well as gui regen
+                
+                self._controller.pub( 'notify_new_tag_display_rules' )
+                
             
         
     
@@ -4722,7 +4749,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag display and search', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage where tag siblings apply (does not do anything yet!)', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblingsApplication )
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
+            #ClientGUIMenus.AppendMenuItem( menu, 'manage where tag parents apply', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagParentsApplication )
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
             
             return ( menu, '&services' )

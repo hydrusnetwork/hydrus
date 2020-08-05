@@ -8,11 +8,11 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientTags
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
+from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingJobs
 
 class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
@@ -436,8 +436,6 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 self._highlighted_watcher_url = highlighted_watcher.GetURL()
-                
-                highlighted_watcher.PublishToPage( True )
                 
             
         
@@ -1102,8 +1100,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._file_seed_cache.GetHashes()
+            fsc = self._file_seed_cache
             
+        
+        return fsc.GetHashes()
         
     
     def GetNetworkJobs( self ):
@@ -1118,12 +1118,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            file_import_options = ClientImportOptions.FileImportOptions()
+            fsc = self._file_seed_cache
             
-            file_import_options.SetPresentationOptions( True, False, False )
-            
-            return self._file_seed_cache.GetPresentedHashes( file_import_options )
-            
+        
+        file_import_options = ClientImportOptions.FileImportOptions()
+        
+        file_import_options.SetPresentationOptions( True, False, False )
+        
+        return fsc.GetPresentedHashes( file_import_options )
         
     
     def GetNumSeeds( self ):
@@ -1146,8 +1148,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._file_seed_cache.GetPresentedHashes( self._file_import_options )
+            fsc = self._file_seed_cache
+            fio = self._file_import_options
             
+        
+        return fsc.GetPresentedHashes( fio )
         
     
     def GetSimpleStatus( self ):

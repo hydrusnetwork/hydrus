@@ -17,7 +17,6 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDuplicates
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIDialogs
@@ -35,6 +34,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientTags
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     

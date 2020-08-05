@@ -13,13 +13,13 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.metadata import ClientTags
 
 def FilterSuggestedPredicatesForMedia( predicates: typing.List[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
     

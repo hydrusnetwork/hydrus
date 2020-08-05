@@ -22,9 +22,9 @@ from hydrus.client import ClientData
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
-from hydrus.client import ClientTags
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportOptions
+from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingDomain
 
 class FileImportJob( object ):
@@ -2333,7 +2333,14 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         file_seed_hashes = [ file_seed.GetHash() for file_seed in eligible_file_seeds ]
         
-        inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
+        if len( file_seed_hashes ) > 0:
+            
+            inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
+            
+        else:
+            
+            inbox_hashes = set()
+            
         
         hashes = []
         hashes_seen = set()

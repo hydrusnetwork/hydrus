@@ -1637,8 +1637,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
             
-            from hydrus.client.gui import ClientGUIImport
-            
             show_downloader_options = True
             
             quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( 'quiet' )

@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 407</h3></li>
+				<ul>
+					<li>sibling prep:</li>
+					<li>I am preparing for a new siblings database cache for v408. this will ultimately make siblings (and parents) faster, more accurate, more powerful, and simple to undo. I have decided, as part of it, to make siblings and parents completely virtual (i.e. the tags won't exist for real, they'll be implied). better tools to manage hard-replace siblings and parents will come later, as trying to support both situations at once has not been excellent</li>
+					<li>.</li>
+					<li>created options to hold per-service sibling and parent preferences, so you'll be able to set up '"my tags" siblings and then "ptr" siblings apply to "my tags"' or 'no parents apply to this service'</li>
+					<li>wrote UI for the sibling options under 'services->manage where tag siblings apply'. you can play with it if you like, and it saves values, but it is not plugged in yet and makes no changes</li>
+					<li>siblings logic is a little tighter. the db and gui side of siblings structure calculation is more unified, petitioned siblings are discounted properly on all generation, and the db side now resolves conflict decisions the same on every regen. the gui-side still runs on an older structure, but will be updated to exactly mirror the db</li>
+					<li>updated and unified how large numbers of raw tag siblings are fetched in the database. it also supports fast tag slicing, speeding up sibling cache maintenance. the siblings lookup cache now uses this method for regeneration and update calls</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>tag right-click menu copying now supports all combinations of selected/all, tags/subtags, and no_count/with_counts where appropriate (issue #325)</li>
+					<li>if the media viewer is too thin for the top hover window to fit into its space, the top-right hover now drops down below it. I don't really like how this looks, and will probably instead figure out a flow layout so the toolbar buttons always fit, but at least they are now accessible (issue #388)</li>
+					<li>altered the above fix--if the top-right hover window can be shrunk to fit in the available space, it will now squeeze in, only bumping down if it can't</li>
+					<li>moving the mouse off an activated (e.g. clicked) hover window now instantly activates the main canvas. this should fix up some fast swallowed clicks and annoying click-to-activate issues with the center-right duplicates hover window, which does not hide (issue #384)</li>
+					<li>the duplicates hover window now positions correctly if its min size is too wide to fit in a thin media window</li>
+					<li>if you make changes to a parser or content parser, there is now a yes/no confirmation when trying to cancel the dialog</li>
+					<li>fixed an issue where 'queue' listboxes with no edit button would throw an error on double-click. now double-click in this case deletes</li>
+					<li>fixed a couple of timestamp convertions that were doing YYYY/MM/DD instead of the more ISO-nice YYYY-MM-DD. also, when in UTC, they'll correctly say UTC now instead of GMT (issue #369)</li>
+					<li>fixed some borked centered text layout on ratings dialog and import folder dialog</li>
+					<li>fixed the manage services dialog's wrong headers for type/name columns</li>
+					<li>added links in the official help to the new user-written simple help guide at https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md</li>
+					<li>moved object tag and ratings code to a new client module, 'metadata', and pulled various ratings gui code into a new separate file</li>
+					<li>refactored some more manager code around to generally more sensible locations</li>
+					<li>did a bit more work chasing down the highlight-downloader ui deadlock, which unfortunately still exists</li>
+					<li>reduced the number of db hits some paged downloaders need, particularly on highlight and init</li>
+					<li>updated some test code to support cleverer db testing</li>
+					<li>updated mpv for windows build. api version is now 1.109. this fixes at least one weird linux vm audio driver issue</li>
+				</ul>
 				<li><h3>version 406</h3></li>
 				<ul>
 					<li>subscription management:</li>

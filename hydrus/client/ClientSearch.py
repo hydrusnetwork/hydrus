@@ -15,7 +15,8 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientTags
+from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagsHandling
 
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
@@ -2439,7 +2440,7 @@ def SubtagIsEmpty( search_text: str ):
     
 class ParsedAutocompleteText( object ):
     
-    def __init__( self, raw_input: str, tag_autocomplete_options: ClientTags.TagAutocompleteOptions, collapse_search_characters: bool ):
+    def __init__( self, raw_input: str, tag_autocomplete_options: ClientTagsHandling.TagAutocompleteOptions, collapse_search_characters: bool ):
         
         self.raw_input = raw_input
         self._tag_autocomplete_options = tag_autocomplete_options

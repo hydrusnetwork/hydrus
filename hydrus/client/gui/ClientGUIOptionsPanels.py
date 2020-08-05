@@ -10,10 +10,6 @@ from hydrus.client.gui import QtPorting as QP
 
 class OptionsPanel( QW.QWidget ):
     
-    def GetOptions( self ): raise NotImplementedError()
-    
-    def SetOptions( self, options ): raise NotImplementedError()
-    
     def GetValue( self ): raise NotImplementedError()
     
     def SetValue( self, info ): raise NotImplementedError()

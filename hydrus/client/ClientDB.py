@@ -35,12 +35,13 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientOptions
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultCache
+from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -1311,9 +1312,8 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
+        # update this to look up options
         if tag_service_id == self._combined_tag_service_id:
-            
-            # until we have the nice system here, we'll do the old-fashioned local, then remote precedence
             
             search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
@@ -1322,19 +1322,25 @@ class DB( HydrusDB.HydrusDB ):
             search_tag_service_ids = [ tag_service_id ]
             
         
-        tss = ClientTags.TagSiblingsStructure()
+        tss = ClientTagsHandling.TagSiblingsStructure()
         
         for search_tag_service_id in search_tag_service_ids:
             
-            for ( bad_tag_id, good_tag_id ) in self._c.execute( 'SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? AND status = ?;', ( search_tag_service_id, HC.CONTENT_STATUS_CURRENT ) ):
+            statuses_to_pair_ids = self._GetTagSiblingsIds( service_id = search_tag_service_id )
+            
+            petitioned_fast_lookup = set( statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )
+            
+            for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_CURRENT ]:
+                
+                if ( bad_tag_id, good_tag_id ) in petitioned_fast_lookup:
+                    
+                    continue
+                    
                 
                 tss.AddPair( bad_tag_id, good_tag_id )
                 
             
-        
-        for search_tag_service_id in search_tag_service_ids:
-            
-            for ( bad_tag_id, good_tag_id ) in self._c.execute( 'SELECT bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( search_tag_service_id, HC.CONTENT_STATUS_PENDING ) ):
+            for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_PENDING ]:
                 
                 tss.AddPair( bad_tag_id, good_tag_id )
                 
@@ -1368,84 +1374,94 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheTagSiblingsUpdateChains( self, tag_service_id, tag_ids, regenerate_existing_entry = True ):
         
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( tag_service_id )
+        # the siblings for tag_ids have changed for tag_service_id
+        # therefore any service that is interested in tag_service_ids's siblings needs to regen the respective chains for these tags
         
-        tag_ids = set( tag_ids )
+        interested_service_ids = [ tag_service_id ] # update this to look up options
         
-        tag_ids.update( self._CacheTagSiblingsLookupGetAdditionalSiblings( tag_service_id, tag_ids ) )
+        if tag_service_id != self._combined_tag_service_id: # and remove this
+            
+            interested_service_ids.append( self._combined_tag_service_id )
+            
         
-        if regenerate_existing_entry:
+        for interested_service_id in interested_service_ids:
             
-            tag_ids_to_do = tag_ids
+            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( interested_service_id )
             
-        else:
+            tag_ids = set( tag_ids )
             
-            tag_ids_to_do = set()
+            tag_ids.update( self._CacheTagSiblingsLookupGetAdditionalSiblings( interested_service_id, tag_ids ) )
             
-            for tag_id in tag_ids:
+            if regenerate_existing_entry:
                 
-                result = self._c.execute( 'SELECT 1 FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( tag_id, tag_id ) ).fetchone()
+                tag_ids_to_do = tag_ids
                 
-                no_entry_yet = result is None
+            else:
                 
-                if no_entry_yet:
+                tag_ids_to_do = set()
+                
+                for tag_id in tag_ids:
                     
-                    tag_ids_to_do.add( tag_id )
+                    result = self._c.execute( 'SELECT 1 FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( tag_id, tag_id ) ).fetchone()
+                    
+                    no_entry_yet = result is None
+                    
+                    if no_entry_yet:
+                        
+                        tag_ids_to_do.add( tag_id )
+                        
+                    
+                
+                if len( tag_ids_to_do ) == 0:
+                    
+                    return
                     
                 
             
-            if len( tag_ids_to_do ) == 0:
+            self._c.executemany( 'DELETE FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_do ) )
+            
+            # update this to look up options
+            if interested_service_id == self._combined_tag_service_id:
                 
-                return
+                tag_service_ids_in_precedence_order = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids_in_precedence_order = [ interested_service_id ]
                 
             
-        
-        self._c.executemany( 'DELETE FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_do ) )
-        
-        if tag_service_id == self._combined_tag_service_id:
+            tss = ClientTagsHandling.TagSiblingsStructure()
             
-            # until we have the nice system here, we'll do the old-fashioned local, then remote precedence
-            
-            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-        else:
-            
-            search_tag_service_ids = [ tag_service_id ]
-            
-        
-        tss = ClientTags.TagSiblingsStructure()
-        
-        for search_tag_service_id in search_tag_service_ids:
-            
-            for tag_id in tag_ids_to_do:
+            for search_tag_service_id in tag_service_ids_in_precedence_order:
                 
-                some_pairs = self._c.execute( 'SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? AND ( bad_tag_id = ? OR good_tag_id = ? ) AND status = ?;', ( search_tag_service_id, tag_id, tag_id, HC.CONTENT_STATUS_CURRENT ) ).fetchall()
+                service_key = self._GetService( search_tag_service_id ).GetServiceKey()
                 
-                for ( bad_tag_id, good_tag_id ) in some_pairs:
+                with HydrusDB.TemporaryIntegerTable( self._c, tag_ids_to_do, 'tag_id' ) as tag_ids_temp_table_name:
+                    
+                    self._AnalyzeTempTable( tag_ids_temp_table_name )
+                    
+                    statuses_to_pair_ids = self._GetTagSiblingsIds( service_id = search_tag_service_id, tag_ids_table_name = tag_ids_temp_table_name )
+                    
+                
+                petitioned_fast_lookup = set( statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )
+                
+                for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_CURRENT ]:
+                    
+                    if ( bad_tag_id, good_tag_id ) in petitioned_fast_lookup:
+                        
+                        continue
+                        
+                    
+                    tss.AddPair( bad_tag_id, good_tag_id )
+                    
+                
+                for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_PENDING ]:
                     
                     tss.AddPair( bad_tag_id, good_tag_id )
                     
                 
             
-        
-        for search_tag_service_id in search_tag_service_ids:
-            
-            for tag_id in tag_ids_to_do:
-                
-                some_pairs = self._c.execute( 'SELECT bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ? AND ( bad_tag_id = ? OR good_tag_id = ? ) AND status = ?;', ( search_tag_service_id, tag_id, tag_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
-                
-                for ( bad_tag_id, good_tag_id ) in some_pairs:
-                    
-                    tss.AddPair( bad_tag_id, good_tag_id )
-                    
-                
-            
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_tag_siblings_lookup_table_name ), tss.GetBadTagsToIdealTags().items() )
-        
-        if tag_service_id != self._combined_tag_service_id:
-            
-            self._CacheTagSiblingsUpdateChains( self._combined_tag_service_id, tag_ids, regenerate_existing_entry = regenerate_existing_entry )
+            self._c.executemany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_tag_siblings_lookup_table_name ), tss.GetBadTagsToIdealTags().items() )
             
         
     
@@ -1898,7 +1914,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._SetJSONDump( favourite_search_manager )
         
-        tag_display_manager = ClientTags.TagDisplayManager()
+        tag_display_manager = ClientTagsHandling.TagDisplayManager()
         
         self._SetJSONDump( tag_display_manager )
         
@@ -8534,64 +8550,53 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetTagSiblings( self, service_key = None ):
+    def _GetTagSiblings( self, service_key ):
         
-        def convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids ):
+        service_id = self._GetServiceId( service_key )
+        
+        statuses_to_pair_ids = self._GetTagSiblingsIds( service_id )
+        
+        all_tag_ids = set()
+        
+        for pair_ids in statuses_to_pair_ids.values():
             
-            all_tag_ids = set()
-            
-            for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids:
+            for ( bad_tag_id, good_tag_id ) in pair_ids:
                 
                 all_tag_ids.add( bad_tag_id )
                 all_tag_ids.add( good_tag_id )
                 
             
-            self._PopulateTagIdsToTagsCache( all_tag_ids )
-            
-            statuses_to_pairs = HydrusData.BuildKeyToSetDict( ( ( status, ( self._tag_ids_to_tags_cache[ bad_tag_id ], self._tag_ids_to_tags_cache[ good_tag_id ] ) ) for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids ) )
-            
-            return statuses_to_pairs
-            
         
-        if service_key is None:
-            
-            service_ids_to_statuses_and_pair_ids = HydrusData.BuildKeyToListDict( ( ( service_id, ( status, bad_tag_id, good_tag_id ) ) for ( service_id, status, bad_tag_id, good_tag_id ) in self._c.execute( 'SELECT service_id, status, bad_tag_id, good_tag_id FROM tag_siblings UNION SELECT service_id, status, bad_tag_id, good_tag_id FROM tag_sibling_petitions;' ) ) )
-            
-            service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
-            
-            for ( service_id, statuses_and_pair_ids ) in list( service_ids_to_statuses_and_pair_ids.items() ):
-                
-                try:
-                    
-                    service = self._GetService( service_id )
-                    
-                except HydrusExceptions.DataMissing:
-                    
-                    self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
-                    self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
-                    
-                    continue
-                    
-                
-                statuses_to_pairs = convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids )
-                
-                service_key = service.GetServiceKey()
-                
-                service_keys_to_statuses_to_pairs[ service_key ] = statuses_to_pairs
-                
-            
-            return service_keys_to_statuses_to_pairs
-            
-        else:
-            
-            service_id = self._GetServiceId( service_key )
+        self._PopulateTagIdsToTagsCache( all_tag_ids )
+        
+        statuses_to_pairs = collections.defaultdict( list )
+        
+        statuses_to_pairs.update( { status : [ ( self._tag_ids_to_tags_cache[ bad_tag_id ], self._tag_ids_to_tags_cache[ good_tag_id ] ) for ( bad_tag_id, good_tag_id ) in pair_ids ] for ( status, pair_ids ) in statuses_to_pair_ids.items() } )
+        
+        return statuses_to_pairs
+        
+    
+    def _GetTagSiblingsIds( self, service_id, tag_ids_table_name = None ):
+        
+        if tag_ids_table_name is None:
             
             statuses_and_pair_ids = self._c.execute( 'SELECT status, bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? UNION SELECT status, bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
-            statuses_to_pairs = convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids )
+        else:
             
-            return statuses_to_pairs
+            first_part = 'SELECT status, bad_tag_id, good_tag_id FROM tag_siblings, {} ON ( bad_tag_id = tag_id OR good_tag_id = tag_id ) WHERE service_id = ?'.format( tag_ids_table_name )
+            second_part = 'SELECT status, bad_tag_id, good_tag_id FROM tag_sibling_petitions, {} ON ( bad_tag_id = tag_id OR good_tag_id = tag_id ) WHERE service_id = ?'.format( tag_ids_table_name )
             
+            statuses_and_pair_ids = self._c.execute( '{} UNION {};'.format( first_part, second_part ), ( service_id, service_id ) ).fetchall()
+            
+        
+        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( bad_tag_id, good_tag_id ) ) for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids )
+        
+        statuses_to_pair_ids = collections.defaultdict( list )
+        
+        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
+        
+        return statuses_to_pair_ids
         
     
     def _GetText( self, text_id ):
@@ -13592,7 +13597,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if result is not None:
                     
-                    tag_display_manager = ClientTags.TagDisplayManager()
+                    tag_display_manager = ClientTagsHandling.TagDisplayManager()
                     
                     old_tag_censorship = self._c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall()
                     

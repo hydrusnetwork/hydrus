@@ -15,10 +15,10 @@ from hydrus.client import ClientDB
 from hydrus.client import ClientManagers
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
-from hydrus.client import ClientTags
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.media import ClientMediaResultCache
+from hydrus.client.metadata import ClientTags
 
 current_tag_pool = [ 'blonde hair', 'blue eyes', 'bodysuit', 'character:samus aran', 'series:metroid', 'studio:nintendo' ]
 pending_tag_pool = [ 'favourites', 'kino', 'brown shirt', 'huge knees' ]
@@ -155,7 +155,7 @@ class TestMigration( unittest.TestCase ):
         
         self.WriteSynchronous( 'update_services', services )
         
-        self.services_manager = ClientManagers.ServicesManager( self )
+        self.services_manager = ClientServices.ServicesManager( self )
         
     
     def _do_fake_imports( self ):
