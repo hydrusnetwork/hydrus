@@ -34,7 +34,7 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientManagers
 from hydrus.client import ClientOptions
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
+from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUI
 from hydrus.client.gui import ClientGUIDialogs
@@ -45,6 +45,8 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportSubscriptions
+from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
@@ -799,7 +801,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', 'services' )
         
-        self.services_manager = ClientManagers.ServicesManager( self )
+        self.services_manager = ClientServices.ServicesManager( self )
         
         self.pub( 'splash_set_status_subtext', 'options' )
         
@@ -928,11 +930,13 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', 'tag display' )
         
+        # note that this has to be made before siblings/parents managers, as they rely on it
+        
         tag_display_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER )
         
         if tag_display_manager is None:
             
-            tag_display_manager = ClientTags.TagDisplayManager()
+            tag_display_manager = ClientTagsHandling.TagDisplayManager()
             
             tag_display_manager._dirty = True
             
@@ -1679,6 +1683,11 @@ class Controller( HydrusController.HydrusController ):
         
         with HG.dirty_object_lock:
             
+            previous_services = self.services_manager.GetServices()
+            previous_service_keys = { service.GetServiceKey() for service in previous_services }
+            
+            new_tag_service_keys = [ service.GetServiceKey() for service in services if service.GetServiceType() in HC.REAL_TAG_SERVICES and service.GetServiceKey() not in previous_service_keys ]
+            
             upnp_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) ]
             
             self.CallToThread( self.services_upnp_manager.SetServices, upnp_services )
@@ -1686,6 +1695,11 @@ class Controller( HydrusController.HydrusController ):
             self.WriteSynchronous( 'update_services', services )
             
             self.services_manager.RefreshServices()
+            
+            if len( new_tag_service_keys ) > 0:
+                
+                self.tag_display_manager.AddNewTagServiceKeys( new_tag_service_keys )
+                
             
         
         self.RestartClientServerServices()

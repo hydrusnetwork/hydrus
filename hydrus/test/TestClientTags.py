@@ -8,8 +8,9 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.client.media import ClientMediaManagers
+from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagsHandling
 
 class TestMergeTagsManagers( unittest.TestCase ):
     
@@ -378,7 +379,7 @@ class TestTagDisplayManager( unittest.TestCase ):
         
         filter_pages.SetRule( 'page:', CC.FILTER_BLACKLIST )
         
-        tag_display_manager = ClientTags.TagDisplayManager()
+        tag_display_manager = ClientTagsHandling.TagDisplayManager()
         
         tag_display_manager.SetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, CC.COMBINED_TAG_SERVICE_KEY, filter_pages )
         
@@ -435,7 +436,7 @@ class TestTagObjects( unittest.TestCase ):
             self.assertEqual( pat.GetAddTagPredicate(), values[0] )
             
         
-        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
         parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
         
@@ -579,7 +580,7 @@ class TestTagObjects( unittest.TestCase ):
         #
         #
         
-        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
         search_namespaces_into_full_tags = True
         namespace_bare_fetch_all_allowed = False
@@ -639,7 +640,7 @@ class TestTagObjects( unittest.TestCase ):
         #
         #
         
-        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
         search_namespaces_into_full_tags = False
         namespace_bare_fetch_all_allowed = True
@@ -699,7 +700,7 @@ class TestTagObjects( unittest.TestCase ):
         #
         #
         
-        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
         search_namespaces_into_full_tags = False
         namespace_bare_fetch_all_allowed = False
@@ -759,7 +760,7 @@ class TestTagObjects( unittest.TestCase ):
         #
         #
         
-        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
         
         search_namespaces_into_full_tags = False
         namespace_bare_fetch_all_allowed = False
@@ -1335,24 +1336,20 @@ class TestTagSiblings( unittest.TestCase ):
         cls._first_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         cls._second_key = HG.test_controller.example_tag_repo_service_key
         
-        tag_siblings = collections.defaultdict( HydrusData.default_dict_set )
+        first_dict = HydrusData.default_dict_list()
         
-        first_dict = HydrusData.default_dict_set()
+        first_dict[ HC.CONTENT_STATUS_CURRENT ] = [ ( 'ishygddt', 'i sure hope you guys don\'t do that' ), ( 'character:rei ayanami', 'character:ayanami rei' ), ( 'tree_1', 'tree_3' ), ( 'tree_2', 'tree_3' ), ( 'tree_3', 'tree_5' ), ( 'tree_4', 'tree_5' ), ( 'tree_5', 'tree_6' ), ( 'current_a', 'current_b' ), ( 'chain_a', 'chain_b' ), ( 'chain_b', 'chain_c' ), ( 'closed_loop', 'closed_loop' ), ( 'loop_a', 'loop_b' ), ( 'loop_b', 'loop_c' ), ( 'loop_c', 'loop_a' ) ]
+        first_dict[ HC.CONTENT_STATUS_DELETED ] = [ ( 'deleted_a', 'deleted_b' ) ]
         
-        first_dict[ HC.CONTENT_STATUS_CURRENT ] = { ( 'ishygddt', 'i sure hope you guys don\'t do that' ), ( 'character:rei ayanami', 'character:ayanami rei' ), ( 'tree_1', 'tree_3' ), ( 'tree_2', 'tree_3' ), ( 'tree_3', 'tree_5' ), ( 'tree_4', 'tree_5' ), ( 'tree_5', 'tree_6' ), ( 'current_a', 'current_b' ), ( 'chain_a', 'chain_b' ), ( 'chain_b', 'chain_c' ), ( 'closed_loop', 'closed_loop' ), ( 'loop_a', 'loop_b' ), ( 'loop_b', 'loop_c' ), ( 'loop_c', 'loop_a' ) }
-        first_dict[ HC.CONTENT_STATUS_DELETED ] = { ( 'deleted_a', 'deleted_b' ) }
+        second_dict = HydrusData.default_dict_list()
         
-        second_dict = HydrusData.default_dict_set()
+        second_dict[ HC.CONTENT_STATUS_CURRENT ] = [ ( 'loop_c', 'loop_a' ), ( 'current_a', 'current_b' ), ( 'petitioned_a', 'petitioned_b' ) ]
+        second_dict[ HC.CONTENT_STATUS_DELETED ] = [ ( 'pending_a', 'pending_b' ) ]
+        second_dict[ HC.CONTENT_STATUS_PENDING ] = [ ( 'pending_a', 'pending_b' ) ]
+        second_dict[ HC.CONTENT_STATUS_PETITIONED ] = [ ( 'petitioned_a', 'petitioned_b' ) ]
         
-        second_dict[ HC.CONTENT_STATUS_CURRENT ] = { ( 'loop_c', 'loop_a' ), ( 'current_a', 'current_b' ), ( 'petitioned_a', 'petitioned_b' ) }
-        second_dict[ HC.CONTENT_STATUS_DELETED ] = { ( 'pending_a', 'pending_b' ) }
-        second_dict[ HC.CONTENT_STATUS_PENDING ] = { ( 'pending_a', 'pending_b' ) }
-        second_dict[ HC.CONTENT_STATUS_PETITIONED ] = { ( 'petitioned_a', 'petitioned_b' ) }
-        
-        tag_siblings[ cls._first_key ] = first_dict
-        tag_siblings[ cls._second_key ] = second_dict
-        
-        HG.test_controller.SetRead( 'tag_siblings', tag_siblings )
+        HG.test_controller.SetParamRead( 'tag_siblings', ( cls._first_key, ), first_dict )
+        HG.test_controller.SetParamRead( 'tag_siblings', ( cls._second_key, ), second_dict )
         
         cls._tag_siblings_manager = ClientManagers.TagSiblingsManager( HG.test_controller )
         

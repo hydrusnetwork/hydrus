@@ -14,7 +14,6 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTagArchive
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientRatings
 from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
@@ -28,6 +27,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
 
@@ -538,7 +538,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_deletable = ''
             
         
-        return ( ( pretty_service_type, name, pretty_deletable ), ( pretty_service_type, name, deletable ) )
+        return ( ( name, pretty_service_type, pretty_deletable ), ( name, pretty_service_type, deletable ) )
         
     
     def _GetExistingNames( self ):

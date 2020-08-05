@@ -25,9 +25,9 @@ from hydrus.client import ClientLocalServerResources
 from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
-from hydrus.client import ClientTags
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientTags
 
 class TestClientAPI( unittest.TestCase ):
     
@@ -723,15 +723,11 @@ class TestClientAPI( unittest.TestCase ):
         old_sib = HG.test_controller.tag_siblings_manager
         old_par = HG.test_controller.tag_parents_manager
         
-        tag_siblings = collections.defaultdict( HydrusData.default_dict_set )
-        
         first_dict = HydrusData.default_dict_set()
         
-        first_dict[ HC.CONTENT_STATUS_CURRENT ] = { ( 'test', 'muh test' ) }
+        first_dict[ HC.CONTENT_STATUS_CURRENT ] = [ ( 'test', 'muh test' ) ]
         
-        tag_siblings[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = first_dict
-        
-        HG.test_controller.SetRead( 'tag_siblings', tag_siblings )
+        HG.test_controller.SetRead( 'tag_siblings', first_dict )
         
         tag_parents = collections.defaultdict( HydrusData.default_dict_set )
         

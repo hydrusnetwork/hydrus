@@ -12,8 +12,8 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientTags
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientTags
 
 def FilterDeletedTags( service_key: bytes, media_result: ClientMediaResult.MediaResult, tags: typing.Iterable[ str ] ):
     

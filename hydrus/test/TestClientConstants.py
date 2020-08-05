@@ -36,7 +36,7 @@ class TestManagers( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'services', services )
         
-        services_manager = ClientManagers.ServicesManager( HG.client_controller )
+        services_manager = ClientServices.ServicesManager( HG.client_controller )
         
         #
         

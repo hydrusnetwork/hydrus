@@ -29,7 +29,6 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIACDropdown
@@ -40,13 +39,13 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin

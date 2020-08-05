@@ -28,10 +28,11 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
+from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
@@ -212,6 +213,8 @@ class Controller( object ):
         self._reads[ 'file_system_predicates' ] = []
         self._reads[ 'media_results' ] = []
         
+        self._param_reads = {}
+        
         self.example_tag_repo_service_key = HydrusData.GenerateKey()
         
         services = []
@@ -243,7 +246,7 @@ class Controller( object ):
         
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
-        self._reads[ 'tag_siblings' ] = {}
+        self._reads[ 'tag_siblings' ] = collections.defaultdict( list )
         self._reads[ 'in_inbox' ] = False
         
         self._writes = collections.defaultdict( list )
@@ -252,7 +255,7 @@ class Controller( object ):
         
         self.column_list_manager = ClientGUIListManager.ColumnListManager()
         
-        self.services_manager = ClientManagers.ServicesManager( self )
+        self.services_manager = ClientServices.ServicesManager( self )
         self.client_files_manager = ClientFiles.ClientFilesManager( self )
         
         self.parsing_cache = ClientCaches.ParsingCache()
@@ -269,7 +272,7 @@ class Controller( object ):
         
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
-        self.tag_display_manager = ClientTags.TagDisplayManager()
+        self.tag_display_manager = ClientTagsHandling.TagDisplayManager()
         self.tag_siblings_manager = ClientManagers.TagSiblingsManager( self )
         self.tag_parents_manager = ClientManagers.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
@@ -619,6 +622,18 @@ class Controller( object ):
     
     def Read( self, name, *args, **kwargs ):
         
+        try:
+            
+            if ( name, args ) in self._param_reads:
+                
+                return self._param_reads[ ( name, args ) ]
+                
+            
+        except:
+            
+            pass
+            
+        
         return self._reads[ name ]
         
     
@@ -780,6 +795,11 @@ class Controller( object ):
         test_thread = threading.Thread( target = do_it )
         
         test_thread.start()
+        
+    
+    def SetParamRead( self, name, args, value ):
+        
+        self._param_reads[ ( name, args ) ] = value
         
     
     def SetRead( self, name, value ):

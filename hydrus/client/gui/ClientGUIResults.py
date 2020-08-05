@@ -23,7 +23,6 @@ from hydrus.client import ClientFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICanvas
 from hydrus.client.gui import ClientGUICanvasFrame
@@ -37,14 +36,13 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.metadata import ClientTags
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     

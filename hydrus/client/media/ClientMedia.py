@@ -12,9 +12,9 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientTags
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientTags
 
 hashes_to_jpeg_quality = {}
 hashes_to_pixel_hashes = {}

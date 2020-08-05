@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import random
 import threading
 import time
 import traceback
@@ -20,12 +21,11 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientDownloading
 from hydrus.client import ClientFiles
-from hydrus.client import ClientRatings
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
+from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
 
@@ -92,13 +92,15 @@ def GenerateDefaultServiceDictionary( service_type ):
         dictionary[ 'shape' ] = ClientRatings.CIRCLE
         dictionary[ 'colours' ] = []
         
+        from hydrus.client.gui import ClientGUIRatings
+        
         if service_type == HC.LOCAL_RATING_LIKE:
             
-            dictionary[ 'colours' ] = list( ClientRatings.default_like_colours.items() )
+            dictionary[ 'colours' ] = list( ClientGUIRatings.default_like_colours.items() )
             
         elif service_type == HC.LOCAL_RATING_NUMERICAL:
             
-            dictionary[ 'colours' ] = list( ClientRatings.default_numerical_colours.items() )
+            dictionary[ 'colours' ] = list( ClientGUIRatings.default_numerical_colours.items() )
             dictionary[ 'num_stars' ] = 5
             dictionary[ 'allow_zero' ]= True
             
@@ -2878,5 +2880,153 @@ class ServiceIPFS( ServiceRemote ):
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
         
         HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        
+    
+class ServicesManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._lock = threading.Lock()
+        self._keys_to_services = {}
+        self._services_sorted = []
+        
+        self.RefreshServices()
+        
+        self._controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
+        
+    
+    def _GetService( self, service_key: bytes ):
+        
+        try:
+            
+            return self._keys_to_services[ service_key ]
+            
+        except KeyError:
+            
+            raise HydrusExceptions.DataMissing( 'That service was not found!' )
+            
+        
+    
+    def _SetServices( self, services: typing.Collection[ Service ] ):
+        
+        self._keys_to_services = { service.GetServiceKey() : service for service in services }
+        
+        self._keys_to_services[ CC.TEST_SERVICE_KEY ] = GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, 'test service' )
+        
+        key = lambda s: s.GetName()
+        
+        self._services_sorted = sorted( services, key = key )
+        
+    
+    def Filter( self, service_keys: typing.Iterable[ bytes ], desired_types: typing.Iterable[ int ] ):
+        
+        with self._lock:
+            
+            filtered_service_keys = [ service_key for service_key in service_keys if service_key in self._keys_to_services and self._keys_to_services[ service_key ].GetServiceType() in desired_types ]
+            
+            return filtered_service_keys
+            
+        
+    
+    def FilterValidServiceKeys( self, service_keys: typing.Iterable[ bytes ] ):
+        
+        with self._lock:
+            
+            filtered_service_keys = [ service_key for service_key in service_keys if service_key in self._keys_to_services ]
+            
+            return filtered_service_keys
+            
+        
+    
+    def GetName( self, service_key: bytes ):
+        
+        with self._lock:
+            
+            service = self._GetService( service_key )
+            
+            return service.GetName()
+            
+        
+    
+    def GetService( self, service_key: bytes ):
+        
+        with self._lock:
+            
+            return self._GetService( service_key )
+            
+        
+    
+    def GetServiceType( self, service_key: bytes ):
+        
+        with self._lock:
+            
+            return self._GetService( service_key ).GetServiceType()
+            
+        
+    
+    def GetServiceKeyFromName( self, allowed_types: typing.Collection[ int ], service_name: str ):
+        
+        with self._lock:
+            
+            for service in self._services_sorted:
+                
+                if service.GetServiceType() in allowed_types and service.GetName() == service_name:
+                    
+                    return service.GetServiceKey()
+                    
+                
+            
+            raise HydrusExceptions.DataMissing()
+            
+        
+    
+    def GetServiceKeys( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES ):
+        
+        with self._lock:
+            
+            filtered_service_keys = [ service_key for ( service_key, service ) in self._keys_to_services.items() if service.GetServiceType() in desired_types ]
+            
+            return filtered_service_keys
+            
+        
+    
+    def GetServices( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES, randomised: bool = False ):
+        
+        with self._lock:
+            
+            services = []
+            
+            for desired_type in desired_types:
+                
+                services.extend( [ service for service in self._services_sorted if service.GetServiceType() == desired_type ] )
+                
+            
+            if randomised:
+                
+                random.shuffle( services )
+                
+            
+            return services
+            
+        
+    
+    def RefreshServices( self ):
+        
+        with self._lock:
+            
+            services = self._controller.Read( 'services' )
+            
+            self._SetServices( services )
+            
+        
+    
+    def ServiceExists( self, service_key: bytes ):
+        
+        with self._lock:
+            
+            return service_key in self._keys_to_services
+            
         
     

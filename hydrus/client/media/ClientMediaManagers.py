@@ -11,7 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
+from hydrus.client.metadata import ClientTags
 
 class DuplicatesManager( object ):
     

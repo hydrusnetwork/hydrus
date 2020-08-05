@@ -17,8 +17,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
 from hydrus.client import ClientPaths
-from hydrus.client import ClientRatings
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUICanvasMedia
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
@@ -31,7 +29,7 @@ from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
@@ -39,6 +37,8 @@ from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientRatings
+from hydrus.client.metadata import ClientTags
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1
@@ -2059,7 +2059,7 @@ class CanvasWithDetails( Canvas ):
                 
                 rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
                 
-                ClientRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state )
+                ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state )
                 
                 like_rating_current_x -= 16
                 
@@ -2077,9 +2077,9 @@ class CanvasWithDetails( Canvas ):
                 
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
                 
-                numerical_width = ClientRatings.GetNumericalWidth( service_key )
+                numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
                 
-                ClientRatings.DrawNumerical( painter, my_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
+                ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
                 
                 current_y += 18
                 
@@ -2219,13 +2219,15 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         CanvasWithDetails.__init__( self, parent )
         
-        self._GenerateHoverTopFrame()
+        top_hover = self._GenerateHoverTopFrame()
         
-        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, self._canvas_key )
+        self._my_shortcuts_handler.AddWindowToFilter( top_hover )
+        
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key )
         
         self._my_shortcuts_handler.AddWindowToFilter( hover )
         
-        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, self._canvas_key )
+        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, top_hover, self._canvas_key )
         
         self._my_shortcuts_handler.AddWindowToFilter( hover )
         
@@ -2339,6 +2341,17 @@ class CanvasWithHovers( CanvasWithDetails ):
         
     
     def mouseMoveEvent( self, event ):
+        
+        current_focus_tlw = QW.QApplication.activeWindow()
+        
+        my_tlw = self.window()
+        
+        if current_focus_tlw != my_tlw and ClientGUIFunctions.IsQtAncestor( current_focus_tlw, my_tlw, through_tlws = True ):
+            
+            my_tlw.activateWindow()
+            
+        
+        #
         
         CC.CAN_HIDE_MOUSE = True
         
@@ -2710,9 +2723,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GenerateHoverTopFrame( self ):
         
-        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( hover )
+        return ClientGUICanvasHoverFrames.CanvasHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
         
     
     def _GetBackgroundColour( self ):
@@ -3228,7 +3239,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        HG.client_controller.CallLaterQtSafe(self, 0.1, catch_up)
+        HG.client_controller.CallLaterQtSafe( self, 0.1, catch_up )
         
     
     def SetMedia( self, media ):
@@ -3439,7 +3450,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    HG.client_controller.CallLaterQtSafe(self, delay, image_cache.GetImageRenderer, media)
+                    HG.client_controller.CallLaterQtSafe( self, delay, image_cache.GetImageRenderer, media )
                     
                 
             
@@ -3693,9 +3704,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( hover )
+        return ClientGUICanvasHoverFrames.CanvasHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
         
     
     def _Keep( self ):
@@ -3833,9 +3842,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopNavigableList( self, self, self._canvas_key )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( hover )
+        return ClientGUICanvasHoverFrames.CanvasHoverFrameTopNavigableList( self, self, self._canvas_key )
         
     
     def Archive( self, canvas_key ):

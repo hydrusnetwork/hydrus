@@ -18,9 +18,9 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 

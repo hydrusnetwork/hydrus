@@ -20,7 +20,6 @@ from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICanvas
@@ -51,6 +50,7 @@ from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportSimpleURLs
 from hydrus.client.importing import ClientImportWatchers
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientTags
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
@@ -1990,11 +1990,21 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             self._multiple_gallery_import.SetHighlightedGalleryImport( self._highlighted_gallery_import )
             
+            self._highlighted_gallery_import.PublishToPage( True )
+            
             hashes = self._highlighted_gallery_import.GetPresentedHashes()
             
-            hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
-            
-            media_results = HG.client_controller.Read( 'media_results', hashes )
+            if len( hashes ) > 0:
+                
+                hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+                
+                media_results = HG.client_controller.Read( 'media_results', hashes )
+                
+            else:
+                
+                hashes = []
+                media_results = []
+                
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
@@ -2273,7 +2283,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No presented hashes for that selection!' )
+            QW.QMessageBox.warning( self, 'Warning', 'No presented files for that selection!' )
             
         
     
@@ -2776,9 +2786,17 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             hashes = self._highlighted_watcher.GetPresentedHashes()
             
-            hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
-            
-            media_results = HG.client_controller.Read( 'media_results', hashes )
+            if len( hashes ) > 0:
+                
+                hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+                
+                media_results = HG.client_controller.Read( 'media_results', hashes )
+                
+            else:
+                
+                hashes = []
+                media_results = []
+                
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
@@ -2791,6 +2809,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             self._page.SwapMediaPanel( panel )
             
             self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
+            
+            self._highlighted_watcher.PublishToPage( True )
             
             self._watchers_listctrl_panel.UpdateButtons()
             
@@ -3055,7 +3075,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No presented hashes for that selection!' )
+            QW.QMessageBox.warning( self, 'Warning', 'No presented files for that selection!' )
             
         
     

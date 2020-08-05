@@ -18,8 +18,6 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
-from hydrus.client.media import ClientMedia
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
@@ -37,10 +35,13 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagsHandling
 
 class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, tag_autocomplete_options: ClientTags.TagAutocompleteOptions ):
+    def __init__( self, parent: QW.QWidget, tag_autocomplete_options: ClientTagsHandling.TagAutocompleteOptions ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -178,7 +179,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        tag_autocomplete_options = ClientTags.TagAutocompleteOptions( self._original_tag_autocomplete_options.GetServiceKey() )
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( self._original_tag_autocomplete_options.GetServiceKey() )
         
         write_autocomplete_tag_domain = self._write_autocomplete_tag_domain.GetValue()
         override_write_autocomplete_file_domain = self._override_write_autocomplete_file_domain.isChecked()
@@ -203,9 +204,11 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_display_manager ):
+    def __init__( self, parent, tag_display_manager: ClientTagsHandling.TagDisplayManager ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_tag_display_manager = tag_display_manager
         
         self._tag_services = ClientGUICommon.BetterNotebook( self )
         
@@ -222,7 +225,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_services, tag_display_manager, service_key )
+            page = self._Panel( self._tag_services, self._original_tag_display_manager, service_key )
             
             select = service_key == CC.COMBINED_TAG_SERVICE_KEY
             
@@ -234,12 +237,6 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        intro = 'Please note this new system is under construction. It is neither completely functional nor as efficient as intended.'
-        
-        st = ClientGUICommon.BetterStaticText( self, intro )
-        st.setWordWrap( True )
-        
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -247,7 +244,9 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        tag_display_manager = ClientTags.TagDisplayManager()
+        tag_display_manager = self._original_tag_display_manager.Duplicate()
+        
+        tag_display_manager.ClearTagDisplayOptions()
         
         for page in self._tag_services.GetPages():
             
@@ -266,7 +265,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
     class _Panel( QW.QWidget ):
         
-        def __init__( self, parent: QW.QWidget, tag_display_manager: ClientTags.TagDisplayManager, service_key: bytes ):
+        def __init__( self, parent: QW.QWidget, tag_display_manager: ClientTagsHandling.TagDisplayManager, service_key: bytes ):
             
             QW.QWidget.__init__( self, parent )
             
@@ -1480,6 +1479,169 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._UpdateStatus()
+        
+    
+class EditTagSiblingsApplication( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, tag_display_manager: ClientTagsHandling.TagDisplayManager ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_tag_display_manager = tag_display_manager
+        
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
+        
+        self._tag_services.setMinimumWidth( min_width )
+        
+        #
+        
+        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) )
+        local_service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_TAG, ) ) )
+        
+        select_service_key = local_service_keys[0]
+        
+        # a panel for combined, panels for all else
+        # default select the first local tag service
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_services, self._original_tag_display_manager, service_key )
+            
+            select = service_key == select_service_key
+            
+            self._tag_services.addTab( page, name )
+            
+            if select:
+                
+                self._tag_services.setCurrentWidget( page )
+                
+            
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        tag_display_manager = self._original_tag_display_manager.Duplicate()
+        
+        service_keys_to_ordered_sibling_service_keys = {}
+        
+        for page in self._tag_services.GetPages():
+            
+            service_key = page.GetServiceKey()
+            
+            ordered_service_keys = page.GetValue()
+            
+            service_keys_to_ordered_sibling_service_keys[ service_key ] = ordered_service_keys
+            
+        
+        tag_display_manager.SetSiblingServiceKeys( service_keys_to_ordered_sibling_service_keys )
+        
+        return tag_display_manager
+        
+    
+    class _Panel( QW.QWidget ):
+        
+        def __init__( self, parent: QW.QWidget, tag_display_manager: ClientTagsHandling.TagDisplayManager, service_key: bytes ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._service_key = service_key
+            
+            if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                message = 'In a couple of situations, typically tag autocomplete suggestion swapping, the client wants to do sibling lookups in \'all known tags\' domain. In this case, it generally tries to combine all known siblings.'
+                message += os.linesep * 2
+                message += 'You can leave this as it is, but if you do not want any siblings, or always want one priority, feel free to set something else.'
+                
+            else:
+                
+                message = 'Normally, a tag service applies its own siblings to itself. If, however, you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings.'
+                message += os.linesep * 2
+                message += 'If there are conflicts, the services at the top of the list have precedence.'
+                
+            
+            ordered_service_keys = tag_display_manager.GetSiblingServiceKeys( HG.client_controller.services_manager, self._service_key )
+            
+            #
+            
+            self._display_box = ClientGUICommon.StaticBox( self, 'sibling application' )
+            
+            self._message = ClientGUICommon.BetterStaticText( self._display_box, label = message )
+            self._message.setWordWrap( True )
+            
+            #
+            
+            self._service_keys = ClientGUIListBoxes.QueueListBox( self._display_box, 6, HG.client_controller.services_manager.GetName, add_callable = self._Add )
+            
+            #
+            
+            self._service_keys.AddDatas( ordered_service_keys )
+            
+            #
+            
+            self._display_box.Add( self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._display_box.Add( self._service_keys, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._display_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+        
+        def _Add( self ):
+            
+            current_service_keys = set( self.GetValue() )
+            
+            allowed_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            
+            allowed_services = [ service for service in allowed_services if service.GetServiceKey() not in current_service_keys ]
+            
+            if len( allowed_services ) == 0:
+                
+                QW.QMessageBox.information( self, 'Information', 'You have all the current tag services applied to this service.' )
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetName() ) for service in allowed_services ]
+            
+            try:
+                
+                service_key = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which service?', choice_tuples )
+                
+                return service_key
+                
+            except HydrusExceptions.CancelledException:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+        def GetServiceKey( self ):
+            
+            return self._service_key
+            
+        
+        def GetValue( self ):
+            
+            return self._service_keys.GetData()
+            
         
     
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):

@@ -16,7 +16,6 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -25,6 +24,7 @@ from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientTags
 
 class BetterQListWidget( QW.QListWidget ):
     
@@ -754,7 +754,15 @@ class QueueListBox( QW.QWidget ):
         #
         
         self._listbox.itemSelectionChanged.connect( self._UpdateButtons )
-        self._listbox.itemDoubleClicked.connect( self._Edit )
+        
+        if self._edit_callable is None:
+            
+            self._listbox.itemDoubleClicked.connect( self._Edit )
+            
+        else:
+            
+            self._listbox.itemDoubleClicked.connect( self._Delete )
+            
         
         self._UpdateButtons()
         
@@ -1722,6 +1730,15 @@ class ListBox( QW.QScrollArea ):
         return size_hint
         
     
+COPY_ALL_TAGS = 0
+COPY_ALL_TAGS_WITH_COUNTS = 1
+COPY_SELECTED_TAGS = 2
+COPY_SELECTED_TAGS_WITH_COUNTS = 3
+COPY_SELECTED_SUBTAGS = 4
+COPY_SELECTED_SUBTAGS_WITH_COUNTS = 5
+COPY_ALL_SUBTAGS = 6
+COPY_ALL_SUBTAGS_WITH_COUNTS = 7
+
 class ListBoxTags( ListBox ):
     
     ors_are_under_construction = False
@@ -1744,14 +1761,71 @@ class ListBoxTags( ListBox ):
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
     
-    def _CanProvideCurrentPagePredicates( self ):
+    def _GetCopyableTagStrings( self, command ):
         
-        return False
+        only_selected = command in ( COPY_SELECTED_TAGS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        with_counts = command in ( COPY_ALL_TAGS_WITH_COUNTS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        only_subtags = command in ( COPY_ALL_SUBTAGS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
         
-    
-    def _GetNamespaceColours( self ):
+        if only_selected:
+            
+            if len( self._selected_terms ) > 1:
+                
+                # keep order
+                terms = [ term for term in self._ordered_terms if term in self._selected_terms ]
+                
+            else:
+                
+                # nice and fast
+                terms = self._selected_terms
+                
+            
+        else:
+            
+            terms = self._ordered_terms
+            
         
-        return HC.options[ 'namespace_colours' ]
+        copyable_tag_strings = []
+        
+        for term in terms:
+            
+            if isinstance( term, ClientSearch.Predicate ):
+                
+                if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+                    
+                    tag = term.GetValue()
+                    
+                else:
+                    
+                    tag = term.ToString( with_count = with_counts )
+                    
+                
+            else:
+                
+                if self._HasCounts() and with_counts:
+                    
+                    tag = self._terms_to_texts[ term ]
+                    
+                else:
+                    
+                    tag = str( term )
+                    
+                
+            
+            copyable_tag_strings.append( tag )
+            
+        
+        if only_subtags:
+            
+            copyable_tag_strings = [ HydrusTags.SplitTag( tag_string )[1] for tag_string in copyable_tag_strings ]
+            
+            if not with_counts:
+                
+                copyable_tag_strings = HydrusData.DedupeList( copyable_tag_strings )
+                
+            
+        
+        return copyable_tag_strings
         
     
     def _GetCurrentFileServiceKey( self ):
@@ -1764,9 +1838,19 @@ class ListBoxTags( ListBox ):
         return set()
         
     
+    def _GetNamespaceColours( self ):
+        
+        return HC.options[ 'namespace_colours' ]
+        
+    
     def _GetNamespaceFromTerm( self, term ):
         
         raise NotImplementedError()
+        
+    
+    def _CanProvideCurrentPagePredicates( self ):
+        
+        return False
         
     
     def _GetSelectedActualTags( self ):
@@ -1793,60 +1877,6 @@ class ListBoxTags( ListBox ):
             
         
         return selected_actual_tags
-        
-    
-    def _GetCopyableTagStrings( self, only_selected = False, with_counts = False ):
-        
-        if only_selected:
-            
-            if len( self._selected_terms ) > 1:
-                
-                # keep order
-                terms = [ term for term in self._ordered_terms if term in self._selected_terms ]
-                
-            else:
-                
-                terms = self._selected_terms
-                
-            
-        else:
-            
-            terms = self._ordered_terms
-            
-        
-        selected_copyable_tag_strings = []
-        
-        for term in terms:
-            
-            if isinstance( term, ClientSearch.Predicate ):
-                
-                if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
-                    
-                    tag = term.GetValue()
-                    
-                else:
-                    
-                    tag = term.ToString( with_count = with_counts )
-                    
-                
-                selected_copyable_tag_strings.append( tag )
-                
-            else:
-                
-                if self._HasCounts() and with_counts:
-                    
-                    tag = self._terms_to_texts[ term ]
-                    
-                else:
-                    
-                    tag = str( term )
-                    
-                
-                selected_copyable_tag_strings.append( tag )
-                
-            
-        
-        return selected_copyable_tag_strings
         
     
     def _GetTagFromTerm( self, term ):
@@ -1963,27 +1993,7 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuCopyEvent( self, command ):
         
-        only_selected = False
-        with_counts = False
-        
-        texts = []
-        
-        if command in ( 'copy_selected_terms', 'copy_selected_sub_terms' ):
-            
-            only_selected = True
-            
-        
-        if command == 'copy_all_tags_with_counts':
-            
-            with_counts = True
-            
-        
-        texts = self._GetCopyableTagStrings( only_selected = only_selected, with_counts = with_counts )
-        
-        if command == 'copy_selected_sub_terms':
-            
-            texts = [ subtag for ( namespace, subtag ) in [ HydrusTags.SplitTag( text ) for text in texts ] ]
-            
+        texts = self._GetCopyableTagStrings( command )
         
         if len( texts ) > 0:
             
@@ -2134,13 +2144,16 @@ class ListBoxTags( ListBox ):
     
     def ShowMenu( self ):
         
+        sub_selection_string = None
+        
         if len( self._ordered_terms ) > 0:
             
             menu = QW.QMenu()
             
             copy_menu = QW.QMenu( menu )
             
-            selected_copyable_tag_strings = self._GetCopyableTagStrings( only_selected = True, with_counts = False )
+            selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
+            selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
             selected_actual_tags = self._GetSelectedActualTags()
             
             if len( selected_copyable_tag_strings ) == 1:
@@ -2149,16 +2162,14 @@ class ListBoxTags( ListBox ):
                 
             else:
                 
-                selection_string = 'selected'
+                selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
                 
             
-            selected_stuff_to_copy = len( selected_copyable_tag_strings ) > 0
-            
-            if selected_stuff_to_copy:
+            if len( selected_copyable_tag_strings ) > 0:
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_selected_terms' )
+                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
                 
-                if len( selected_copyable_tag_strings ) == 1:
+                if len( selected_copyable_subtag_strings ) == 1:
                     
                     ( selection_string, ) = selected_copyable_tag_strings 
                     
@@ -2168,12 +2179,14 @@ class ListBoxTags( ListBox ):
                         
                         sub_selection_string = subtag
                         
-                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected sub-predicate to your clipboard.', self._ProcessMenuCopyEvent, 'copy_selected_sub_terms' )
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
                         
                     
                 else:
                     
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_selected_sub_terms' )
+                    sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
                     
                 
                 siblings = []
@@ -2222,6 +2235,18 @@ class ListBoxTags( ListBox ):
                         
                     
                 
+                if self._HasCounts():
+                    
+                    ClientGUIMenus.AppendSeparator( copy_menu )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( selection_string ), 'Copy the selected tags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS_WITH_COUNTS )
+                    
+                    if sub_selection_string is not None:
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( sub_selection_string ), 'Copy the selected subtags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+                        
+                    
+                
             
             copy_all_is_appropriate = len( self._ordered_terms ) > len( self._selected_terms )
             
@@ -2229,11 +2254,13 @@ class ListBoxTags( ListBox ):
                 
                 ClientGUIMenus.AppendSeparator( copy_menu )
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the tags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags', 'Copy all the subtags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS )
                 
                 if self._HasCounts():
                     
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the tags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS_WITH_COUNTS )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags with counts', 'Copy all the subtags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS_WITH_COUNTS )
                     
                 
             

@@ -16,7 +16,6 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientSearch
-from hydrus.client import ClientTags
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
@@ -28,6 +27,7 @@ from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.metadata import ClientTags
 
 from hydrus.external import LogicExpressionQueryParser
 

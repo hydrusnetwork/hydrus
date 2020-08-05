@@ -181,8 +181,6 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = 'Delete all selected?'
             
-            from hydrus.client.gui import ClientGUIDialogsQuick
-            
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
             if result == QW.QDialog.Accepted:

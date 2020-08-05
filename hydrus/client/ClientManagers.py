@@ -1,20 +1,16 @@
 import collections
-import random
 import threading
-import traceback
 import typing
 
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientSearch
-from hydrus.client import ClientServices
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -480,154 +476,6 @@ class FileViewingStatsManager( object ):
         self._PubSubRow( hash, row )
         
 
-class ServicesManager( object ):
-    
-    def __init__( self, controller ):
-        
-        self._controller = controller
-        
-        self._lock = threading.Lock()
-        self._keys_to_services = {}
-        self._services_sorted = []
-        
-        self.RefreshServices()
-        
-        self._controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
-        
-    
-    def _GetService( self, service_key: bytes ):
-        
-        try:
-            
-            return self._keys_to_services[ service_key ]
-            
-        except KeyError:
-            
-            raise HydrusExceptions.DataMissing( 'That service was not found!' )
-            
-        
-    
-    def _SetServices( self, services: typing.Collection[ ClientServices.Service ] ):
-        
-        self._keys_to_services = { service.GetServiceKey() : service for service in services }
-        
-        self._keys_to_services[ CC.TEST_SERVICE_KEY ] = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, 'test service' )
-        
-        key = lambda s: s.GetName()
-        
-        self._services_sorted = sorted( services, key = key )
-        
-    
-    def Filter( self, service_keys: typing.Iterable[ bytes ], desired_types: typing.Iterable[ int ] ):
-        
-        with self._lock:
-            
-            filtered_service_keys = [ service_key for service_key in service_keys if service_key in self._keys_to_services and self._keys_to_services[ service_key ].GetServiceType() in desired_types ]
-            
-            return filtered_service_keys
-            
-        
-    
-    def FilterValidServiceKeys( self, service_keys: typing.Iterable[ bytes ] ):
-        
-        with self._lock:
-            
-            filtered_service_keys = [ service_key for service_key in service_keys if service_key in self._keys_to_services ]
-            
-            return filtered_service_keys
-            
-        
-    
-    def GetName( self, service_key: bytes ):
-        
-        with self._lock:
-            
-            service = self._GetService( service_key )
-            
-            return service.GetName()
-            
-        
-    
-    def GetService( self, service_key: bytes ):
-        
-        with self._lock:
-            
-            return self._GetService( service_key )
-            
-        
-    
-    def GetServiceType( self, service_key: bytes ):
-        
-        with self._lock:
-            
-            return self._GetService( service_key ).GetServiceType()
-            
-        
-    
-    def GetServiceKeyFromName( self, allowed_types: typing.Collection[ int ], service_name: str ):
-        
-        with self._lock:
-            
-            for service in self._services_sorted:
-                
-                if service.GetServiceType() in allowed_types and service.GetName() == service_name:
-                    
-                    return service.GetServiceKey()
-                    
-                
-            
-            raise HydrusExceptions.DataMissing()
-            
-        
-    
-    def GetServiceKeys( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES ):
-        
-        with self._lock:
-            
-            filtered_service_keys = [ service_key for ( service_key, service ) in self._keys_to_services.items() if service.GetServiceType() in desired_types ]
-            
-            return filtered_service_keys
-            
-        
-    
-    def GetServices( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES, randomised: bool = False ):
-        
-        with self._lock:
-            
-            services = []
-            
-            for desired_type in desired_types:
-                
-                services.extend( [ service for service in self._services_sorted if service.GetServiceType() == desired_type ] )
-                
-            
-            if randomised:
-                
-                random.shuffle( services )
-                
-            
-            return services
-            
-        
-    
-    def RefreshServices( self ):
-        
-        with self._lock:
-            
-            services = self._controller.Read( 'services' )
-            
-            self._SetServices( services )
-            
-        
-    
-    def ServiceExists( self, service_key: bytes ):
-        
-        with self._lock:
-            
-            return service_key in self._keys_to_services
-            
-        
-    
 class TagParentsManager( object ):
     
     def __init__( self, controller ):
@@ -830,13 +678,15 @@ class TagSiblingsManager( object ):
         
         tag_repo_pairs = set()
         
-        service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_siblings' )
-        
-        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+        for service in self._controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
             
-            all_pairs = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
+            service_key = service.GetServiceKey()
             
-            service = self._controller.services_manager.GetService( service_key )
+            statuses_to_pairs = self._controller.Read( 'tag_siblings', service_key )
+            
+            # don't do set here, do the same ordered lookup on lists, use set for petitioned to discount from current
+            # also, obviously, we'll be moving to TSS, rather than this ad-hoc mess, so we are all on the same page
+            all_pairs = set( statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ).union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( statuses_to_pairs[ HC.CONTENT_UPDATE_PETITION ] )
             
             if service.GetServiceType() == HC.LOCAL_TAG:
                 

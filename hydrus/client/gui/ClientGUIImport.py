@@ -16,7 +16,6 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
@@ -39,6 +38,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
+from hydrus.client.metadata import ClientTags
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     

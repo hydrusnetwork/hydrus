@@ -538,8 +538,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._file_seed_cache.GetHashes()
+            fsc = self._file_seed_cache
             
+        
+        return fsc.GetHashes()
         
     
     def GetNetworkJobs( self ):
@@ -554,12 +556,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            file_import_options = ClientImportOptions.FileImportOptions()
+            fsc = self._file_seed_cache
             
-            file_import_options.SetPresentationOptions( True, False, False )
-            
-            return self._file_seed_cache.GetPresentedHashes( file_import_options )
-            
+        
+        file_import_options = ClientImportOptions.FileImportOptions()
+        
+        file_import_options.SetPresentationOptions( True, False, False )
+        
+        return fsc.GetPresentedHashes( file_import_options )
         
     
     def GetNumSeeds( self ):
@@ -582,8 +586,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._file_seed_cache.GetPresentedHashes( self._file_import_options )
+            fsc = self._file_seed_cache
+            fio = self._file_import_options
             
+        
+        return fsc.GetPresentedHashes( fio )
         
     
     def GetQueryText( self ):
@@ -1437,8 +1444,6 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 self._highlighted_gallery_import_key = highlighted_gallery_import.GetGalleryImportKey()
-                
-                highlighted_gallery_import.PublishToPage( True )
                 
             
         

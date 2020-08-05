@@ -6,7 +6,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientTags
+from hydrus.client.metadata import ClientTags
 
 class TestFunctions( unittest.TestCase ):
     

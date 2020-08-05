@@ -14,12 +14,12 @@ from hydrus.client import ClientDefaults
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
-from hydrus.client import ClientTags
 from hydrus.client.gui import ClientGUIManagement
 from hydrus.client.gui import ClientGUIPages
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.metadata import ClientTags
 
 from hydrus.test import TestController
 

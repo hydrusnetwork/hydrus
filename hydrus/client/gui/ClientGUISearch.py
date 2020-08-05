@@ -11,8 +11,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.media import ClientMedia
-from hydrus.client import ClientRatings
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
@@ -20,10 +18,13 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIOptionsPanels
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientRatings
 
 FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
@@ -1999,7 +2000,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             
             rated_checkbox = QW.QCheckBox( 'rated', self )
             not_rated_checkbox = QW.QCheckBox( 'not rated', self )
-            rating_ctrl = ClientGUICommon.RatingLikeDialog( self, service_key )
+            rating_ctrl = ClientGUIRatings.RatingLikeDialog( self, service_key )
             
             self._like_checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
             self._like_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
@@ -2028,7 +2029,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             rated_checkbox = QW.QCheckBox( 'rated', self )
             not_rated_checkbox = QW.QCheckBox( 'not rated', self )
             choice = QP.RadioBox( self, choices=['>','<','=','\u2248'] )
-            rating_ctrl = ClientGUICommon.RatingNumericalDialog( self, service_key )
+            rating_ctrl = ClientGUIRatings.RatingNumericalDialog( self, service_key )
             
             choice.Select( 2 )
             
