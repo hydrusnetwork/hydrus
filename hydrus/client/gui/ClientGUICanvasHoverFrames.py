@@ -267,6 +267,7 @@ class CanvasHoverFrame( QW.QFrame ):
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
         self.setLineWidth( 2 )
         
+        self._my_parent_tlw = parent.window()
         self._my_canvas = my_canvas
         self._canvas_key = canvas_key
         self._current_media = None
@@ -280,6 +281,8 @@ class CanvasHoverFrame( QW.QFrame ):
         self._hide_until =  None
         
         self._position_initialised = False
+        
+        self._my_parent_tlw.installEventFilter( self )
         
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
@@ -299,15 +302,29 @@ class CanvasHoverFrame( QW.QFrame ):
             
             if should_resize:
                 
-                self.setGeometry( QC.QRect( my_ideal_position, my_ideal_size ) )
+                self.resize( my_ideal_size )
                 
-            else:
+            
+            if my_ideal_position != self.pos():
                 
                 self.move( my_ideal_position )
                 
             
             self._position_initialised = True
             
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if watched == self._my_parent_tlw:
+            
+            if event.type() in ( QC.QEvent.Move, QC.QEvent.Resize ):
+                
+                self._position_initialised = False
+                
+            
+        
+        return False
         
     
     def SetDisplayMedia( self, canvas_key, media ):
@@ -838,7 +855,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = int( parent_width * 0.6 )
+        my_ideal_width = max( int( parent_width * 0.6 ), self.sizeHint().width() )
         
         my_ideal_height = self.sizeHint().height()
         
@@ -1346,7 +1363,10 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        width_beside_top_hover = ClientGUIFunctions.ClientToScreen( parent_window, parent_window.rect().topRight() ).x() - ClientGUIFunctions.ClientToScreen( self._top_hover, self._top_hover.rect().bottomRight() ).x()
+        # don't use .rect() here, it (sometimes) isn't updated on a hidden window until next show, I think
+        top_hover_bottom_right = QC.QPoint( self._top_hover.x() + self._top_hover.width(), self._top_hover.y() + self._top_hover.height() )
+        
+        width_beside_top_hover = ClientGUIFunctions.ClientToScreen( parent_window, parent_window.rect().topRight() ).x() - top_hover_bottom_right.x()
         
         my_ideal_width = max( self.sizeHint().width(), width_beside_top_hover )
         
@@ -1357,8 +1377,6 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
         
         ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width - my_ideal_width ), 0 ) )
-        
-        top_hover_bottom_right = ClientGUIFunctions.ClientToScreen( self._top_hover, self._top_hover.rect().bottomRight() )
         
         if top_hover_bottom_right.x() > ideal_position.x():
             

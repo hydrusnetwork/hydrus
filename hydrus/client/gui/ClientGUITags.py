@@ -1,6 +1,7 @@
 import collections
 import itertools
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -1481,44 +1482,44 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-class EditTagSiblingsApplication( ClientGUIScrolledPanels.EditPanel ):
+class EditTagSiblingApplication( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_display_manager: ClientTagsHandling.TagDisplayManager ):
+    def __init__( self, parent, master_service_keys_to_applicable_service_keys ):
+        
+        master_service_keys_to_applicable_service_keys = collections.defaultdict( list, master_service_keys_to_applicable_service_keys )
+        
+        
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._original_tag_display_manager = tag_display_manager
+        self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
         
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services_notebook, 100 )
         
-        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
-        
-        self._tag_services.setMinimumWidth( min_width )
+        self._tag_services_notebook.setMinimumWidth( min_width )
         
         #
         
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) )
-        local_service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_TAG, ) ) )
+        services = list( HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
         
-        select_service_key = local_service_keys[0]
-        
-        # a panel for combined, panels for all else
-        # default select the first local tag service
+        select_service_key = services[0].GetServiceKey()
         
         for service in services:
             
-            service_key = service.GetServiceKey()
+            master_service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_services, self._original_tag_display_manager, service_key )
+            applicable_service_keys = master_service_keys_to_applicable_service_keys[ master_service_key ]
             
-            select = service_key == select_service_key
+            page = self._Panel( self._tag_services_notebook, master_service_key, applicable_service_keys )
             
-            self._tag_services.addTab( page, name )
+            select = master_service_key == select_service_key
+            
+            self._tag_services_notebook.addTab( page, name )
             
             if select:
                 
-                self._tag_services.setCurrentWidget( page )
+                self._tag_services_notebook.setCurrentWidget( page )
                 
             
         
@@ -1526,53 +1527,36 @@ class EditTagSiblingsApplication( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
         
-        tag_display_manager = self._original_tag_display_manager.Duplicate()
+        master_service_keys_to_applicable_service_keys = collections.defaultdict( list )
         
-        service_keys_to_ordered_sibling_service_keys = {}
-        
-        for page in self._tag_services.GetPages():
+        for page in self._tag_services_notebook.GetPages():
             
-            service_key = page.GetServiceKey()
+            ( master_service_key, applicable_service_keys ) = page.GetValue()
             
-            ordered_service_keys = page.GetValue()
-            
-            service_keys_to_ordered_sibling_service_keys[ service_key ] = ordered_service_keys
+            master_service_keys_to_applicable_service_keys[ master_service_key ] = applicable_service_keys
             
         
-        tag_display_manager.SetSiblingServiceKeys( service_keys_to_ordered_sibling_service_keys )
-        
-        return tag_display_manager
+        return master_service_keys_to_applicable_service_keys
         
     
     class _Panel( QW.QWidget ):
         
-        def __init__( self, parent: QW.QWidget, tag_display_manager: ClientTagsHandling.TagDisplayManager, service_key: bytes ):
+        def __init__( self, parent: QW.QWidget, master_service_key: bytes, applicable_service_keys: typing.List[ bytes ] ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._service_key = service_key
+            self._master_service_key = master_service_key
             
-            if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                message = 'In a couple of situations, typically tag autocomplete suggestion swapping, the client wants to do sibling lookups in \'all known tags\' domain. In this case, it generally tries to combine all known siblings.'
-                message += os.linesep * 2
-                message += 'You can leave this as it is, but if you do not want any siblings, or always want one priority, feel free to set something else.'
-                
-            else:
-                
-                message = 'Normally, a tag service applies its own siblings to itself. If, however, you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings.'
-                message += os.linesep * 2
-                message += 'If there are conflicts, the services at the top of the list have precedence.'
-                
-            
-            ordered_service_keys = tag_display_manager.GetSiblingServiceKeys( HG.client_controller.services_manager, self._service_key )
+            message = 'Normally, a tag service applies its own siblings to itself. If, however, you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings.'
+            message += os.linesep * 2
+            message += 'If there are conflicts, the services at the top of the list have precedence.'
             
             #
             
@@ -1583,16 +1567,16 @@ class EditTagSiblingsApplication( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            self._service_keys = ClientGUIListBoxes.QueueListBox( self._display_box, 6, HG.client_controller.services_manager.GetName, add_callable = self._Add )
+            self._service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._display_box, 6, HG.client_controller.services_manager.GetName, add_callable = self._Add )
             
             #
             
-            self._service_keys.AddDatas( ordered_service_keys )
+            self._service_keys_listbox.AddDatas( applicable_service_keys )
             
             #
             
             self._display_box.Add( self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._display_box.Add( self._service_keys, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._display_box.Add( self._service_keys_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
@@ -1606,7 +1590,7 @@ class EditTagSiblingsApplication( ClientGUIScrolledPanels.EditPanel ):
         
         def _Add( self ):
             
-            current_service_keys = set( self.GetValue() )
+            ( master_service_key, current_service_keys ) = self.GetValue()
             
             allowed_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
             
@@ -1633,14 +1617,9 @@ class EditTagSiblingsApplication( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        def GetServiceKey( self ):
-            
-            return self._service_key
-            
-        
         def GetValue( self ):
             
-            return self._service_keys.GetData()
+            return ( self._master_service_key, self._service_keys_listbox.GetData() )
             
         
     
@@ -1940,23 +1919,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
             
-            menu_items = []
-            
-            call = HydrusData.Call( self._DoSiblingsAndParents, self._tag_service_key )
-            
-            sub_menu_items = []
-            
-            sub_menu_items.append( ( 'normal', 'Just this service\'s siblings and parents', 'Fix siblings and parents.', call ) )
-            
-            call = HydrusData.Call( self._DoSiblingsAndParents, CC.COMBINED_TAG_SERVICE_KEY )
-            
-            sub_menu_items.append( ( 'normal', 'All service siblings and parents', 'Fix siblings and parents.', call ) )
-            
-            menu_items.append( ( 'submenu', 'Hard-replace siblings and add parents', '', sub_menu_items ) )
-            
-            self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().family, menu_items )
-            self._do_siblings_and_parents.setToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )
-            
             self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().copy, self._Copy )
             self._copy_button.setToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
             
@@ -1970,10 +1932,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipExpandParents, lambda: self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
             
             menu_items.append( ( 'check', 'auto-add entered tags\' parents on add/pend action', 'If checked, adding any tag that has parents will also add those parents.', check_manager ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'replace_siblings_on_manage_tags' )
-            
-            menu_items.append( ( 'check', 'auto-replace entered siblings on add/pend action', 'If checked, adding any tag that has a sibling will instead add that sibling.', check_manager ) )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'allow_remove_on_manage_tags_input' )
             
@@ -2015,7 +1973,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             button_hbox = QP.HBoxLayout()
             
             QP.AddToLayout( button_hbox, self._remove_tags, CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( button_hbox, self._do_siblings_and_parents, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER )
@@ -2283,13 +2240,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
                         
-                        if self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ):
-                            
-                            siblings_manager = HG.client_controller.tag_siblings_manager
-                            
-                            tag = siblings_manager.CollapseTag( self._tag_service_key, tag )
-                            
-                        
                         recent_tags.add( tag )
                         
                         if self._new_options.GetBoolean( 'add_parents_on_manage_tags' ):
@@ -2392,147 +2342,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 HG.client_controller.pub( 'clipboard', 'text', text )
                 
-            
-        
-        def _DoSiblingsAndParents( self, service_key ):
-            
-            tag_siblings_manager = HG.client_controller.tag_siblings_manager
-            
-            tag_parents_manager = HG.client_controller.tag_parents_manager
-            
-            removee_tags_to_hashes = collections.defaultdict( list )
-            addee_tags_to_hashes = collections.defaultdict( list )
-            
-            for m in self._media:
-                
-                hash = m.GetHash()
-                
-                tags = m.GetTagsManager().GetCurrentAndPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
-                
-                sibling_correct_tags = tag_siblings_manager.CollapseTags( service_key, tags, service_strict = True )
-                
-                sibling_and_parent_correct_tags = tag_parents_manager.ExpandTags( service_key, sibling_correct_tags, service_strict = True )
-                
-                removee_tags = tags.difference( sibling_and_parent_correct_tags )
-                addee_tags = sibling_and_parent_correct_tags.difference( tags )
-                
-                for tag in removee_tags:
-                    
-                    removee_tags_to_hashes[ tag ].append( hash )
-                    
-                
-                for tag in addee_tags:
-                    
-                    addee_tags_to_hashes[ tag ].append( hash )
-                    
-                
-            
-            if len( removee_tags_to_hashes ) == 0 and len( addee_tags_to_hashes ) == 0:
-                
-                QW.QMessageBox.information( self, 'Information', 'No replacements seem to be needed.' )
-                
-                return
-                
-            
-            summary_message = 'The following changes will be made:'
-            
-            if len( removee_tags_to_hashes ) > 0:
-                
-                removee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in removee_tags_to_hashes.items() }
-                
-                removee_tags = list( removee_tags_to_counts.keys() )
-                
-                ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, removee_tags, removee_tags_to_counts )
-                
-                removee_tag_statements = [ '{} ({})'.format( tag, removee_tags_to_counts[ tag ] ) for tag in removee_tags ]
-                
-                if len( removee_tag_statements ) > 10:
-                    
-                    removee_tag_statements = removee_tag_statements[:10]
-                    
-                    removee_tag_statements.append( 'and more' )
-                    
-                
-                summary_message += os.linesep * 2
-                summary_message += 'REMOVE: ' + ', '.join( removee_tag_statements )
-                
-            
-            if len( addee_tags_to_hashes ) > 0:
-                
-                addee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in addee_tags_to_hashes.items() }
-                
-                addee_tags = list( addee_tags_to_counts.keys() )
-                
-                ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, addee_tags, addee_tags_to_counts )
-                
-                addee_tag_statements = [ '{} ({})'.format( tag, addee_tags_to_counts[ tag ] ) for tag in addee_tags ]
-                
-                if len( addee_tag_statements ) > 10:
-                    
-                    addee_tag_statements = addee_tag_statements[:10]
-                    
-                    addee_tag_statements.append( 'and more' )
-                    
-                
-                summary_message += os.linesep * 2
-                summary_message += 'ADD: ' + ', '.join( addee_tag_statements )
-                
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, summary_message, yes_label = 'do it', no_label = 'forget it' )
-            
-            if result != QW.QDialog.Accepted:
-                
-                return
-                
-            
-            # this no longer does pend/petition for repos, making it local-only
-            # therefore, clients' unusual siblings no longer affect the tag repo
-            
-            addee_action = HC.CONTENT_UPDATE_ADD
-            removee_action = HC.CONTENT_UPDATE_DELETE
-            other_removee_action = HC.CONTENT_UPDATE_RESCIND_PEND
-            reason = None
-            
-            content_updates = []
-            
-            for ( tag, hashes ) in removee_tags_to_hashes.items():
-                
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, removee_action, ( tag, hashes ), reason = reason ) )
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, other_removee_action, ( tag, hashes ), reason = reason ) )
-                
-            
-            for ( tag, hashes ) in addee_tags_to_hashes.items():
-                
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, addee_action, ( tag, hashes ), reason = reason ) )
-                
-            
-            if not self._immediate_commit:
-                
-                hashes_to_tag_managers = { m.GetHash() : m.GetTagsManager() for m in self._media }
-                
-                for content_update in content_updates:
-                    
-                    hashes = content_update.GetHashes()
-                    
-                    for hash in hashes:
-                        
-                        if hash in hashes_to_tag_managers:
-                            
-                            hashes_to_tag_managers[ hash ].ProcessContentUpdate( self._tag_service_key, content_update )
-                            
-                        
-                    
-                
-                self._groups_of_content_updates.append( content_updates )
-                
-            else:
-                
-                service_keys_to_content_updates = { self._tag_service_key : content_updates }
-                
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                
-            
-            self._tags_box.SetTagsByMedia( self._media )
             
         
         def _FlipExpandParents( self ):
@@ -3427,7 +3236,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             show_all = self._show_all.isChecked()
             
-            for ( status, pairs ) in list(self._current_statuses_to_pairs.items()):
+            for ( status, pairs ) in self._current_statuses_to_pairs.items():
                 
                 if status == HC.CONTENT_STATUS_DELETED:
                     
@@ -3911,13 +3720,13 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         else:
                             
-                            if len( pending_pairs ) > 10:
+                            if len( current_pairs ) > 10:
                                 
                                 pair_strings = 'The many pairs you entered.'
                                 
                             else:
                                 
-                                pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                                pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
                                 
                             
                             message = 'Enter a reason for:'
@@ -4467,7 +4276,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.setText( 'Tags on the left will be replaced by those on the right.' )
+                self._status_st.setText( 'Tags on the left will be appear as those on the right.' )
                 self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
                 self._old_input.setEnabled( True )

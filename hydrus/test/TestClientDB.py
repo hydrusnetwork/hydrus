@@ -79,11 +79,11 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'series:*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'series:*' )
         
         self.assertEqual( result, [] )
         
@@ -117,7 +117,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c*', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*', add_namespaceless = True )
         
         preds = set()
         
@@ -130,7 +130,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c*', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*', add_namespaceless = False )
         
         preds = set()
         
@@ -143,13 +143,13 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'ser*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'ser*' )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'series:c*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'series:c*' )
         
         pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 )
         
@@ -161,7 +161,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'car', exact_match = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'car', exact_match = True )
         
         pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 )
         
@@ -173,7 +173,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_search_context = tag_search_context, search_text = 'c', exact_match = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c', exact_match = True )
         
         self.assertEqual( result, [] )
         

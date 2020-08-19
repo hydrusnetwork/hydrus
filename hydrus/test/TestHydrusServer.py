@@ -292,7 +292,7 @@ class TestServer( unittest.TestCase ):
         
         file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
         
-        media_results = [ ClientMediaResult.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {} ), ClientMediaManagers.LocationsManager( set(), set(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
+        media_results = [ ClientMediaResult.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {}, {} ), ClientMediaManagers.LocationsManager( set(), set(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
         
         HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HG.test_controller.SetRead( 'local_booru_share', info )

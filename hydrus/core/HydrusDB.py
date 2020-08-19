@@ -312,6 +312,11 @@ class HydrusDB( object ):
             
         
     
+    def _CleanAfterJobWork( self ):
+        
+        self._pubsubs = []
+        
+    
     def _CleanUpCaches( self ):
         
         pass
@@ -392,6 +397,14 @@ class HydrusDB( object ):
         message += text
         
         HydrusData.DebugPrint( message )
+        
+    
+    def _DoAfterJobWork( self ):
+        
+        for ( topic, args, kwargs ) in self._pubsubs:
+            
+            self._controller.pub( topic, *args, **kwargs )
+            
         
     
     def _ExecuteManySelectSingleParam( self, query, single_param_iterator ):
@@ -637,10 +650,7 @@ class HydrusDB( object ):
                 self._Save()
                 
             
-            for ( topic, args, kwargs ) in self._pubsubs:
-                
-                self._controller.pub( topic, *args, **kwargs )
-                
+            self._DoAfterJobWork()
             
             if job.IsSynchronous():
                 
@@ -670,7 +680,7 @@ class HydrusDB( object ):
             
         finally:
             
-            self._pubsubs = []
+            self._CleanAfterJobWork()
             
             self._current_status = ''
             
@@ -1059,7 +1069,8 @@ class TemporaryIntegerTable( object ):
         
         self._cursor.execute( 'CREATE TABLE {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
         
-        self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), ( ( i, ) for i in self._integer_iterable ) )
+        # just make sure we are unique here with a set
+        self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), { ( i, ) for i in self._integer_iterable } )
         
         return self._table_name
         

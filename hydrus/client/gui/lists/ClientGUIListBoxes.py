@@ -254,7 +254,15 @@ class AddEditDeleteListBox( QW.QWidget ):
         self._ShowHideButtons()
         
         self._listbox.itemSelectionChanged.connect( self._ShowHideButtons )
-        self._listbox.itemDoubleClicked.connect( self._Edit )
+        
+        if self._edit_callable is not None:
+            
+            self._listbox.itemDoubleClicked.connect( self._Edit )
+            
+        else:
+            
+            self._listbox.itemDoubleClicked.connect( self._Delete )
+            
         
     
     def _Add( self ):
@@ -755,7 +763,7 @@ class QueueListBox( QW.QWidget ):
         
         self._listbox.itemSelectionChanged.connect( self._UpdateButtons )
         
-        if self._edit_callable is None:
+        if self._edit_callable is not None:
             
             self._listbox.itemDoubleClicked.connect( self._Edit )
             
@@ -2954,7 +2962,7 @@ class ListBoxTagsStrings( ListBoxTags ):
             
             sibling = siblings_manager.GetSibling( self._service_key, tag )
             
-            if sibling is not None:
+            if sibling != tag:
                 
                 tag_string += ' (will display as ' + ClientTags.RenderTag( sibling, True ) + ')'
                 
@@ -3188,7 +3196,7 @@ class ListBoxTagsMedia( ListBoxTags ):
             
             sibling = HG.client_controller.tag_siblings_manager.GetSibling( self._tag_service_key, tag )
             
-            if sibling is not None:
+            if sibling != tag:
                 
                 sibling = ClientTags.RenderTag( sibling, self.render_for_user )
                 

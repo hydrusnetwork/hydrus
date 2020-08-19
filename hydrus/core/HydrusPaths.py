@@ -369,20 +369,23 @@ def GetDevice( path ):
     
     try:
         
-        partition_infos = psutil.disk_partitions( all = True )
-        
-        def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
+        for scan_network in ( False, True ):
             
-            return - len( partition_info.mountpoint )
+            partition_infos = psutil.disk_partitions( all = scan_network )
             
-        
-        partition_infos.sort( key = sort_descending_mountpoint )
-        
-        for partition_info in partition_infos:
-            
-            if path.startswith( partition_info.mountpoint.lower() ):
+            def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
                 
-                return partition_info.device
+                return - len( partition_info.mountpoint )
+                
+            
+            partition_infos.sort( key = sort_descending_mountpoint )
+            
+            for partition_info in partition_infos:
+                
+                if path.startswith( partition_info.mountpoint.lower() ):
+                    
+                    return partition_info.device
+                    
                 
             
         

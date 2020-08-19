@@ -718,9 +718,10 @@ class TestClientAPI( unittest.TestCase ):
         
         # siblings and parents
         
+        # going to nuke this, so won't do anything soon
+        
         # setting up
         
-        old_sib = HG.test_controller.tag_siblings_manager
         old_par = HG.test_controller.tag_parents_manager
         
         first_dict = HydrusData.default_dict_set()
@@ -739,7 +740,6 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        HG.test_controller.tag_siblings_manager = ClientManagers.TagSiblingsManager( HG.test_controller )
         HG.test_controller.tag_parents_manager = ClientManagers.TagParentsManager( HG.test_controller )
         
         # ok, now with
@@ -748,7 +748,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test' ] } }
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'muh test' ] } }
         
         body = json.dumps( body_dict )
         
@@ -784,7 +784,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test' ] }, 'add_siblings_and_parents' : False }
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'muh test' ] }, 'add_siblings_and_parents' : False }
         
         body = json.dumps( body_dict )
         
@@ -798,7 +798,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ) ]
+        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'muh test', set( [ hash ] ) ) ) ]
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -816,7 +816,6 @@ class TestClientAPI( unittest.TestCase ):
         
         # cleanup
         
-        HG.test_controller.tag_siblings_manager = old_sib
         HG.test_controller.tag_parents_manager = old_par
         
     
@@ -1583,8 +1582,9 @@ class TestClientAPI( unittest.TestCase ):
             file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
             
             service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+            service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
             
-            tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+            tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
             
             locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = False, urls = urls )
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
@@ -1804,8 +1804,9 @@ class TestClientAPI( unittest.TestCase ):
         file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
         
         service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+        service_keys_to_statuses_to_display_tags =  { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
         
-        tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
         locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set() )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )

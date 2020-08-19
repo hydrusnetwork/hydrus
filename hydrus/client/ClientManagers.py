@@ -85,94 +85,6 @@ def BuildSimpleChildrenToParents( pairs ):
     
     return simple_children_to_parents
     
-def CollapseTagSiblingPairs( groups_of_pairs ):
-    
-    # This now takes 'groups' of pairs in descending order of precedence
-    
-    # This allows us to mandate that local tags take precedence
-    
-    # a pair is invalid if:
-    # it causes a loop (a->b, b->c, c->a)
-    # there is already a relationship for the 'bad' sibling (a->b, a->c)
-    
-    valid_chains = {}
-    
-    for pairs in groups_of_pairs:
-        
-        pairs = sorted( pairs )
-        
-        for ( bad, good ) in pairs:
-            
-            if bad == good:
-                
-                # a->a is a loop!
-                
-                continue
-                
-            
-            if bad not in valid_chains:
-                
-                we_have_a_loop = False
-                
-                current_best = good
-                
-                while current_best in valid_chains:
-                    
-                    current_best = valid_chains[ current_best ]
-                    
-                    if current_best == bad:
-                        
-                        we_have_a_loop = True
-                        
-                        break
-                        
-                    
-                
-                if not we_have_a_loop:
-                    
-                    valid_chains[ bad ] = good
-                    
-                
-            
-        
-    
-    # now we collapse the chains, turning:
-    # a->b, b->c ... e->f
-    # into
-    # a->f, b->f ... e->f
-    
-    siblings = {}
-    
-    for ( bad, good ) in list( valid_chains.items() ):
-        
-        # given a->b, want to find f
-        
-        if good in siblings:
-            
-            # f already calculated and added
-            
-            best = siblings[ good ]
-            
-        else:
-            
-            # we don't know f for this chain, so let's figure it out
-            
-            current_best = good
-            
-            while current_best in valid_chains:
-                
-                current_best = valid_chains[ current_best ] # pursue endpoint f
-                
-            
-            best = current_best
-            
-        
-        # add a->f
-        siblings[ bad ] = best
-        
-    
-    return siblings
-    
 def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     potential_loop_paths = { parent }
@@ -435,8 +347,8 @@ class FileViewingStatsManager( object ):
                 
                 service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
                 
-                # non-synchronous
-                self._controller.Write( 'content_updates', service_keys_to_content_updates, do_pubsubs = False )
+                # non-synchronous, non-publishing
+                self._controller.Write( 'content_updates', service_keys_to_content_updates, publish_content_updates = False )
                 
                 self._pending_updates = {}
                 
@@ -499,8 +411,7 @@ class TagParentsManager( object ):
         service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_parents' )
         
         # first collapse siblings
-        
-        siblings_manager = self._controller.tag_siblings_manager
+        # this no longer happens
         
         collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -512,8 +423,6 @@ class TagParentsManager( object ):
                 
             
             for ( status, pairs ) in statuses_to_pairs.items():
-                
-                pairs = siblings_manager.CollapsePairs( service_key, pairs )
                 
                 collapsed_service_keys_to_statuses_to_pairs[ service_key ][ status ] = pairs
                 
@@ -550,11 +459,6 @@ class TagParentsManager( object ):
     
     def ExpandPredicates( self, service_key, predicates, service_strict = False ):
         
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
         results = []
         
         with self._lock:
@@ -584,11 +488,6 @@ class TagParentsManager( object ):
     
     def ExpandTags( self, service_key, tags, service_strict = False ):
         
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
         with self._lock:
             
             tags_results = set( tags )
@@ -603,11 +502,6 @@ class TagParentsManager( object ):
         
     
     def GetParents( self, service_key, tag, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
         
         with self._lock:
             
@@ -652,216 +546,46 @@ class TagSiblingsManager( object ):
         self._dirty = False
         self._refresh_job = None
         
-        self._service_keys_to_siblings = collections.defaultdict( dict )
-        self._service_keys_to_reverse_lookup = collections.defaultdict( dict )
+        self._service_keys_to_tags_to_ideals = collections.defaultdict( dict )
+        self._service_keys_to_ideals_to_all_tags = collections.defaultdict( dict )
         
         self._RefreshSiblings()
         
         self._lock = threading.Lock()
         
-        self._controller.sub( self, 'NotifyNewSiblings', 'notify_new_siblings_data' )
+        self._controller.sub( self, 'NotifyNewSiblings', 'notify_new_siblings' )
         
     
     def _CollapseTags( self, service_key, tags ):
-    
-        siblings = self._service_keys_to_siblings[ service_key ]
         
-        return { siblings[ tag ] if tag in siblings else tag for tag in tags }
+        tags_to_ideals = self._service_keys_to_tags_to_ideals[ service_key ]
+        
+        return { tags_to_ideals[ tag ] if tag in tags_to_ideals else tag for tag in tags }
         
     
     def _RefreshSiblings( self ):
         
-        self._service_keys_to_siblings = collections.defaultdict( dict )
-        self._service_keys_to_reverse_lookup = collections.defaultdict( dict )
+        self._service_keys_to_tags_to_ideals = collections.defaultdict( dict )
+        self._service_keys_to_ideals_to_all_tags = collections.defaultdict( dict )
         
-        local_tags_pairs = set()
-        
-        tag_repo_pairs = set()
-        
-        for service in self._controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
+        for service_key in self._controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES ):
             
-            service_key = service.GetServiceKey()
+            tags_to_ideals = self._controller.Read( 'tag_siblings_ideals', service_key )
             
-            statuses_to_pairs = self._controller.Read( 'tag_siblings', service_key )
+            self._service_keys_to_tags_to_ideals[ service_key ] = tags_to_ideals
             
-            # don't do set here, do the same ordered lookup on lists, use set for petitioned to discount from current
-            # also, obviously, we'll be moving to TSS, rather than this ad-hoc mess, so we are all on the same page
-            all_pairs = set( statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ).union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( statuses_to_pairs[ HC.CONTENT_UPDATE_PETITION ] )
+            ideals_to_all_tags = collections.defaultdict( list )
             
-            if service.GetServiceType() == HC.LOCAL_TAG:
+            for ( bad, good ) in tags_to_ideals.items():
                 
-                local_tags_pairs.update( all_pairs )
-                
-            else:
-                
-                tag_repo_pairs.update( all_pairs )
+                ideals_to_all_tags[ good ].append( bad )
                 
             
-            siblings = CollapseTagSiblingPairs( [ all_pairs ] )
-            
-            self._service_keys_to_siblings[ service_key ] = siblings
-            
-            reverse_lookup = collections.defaultdict( list )
-            
-            for ( bad, good ) in siblings.items():
-                
-                reverse_lookup[ good ].append( bad )
-                
-            
-            self._service_keys_to_reverse_lookup[ service_key ] = reverse_lookup
-            
-        
-        combined_siblings = CollapseTagSiblingPairs( [ local_tags_pairs, tag_repo_pairs ] )
-        
-        self._service_keys_to_siblings[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_siblings
-        
-        combined_reverse_lookup = collections.defaultdict( list )
-        
-        for ( bad, good ) in combined_siblings.items():
-            
-            combined_reverse_lookup[ good ].append( bad )
-            
-        
-        self._service_keys_to_reverse_lookup[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_reverse_lookup
-        
-    
-    def CollapsePredicates( self, service_key, predicates, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            
-            results = [ predicate for predicate in predicates if predicate.GetType() != ClientSearch.PREDICATE_TYPE_TAG ]
-            
-            tag_predicates = [ predicate for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG ]
-            
-            tags_to_predicates = {predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG}
-            
-            tags = list( tags_to_predicates.keys() )
-            
-            tags_to_include_in_results = set()
-            
-            for tag in tags:
-                
-                if tag in siblings:
-                    
-                    old_tag = tag
-                    old_predicate = tags_to_predicates[ old_tag ]
-                    
-                    new_tag = siblings[ old_tag ]
-                    
-                    if new_tag not in tags_to_predicates:
-                        
-                        ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
-                        
-                        new_predicate = ClientSearch.Predicate( old_pred_type, new_tag, old_inclusive )
-                        
-                        tags_to_predicates[ new_tag ] = new_predicate
-                        
-                        tags_to_include_in_results.add( new_tag )
-                        
-                    
-                    new_predicate = tags_to_predicates[ new_tag ]
-                    
-                    new_predicate.AddCounts( old_predicate )
-                    
-                else:
-                    
-                    tags_to_include_in_results.add( tag )
-                    
-                
-            
-            results.extend( [ tags_to_predicates[ tag ] for tag in tags_to_include_in_results ] )
-            
-            return results
+            self._service_keys_to_ideals_to_all_tags[ service_key ] = ideals_to_all_tags
             
         
     
-    def CollapsePairs( self, service_key, pairs, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            
-            result = set()
-            
-            for ( a, b ) in pairs:
-                
-                if a in siblings:
-                    
-                    a = siblings[ a ]
-                    
-                
-                if b in siblings:
-                    
-                    b = siblings[ b ]
-                    
-                
-                result.add( ( a, b ) )
-                
-            
-            return result
-            
-        
-    
-    def CollapseStatusesToTags( self, service_key, statuses_to_tags, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            new_statuses_to_tags = HydrusData.default_dict_set()
-            
-            for ( status, tags ) in statuses_to_tags.items():
-                
-                new_statuses_to_tags[ status ] = self._CollapseTags( service_key, tags )
-                
-            
-            return new_statuses_to_tags
-            
-        
-    
-    def CollapseTag( self, service_key, tag, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            
-            if tag in siblings:
-                
-                return siblings[ tag ]
-                
-            else:
-                
-                return tag
-                
-            
-        
-    
-    def CollapseTags( self, service_key, tags, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
+    def CollapseTags( self, service_key, tags ):
         
         with self._lock:
             
@@ -869,39 +593,7 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapseTagsToCount( self, service_key, tags_to_count, service_strict = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            
-            results = collections.Counter()
-            
-            for ( tag, count ) in tags_to_count.items():
-                
-                if tag in siblings:
-                    
-                    tag = siblings[ tag ]
-                    
-                
-                results[ tag ] += count
-                
-            
-            return results
-            
-        
-    
-    def ExpandPredicate( self, service_key: bytes, predicate: ClientSearch.Predicate, service_strict: bool = False ):
-        
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
+    def ExpandPredicate( self, service_key: bytes, predicate: ClientSearch.Predicate ):
         
         ideal_sibling_predicate = predicate
         other_sibling_predicates = []
@@ -910,11 +602,11 @@ class TagSiblingsManager( object ):
             
             tag = predicate.GetValue()
             
-            ideal_sibling = self.CollapseTag( service_key, tag, service_strict = service_strict )
+            ideal_sibling = self.GetSibling( service_key, tag )
             
             ideal_sibling_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, ideal_sibling, predicate.IsInclusive() )
             
-            other_siblings = set( self.GetAllSiblings( service_key, tag, service_strict = service_strict ) )
+            other_siblings = set( self.GetAllSiblings( service_key, tag ) )
             
             other_siblings.discard( tag )
             other_siblings.discard( ideal_sibling )
@@ -925,56 +617,56 @@ class TagSiblingsManager( object ):
         return ( ideal_sibling_predicate, other_sibling_predicates )
         
     
-    def GetSibling( self, service_key, tag, service_strict = False ):
+    def GetSibling( self, service_key, tag ):
         
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            return tag
             
         
         with self._lock:
             
-            siblings = self._service_keys_to_siblings[ service_key ]
+            tags_to_ideals = self._service_keys_to_tags_to_ideals[ service_key ]
             
-            if tag in siblings:
+            if tag in tags_to_ideals:
                 
-                return siblings[ tag ]
+                return tags_to_ideals[ tag ]
                 
             else:
                 
-                return None
+                return tag
                 
             
         
     
-    def GetAllSiblings( self, service_key, tag, service_strict = False ) -> typing.Set[ str ]:
+    def GetAllSiblings( self, service_key, tag ) -> typing.Set[ str ]:
         
-        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            return HydrusData.MassUnion( self.GetAllSiblings( s_k, tag ) for s_k in self._controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES ) )
             
         
         with self._lock:
             
-            siblings = self._service_keys_to_siblings[ service_key ]
-            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
+            tags_to_ideals = self._service_keys_to_tags_to_ideals[ service_key ]
+            ideals_to_all_tags = self._service_keys_to_ideals_to_all_tags[ service_key ]
             
-            if tag in siblings:
+            if tag in tags_to_ideals:
                 
-                best_tag = siblings[ tag ]
+                ideal_tag = tags_to_ideals[ tag ]
                 
-            elif tag in reverse_lookup:
+            elif tag in ideals_to_all_tags:
                 
-                best_tag = tag
+                ideal_tag = tag
                 
             else:
                 
                 return { tag }
                 
             
-            all_siblings = set( reverse_lookup[ best_tag ] )
+            all_siblings = set( ideals_to_all_tags[ ideal_tag ] )
             
-            all_siblings.add( best_tag )
+            all_siblings.add( ideal_tag )
             
             return all_siblings
             
@@ -991,7 +683,7 @@ class TagSiblingsManager( object ):
                 self._refresh_job.Cancel()
                 
             
-            self._refresh_job = self._controller.CallLater( 8.0, self.RefreshSiblingsIfDirty )
+            self._refresh_job = self._controller.CallLater( 2.0, self.RefreshSiblingsIfDirty )
             
         
     

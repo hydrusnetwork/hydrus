@@ -45,6 +45,7 @@ from hydrus.test import TestClientDaemons
 from hydrus.test import TestClientData
 from hydrus.test import TestClientDB
 from hydrus.test import TestClientDBDuplicates
+from hydrus.test import TestClientDBTags
 from hydrus.test import TestClientImageHandling
 from hydrus.test import TestClientImportOptions
 from hydrus.test import TestClientImportSubscriptions
@@ -246,7 +247,7 @@ class Controller( object ):
         
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
-        self._reads[ 'tag_siblings' ] = collections.defaultdict( list )
+        self._reads[ 'tag_siblings_ideals' ] = {}
         self._reads[ 'in_inbox' ] = False
         
         self._writes = collections.defaultdict( list )
@@ -695,6 +696,7 @@ class Controller( object ):
             TestClientDB,
             TestServerDB,
             TestClientDBDuplicates,
+            TestClientDBTags,
             TestClientNetworking,
             TestHydrusNetworking,
             TestClientImportSubscriptions,
@@ -729,12 +731,12 @@ class Controller( object ):
         ]
             
         module_lookup[ 'tags' ] = [
-            TestClientTags
+            TestClientTags,
+            TestClientDBTags
         ]
         
         module_lookup[ 'db' ] = [
             TestClientDB,
-            TestClientDBDuplicates,
             TestServerDB
         ]
         

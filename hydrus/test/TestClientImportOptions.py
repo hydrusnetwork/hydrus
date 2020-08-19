@@ -413,8 +413,9 @@ def GetNotesMediaResult( hash, names_to_notes ):
     file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
     
     service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+    service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
     
-    tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+    tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
     locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = True )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )
@@ -549,7 +550,9 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     
     service_keys_to_statuses_to_tags[ service_key ] = { HC.CONTENT_STATUS_DELETED : deleted_tags }
     
-    tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+    service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+    
+    tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
     locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = in_inbox )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )

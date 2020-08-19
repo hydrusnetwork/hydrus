@@ -2092,7 +2092,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 service_keys_to_content_updates = { self._service.GetServiceKey() : [ content_update ] }
                 
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates, do_pubsubs = False )
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates, publish_content_updates = False )
                 
                 HG.client_controller.pub( 'service_updated', self._service )
                 

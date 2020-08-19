@@ -178,10 +178,10 @@ class TestSerialisables( unittest.TestCase ):
         
         # duplicate to generate proper dicts
         
-        one_tags_manager = ClientMediaManagers.TagsManager( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'one' } } } ).Duplicate()
-        two_tags_manager = ClientMediaManagers.TagsManager( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'two' } } } ).Duplicate()
-        substantial_tags_manager = ClientMediaManagers.TagsManager( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'test tag', 'series:namespaced test tag' } } } ).Duplicate()
-        empty_tags_manager = ClientMediaManagers.TagsManager( {} ).Duplicate()
+        one_tags_manager = ClientMediaManagers.TagsManager( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'one' } } }, { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'one' } } } ).Duplicate()
+        two_tags_manager = ClientMediaManagers.TagsManager( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'two' } } }, { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'two' } } } ).Duplicate()
+        substantial_tags_manager = ClientMediaManagers.TagsManager( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'test tag', 'series:namespaced test tag' } } }, { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'test tag', 'series:namespaced test tag' } } } ).Duplicate()
+        empty_tags_manager = ClientMediaManagers.TagsManager( {}, {} ).Duplicate()
         
         one_ratings_manager = ClientMediaManagers.RatingsManager( { TC.LOCAL_RATING_LIKE_SERVICE_KEY : 1.0, TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY : 0.8 } )
         two_ratings_manager = ClientMediaManagers.RatingsManager( { TC.LOCAL_RATING_LIKE_SERVICE_KEY : 0.0, TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY : 0.6 } )

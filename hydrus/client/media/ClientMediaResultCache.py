@@ -59,6 +59,14 @@ class MediaResultCache( object ):
             
         
     
+    def FilterFiles( self, hash_ids: typing.Collection[ int ] ):
+        
+        with self._lock:
+            
+            return { hash_id for hash_id in hash_ids if hash_id in self._hash_ids_to_media_results }
+            
+        
+    
     def GetMediaResultsAndMissing( self, hash_ids: typing.Iterable[ int ] ):
         
         with self._lock:
@@ -198,3 +206,18 @@ class MediaResultCache( object ):
             
         
     
+    def SilentlyTakeNewTagsManagers( self, hash_ids_to_tags_managers ):
+        
+        with self._lock:
+            
+            for ( hash_id, tags_manager ) in hash_ids_to_tags_managers.items():
+                
+                media_result = self._hash_ids_to_media_results.get( hash_id, None )
+                
+                if media_result is not None:
+                    
+                    media_result.SetTagsManager( tags_manager )
+                    
+                
+            
+        

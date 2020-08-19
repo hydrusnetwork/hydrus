@@ -1284,7 +1284,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Predicate'
     SERIALISABLE_VERSION = 4
     
-    def __init__( self, predicate_type: int = None, value: object = None, inclusive: bool = True, min_current_count: HC.noneable_int = 0, min_pending_count: HC.noneable_int = 0, max_current_count: HC.noneable_int = None, max_pending_count: HC.noneable_int = None ):
+    def __init__(
+        self,
+        predicate_type: int = None,
+        value: object = None,
+        inclusive: bool = True,
+        min_current_count: HC.noneable_int = 0,
+        min_pending_count: HC.noneable_int = 0,
+        max_current_count: HC.noneable_int = None,
+        max_pending_count: HC.noneable_int = None
+        ):
         
         if isinstance( value, ( list, set ) ):
             
@@ -2291,7 +2300,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 sibling = siblings_manager.GetSibling( sibling_service_key, tag )
                 
-                if sibling is not None:
+                if sibling != tag:
                     
                     sibling = ClientTags.RenderTag( sibling, render_for_user )
                     

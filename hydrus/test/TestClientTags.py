@@ -34,7 +34,17 @@ class TestMergeTagsManagers( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ third ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate', 'current_duplicate_1' }
         service_keys_to_statuses_to_tags[ third ][ HC.CONTENT_STATUS_PENDING ] = { 'volume:3' }
         
-        tags_manager_1 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+        service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        service_keys_to_statuses_to_display_tags[ first ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_1', 'series:blame!' }
+        
+        service_keys_to_statuses_to_display_tags[ second ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate_1', 'character:cibo' }
+        service_keys_to_statuses_to_display_tags[ second ][ HC.CONTENT_STATUS_PENDING ] = { 'pending_1', 'creator:tsutomu nihei' }
+        
+        service_keys_to_statuses_to_display_tags[ third ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate', 'current_duplicate_1' }
+        service_keys_to_statuses_to_display_tags[ third ][ HC.CONTENT_STATUS_PENDING ] = { 'volume:3' }
+        
+        tags_manager_1 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
         #
         
@@ -48,7 +58,17 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         service_keys_to_statuses_to_tags[ third ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate' }
         
-        tags_manager_2 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+        service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        service_keys_to_statuses_to_display_tags[ first ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_2', 'series:blame!', 'chapter:1' }
+        service_keys_to_statuses_to_display_tags[ first ][ HC.CONTENT_STATUS_DELETED ] = { 'deleted_2' }
+        
+        service_keys_to_statuses_to_display_tags[ second ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate'  }
+        service_keys_to_statuses_to_display_tags[ second ][ HC.CONTENT_STATUS_PENDING ] = { 'architecture', 'chapter:2' }
+        
+        service_keys_to_statuses_to_display_tags[ third ][ HC.CONTENT_STATUS_CURRENT ] = { 'current_duplicate' }
+        
+        tags_manager_2 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
         #
         
@@ -57,7 +77,12 @@ class TestMergeTagsManagers( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ second ][ HC.CONTENT_STATUS_CURRENT ] = { 'page:4', 'page:5' }
         service_keys_to_statuses_to_tags[ second ][ HC.CONTENT_STATUS_PENDING ] = { 'title:double page spread' }
         
-        tags_manager_3 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+        service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        service_keys_to_statuses_to_display_tags[ second ][ HC.CONTENT_STATUS_CURRENT ] = { 'page:4', 'page:5' }
+        service_keys_to_statuses_to_display_tags[ second ][ HC.CONTENT_STATUS_PENDING ] = { 'title:double page spread' }
+        
+        tags_manager_3 = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
         #
         
@@ -92,7 +117,18 @@ class TestTagsManager( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ cls._third_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'petitioned' }
         service_keys_to_statuses_to_tags[ cls._third_key ][ HC.CONTENT_STATUS_DELETED ] = { 'pending' }
         
-        cls._tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags )
+        service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        service_keys_to_statuses_to_display_tags[ cls._first_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'current', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
+        service_keys_to_statuses_to_display_tags[ cls._first_key ][ HC.CONTENT_STATUS_DELETED ] = { 'deleted' }
+        
+        service_keys_to_statuses_to_display_tags[ cls._second_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'deleted', '\u2835' }
+        service_keys_to_statuses_to_display_tags[ cls._second_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
+        
+        service_keys_to_statuses_to_display_tags[ cls._third_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'petitioned' }
+        service_keys_to_statuses_to_display_tags[ cls._third_key ][ HC.CONTENT_STATUS_DELETED ] = { 'pending' }
+        
+        cls._tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
         cls._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
         
@@ -112,7 +148,14 @@ class TestTagsManager( unittest.TestCase ):
         other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'reset_pending' }
         other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'reset_petitioned' }
         
-        cls._other_tags_manager = ClientMediaManagers.TagsManager( other_service_keys_to_statuses_to_tags )
+        other_service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        other_service_keys_to_statuses_to_display_tags[ cls._pending_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
+        
+        other_service_keys_to_statuses_to_display_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'reset_current' }
+        other_service_keys_to_statuses_to_display_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'reset_pending' }
+        
+        cls._other_tags_manager = ClientMediaManagers.TagsManager( other_service_keys_to_statuses_to_tags, other_service_keys_to_statuses_to_display_tags )
         
         cls._other_service_keys_to_statuses_to_tags = other_service_keys_to_statuses_to_tags
         
@@ -1326,174 +1369,5 @@ class TestTagParents( unittest.TestCase ):
         
         self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
         self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'pending_b' ] ), { 'pending_b' } )
-        
-    
-class TestTagSiblings( unittest.TestCase ):
-    
-    @classmethod
-    def setUpClass( cls ):
-        
-        cls._first_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
-        cls._second_key = HG.test_controller.example_tag_repo_service_key
-        
-        first_dict = HydrusData.default_dict_list()
-        
-        first_dict[ HC.CONTENT_STATUS_CURRENT ] = [ ( 'ishygddt', 'i sure hope you guys don\'t do that' ), ( 'character:rei ayanami', 'character:ayanami rei' ), ( 'tree_1', 'tree_3' ), ( 'tree_2', 'tree_3' ), ( 'tree_3', 'tree_5' ), ( 'tree_4', 'tree_5' ), ( 'tree_5', 'tree_6' ), ( 'current_a', 'current_b' ), ( 'chain_a', 'chain_b' ), ( 'chain_b', 'chain_c' ), ( 'closed_loop', 'closed_loop' ), ( 'loop_a', 'loop_b' ), ( 'loop_b', 'loop_c' ), ( 'loop_c', 'loop_a' ) ]
-        first_dict[ HC.CONTENT_STATUS_DELETED ] = [ ( 'deleted_a', 'deleted_b' ) ]
-        
-        second_dict = HydrusData.default_dict_list()
-        
-        second_dict[ HC.CONTENT_STATUS_CURRENT ] = [ ( 'loop_c', 'loop_a' ), ( 'current_a', 'current_b' ), ( 'petitioned_a', 'petitioned_b' ) ]
-        second_dict[ HC.CONTENT_STATUS_DELETED ] = [ ( 'pending_a', 'pending_b' ) ]
-        second_dict[ HC.CONTENT_STATUS_PENDING ] = [ ( 'pending_a', 'pending_b' ) ]
-        second_dict[ HC.CONTENT_STATUS_PETITIONED ] = [ ( 'petitioned_a', 'petitioned_b' ) ]
-        
-        HG.test_controller.SetParamRead( 'tag_siblings', ( cls._first_key, ), first_dict )
-        HG.test_controller.SetParamRead( 'tag_siblings', ( cls._second_key, ), second_dict )
-        
-        cls._tag_siblings_manager = ClientManagers.TagSiblingsManager( HG.test_controller )
-        
-    
-    def test_collapse_predicates( self ):
-        
-        predicates = []
-        
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
-        
-        results = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20, max_current_count = 35 ) ]
-        
-        self.assertEqual( self._tag_siblings_manager.CollapsePredicates( self._first_key, predicates ), results )
-        
-        predicates = []
-        
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
-        
-        ( result, ) = self._tag_siblings_manager.CollapsePredicates( self._first_key, predicates )
-        
-        self.assertEqual( result.GetCount(), 20 )
-        self.assertEqual( result.ToString(), 'chain_c (20-35)' )
-        
-    
-    def test_chain( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'chain_a' ), 'chain_c' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'chain_b' ), 'chain_c' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'chain_c' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'chain_a' ) ), set( [ 'chain_a', 'chain_b', 'chain_c' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'chain_b' ) ), set( [ 'chain_a', 'chain_b', 'chain_c' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'chain_c' ) ), set( [ 'chain_a', 'chain_b', 'chain_c' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'chain_a', 'chain_b' ] ) ), set( [ 'chain_c' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'chain_a', 'chain_b', 'chain_c' ] ) ), set( [ 'chain_c' ] ) )
-        
-    
-    def test_current( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'current_a' ), 'current_b' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'current_b' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'current_a' ) ), set( [ 'current_a', 'current_b' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'current_b' ) ), set( [ 'current_a', 'current_b' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'chain_a', 'chain_b' ] ) ), set( [ 'chain_c' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'chain_a', 'chain_b', 'chain_c' ] ) ), set( [ 'chain_c' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'chain_a' : 10, 'chain_b' : 5 } ), { 'chain_c' : 15 } )
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'chain_a' : 10, 'chain_b' : 5, 'chain_c' : 20 } ), { 'chain_c' : 35 } )
-        
-    
-    def test_deleted( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'deleted_a' ), None )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'deleted_b' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'deleted_a' ) ), set( [ 'deleted_a' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'deleted_b' ) ), set( [ 'deleted_b' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'deleted_a', 'deleted_b' ] ) ), set( [ 'deleted_a', 'deleted_b' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'deleted_a' : 10, 'deleted_b' : 5 } ), { 'deleted_a' : 10, 'deleted_b' : 5 } )
-        
-    
-    def test_no_loop( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'closed_loop' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'closed_loop' ) ), set( [ 'closed_loop' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'closed_loop' ] ) ), set( [ 'closed_loop' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'closed_loop' : 10 } ), { 'closed_loop' : 10 } )
-        
-    
-    def test_not_exist( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'not_exist' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'not_exist' ) ), set( [ 'not_exist' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._second_key, [ 'not_exist' ] ) ), set( [ 'not_exist' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._second_key, { 'not_exist' : 10 } ), { 'not_exist' : 10 } )
-        
-    
-    def test_pending_overwrite( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'pending_a' ), 'pending_b' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'pending_b' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'pending_a' ) ), set( [ 'pending_a', 'pending_b' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'pending_b' ) ), set( [ 'pending_a', 'pending_b' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._second_key, [ 'pending_a' ] ) ), set( [ 'pending_b' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._second_key, [ 'pending_a', 'pending_b' ] ) ), set( [ 'pending_b' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._second_key, { 'pending_a' : 10 } ), { 'pending_b' : 10 } )
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._second_key, { 'pending_a' : 10, 'pending_b' : 5 } ), { 'pending_b' : 15 } )
-        
-    
-    def test_petitioned_no_overwrite( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'petitioned_a' ), 'petitioned_b' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'petitioned_b' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'petitioned_a' ) ), set( [ 'petitioned_a', 'petitioned_b' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'petitioned_b' ) ), set( [ 'petitioned_a', 'petitioned_b' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._second_key, [ 'petitioned_a' ] ) ), set( [ 'petitioned_b' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._second_key, [ 'petitioned_a', 'petitioned_b' ] ) ), set( [ 'petitioned_b' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._second_key, { 'petitioned_a' : 10 } ), { 'petitioned_b' : 10 } )
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._second_key, { 'petitioned_a' : 10, 'petitioned_b' : 5 } ), { 'petitioned_b' : 15 } )
-        
-    
-    def test_tree( self ):
-        
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_1' ), 'tree_6' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_2' ), 'tree_6' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_3' ), 'tree_6' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_4' ), 'tree_6' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_5' ), 'tree_6' )
-        self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_6' ), None )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'tree_1' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'tree_2' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'tree_3' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'tree_4' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'tree_5' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'tree_6' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'tree_1' ] ) ), set( [ 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'tree_1', 'tree_3', 'tree_5' ] ) ), set( [ 'tree_6' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.CollapseTags( self._first_key, [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) ), set( [ 'tree_6' ] ) )
-        
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'tree_1' : 10 } ), { 'tree_6' : 10 } )
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'tree_1' : 10, 'tree_3' : 5, 'tree_5' : 20 } ), { 'tree_6' : 35 } )
-        self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( self._first_key, { 'tree_1' : 10, 'tree_2' : 3, 'tree_3' : 5, 'tree_4' : 2, 'tree_5' : 20, 'tree_6' : 30 } ), { 'tree_6' : 70 } )
         
     

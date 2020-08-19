@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 408</h3></li>
+				<ul>
+					<li>tag siblings cache:</li>
+					<li>tl;dr: siblings are faster and better now, you don't have to do anything. some parents will not appear with new downloads - don't worry about it, they will all fill back in nicely soon</li>
+					<li>wrote the first version of a 'tag display' cache, which stores not your tags as they are, but how they appear after display rules such as siblings, parents, and filtering are applied, meaning this data need not be calculated every time on thumbnail load. this week marks the first concrete step forward in an improvement of siblings and parents storage, and begins with just siblings. all siblings and front-end tags work should be generally faster and more accurate</li>
+					<li>part one is for tag domains cross-referenced with file domains. it maintains virtual sibling-collapsed mappings and autocomplete counts through mappings added, deleted, pended or pend-rescinded, files added/deleted, and siblings added/removed</li>
+					<li>part two is for tag domains on the 'all known files' domain (i.e. no file domain). it maintains virtual sibling-collapsed autocomplete counts through mappings added, deleted, pended or pend-rescinded, and siblings added/removed</li>
+					<li>both parts also support full table drop/regen (under the new database->regenerate->tag display mappings cache) for when my logic inevitably miscounts something. the existing regen 'tag mappings cache'/'tag siblings lookup' commands also regen the display mappings cache, since it relies on them</li>
+					<li>when tag siblings on a repository are petitioned to be deleted, they are now instantly discounted from tag sibling application (previously, they had to be uploaded and committed to count, now both pending and petitioned offer a quick preview of outcome)</li>
+					<li>the display cache supports the tag sibling service application rules under the 'services menu', and regen when that changes, so you can now turn siblings on and off, and apply them across services. as a result, the old 'apply all siblings to all services' option is now gone! as parents will undergo a similar change soon, and the siblings changes this week may lead to some undesired parents in the interim, the 'apply all parents to all services' option is also gone</li>
+					<li>tag autocomplete counts in the form (x-y) due to siblings are eliminated. it will still do it when combining the same merged tag across different services, or when an unnamespaced tag includes how many potential namespaced will also be found</li>
+					<li>the following search types now obey tag sibling application rules accurately: number of tags search, namespace:anything search, wildcard search, tag search (on a per-tag-domain basis, previously it was globally hacked to all siblings), tag-as-number search. for instance, if you search series:anything, a file that has 'metroid' tag-siblinged to 'series:metroid' will now correctly appear.</li>
+					<li>the above search types are now exact to how the tag displays. if you have for files that are tagged 'samus' on either tag service A or B, and service B has a sibling for that to 'character:samus aran', searching for 'samus' gets the results in A, 'character:samus aran' gets the results in B. previously it was an expensive logical mish-mash of 'sure, try and get everything behind the scenes'. now it searches what you see</li>
+					<li>searching for files in the advanced 'all known files' domain currently has no sibling support for the above search types. autocomplete counts should be good, and the results that come up should have the correct tag display, but the actual results are calculated based on storage tags. getting this to work without doubling the size of the db is tricky, so it will have to be ongoing work</li>
+					<li>all tag siblings are now completely virtual. this means that when a tag comes in via a downloader or other means, it will not be automatically coerced to its ideal sibling in the actual db storage tables (the true tags you see in manage tags dialog), but remain as it is. there is no change in sibling appearance in normal operation--it still _displays_ and searches as its ideal sibling. the same will happen to parents in the coming months, and in the interim period, parents no longer apply across siblings. as siblings can come and go from anywhere, they are now divorced from actual stored tag mappings. in a similar way, the manage tags dialog no longer supports the 'hard-replace siblings and parents' command, nor the 'auto-replace with sibling' command. this may be jarring to workflows and preferences, so please bear with me and let me know what feels particularly bad. and please don't worry too much about parents not always being added in the meantime--I hope to do the same transition for them in four of five weeks, and all gaps will be filled in. also, in the coming weeks, I expect to improve manual tagging workflow by indent-grouping edit-view siblings together (ditching the old 'will display as' text) for easier review and selection, a bit like parents. actual 'hard' siblings and parents that do always get irreversibly renamed/added in storage will come in the future as a separate system</li>
+					<li>the 'add_siblings_and_parents' client api parameter no longer adds siblings, and soon will be retired completely</li>
+					<li>I had wanted to completely eliminate the old UI level siblings manager this week, but there are still some systems, mostly tag autocomplete work, that need it and are tricky to swap. I stripped it down, at least, and reduced its update delay to 2 seconds. therefore, the 'loading tag siblings' step of boot still occurs, albiet a _little_ faster. I hope to have it gone soon</li>
+					<li>this is some complicated code affecting core systems. almost everything 'siblings' is now different. there are likely to be laggy parts, awkward new workflow, and possibly some update or miscount bugs as I iron it out. the good news, now they are all virtual, is that problems are undoable. please report any issues, and I will work on it as I keep pushing on this and on parents</li>
+					<li>please expect your client.caches.db file to expand in size about 10-30% or so this week. the update itself will take a few minutes as the improved tag lookups and new caches are regenerated from empty</li>
+					<li>.</li>
+					<li>boring mostly db optimisation list:</li>
+					<li>after some thought, moved those new options for tag sibling application down to the db. previously, they were stored in an UI object for convenience, but since everything is going down to the db, it is worth doing it properly down there. thus they reset this week to the default</li>
+					<li>I also removed that complicated 'all known tags' page in the tag sibling application options--it wasn't doing enough to justify itself</li>
+					<li>tag siblings lookup cache now obeys the tag sibling application rules and regenerates the appropriate cache when the options change</li>
+					<li>tightened up the db tag siblings lookup cache and wrote more tools for it. it had a couple of blind spots for getting all siblings in a chain. also optimised the lookup for en-masse tag operations</li>
+					<li>tightened up my tag sibling structure builder object, which was not eliminating loops but collapsing them to (generally harmless, but not desireable) (A,A) pairs</li>
+					<li>extended mappings and siblings lookup caches to perform various sorts of tag sibling collapse filtering, to determine files that do or do not have another tag mapping on a tag sibling chain</li>
+					<li>optimised the existing mappings cache in several ways</li>
+					<li>optimised cross-domain file cache mappings filtering, and cleaned the code</li>
+					<li>optimised autocomplete count fetching from the mappings cache, particularly for large result sets</li>
+					<li>optimised how the combined autocomplete count generates from nothing</li>
+					<li>optimised how tags are loaded for search results (thumbnails)</li>
+					<li>optimesed basic tag search</li>
+					<li>greatly optimised how the mappings caches request cross-domain file cache filtering</li>
+					<li>broke up the rescind_pending/add mappings job into simpler separate parts, which was needed for accurate display cache counting. this may end up fixing the other weird pending miscount bug we had</li>
+					<li>the cached 'display' tags are now loaded with regular media results, not generated on the fly on first request (unless in the advanced 'all known files' domain, where it is done quickly on first load at the db level)</li>
+					<li>converted the db over to using its local sibling lookup cache for all sibling jobs</li>
+					<li>all data-level content updates to media result objects now occur in the database loop, reducing lag and eliminating a single UI event loop gap when the objects the UI relies on were desynchronised</li>
+					<li>optimised how the tag and hash id-to-definition cache maintains itself</li>
+					<li>cleaned up cache code generally</li>
+					<li>wrote a ton of unit tests to cover construction, tag, and tag sibling operations on the siblings and display caches</li>
+					<li>wrote a second optimised method for regenerating 'all known files' display cache autocomplete counts from nothing, which, when multiple siblings have wildly different counts (e.g. 50, 100, 200000), instead of counting them all, counts the smaller tags sans the largest, and adds this to the already pre-computed largest count</li>
+					<li>the old ui level siblings manager has been pared down to some final tools that will be trickier to replace</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed the stupid manage tag siblings dialog input/ok bug I introduced last week</li>
+					<li>fixed the pair preview label in manage tag siblings dialog when it asks to enter a reason for a remove petition</li>
+					<li>I believe I fixed the annoying recent bug where the top-right hover window would sometimes not position itself correctly on a window size/move until the top hover was shown once</li>
+					<li>fixed a bug where the 'do you want to do shutdown work?' dialog was not abandoning shutdown if cancelled (rather than yes/no)</li>
+					<li>updated the 'has free space to do db transaction?' checker, which needs to test device partitions, to do two sweeps--first only fast local devices, then potentially mega laggy network discovery if the mount point is not found (hydev was wondering why it was suddenly taking nine seconds to close his test client!)</li>
+					<li>fixed another issue with double-clicking some addremove/queue listboxes when no edit button is set--now in this case they all delete on a double-click</li>
+					<li>fixed a little bad error handling on pending content upload. an error with petitioning certain IPFS uploads is not yet fixed</li>
+				</ul>
 				<li><h3>version 407</h3></li>
 				<ul>
 					<li>sibling prep:</li>

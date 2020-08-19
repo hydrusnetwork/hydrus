@@ -1686,8 +1686,6 @@ class Controller( HydrusController.HydrusController ):
             previous_services = self.services_manager.GetServices()
             previous_service_keys = { service.GetServiceKey() for service in previous_services }
             
-            new_tag_service_keys = [ service.GetServiceKey() for service in services if service.GetServiceType() in HC.REAL_TAG_SERVICES and service.GetServiceKey() not in previous_service_keys ]
-            
             upnp_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) ]
             
             self.CallToThread( self.services_upnp_manager.SetServices, upnp_services )
@@ -1695,11 +1693,6 @@ class Controller( HydrusController.HydrusController ):
             self.WriteSynchronous( 'update_services', services )
             
             self.services_manager.RefreshServices()
-            
-            if len( new_tag_service_keys ) > 0:
-                
-                self.tag_display_manager.AddNewTagServiceKeys( new_tag_service_keys )
-                
             
         
         self.RestartClientServerServices()

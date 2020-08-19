@@ -202,7 +202,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER
     SERIALISABLE_NAME = 'Tag Display Manager'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self ):
         
@@ -213,9 +213,6 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         self._tag_display_types_to_service_keys_to_tag_filters = collections.defaultdict( service_keys_to_tag_filters_defaultdict )
         
         self._tag_service_keys_to_tag_autocomplete_options = dict()
-        
-        self._service_keys_to_ordered_sibling_service_keys = collections.defaultdict( list )
-        self._service_keys_to_ordered_parent_service_keys = collections.defaultdict( list )
         
         self._lock = threading.Lock()
         self._dirty = False
@@ -234,14 +231,9 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_tag_autocomplete_options = HydrusSerialisable.SerialisableList( self._tag_service_keys_to_tag_autocomplete_options.values() ).GetSerialisableTuple()
         
-        serialisable_service_keys_to_ordered_sibling_service_keys = HydrusSerialisable.SerialisableBytesDictionary( self._service_keys_to_ordered_sibling_service_keys ).GetSerialisableTuple()
-        serialisable_service_keys_to_ordered_parent_service_keys = HydrusSerialisable.SerialisableBytesDictionary( self._service_keys_to_ordered_parent_service_keys ).GetSerialisableTuple()
-        
         serialisable_info = [
             serialisable_tag_display_types_to_service_keys_to_tag_filters,
-            serialisable_tag_autocomplete_options,
-            serialisable_service_keys_to_ordered_sibling_service_keys,
-            serialisable_service_keys_to_ordered_parent_service_keys
+            serialisable_tag_autocomplete_options
         ]
         
         return serialisable_info
@@ -251,9 +243,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         
         [
             serialisable_tag_display_types_to_service_keys_to_tag_filters,
-            serialisable_tag_autocomplete_options,
-            serialisable_service_keys_to_ordered_sibling_service_keys,
-            serialisable_service_keys_to_ordered_parent_service_keys
+            serialisable_tag_autocomplete_options
         ] = serialisable_info
         
         for ( tag_display_type, serialisable_service_keys_to_tag_filters ) in serialisable_tag_display_types_to_service_keys_to_tag_filters:
@@ -268,12 +258,6 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             
         
         self._tag_service_keys_to_tag_autocomplete_options = { tag_autocomplete_options.GetServiceKey() : tag_autocomplete_options for tag_autocomplete_options in HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_autocomplete_options ) }
-        
-        self._service_keys_to_ordered_sibling_service_keys = collections.defaultdict( list )
-        self._service_keys_to_ordered_sibling_service_keys.update( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_keys_to_ordered_sibling_service_keys ) )
-        
-        self._service_keys_to_ordered_parent_service_keys = collections.defaultdict( list )
-        self._service_keys_to_ordered_sibling_service_keys.update( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_keys_to_ordered_parent_service_keys ) )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -315,13 +299,25 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
-    
-    def AddNewTagServiceKeys( self, tag_service_keys ):
+        if version == 3:
+            
+            # took it out again lmao, down to the db
+            
+            [
+                serialisable_tag_display_types_to_service_keys_to_tag_filters,
+                serialisable_tag_autocomplete_options,
+                serialisable_service_keys_to_ordered_sibling_service_keys,
+                serialisable_service_keys_to_ordered_parent_service_keys
+            ] = old_serialisable_info
+            
+            
+            new_serialisable_info = [
+                serialisable_tag_display_types_to_service_keys_to_tag_filters,
+                serialisable_tag_autocomplete_options
+            ]
+            
+            return ( 4, new_serialisable_info )
         
-        with self._lock:
-            
-            self._service_keys_to_ordered_sibling_service_keys[ CC.COMBINED_TAG_SERVICE_KEY ].extend( tag_service_keys )
-            
         
     
     def ClearTagDisplayOptions( self ):
@@ -392,70 +388,6 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetParentServiceKeys( self, services_manager: ClientServices.ServicesManager, requested_service_key: bytes ):
-        
-        with self._lock:
-            
-            if requested_service_key not in self._service_keys_to_ordered_parent_service_keys:
-                
-                self._service_keys_to_ordered_parent_service_keys[ requested_service_key ] = [ requested_service_key ]
-                
-            
-            ordered_service_keys = self._service_keys_to_ordered_parent_service_keys[ requested_service_key ]
-            
-            valid_ordered_service_keys = [ service_key for service_key in ordered_service_keys if services_manager.ServiceExists( service_key ) ]
-            
-            if len( valid_ordered_service_keys ) != len( ordered_service_keys ):
-                
-                self._service_keys_to_ordered_parent_service_keys[ requested_service_key ] = valid_ordered_service_keys
-                
-                self._dirty = True
-                
-            
-            return valid_ordered_service_keys
-            
-        
-    
-    def GetSiblingServiceKeys( self, services_manager: ClientServices.ServicesManager, requested_service_key: bytes ):
-        
-        local_service_keys = services_manager.GetServiceKeys( ( HC.LOCAL_TAG, ) )
-        tag_repo_service_keys = services_manager.GetServiceKeys( ( HC.TAG_REPOSITORY, ) )
-        
-        all_current_tag_service_keys = set( local_service_keys )
-        all_current_tag_service_keys.update( tag_repo_service_keys )
-        
-        with self._lock:
-            
-            if requested_service_key not in self._service_keys_to_ordered_sibling_service_keys:
-                
-                if requested_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                    
-                    service_keys = list( local_service_keys )
-                    service_keys.extend( tag_repo_service_keys )
-                    
-                else:
-                    
-                    service_keys = [ requested_service_key ]
-                    
-                
-                self._service_keys_to_ordered_sibling_service_keys[ requested_service_key ] = service_keys
-                
-            
-            ordered_service_keys = self._service_keys_to_ordered_sibling_service_keys[ requested_service_key ]
-            
-            valid_ordered_service_keys = list( filter( lambda sk: sk in all_current_tag_service_keys, ordered_service_keys ) )
-            
-            if len( valid_ordered_service_keys ) != len( ordered_service_keys ):
-                
-                self._service_keys_to_ordered_sibling_service_keys[ requested_service_key ] = valid_ordered_service_keys
-                
-                self._dirty = True
-                
-            
-            return valid_ordered_service_keys
-            
-        
-    
     def GetTagAutocompleteOptions( self, service_key: bytes ):
         
         with self._lock:
@@ -496,28 +428,6 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dirty
-            
-        
-    
-    def SetParentServiceKeys( self, service_keys_to_ordered_parent_service_keys ):
-        
-        with self._lock:
-            
-            self._service_keys_to_ordered_parent_service_keys = collections.defaultdict( list )
-            self._service_keys_to_ordered_parent_service_keys.update( service_keys_to_ordered_parent_service_keys )
-            
-            self._dirty = True
-            
-        
-    
-    def SetSiblingServiceKeys( self, service_keys_to_ordered_sibling_service_keys ):
-        
-        with self._lock:
-            
-            self._service_keys_to_ordered_sibling_service_keys = collections.defaultdict( list )
-            self._service_keys_to_ordered_sibling_service_keys.update( service_keys_to_ordered_sibling_service_keys )
-            
-            self._dirty = True
             
         
     
@@ -591,7 +501,7 @@ class TagSiblingsStructure( object ):
         
         if extending_existing_chain and joining_existing_chain:
             
-            joined_chain_ideal = self._bad_tags_to_ideal_tags
+            joined_chain_ideal = self._bad_tags_to_ideal_tags[ good_tag ]
             
             if joined_chain_ideal == bad_tag:
                 

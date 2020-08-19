@@ -2997,12 +2997,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ac_select_first_with_count = QW.QCheckBox( general_panel )
             
-            self._apply_all_parents_to_all_services = QW.QCheckBox( general_panel )
-            self._apply_all_siblings_to_all_services = QW.QCheckBox( general_panel )
-            
-            self._apply_all_parents_to_all_services.setToolTip( 'If checked, all services will apply their tag parents to each other. If unchecked, services will only apply tag parents to themselves.' )
-            self._apply_all_siblings_to_all_services.setToolTip( 'If checked, all services will apply their tag siblings to each other. If unchecked, services will only apply tag siblings to themselves. In case of conflict, local tag services have precedence.' )
-            
             #
             
             favourites_panel = ClientGUICommon.StaticBox( self, 'favourite tags' )
@@ -3040,9 +3034,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ac_select_first_with_count.setChecked( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
             
-            self._apply_all_parents_to_all_services.setChecked( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
-            self._apply_all_siblings_to_all_services.setChecked( self._new_options.GetBoolean( 'apply_all_siblings_to_all_services' ) )
-            
             #
             
             self._favourites.SetTags( new_options.GetStringList( 'favourite_tags' ) )
@@ -3057,8 +3048,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
-            rows.append( ( 'Apply all parents for all services: ', self._apply_all_parents_to_all_services ) )
-            rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
             
@@ -3087,9 +3076,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
             
             self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetValue() )
-            
-            self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.isChecked() )
-            self._new_options.SetBoolean( 'apply_all_siblings_to_all_services', self._apply_all_siblings_to_all_services.isChecked() )
             
             #
             

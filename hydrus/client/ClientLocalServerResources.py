@@ -894,10 +894,6 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 if add_siblings_and_parents:
                     
-                    siblings_manager = HG.client_controller.tag_siblings_manager
-                    
-                    tags = siblings_manager.CollapseTags( service_key, tags )
-                    
                     parents_manager = HG.client_controller.tag_parents_manager
                     
                     tags = parents_manager.ExpandTags( service_key, tags )
@@ -958,10 +954,6 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                     
                     if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and add_siblings_and_parents:
-                        
-                        siblings_manager = HG.client_controller.tag_siblings_manager
-                        
-                        tags = siblings_manager.CollapseTags( service_key, tags )
                         
                         parents_manager = HG.client_controller.tag_parents_manager
                         

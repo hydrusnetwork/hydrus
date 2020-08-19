@@ -582,9 +582,16 @@ class RatingsManager( object ):
     
 class TagsManager( object ):
     
-    def __init__( self, service_keys_to_statuses_to_tags: typing.Dict[ bytes, typing.Dict[ int, typing.Set[ str ] ] ] ):
+    def __init__(
+        self,
+        service_keys_to_statuses_to_storage_tags: typing.Dict[ bytes, typing.Dict[ int, typing.Set[ str ] ] ],
+        service_keys_to_statuses_to_display_tags: typing.Dict[ bytes, typing.Dict[ int, typing.Set[ str ] ] ]
+        ):
         
-        self._tag_display_types_to_service_keys_to_statuses_to_tags = { ClientTags.TAG_DISPLAY_STORAGE : service_keys_to_statuses_to_tags }
+        self._tag_display_types_to_service_keys_to_statuses_to_tags = {
+            ClientTags.TAG_DISPLAY_STORAGE : service_keys_to_statuses_to_storage_tags,
+            ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS : service_keys_to_statuses_to_display_tags
+        }
         
         self._cache_is_dirty = True
         
@@ -602,27 +609,29 @@ class TagsManager( object ):
         
         if self._cache_is_dirty:
             
-            # siblings (parents later)
-            
-            tag_siblings_manager = HG.client_controller.tag_siblings_manager
-            
-            # ultimately, we would like to just have these values pre-computed on the db so we can just read them in, but one step at a time
-            # and ultimately, this will make parents virtual, whether that is before or after we move this calc down to db cache level
-            # we'll want to keep this live updating capability though so we can keep up with content updates without needing a db refresh
-            # main difference is cache_dirty will default to False or similar
+            # display tags don't have petitioned or deleted, so we just fill in blanks:
             
             source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_STORAGE ]
             
-            destination_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+            destination_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ]
             
             for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
                 
-                destination_statuses_to_tags = tag_siblings_manager.CollapseStatusesToTags( service_key, source_statuses_to_tags )
+                destination_statuses_to_tags = destination_service_keys_to_statuses_to_tags[ service_key ]
                 
-                destination_service_keys_to_statuses_to_tags[ service_key ] = destination_statuses_to_tags
+                for status in ( HC.CONTENT_STATUS_DELETED, HC.CONTENT_STATUS_PETITIONED ):
+                    
+                    if status in destination_statuses_to_tags:
+                        
+                        del destination_statuses_to_tags[ status ]
+                        
+                    
+                    if status in source_statuses_to_tags:
+                        
+                        destination_statuses_to_tags[ status ] = set( source_statuses_to_tags[ status ] )
+                        
+                    
                 
-            
-            self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ] = destination_service_keys_to_statuses_to_tags
             
             # display filtering
             
@@ -671,7 +680,6 @@ class TagsManager( object ):
                 
             
             # combined service merge calculation
-            # would be great if this also could be db pre-computed
             
             for ( tag_display_type, service_keys_to_statuses_to_tags ) in self._tag_display_types_to_service_keys_to_statuses_to_tags.items():
                 
@@ -702,6 +710,8 @@ class TagsManager( object ):
     @staticmethod
     def MergeTagsManagers( tags_managers ):
         
+        # we cheat here and just get display tags, since this is read only and storage exacts isn't super important
+        
         def CurrentAndPendingFilter( items ):
             
             for ( service_key, statuses_to_tags ) in items:
@@ -713,7 +723,7 @@ class TagsManager( object ):
             
         
         # [[( service_key, statuses_to_tags )]]
-        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE ).items() ) for tags_manager in tags_managers )
+        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).items() ) for tags_manager in tags_managers )
         
         # [(service_key, statuses_to_tags)]
         flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
@@ -740,7 +750,7 @@ class TagsManager( object ):
             merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
             
         
-        return TagsManager( merged_service_keys_to_statuses_to_tags )
+        return TagsManager( merged_service_keys_to_statuses_to_tags, merged_service_keys_to_statuses_to_tags )
         
     
     def DeletePending( self, service_key ):
@@ -765,7 +775,7 @@ class TagsManager( object ):
         
         with self._lock:
             
-            dupe_tags_manager = TagsManager( {} )
+            dupe_tags_manager = TagsManager( {}, {} )
             
             dupe_tag_display_types_to_service_keys_to_statuses_to_tags = dict()
             
@@ -961,7 +971,7 @@ class TagsManager( object ):
             
         
     
-    def ProcessContentUpdate( self, service_key, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update: HydrusData.ContentUpdate ):
         
         with self._lock:
             
@@ -1013,6 +1023,51 @@ class TagsManager( object ):
                 
                 statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
                 
+            
+            #
+            
+            # this does not need to do clever sibling collapse, because in this case, the db forces tagsmanager refresh
+            # so this is just handling things for non-sibling tags
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            ( data_type, action, row ) = content_update.ToTuple()
+            
+            ( tag, hashes ) = row
+            
+            if action == HC.CONTENT_UPDATE_ADD:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].add( tag )
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
+                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_DELETE:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].add( tag )
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].discard( tag )
+                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_PEND:
+                
+                if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
+                    
+                    statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].add( tag )
+                    
+                
+            elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
+                
+            elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
+                
+                statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
+                
+            
+            #
             
             self._cache_is_dirty = True
             
