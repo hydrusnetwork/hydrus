@@ -257,6 +257,15 @@ class NetworkJob( object ):
         return ( session_network_context, login_network_context )
         
     
+    def _GetTimeouts( self ):
+        
+        connect_timeout = HG.client_controller.new_options.GetInteger( 'network_timeout' )
+        
+        read_timeout = connect_timeout * 6
+        
+        return ( connect_timeout, read_timeout )
+        
+    
     def _SendRequestAndGetResponse( self ):
         
         with self._lock:
@@ -317,9 +326,7 @@ class NetworkJob( object ):
         
         session = self.engine.session_manager.GetSession( snc )
         
-        connect_timeout = HG.client_controller.new_options.GetInteger( 'network_timeout' )
-        
-        read_timeout = connect_timeout * 6
+        ( connect_timeout, read_timeout ) = self._GetTimeouts()
         
         response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
         
@@ -1649,7 +1656,11 @@ class NetworkJobHydrus( NetworkJob ):
     
 class NetworkJobIPFS( NetworkJob ):
     
-    def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
+    IS_IPFS_SERVICE = True
+    
+    def __init__( self, url, body = None, referral_url = None, temp_path = None ):
+        
+        method = 'POST'
         
         NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
@@ -1657,7 +1668,14 @@ class NetworkJobIPFS( NetworkJob ):
         self.OverrideBandwidth()
         
     
-    IS_IPFS_SERVICE = True
+    def _GetTimeouts( self ):
+        
+        ( connect_timeout, read_timeout ) = NetworkJob._GetTimeouts( self )
+        
+        read_timeout = max( 7200, read_timeout )
+        
+        return ( connect_timeout, read_timeout )
+        
     
 class NetworkJobWatcherPage( NetworkJob ):
     

@@ -3,6 +3,7 @@ import re
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
@@ -10,6 +11,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client.metadata import ClientTags
@@ -250,8 +252,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_NAME = 'Export Folder'
     SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = None, run_regularly = True, period = 3600, phrase = None, last_checked = 0, paused = False, run_now = False ):
+    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = None, run_regularly = True, period = 3600, phrase = None, last_checked = 0, paused = False, run_now = False, last_error = '' ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
@@ -280,18 +283,19 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._last_checked = last_checked
         self._paused = paused and not run_now
         self._run_now = run_now
+        self._last_error = last_error
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         
-        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now )
+        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now ) = serialisable_info
+        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error ) = serialisable_info
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
@@ -336,6 +340,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, run_regularly, period, phrase, last_checked, paused, run_now )
             
             return ( 4, new_serialisable_info )
+            
+        
+        if version == 4:
+            
+            ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = old_serialisable_info
+            
+            last_error = ''
+            
+            new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, run_regularly, period, phrase, last_checked, paused, run_now, last_error )
+            
+            return ( 5, new_serialisable_info )
             
         
     
@@ -396,7 +411,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             mime = media_result.GetMime()
             size = media_result.GetSize()
             
-            source_path = client_files_manager.GetFilePath( hash, mime )
+            try:
+                
+                source_path = client_files_manager.GetFilePath( hash, mime )
+                
+            except HydrusExceptions.FileMissingException:
+                
+                raise Exception( 'A file to be exported, hash "{}", was missing! You should run file maintenance (under database->maintenance->files) to check the files for the export folder\'s search, and possibly all your files.' )
+                
             
             filename = GenerateExportFilename( self._path, media_result, terms )
             
@@ -522,13 +544,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._DoExport()
             
+            self._last_error = ''
+            
         except Exception as e:
             
             self._paused = True
             
-            HydrusData.ShowText( 'The export folder "' + self._name + '" encountered an error! The error will follow! It has now been paused. Please check the folder\'s settings and maybe report to hydrus dev if the error is complicated!' )
+            HydrusData.ShowText( 'The export folder "' + self._name + '" encountered an error! It has now been paused. Please check the folder\'s settings and maybe report to hydrus dev if the error is complicated! The error follows:' )
             
             HydrusData.ShowException( e )
+            
+            self._last_error = str( e )
             
         finally:
             
@@ -537,6 +563,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             
+        
+    
+    def GetLastError( self ) -> str:
+        
+        return self._last_error
         
     
     def RunNow( self ):

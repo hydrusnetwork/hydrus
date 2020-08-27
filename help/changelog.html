@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 409</h3></li>
+				<ul>
+					<li>siblings:</li>
+					<li>the slowest of the new sibling regen & update code has received a full optimisation pass. some sections take 10% less time, some 90%, and one critical query takes 99% less time. overall, several big jobs work much faster, and ptr processing, which slowed significantly for many users, should be back up to a good speed. uploading pending tags (which tend to be for local files) should be much faster in particular. let's do another round of IRL observation and profiling this week, and I'll keep at it</li>
+					<li>the various 'display' regeneration routines now provide more progress status text, drilling down to the x/y siblings being collapse-counted, or number of files added to a cache, and generally all tag sibling regen got a status update polish pass</li>
+					<li>optimised the way tag sibling application is set--now, only the tag siblings that are changed need to have their counts regenerated. hence, if you just apply (or remove) your own five 'my tags' siblings onto the PTR, the client now only has to do two seconds of work, not ten minutes</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed the annoying issue with media viewer mouseovers stealing focus/activation from the manage tags dialog. this can now only happen if current focus is on a hover window. sorry for the delay!</li>
+					<li>updated manage tag parents dialog to state the pairs being petitioned on the 'petition reason entry' dialog</li>
+					<li>updated manage tag parents and siblings dialogs to have appropriate 'reason' suggestions for petitions (previously, they were inheriting the same suggestions as for add)</li>
+					<li>ipfs network jobs now have a minimum 'reply' connection timeout of two hours (so giganto directory pushes won't throw an error). connection timeout remains the same, so if the server is hanging on that, it'll still notice</li>
+					<li>fixed the 'test address' button on the IPFS manage services panel</li>
+					<li>petitioning an IPFS file when there is no IPFS multihash entry in the db no longer causes an error. now, in this case, the file entry is removed with no change made.</li>
+					<li>when pending to or petitioning from a file service, a quick filter is now applied to discard invalid files (i.e. (not) already in the service). any weird logical holes where this might occur should now be fixed</li>
+					<li>export folders now catch and report missing file errors more nicely</li>
+					<li>export folders now remember the last error they encountered and report that in the edit export folders dialog</li>
+					<li>.</li>
+					<li>boring tag siblings optimisations:</li>
+					<li>optimised the tag manager generation routine to use any common file domains for fast cache lookup for any subset of the files available, rather than falling back to 'all known files' domain when there is no single common file domain</li>
+					<li>optimised the new 'all known files' display autocomplete cache to use similar faster specific files cache lookups when available</li>
+					<li>optimised how the 'all known files' display cache regenerates tag sibling chains. it now takes a shortcut when given non-sibling tags and tags where all but one sibling member have zero count, and it can count current and pending counts separately according to the most efficient counting method (e.g. most pre-display pending counts are 0 across the board, so even if current count is a million, the pending count can often be assumed without lookup overhead). furthermore, the 'clever' count has better query planning and less non-sqlite data overhead, and with experimental data is now chosen more carefully. what was previously a 22s job on a test database now takes 5s</li>
+					<li>deduplicated how new mappings are filtered to all the specific cache domains, significantly reducing overhead</li>
+					<li>massively optimised a critical - and the slowest - part of the new 'combined' cache that handles add/pend mappings pre-insert presence testing, speeding up the core query about 100x!</li>
+					<li>reduced some overhead when doing file service_id normalisation in repository processing</li>
+					<li>split up specific chain regen into groups to reduce memory usage</li>
+					<li>optimised specific display tag cache 'add file' updates, and thereby basic cache regeneration, to be just a little faster for files that have multiple sibling tags</li>
+					<li>all predicates made in the database are now populated with ideal and chain sibling information, and this is used for '(will display as xxx)' labels and autocomplete tag search filtering (e.g. you type in 'lotr', it matches an autocomplete result of 'lord of the rings'). there are still some ui-made predicates to figure out, so the old system remains as a fallback</li>
+					<li>related tags lookup is a tiny bit faster and now populates its predicates with ideal and chain sibling info at the db level</li>
+					<li>cleaned up some 'fetch related tags' code, might make it a bit faster for large tag counts</li>
+					<li>cleaned up the way some mapping tables are fetched</li>
+					<li>unified table/table_name nomenclature in the db code</li>
+					<li>updated an old data->ui status presentation method (it typically does stuff like "regenning some stuff: 500/10,000"), to not hog so much UI time and not yield worker threads so often when new statuses are coming in real fast</li>
+					<li>several late optimisations based on IRL testing</li>
+				</ul>
 				<li><h3>version 408</h3></li>
 				<ul>
 					<li>tag siblings cache:</li>

@@ -37,6 +37,9 @@ class JobKey( object ):
         self._cancelled = threading.Event()
         self._paused = threading.Event()
         
+        self._ui_update_pause_period = 0.1
+        self._next_ui_update_pause = HydrusData.GetNowFloat() + self._ui_update_pause_period
+        
         self._yield_pause_period = 10
         self._next_yield_pause = HydrusData.GetNow() + self._yield_pause_period
         
@@ -164,7 +167,12 @@ class JobKey( object ):
             if name in self._variables: del self._variables[ name ]
             
         
-        time.sleep( 0.00001 )
+        if HydrusData.TimeHasPassedFloat( self._next_ui_update_pause ):
+            
+            time.sleep( 0.00001 )
+            
+            self._next_ui_update_pause = HydrusData.GetNowFloat() + self._ui_update_pause_period
+            
         
     
     def Finish( self, seconds = None ):
@@ -311,7 +319,12 @@ class JobKey( object ):
         
         with self._variable_lock: self._variables[ name ] = value
         
-        time.sleep( 0.00001 )
+        if HydrusData.TimeHasPassed( self._next_ui_update_pause ):
+            
+            time.sleep( 0.00001 )
+            
+            self._next_ui_update_pause = HydrusData.GetNow() + self._ui_update_pause_period
+            
         
     
     def TimeRunning( self ):

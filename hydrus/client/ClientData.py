@@ -236,7 +236,7 @@ def MergePredicates( predicates, add_namespaceless = False ):
         unnamespaced_predicate_dict = {}
         subtag_nonzero_instance_counter = collections.Counter()
         
-        for predicate in list(master_predicate_dict.values()):
+        for predicate in master_predicate_dict.values():
             
             if predicate.HasNonZeroCount():
                 
@@ -266,7 +266,7 @@ def MergePredicates( predicates, add_namespaceless = False ):
             
         
     
-    return list(master_predicate_dict.values())
+    return list( master_predicate_dict.values() )
     
 def OrdIsSensibleASCII( o ):
     

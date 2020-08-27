@@ -2346,7 +2346,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         my_tlw = self.window()
         
-        if current_focus_tlw != my_tlw and ClientGUIFunctions.IsQtAncestor( current_focus_tlw, my_tlw, through_tlws = True ):
+        if isinstance( current_focus_tlw, ClientGUICanvasHoverFrames.CanvasHoverFrame ) and ClientGUIFunctions.IsQtAncestor( current_focus_tlw, my_tlw, through_tlws = True ):
             
             my_tlw.activateWindow()
             

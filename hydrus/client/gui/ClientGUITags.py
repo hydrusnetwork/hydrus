@@ -1548,7 +1548,7 @@ class EditTagSiblingApplication( ClientGUIScrolledPanels.EditPanel ):
     
     class _Panel( QW.QWidget ):
         
-        def __init__( self, parent: QW.QWidget, master_service_key: bytes, applicable_service_keys: typing.List[ bytes ] ):
+        def __init__( self, parent: QW.QWidget, master_service_key: bytes, applicable_service_keys: typing.Sequence[ bytes ] ):
             
             QW.QWidget.__init__( self, parent )
             
@@ -2820,12 +2820,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            suggestions = []
-            
-            suggestions.append( 'obvious by definition (a sword is a weapon)' )
-            suggestions.append( 'character/series/studio/etc... belonging (character x belongs to series y)' )
-            suggestions.append( 'character/person/etc... properties (character x is a female)' )
-            
             affected_pairs = []
             
             if len( new_pairs ) > 0:
@@ -2850,6 +2844,12 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
+                        
+                        suggestions = []
+                        
+                        suggestions.append( 'obvious by definition (a sword is a weapon)' )
+                        suggestions.append( 'character/series/studio/etc... belonging (character x belongs to series y)' )
+                        suggestions.append( 'character/person/etc... properties (character x is a female)' )
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
@@ -2913,7 +2913,15 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                 
                             else:
                                 
-                                message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                                message = 'Enter a reason for:'
+                                message += os.linesep * 2
+                                message += pair_strings
+                                message += os.linesep * 2
+                                message += 'to be removed. A janitor will review your petition.'
+                                
+                                suggestions = []
+                                
+                                suggestions.append( 'obvious typo/mistake' )
                                 
                                 with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                     
@@ -3646,11 +3654,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            suggestions = []
-            
-            suggestions.append( 'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag' )
-            suggestions.append( 'rewording/namespacing based on preference' )
-            
             if len( new_pairs ) > 0:
                 
                 do_it = True
@@ -3675,6 +3678,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                             pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
                             
+                        
+                        suggestions = []
+                        
+                        suggestions.append( 'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag' )
+                        suggestions.append( 'rewording/namespacing based on preference' )
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
                         
@@ -3734,6 +3742,12 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             message += pair_strings
                             message += os.linesep * 2
                             message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
+                            
+                            suggestions = []
+                            
+                            suggestions.append( 'obvious typo/mistake' )
+                            suggestions.append( 'disambiguation' )
+                            suggestions.append( 'correcting to repository standard' )
                             
                             with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                 

@@ -2284,7 +2284,7 @@ class ServiceIPFS( ServiceRemote ):
         
         links_url = api_base_url + 'object/links/' + multihash
         
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', links_url )
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( links_url )
         
         if job_key is not None:
             
@@ -2366,7 +2366,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'config?arg=Experimental.FilestoreEnabled&arg={}&bool=true'.format( arg_value )
         
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2388,7 +2388,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'version'
         
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2418,7 +2418,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'config?arg=Experimental.FilestoreEnabled'
         
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2550,7 +2550,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'pin/ls?arg={}'.format( multihash )
         
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
         
         HG.client_controller.network_engine.AddJob( network_job )
         
@@ -2648,7 +2648,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'object/new?arg=unixfs-dir'
             
-            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2678,7 +2678,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
                 
-                network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+                network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
                 
                 HG.client_controller.network_engine.AddJob( network_job )
                 
@@ -2693,7 +2693,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/add?arg=' + directory_multihash
             
-            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2786,7 +2786,7 @@ class ServiceIPFS( ServiceRemote ):
                 files = { 'path' : ( hash.hex(), f, mime_string ) }
                 
             
-            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
             network_job.SetFiles( files )
             
@@ -2847,7 +2847,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/rm/' + multihash
             
-            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -2870,7 +2870,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/rm/' + multihash
             
-            network_job = ClientNetworkingJobs.NetworkJobIPFS( 'POST', url )
+            network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
             HG.client_controller.network_engine.AddJob( network_job )
             

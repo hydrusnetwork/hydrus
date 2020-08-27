@@ -921,7 +921,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     url = scheme + host + ':' + str( port ) + '/' + request
                     
-                    network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
+                    if self._service_type in HC.REPOSITORIES:
+                        
+                        network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
+                        
+                    else:
+                        
+                        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
+                        
                     
                     network_job.OnlyTryConnectionOnce()
                     network_job.OverrideBandwidth()

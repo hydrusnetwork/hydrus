@@ -1996,7 +1996,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             if len( hashes ) > 0:
                 
-                hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+                hashes = HG.client_controller.Read( 'filter_hashes', CC.LOCAL_FILE_SERVICE_KEY, hashes )
                 
                 media_results = HG.client_controller.Read( 'media_results', hashes )
                 
@@ -2269,7 +2269,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             filter_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
             
         
-        hashes = HG.client_controller.Read( 'filter_hashes', hashes, filter_file_service_key )
+        hashes = HG.client_controller.Read( 'filter_hashes', filter_file_service_key, hashes )
         
         if len( hashes ) > 0:
             
@@ -2788,7 +2788,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             if len( hashes ) > 0:
                 
-                hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+                hashes = HG.client_controller.Read( 'filter_hashes', CC.LOCAL_FILE_SERVICE_KEY, hashes )
                 
                 media_results = HG.client_controller.Read( 'media_results', hashes )
                 
@@ -3061,7 +3061,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             filter_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
             
         
-        hashes = HG.client_controller.Read( 'filter_hashes', hashes, filter_file_service_key )
+        hashes = HG.client_controller.Read( 'filter_hashes', filter_file_service_key, hashes )
         
         if len( hashes ) > 0:
             
@@ -4642,7 +4642,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
             
-            self._tag_autocomplete.tagServiceChanged.connect( self.SetFileServiceKey )
+            self._tag_autocomplete.fileServiceChanged.connect( self.SetFileServiceKey )
             
         
     

@@ -21,7 +21,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.metadata import ClientTags
 
-def FilterSuggestedPredicatesForMedia( predicates: typing.List[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
+def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
     
     tags = [ predicate.GetValue() for predicate in predicates ]
     
@@ -31,7 +31,7 @@ def FilterSuggestedPredicatesForMedia( predicates: typing.List[ ClientSearch.Pre
     
     return predicates
     
-def FilterSuggestedTagsForMedia( tags: typing.List[ str ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
+def FilterSuggestedTagsForMedia( tags: typing.Sequence[ str ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
     
     tags_filtered_set = set( tags )
     

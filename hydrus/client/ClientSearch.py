@@ -142,105 +142,6 @@ def CollapseWildcardCharacters( text ):
     
     return text
     
-def FilterPredicatesBySearchText( service_key, search_text, predicates ):
-    
-    tags_to_predicates = {}
-    
-    for predicate in predicates:
-        
-        ( predicate_type, value, inclusive ) = predicate.GetInfo()
-        
-        if predicate_type == PREDICATE_TYPE_TAG:
-            
-            tags_to_predicates[ value ] = predicate
-            
-        
-    
-    matching_tags = FilterTagsBySearchText( service_key, search_text, list( tags_to_predicates.keys() ) )
-    
-    matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
-    
-    return matches
-    
-def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = True ):
-    
-    def compile_re( s ):
-        
-        regular_parts_of_s = s.split( '*' )
-        
-        escaped_parts_of_s = list(map( re.escape, regular_parts_of_s ))
-        
-        s = '.*'.join( escaped_parts_of_s )
-        
-        # \A is start of string
-        # \Z is end of string
-        # \s is whitespace
-        
-        # ':' is no longer escaped to '\:' in py 3.7 lmaooooo, so some quick hackery
-        if re.escape( ':' ) == r'\:':
-            
-            s = s.replace( r'\:', ':' )
-            
-        
-        if ':' in s:
-            
-            beginning = r'\A'
-            
-            s = s.replace( r':', r'(:|.*\s)', 1 )
-            
-        elif s.startswith( '.*' ):
-            
-            beginning = r'(\A|:)'
-            
-        else:
-            
-            beginning = r'(\A|:|\s)'
-            
-        
-        if s.endswith( '.*' ):
-            
-            end = r'\Z' # end of string
-            
-        else:
-            
-            end = r'(\s|\Z)' # whitespace or end of string
-            
-        
-        return re.compile( beginning + s + end )
-        
-    
-    re_predicate = compile_re( search_text )
-    
-    siblings_manager = HG.client_controller.tag_siblings_manager
-    
-    result = []
-    
-    for tag in tags:
-        
-        if search_siblings:
-            
-            possible_tags = siblings_manager.GetAllSiblings( service_key, tag )
-            
-        else:
-            
-            possible_tags = { tag }
-            
-        
-        possible_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
-        
-        for possible_tag in possible_tags:
-            
-            if re_predicate.search( possible_tag ) is not None:
-                
-                result.append( tag )
-                
-                break
-                
-            
-        
-    
-    return result
-    
 def IsComplexWildcard( search_text ):
     
     num_stars = search_text.count( '*' )
@@ -1088,6 +989,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def SetTagServiceKey( self, tag_service_key ):
         
         self._tag_search_context.service_key = tag_service_key
+        self._tag_search_context.display_service_key = tag_service_key
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
@@ -1096,26 +998,50 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT
     SERIALISABLE_NAME = 'Tag Search Context'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ):
+    def __init__( self, service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, display_service_key = None ):
         
         self.service_key = service_key
         
         self.include_current_tags = include_current_tags
         self.include_pending_tags = include_pending_tags
         
+        if display_service_key is None:
+            
+            self.display_service_key = self.service_key
+            
+        else:
+            
+            self.display_service_key = display_service_key
+            
+        
     
     def _GetSerialisableInfo( self ):
         
-        return ( self.service_key.hex(), self.include_current_tags, self.include_pending_tags )
+        return ( self.service_key.hex(), self.include_current_tags, self.include_pending_tags, self.display_service_key.hex() )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( encoded_service_key, self.include_current_tags, self.include_pending_tags ) = serialisable_info
+        ( encoded_service_key, self.include_current_tags, self.include_pending_tags, encoded_display_service_key ) = serialisable_info
         
         self.service_key = bytes.fromhex( encoded_service_key )
+        self.display_service_key = bytes.fromhex( encoded_display_service_key )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( encoded_service_key, self.include_current_tags, self.include_pending_tags ) = old_serialisable_info
+            
+            encoded_display_service_key = encoded_service_key
+            
+            new_serialisable_info = ( encoded_service_key, self.include_current_tags, self.include_pending_tags, encoded_display_service_key )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT ] = TagSearchContext
@@ -1309,6 +1235,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._min_pending_count = min_pending_count
         self._max_current_count = max_current_count
         self._max_pending_count = max_pending_count
+        
+        self._ideal_sibling = None
+        self._siblings = None
         
     
     def __eq__( self, other ):
@@ -1622,6 +1551,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return None
             
+        
+    
+    def GetSiblings( self ):
+        
+        return self._siblings
         
     
     def GetTextsAndNamespaces( self, or_under_construction = False ):
@@ -2296,15 +2230,25 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             if sibling_service_key is not None:
                 
-                siblings_manager = HG.client_controller.tag_siblings_manager
-                
-                sibling = siblings_manager.GetSibling( sibling_service_key, tag )
-                
-                if sibling != tag:
+                if self._ideal_sibling is not None:
                     
-                    sibling = ClientTags.RenderTag( sibling, render_for_user )
+                    if self._ideal_sibling != tag:
+                        
+                        base += ' (will display as ' + self._ideal_sibling + ')'
+                        
                     
-                    base += ' (will display as ' + sibling + ')'
+                else:
+                    
+                    siblings_manager = HG.client_controller.tag_siblings_manager
+                    
+                    sibling = siblings_manager.GetSibling( sibling_service_key, tag )
+                    
+                    if sibling != tag:
+                        
+                        sibling = ClientTags.RenderTag( sibling, render_for_user )
+                        
+                        base += ' (will display as ' + sibling + ')'
+                        
                     
                 
             
@@ -2393,9 +2337,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._min_current_count > 0 or self._min_pending_count > 0
         
     
+    def SetIdealSibling( self, tag: str ):
+        
+        self._ideal_sibling = tag
+        
+    
     def SetInclusive( self, inclusive ):
         
         self._inclusive = inclusive
+        
+    
+    def SetSiblings( self, siblings: typing.Set[ str ] ):
+        
+        self._siblings = siblings
         
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
@@ -2408,6 +2362,107 @@ SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM_LOCAL, None )
 
 SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None )
 
+def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.Collection[ Predicate ] ):
+    
+    def compile_re( s ):
+        
+        regular_parts_of_s = s.split( '*' )
+        
+        escaped_parts_of_s = list(map( re.escape, regular_parts_of_s ))
+        
+        s = '.*'.join( escaped_parts_of_s )
+        
+        # \A is start of string
+        # \Z is end of string
+        # \s is whitespace
+        
+        # ':' is no longer escaped to '\:' in py 3.7 lmaooooo, so some quick hackery
+        if re.escape( ':' ) == r'\:':
+            
+            s = s.replace( r'\:', ':' )
+            
+        
+        if ':' in s:
+            
+            beginning = r'\A'
+            
+            s = s.replace( r':', r'(:|.*\s)', 1 )
+            
+        elif s.startswith( '.*' ):
+            
+            beginning = r'(\A|:)'
+            
+        else:
+            
+            beginning = r'(\A|:|\s)'
+            
+        
+        if s.endswith( '.*' ):
+            
+            end = r'\Z' # end of string
+            
+        else:
+            
+            end = r'(\s|\Z)' # whitespace or end of string
+            
+        
+        return re.compile( beginning + s + end )
+        
+    
+    re_predicate = compile_re( search_text )
+    
+    siblings_manager = HG.client_controller.tag_siblings_manager
+    
+    matches = []
+    
+    for predicate in predicates:
+        
+        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        
+        if predicate_type != PREDICATE_TYPE_TAG:
+            
+            continue
+            
+        
+        sibling_tags = predicate.GetSiblings()
+        
+        if sibling_tags is None:
+            
+            tag = value
+            
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                possible_tags = ( tag, )
+                
+            else:
+                
+                possible_tags = siblings_manager.GetAllSiblings( service_key, tag )
+                
+                if len( possible_tags ) > 1:
+                    HydrusData.Print( ( 'yo', possible_tags ) )
+                    
+                
+            
+        else:
+            
+            possible_tags = sibling_tags
+            
+        
+        searchable_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
+        
+        for searchable_tag in searchable_tags:
+            
+            if re_predicate.search( searchable_tag ) is not None:
+                
+                matches.append( predicate )
+                
+                break
+                
+            
+        
+    
+    return matches
+    
 def SearchTextIsFetchAll( search_text: str ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( search_text )

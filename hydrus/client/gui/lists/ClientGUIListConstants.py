@@ -160,7 +160,7 @@ class COLUMN_LIST_EXPORT_FOLDERS( COLUMN_LIST_DEFINITION ):
     PAUSED = 4
     PERIOD = 5
     PHRASE = 6
-    
+    LAST_ERROR = 7
 
 column_list_type_name_lookup[ COLUMN_LIST_EXPORT_FOLDERS.ID ] = 'export folders'
 
@@ -171,6 +171,7 @@ register_column_type( COLUMN_LIST_EXPORT_FOLDERS.ID, COLUMN_LIST_EXPORT_FOLDERS.
 register_column_type( COLUMN_LIST_EXPORT_FOLDERS.ID, COLUMN_LIST_EXPORT_FOLDERS.PAUSED, 'paused', False, 8, True)
 register_column_type( COLUMN_LIST_EXPORT_FOLDERS.ID, COLUMN_LIST_EXPORT_FOLDERS.PERIOD, 'period', False, 16, True )
 register_column_type( COLUMN_LIST_EXPORT_FOLDERS.ID, COLUMN_LIST_EXPORT_FOLDERS.PHRASE, 'phrase', False, 20, True )
+register_column_type( COLUMN_LIST_EXPORT_FOLDERS.ID, COLUMN_LIST_EXPORT_FOLDERS.LAST_ERROR, 'recent error?', False, 20, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_EXPORT_FOLDERS.ID ] = ( COLUMN_LIST_EXPORT_FOLDERS.NAME, True )
 

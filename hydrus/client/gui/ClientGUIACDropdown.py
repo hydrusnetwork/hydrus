@@ -274,14 +274,16 @@ def ReadFetch(
             tags_to_do.update( current_tags_to_count.keys() )
             tags_to_do.update( pending_tags_to_count.keys() )
             
-            tags_to_do = ClientSearch.FilterTagsBySearchText( tag_service_key, autocomplete_search_text, tags_to_do )
-            
             if job_key.IsCancelled():
                 
                 return
                 
             
+            # so potentially just fetch the preds from db here with tags_to_full_counts dict, to get sibling population and so on
+            
             predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, parsed_autocomplete_text.inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
+            
+            predicates = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
             
             if job_key.IsCancelled():
                 
@@ -363,9 +365,9 @@ def ShouldDoExactSearch( entry_text ):
     
     return 0 < len( test_text ) <= autocomplete_exact_match_threshold
     
-def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_service_key: bytes, tag_service_key: bytes, expand_parents: bool, display_tag_service_key, results_cache: ClientSearch.PredicateResultsCache ):
+def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, tag_search_context: ClientSearch.TagSearchContext, file_service_key: bytes, expand_parents: bool, results_cache: ClientSearch.PredicateResultsCache ):
     
-    tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+    display_tag_service_key = tag_search_context.display_service_key
     
     if not parsed_autocomplete_text.IsAcceptableForTagSearches():
         
@@ -2368,7 +2370,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         HG.client_controller.CallLaterQtSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
-        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._display_tag_service_key, self._results_cache )
+        tag_search_context = ClientSearch.TagSearchContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
+        
+        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, tag_search_context, self._file_service_key, self._expand_parents, self._results_cache )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):

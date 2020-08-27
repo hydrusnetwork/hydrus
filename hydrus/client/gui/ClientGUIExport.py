@@ -90,7 +90,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertExportFolderToListCtrlTuples( self, export_folder ):
+    def _ConvertExportFolderToListCtrlTuples( self, export_folder: ClientExporting.ExportFolder ):
         
         ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
         
@@ -135,9 +135,11 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_phrase = phrase
         
-        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_paused, pretty_period, pretty_phrase )
+        last_error = export_folder.GetLastError()
         
-        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, paused, period, phrase )
+        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_paused, pretty_period, pretty_phrase, last_error )
+        
+        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, paused, period, phrase, last_error )
         
         return ( display_tuple, sort_tuple )
         
@@ -188,7 +190,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, export_folder ):
+    def __init__( self, parent, export_folder: ClientExporting.ExportFolder ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -408,7 +410,22 @@ If you select synchronise, be careful!'''
         
         paused = self._paused.isChecked()
         
-        export_folder = ClientExporting.ExportFolder( name, path = path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, run_regularly = run_regularly, period = period, phrase = phrase, last_checked = self._last_checked, paused = paused, run_now = run_now )
+        last_error = self._export_folder.GetLastError()
+        
+        export_folder = ClientExporting.ExportFolder(
+            name,
+            path = path,
+            export_type = export_type,
+            delete_from_client_after_export = delete_from_client_after_export,
+            file_search_context = file_search_context,
+            run_regularly = run_regularly,
+            period = period,
+            phrase = phrase,
+            last_checked = self._last_checked,
+            paused = paused,
+            run_now = run_now,
+            last_error = last_error
+        )
         
         return export_folder
         

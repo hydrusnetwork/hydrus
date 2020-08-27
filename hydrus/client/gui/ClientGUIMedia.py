@@ -20,7 +20,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 
-def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.List[ ClientMedia.Media ] ):
+def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Sequence[ ClientMedia.Media ] ):
     
     sha256_hashes = list( itertools.chain.from_iterable( ( media.GetHashes( ordered = True ) for media in medias ) ) )
     
