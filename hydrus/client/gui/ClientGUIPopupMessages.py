@@ -1061,11 +1061,13 @@ class PopupMessageManager( QW.QWidget ):
 # This was originally a reviewpanel subclass which is a scroll area subclass, but having it in a scroll area didn't work out with dynamically updating size as the widget contents change.
 class PopupMessageDialogPanel( QW.QWidget ):
     
-    def __init__( self, parent, job_key ):
+    def __init__( self, parent, job_key, hide_main_gui = False ):
         
         QW.QWidget.__init__( self, parent )
         
         self._yesno_open = False
+        
+        self._hide_main_gui = hide_main_gui
         
         self._job_key = job_key
         
@@ -1093,14 +1095,21 @@ class PopupMessageDialogPanel( QW.QWidget ):
 
     def _HideOtherWindows( self ):
         
+        from hydrus.client.gui import ClientGUI
+        
         for tlw in QW.QApplication.topLevelWidgets():
             
-            if tlw == self:
+            if isinstance( tlw, ClientGUI.FrameGUI ):
+                
+                pass
+                
+            
+            if tlw == self.window():
                 
                 continue
                 
             
-            if not isinstance( tlw, ( ClientGUITopLevelWindows.Frame, ClientGUITopLevelWindows.NewDialog ) ):
+            if not isinstance( tlw, ( ClientGUITopLevelWindows.Frame, ClientGUITopLevelWindows.MainFrame, ClientGUITopLevelWindows.NewDialog ) ):
                 
                 continue
                 
@@ -1110,9 +1119,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
                 continue
                 
             
-            from hydrus.client.gui import ClientGUI
-            
-            if isinstance( tlw, ClientGUI.FrameGUI ):
+            if isinstance( tlw, ClientGUI.FrameGUI ) and not self._hide_main_gui:
                 
                 continue
                 

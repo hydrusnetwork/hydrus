@@ -270,7 +270,7 @@ class ClientFilesManager( object ):
                 
                 correct_location = potential_correct_locations[0]
                 
-                correct_rows.append( ( missing_location, prefix, correct_location ) )
+                correct_rows.append( ( prefix, correct_location ) )
                 
                 fixes_counter[ ( missing_location, correct_location ) ] += 1
                 
@@ -686,21 +686,17 @@ class ClientFilesManager( object ):
         
         self._missing_locations = set()
         
-        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+        for ( prefix, location ) in self._prefixes_to_locations.items():
             
             if os.path.exists( location ):
                 
-                subdir = os.path.join( location, prefix )
-                
-                if not os.path.exists( subdir ):
+                if os.path.exists( os.path.join( location, prefix ) ):
                     
-                    self._missing_locations.add( ( location, prefix ) )
+                    continue
                     
                 
-            else:
-                
-                self._missing_locations.add( ( location, prefix ) )
-                
+            
+            self._missing_locations.add( ( location, prefix ) )
             
         
     
@@ -1189,11 +1185,13 @@ class ClientFilesManager( object ):
                     job_key.SetVariable( 'popup_text_1', text )
                     
                     # these two lines can cause a deadlock because the db sometimes calls stuff in here.
-                    self._controller.Write( 'relocate_client_files', prefix, overweight_location, underweight_location )
+                    self._controller.WriteSynchronous( 'relocate_client_files', prefix, overweight_location, underweight_location )
                     
                     self._Reinit()
                     
                     rebalance_tuple = self._GetRebalanceTuple()
+                    
+                    time.sleep( 0.01 )
                     
                 
                 recover_tuple = self._GetRecoverTuple()
@@ -1219,6 +1217,8 @@ class ClientFilesManager( object ):
                     HydrusPaths.MergeTree( recoverable_path, correct_path )
                     
                     recover_tuple = self._GetRecoverTuple()
+                    
+                    time.sleep( 0.01 )
                     
                 
             

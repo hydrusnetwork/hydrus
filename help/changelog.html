@@ -8,6 +8,54 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 410</h3></li>
+				<ul>
+					<li>general work:</li>
+					<li>fixed a bug in the new file service filtering code that was stopping file upload commands to file repositories or ipfs services from sticking</li>
+					<li>fixed an issue with the export files dialog auto-close-when-done function</li>
+					<li>I think I fixed a possible bug in the boot file location repair/recovery dialog sometimes not saving corrected paths on unusual file systems</li>
+					<li>file migration cancel button and shut off timer should work a bit more reliably, more to come here</li>
+					<li>copying subscription quality csv info to clipboard no longer does nice human numbers (you now get 1234, not csv-breaking 1,234)!</li>
+					<li>may have fixed a very rare 'or predicate' error when opening a dialog with a 'read' autocomplete input, like export folder or file maintenance jobs dialogs</li>
+					<li>all pages are better about dealing with missing (i.e. recently deleted) services on load, and autocompletes also</li>
+					<li>error handling from servers with strange character encodings should be better about dealing with null characters</li>
+					<li>cleaned up the combined display regen chain code</li>
+					<li>deleted some obselete db code</li>
+					<li>.</li>
+					<li>optimisation review:</li>
+					<li>after more profiling, and thanks to additional input from users, I have done another round of optimisation for the new caches. using a new technique, more than just mappings are sped up this week - a number of queries that were prone to lag spikes should now have much more reliable speed and also be faster when hammered often</li>
+					<li>.</li>
+					<li>join and analyse db optimisations:</li>
+					<li>these are mostly forcing table join orders, which reduces lag spikes, and reducing some related pre-query analysis overhead, which speeds things up more the faster your drive is (up to double processing speed on an ssd). they will affect different clients to different extents, but if your 'related tags' were taking more than a second to load, it should be sorted this week. systems affected:</li>
+					<li>archiving files</li>
+					<li>fetching 'related' suggested tags</li>
+					<li>tag siblings regen/update in about ten places</li>
+					<li>all mappings processing</li>
+					<li>additional mappings processing for add/delete, pend/rescind_pend</li>
+					<li>importing or deleting files that have tags</li>
+					<li>loading medias' tags for the first time or on regen</li>
+					<li>loading any media for the first time</li>
+					<li>num notes searches</li>
+					<li>similar files search tree maintenance</li>
+					<li>many general file hash lookups</li>
+					<li>many general tag lookups</li>
+					<li>.</li>
+					<li>other optimisations:</li>
+					<li>mappings processing</li>
+					<li>sibling processing</li>
+					<li>wildcard tag searches, with and without namespaces, particularly when mixed with other search terms</li>
+					<li>'tag as number' searches, with and without namespaces, particularly when mixed with other search terms</li>
+					<li>searching for tags when mixed with other search terms</li>
+					<li>has notes/no notes</li>
+					<li>searching files on 'all known files' with general file metadata system predicates (like size, filetype)</li>
+					<li>url class, url domain, and url regex file searches, particularly when mixed with other search terms</li>
+					<li>num tag file searches when mixed with other search terms</li>
+					<li>has/not has tags file searches when mixed with other search terms</li>
+					<li>sped up specific display chain regen significantly, with similar separate current/pending optimisations as last week's for combined</li>
+					<li>converted specific display cache overall regen to use a copy followed by the new chain regen rather than additive file import</li>
+					<li>sped up combined display chain regen a little bit</li>
+					<li>the splash window now updates itself with less UI overhead, so spammy updates (like the new tag regen code) use a little less CPU and fewer UI context switches</li>
+				</ul>
 				<li><h3>version 409</h3></li>
 				<ul>
 					<li>siblings:</li>

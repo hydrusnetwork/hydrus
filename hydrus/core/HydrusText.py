@@ -103,6 +103,7 @@ def NonFailingUnicodeDecode( data, encoding ):
     except UnicodeDecodeError:
         
         unicode_replacement_character = u'\ufffd'
+        null_character = '\0x0'
         
         text = str( data, encoding, errors = 'replace' )
         
@@ -121,6 +122,11 @@ def NonFailingUnicodeDecode( data, encoding ):
                 chardet_error_count = chardet_text.count( unicode_replacement_character )
                 
                 if chardet_error_count < error_count:
+                    
+                    if null_character in chardet_text:
+                        
+                        chardet_text = chardet_text.replace( null_character, '' )
+                        
                     
                     return ( chardet_text, chardet_encoding )
                     

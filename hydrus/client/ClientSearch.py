@@ -930,6 +930,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def FixMissingServices( self, services_manager ):
+        
+        if not HG.client_controller.services_manager.ServiceExists( self._file_service_key ) or not HG.client_controller.services_manager.ServiceExists( self._tag_search_context.service_key ):
+            
+            self._file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            self._tag_search_context.service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+    
     def GetFileServiceKey( self ): return self._file_service_key
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
     def GetNamespacesToInclude( self ): return self._namespaces_to_include
@@ -2437,10 +2446,6 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
             else:
                 
                 possible_tags = siblings_manager.GetAllSiblings( service_key, tag )
-                
-                if len( possible_tags ) > 1:
-                    HydrusData.Print( ( 'yo', possible_tags ) )
-                    
                 
             
         else:

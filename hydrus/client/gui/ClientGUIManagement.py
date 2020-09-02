@@ -1006,6 +1006,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         file_search_context = management_controller.GetVariable( 'file_search_context' )
         
+        file_search_context.FixMissingServices( HG.client_controller.services_manager )
+        
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, allow_all_known_files = False, force_system_everything = True )
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
@@ -4605,6 +4607,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         file_search_context = self._management_controller.GetVariable( 'file_search_context' )
         
+        file_search_context.FixMissingServices( HG.client_controller.services_manager )
+        
         self._search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
         self._query_job_key = ClientThreading.JobKey( cancellable = True )
@@ -4680,6 +4684,8 @@ class ManagementPanelQuery( ManagementPanel ):
             self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE, tag_autocomplete = self._tag_autocomplete )
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
+            
+            file_search_context.FixMissingServices( HG.client_controller.services_manager )
             
             tag_service_key = file_search_context.GetTagSearchContext().service_key
             
@@ -4886,6 +4892,8 @@ class ManagementPanelQuery( ManagementPanel ):
     def Start( self ):
         
         file_search_context = self._management_controller.GetVariable( 'file_search_context' )
+        
+        file_search_context.FixMissingServices( HG.client_controller.services_manager )
         
         initial_predicates = file_search_context.GetPredicates()
         

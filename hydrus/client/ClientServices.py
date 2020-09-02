@@ -1367,7 +1367,7 @@ class ServiceRepository( ServiceRestricted ):
         
         popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ), rows_s )
         
-        HG.client_controller.pub( 'splash_set_status_text', popup_message, print_to_log = False )
+        HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
         job_key.SetVariable( 'popup_text_2', popup_message )
         
     
@@ -1454,7 +1454,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     status = 'update ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( update_hashes ) )
                     
-                    HG.client_controller.pub( 'splash_set_status_text', status, print_to_log = False )
+                    HG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_key.SetVariable( 'popup_text_1', status )
                     job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( update_hashes ) ) )
                     
@@ -1634,7 +1634,7 @@ class ServiceRepository( ServiceRestricted ):
             num_updates_to_do = len( definition_hashes ) + len( content_hashes )
             
             HG.client_controller.pub( 'message', job_key )
-            HG.client_controller.pub( 'splash_set_title_text', title, print_to_log = False )
+            HG.client_controller.frame_splash_status.SetTitleText( title, print_to_log = False )
             
             total_definition_rows_completed = 0
             total_content_rows_completed = 0
@@ -1652,7 +1652,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
                     
-                    HG.client_controller.pub( 'splash_set_title_text', splash_title, clear_undertexts = False, print_to_log = False )
+                    HG.client_controller.frame_splash_status.SetTitleText( splash_title, clear_undertexts = False, print_to_log = False )
                     
                     status = 'processing {}'.format( progress_string )
                     
@@ -1780,7 +1780,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
                     
-                    HG.client_controller.pub( 'splash_set_title_text', splash_title, clear_undertexts = False, print_to_log = False )
+                    HG.client_controller.frame_splash_status.SetTitleText( splash_title, clear_undertexts = False, print_to_log = False )
                     
                     status = 'processing {}'.format( progress_string )
                     
@@ -2187,7 +2187,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     status = 'thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do )
                     
-                    HG.client_controller.pub( 'splash_set_status_text', status, print_to_log = False )
+                    HG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_key.SetVariable( 'popup_text_1', status )
                     job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
                     

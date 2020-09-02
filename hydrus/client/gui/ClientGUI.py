@@ -4175,18 +4175,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         job_key.SetVariable( 'popup_title', 'rebalancing files' )
         
-        self.setVisible( False )
-        
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( None, 'migrating files' ) as dlg:
             
-            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
+            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key, hide_main_gui = True )
             
             dlg.SetPanel( panel )
             
             dlg.exec()
             
-        
-        self.setVisible( True )
         
         self._MigrateDatabase()
         

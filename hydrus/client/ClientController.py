@@ -208,6 +208,8 @@ class Controller( HydrusController.HydrusController ):
                 
                 splash.close()
                 
+                self.frame_splash_status.Reset()
+                
             
         
         if self._splash is not None:
@@ -232,14 +234,14 @@ class Controller( HydrusController.HydrusController ):
     
     def _PublishShutdownSubtext( self, text ):
         
-        self.pub( 'splash_set_status_subtext', text )
+        self.frame_splash_status.SetSubtext( text )
         
     
     def _ReportShutdownDaemonsStatus( self ):
         
         names = sorted( { daemon.name for daemon in self._daemons if daemon.is_alive() } )
         
-        self.pub( 'splash_set_status_subtext', ', '.join( names ) )
+        self.frame_splash_status.SetSubtext( ', '.join( names ) )
         
     
     def _ReportShutdownException( self ):
@@ -442,7 +444,7 @@ class Controller( HydrusController.HydrusController ):
         
         while HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
             
-            self.pub( 'splash_set_status_text', 'client already running' )
+            self.frame_splash_status.SetText( 'client already running' )
             
             def qt_code():
                 
@@ -469,7 +471,7 @@ class Controller( HydrusController.HydrusController ):
                     break
                     
                 
-                self.pub( 'splash_set_status_text', 'waiting ' + str( i ) + ' seconds' )
+                self.frame_splash_status.SetText( 'waiting ' + str( i ) + ' seconds' )
                 
                 time.sleep( 1 )
                 
@@ -520,7 +522,9 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self._splash = ClientGUISplash.FrameSplash( self, title )
+            self.frame_splash_status.Reset()
+            
+            self._splash = ClientGUISplash.FrameSplash( self, title, self.frame_splash_status )
             
         except:
             
@@ -616,7 +620,7 @@ class Controller( HydrusController.HydrusController ):
     
     def DoIdleShutdownWork( self ):
         
-        self.pub( 'splash_set_status_subtext', 'db' )
+        self.frame_splash_status.SetSubtext( 'db' )
         
         stop_time = HydrusData.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
         
@@ -633,7 +637,7 @@ class Controller( HydrusController.HydrusController ):
                     return
                     
                 
-                self.pub( 'splash_set_status_subtext', '{} processing'.format( service.GetName() ) )
+                self.frame_splash_status.SetSubtext( '{} processing'.format( service.GetName() ) )
                 
                 service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
                 
@@ -787,23 +791,23 @@ class Controller( HydrusController.HydrusController ):
         
         while len( missing_locations ) > 0:
             
-            missing_locations = self.CallBlockingToQt(self._splash, qt_code, missing_locations)
+            missing_locations = self.CallBlockingToQt( self._splash, qt_code, missing_locations )
             
         
     
     def InitModel( self ):
         
-        self.pub( 'splash_set_title_text', 'booting db\u2026' )
+        self.frame_splash_status.SetTitleText( 'booting db\u2026' )
         
         HydrusController.HydrusController.InitModel( self )
         
-        self.pub( 'splash_set_status_text', 'initialising managers' )
+        self.frame_splash_status.SetText( 'initialising managers' )
         
-        self.pub( 'splash_set_status_subtext', 'services' )
+        self.frame_splash_status.SetSubtext( 'services' )
         
         self.services_manager = ClientServices.ServicesManager( self )
         
-        self.pub( 'splash_set_status_subtext', 'options' )
+        self.frame_splash_status.SetSubtext( 'options' )
         
         self.options = self.Read( 'options' )
         self.new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
@@ -833,13 +837,13 @@ class Controller( HydrusController.HydrusController ):
         
         self.column_list_manager = column_list_manager
         
-        self.pub( 'splash_set_status_subtext', 'client files' )
+        self.frame_splash_status.SetSubtext( 'client files' )
         
         self.InitClientFilesManager()
         
         #
         
-        self.pub( 'splash_set_status_subtext', 'network' )
+        self.frame_splash_status.SetSubtext( 'network' )
         
         self.parsing_cache = ClientCaches.ParsingCache()
         
@@ -928,7 +932,7 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.pub( 'splash_set_status_subtext', 'tag display' )
+        self.frame_splash_status.SetSubtext( 'tag display' )
         
         # note that this has to be made before siblings/parents managers, as they rely on it
         
@@ -947,7 +951,7 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.pub( 'splash_set_status_subtext', 'favourite searches' )
+        self.frame_splash_status.SetSubtext( 'favourite searches' )
         
         favourite_search_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
         
@@ -966,11 +970,11 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.pub( 'splash_set_status_subtext', 'tag siblings' )
+        self.frame_splash_status.SetSubtext( 'tag siblings' )
         
         self.tag_siblings_manager = ClientManagers.TagSiblingsManager( self )
         
-        self.pub( 'splash_set_status_subtext', 'tag parents' )
+        self.frame_splash_status.SetSubtext( 'tag parents' )
         
         self.tag_parents_manager = ClientManagers.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
@@ -985,7 +989,7 @@ class Controller( HydrusController.HydrusController ):
             CC.GlobalPixmaps()
             
         
-        self.pub( 'splash_set_status_subtext', 'image caches' )
+        self.frame_splash_status.SetSubtext( 'image caches' )
         
         self.CallBlockingToQt(self._splash, qt_code)
         
@@ -996,7 +1000,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self.options[ 'password' ] is not None:
             
-            self.pub( 'splash_set_status_text', 'waiting for password' )
+            self.frame_splash_status.SetText( 'waiting for password' )
             
             def qt_code_password():
                 
@@ -1024,7 +1028,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToQt( self._splash, qt_code_password )
             
         
-        self.pub( 'splash_set_title_text', 'booting gui\u2026' )
+        self.frame_splash_status.SetTitleText( 'booting gui\u2026' )
         
         subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
@@ -1372,6 +1376,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
         
+        self.frame_splash_status = ClientGUISplash.FrameSplashStatus()
+        
         self.CreateSplash( 'hydrus client booting' )
         
         signal.signal( signal.SIGINT, self.CatchSignal )
@@ -1416,14 +1422,14 @@ class Controller( HydrusController.HydrusController ):
             
             if len( dirty_services ) > 0:
                 
-                self.pub( 'splash_set_status_subtext', 'services' )
+                self.frame_splash_status.SetSubtext( 'services' )
                 
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
             
             if self.client_api_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'client api manager' )
+                self.frame_splash_status.SetSubtext( 'client api manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.client_api_manager )
                 
@@ -1432,7 +1438,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.domain_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'domain manager' )
+                self.frame_splash_status.SetSubtext( 'domain manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.domain_manager )
                 
@@ -1441,7 +1447,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.login_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'login manager' )
+                self.frame_splash_status.SetSubtext( 'login manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.login_manager )
                 
@@ -1450,7 +1456,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.favourite_search_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'favourite searches manager' )
+                self.frame_splash_status.SetSubtext( 'favourite searches manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.favourite_search_manager )
                 
@@ -1459,7 +1465,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.tag_display_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'tag display manager' )
+                self.frame_splash_status.SetSubtext( 'tag display manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.tag_display_manager )
                 
@@ -1474,7 +1480,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.column_list_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'column list manager' )
+                self.frame_splash_status.SetSubtext( 'column list manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.column_list_manager )
                 
@@ -1483,7 +1489,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.bandwidth_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'bandwidth manager' )
+                self.frame_splash_status.SetSubtext( 'bandwidth manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
                 
@@ -1492,7 +1498,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.network_engine.session_manager.IsDirty():
                 
-                self.pub( 'splash_set_status_subtext', 'session manager' )
+                self.frame_splash_status.SetSubtext( 'session manager' )
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.session_manager )
                 
@@ -1700,15 +1706,15 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownModel( self ):
         
-        self.pub( 'splash_set_status_text', 'saving and exiting objects' )
+        self.frame_splash_status.SetText( 'saving and exiting objects' )
         
         if self._is_booted:
             
-            self.pub( 'splash_set_status_subtext', 'file viewing stats flush' )
+            self.frame_splash_status.SetSubtext( 'file viewing stats flush' )
             
             self.file_viewing_stats_manager.Flush()
             
-            self.pub( 'splash_set_status_subtext', '' )
+            self.frame_splash_status.SetSubtext( '' )
             
             self.SaveDirtyObjectsImportant()
             self.SaveDirtyObjectsInfrequent()
@@ -1721,25 +1727,25 @@ class Controller( HydrusController.HydrusController ):
         
         if not self._doing_fast_exit:
             
-            self.pub( 'splash_set_status_text', 'waiting for subscriptions to exit' )
+            self.frame_splash_status.SetText( 'waiting for subscriptions to exit' )
             
             self._ShutdownSubscriptionsManager()
             
-            self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
+            self.frame_splash_status.SetText( 'waiting for daemons to exit' )
             
             self._ShutdownDaemons()
             
-            self.pub( 'splash_set_status_subtext', '' )
+            self.frame_splash_status.SetSubtext( '' )
             
             if HG.do_idle_shutdown_work:
                 
-                self.pub( 'splash_set_status_text', 'waiting for idle shutdown work' )
+                self.frame_splash_status.SetText( 'waiting for idle shutdown work' )
                 
                 try:
                     
                     self.DoIdleShutdownWork()
                     
-                    self.pub( 'splash_set_status_subtext', '' )
+                    self.frame_splash_status.SetSubtext( '' )
                     
                 except:
                     
@@ -1747,19 +1753,19 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.pub( 'splash_set_status_subtext', 'files maintenance manager' )
+            self.frame_splash_status.SetSubtext( 'files maintenance manager' )
             
             self.files_maintenance_manager.Shutdown()
             
-            self.pub( 'splash_set_status_subtext', 'download manager' )
+            self.frame_splash_status.SetSubtext( 'download manager' )
             
             self.quick_download_manager.Shutdown()
             
-            self.pub( 'splash_set_status_subtext', '' )
+            self.frame_splash_status.SetSubtext( '' )
             
             try:
                 
-                self.pub( 'splash_set_status_text', 'waiting for twisted to exit' )
+                self.frame_splash_status.SetText( 'waiting for twisted to exit' )
                 
                 self.SetRunningTwistedServices( [] )
                 
@@ -1914,22 +1920,22 @@ class Controller( HydrusController.HydrusController ):
             
             gc.collect()
             
-            self.pub( 'splash_set_title_text', 'shutting down gui\u2026' )
+            self.frame_splash_status.SetTitleText( 'shutting down gui\u2026' )
             
             self.ShutdownView()
             
-            self.pub( 'splash_set_title_text', 'shutting down db\u2026' )
+            self.frame_splash_status.SetTitleText( 'shutting down db\u2026' )
             
             self.ShutdownModel()
             
             if self._restore_backup_path is not None:
                 
-                self.pub( 'splash_set_title_text', 'restoring backup\u2026' )
+                self.frame_splash_status.SetTitleText( 'restoring backup\u2026' )
                 
                 self.db.RestoreBackup( self._restore_backup_path )
                 
             
-            self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
+            self.frame_splash_status.SetTitleText( 'cleaning up\u2026' )
             
             self.CleanRunningFile()
             

@@ -1234,6 +1234,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def __init__( self, parent, file_service_key, tag_service_key ):
         
+        if not HG.client_controller.services_manager.ServiceExists( file_service_key ):
+            
+            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            
+        
+        if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+            
+            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
         self._file_service_key = file_service_key
         self._tag_service_key = tag_service_key
         
@@ -1437,14 +1447,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._page_key = page_key
         
+        self._under_construction_or_predicate = None
+        
         file_service_key = file_search_context.GetFileServiceKey()
         tag_search_context = file_search_context.GetTagSearchContext()
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
         self._force_system_everything = force_system_everything
         self._hide_favourites_edit_actions = hide_favourites_edit_actions
-        
-        AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_search_context.service_key )
         
         self._media_sort_widget = media_sort_widget
         self._media_collect_widget = media_collect_widget
@@ -1453,9 +1463,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._media_callable = media_callable
         
-        self._under_construction_or_predicate = None
-        
         self._file_search_context = file_search_context
+        
+        AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_search_context.service_key )
         
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         

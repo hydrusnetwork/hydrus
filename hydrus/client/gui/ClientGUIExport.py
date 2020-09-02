@@ -702,7 +702,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if quit_afterwards:
                 
-                QP.CallAfter( self.parentWidget().close() )
+                QP.CallAfter( self.parentWidget().close )
                 
             
         

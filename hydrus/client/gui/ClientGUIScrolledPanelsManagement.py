@@ -4060,7 +4060,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            correct_rows.append( ( incorrect_location, prefix, correct_location ) )
+            correct_rows.append( ( prefix, correct_location ) )
             
         
         return ( correct_rows, thumb_problems )

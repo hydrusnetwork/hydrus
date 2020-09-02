@@ -30,6 +30,7 @@ from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
@@ -191,6 +192,8 @@ class Controller( object ):
         
         self.db = self
         self.gui = self
+        
+        self.frame_splash_status = ClientGUISplash.FrameSplashStatus()
         
         self._call_to_threads = []
         

@@ -640,7 +640,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 percent = '0.0%'
                 
             
-            data_string = '{},{},{},{},{}'.format( name, HydrusData.ToHumanInt( num_inbox ), HydrusData.ToHumanInt( num_archived ), HydrusData.ToHumanInt( num_deleted ), percent )
+            data_string = '{},{},{},{},{}'.format( name, num_inbox, num_archived, num_deleted, percent )
             
             data_strings.append( data_string )
             

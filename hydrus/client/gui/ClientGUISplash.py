@@ -17,13 +17,15 @@ from hydrus.client.gui import QtPorting as QP
 
 class FrameSplashPanel( QW.QWidget ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent, controller, frame_splash_status ):
         
         QW.QWidget.__init__( self, parent )
         
         self._controller = controller
         
-        self._my_status = FrameSplashStatus( self._controller, self )
+        self._my_status = frame_splash_status
+        
+        self._my_status.SetWindow( self )
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 64 )
         
@@ -128,26 +130,25 @@ class FrameSplashPanel( QW.QWidget ):
 # all of a sudden, pubsubs are processed in non Qt-thread time, so this handles that safely and lets the gui know if the Qt controller is still running
 class FrameSplashStatus( object ):
     
-    def __init__( self, controller, ui ):
-        
-        self._controller = controller
+    def __init__( self ):
         
         self._lock = threading.Lock()
         
-        self._updater = ClientGUIAsync.FastThreadToGUIUpdater( ui, ui.SetDirty )
+        self._updater = None
         
         self._title_text = ''
         self._status_text = ''
         self._status_subtext = ''
         
-        self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
-        self._controller.sub( self, 'SetText', 'splash_set_status_text' )
-        self._controller.sub( self, 'SetSubtext', 'splash_set_status_subtext' )
-        
     
     def _NotifyUI( self ):
         
-        self._updater.Update()
+        updater = self._updater
+        
+        if updater is not None:
+            
+            updater.Update()
+            
         
     
     def GetTexts( self ):
@@ -158,9 +159,21 @@ class FrameSplashStatus( object ):
             
         
     
+    def Reset( self ):
+        
+        with self._lock:
+            
+            self._title_text = ''
+            self._status_text = ''
+            self._status_subtext = ''
+            
+            self._updater = None
+            
+        
+    
     def SetText( self, text, print_to_log = True ):
         
-        if print_to_log and len( text ) > 0:
+        if self._updater is not None and print_to_log and len( text ) > 0:
             
             HydrusData.Print( text )
             
@@ -186,7 +199,7 @@ class FrameSplashStatus( object ):
     
     def SetTitleText( self, text, clear_undertexts = True, print_to_log = True ):
         
-        if print_to_log:
+        if self._updater is not None and print_to_log:
             
             HydrusData.DebugPrint( text )
             
@@ -205,9 +218,14 @@ class FrameSplashStatus( object ):
         self._NotifyUI()
         
     
+    def SetWindow( self, ui: FrameSplashPanel ):
+        
+        self._updater = ClientGUIAsync.FastThreadToGUIUpdater( ui, ui.SetDirty )
+        
+    
 class FrameSplash( QW.QWidget ):
     
-    def __init__( self, controller, title ):
+    def __init__( self, controller, title, frame_splash_status: FrameSplashStatus ):
         
         self._controller = controller
         
@@ -223,7 +241,7 @@ class FrameSplash( QW.QWidget ):
         
         self.setWindowIcon( QG.QIcon( self._controller.frame_icon_pixmap ) )
         
-        self._my_panel = FrameSplashPanel( self, self._controller )
+        self._my_panel = FrameSplashPanel( self, self._controller, frame_splash_status )
         
         self._cancel_shutdown_maintenance = ClientGUICommon.BetterButton( self, 'stop shutdown maintenance', self.CancelShutdownMaintenance )
         

@@ -1899,7 +1899,14 @@ class EllipsizedLabel( QW.QLabel ):
     
     def setText( self, text ):
         
-        QW.QLabel.setText( self, text )
+        try:
+            
+            QW.QLabel.setText( self, text )
+            
+        except ValueError:
+            
+            QW.QLabel.setText( self, repr( text ) )
+            
         
         self.update()
         
