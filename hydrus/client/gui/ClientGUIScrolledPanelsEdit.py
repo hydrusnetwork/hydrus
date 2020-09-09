@@ -2674,7 +2674,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = 'Any tags you enter here will be applied to every file that passes through this import context.'
         
-        with ClientGUIDialogs.DialogInputTags( self, self._service_key, list( self._additional_tags ), message = message ) as dlg:
+        with ClientGUIDialogs.DialogInputTags( self, self._service_key, list( self._additional_tags ), message = message, show_sibling_text = True ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 

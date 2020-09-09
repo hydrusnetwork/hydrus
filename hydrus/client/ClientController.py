@@ -970,10 +970,6 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.frame_splash_status.SetSubtext( 'tag siblings' )
-        
-        self.tag_siblings_manager = ClientManagers.TagSiblingsManager( self )
-        
         self.frame_splash_status.SetSubtext( 'tag parents' )
         
         self.tag_parents_manager = ClientManagers.TagParentsManager( self )

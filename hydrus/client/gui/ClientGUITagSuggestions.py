@@ -55,9 +55,9 @@ def FilterSuggestedTagsForMedia( tags: typing.Sequence[ str ], medias: typing.Co
     
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
-    def __init__( self, parent, activate_callable, sort_tags = True ):
+    def __init__( self, parent, service_key, activate_callable, sort_tags = True ):
         
-        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, sort_tags = sort_tags )
+        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = sort_tags )
         
         self._activate_callable = activate_callable
         
@@ -100,7 +100,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
 class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
-    def __init__( self, parent, activate_callable ):
+    def __init__( self, parent, service_key, activate_callable ):
         
         ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent )
         
@@ -129,7 +129,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         predicate = term
         
-        return predicate.ToString( with_count = False )
+        return predicate.ToString( tag_display_type = ClientTags.TAG_DISPLAY_STORAGE, with_count = False )
         
     
     def TakeFocusForUser( self ):
@@ -153,7 +153,7 @@ class FavouritesTagsPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        self._favourite_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = False )
+        self._favourite_tags = ListBoxTagsSuggestionsFavourites( self, self._service_key, activate_callable, sort_tags = False )
         
         QP.AddToLayout( vbox, self._favourite_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -208,7 +208,7 @@ class RecentTagsPanel( QW.QWidget ):
         clear_button = QW.QPushButton( 'clear', self )
         clear_button.clicked.connect( self.EventClear )
         
-        self._recent_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = False )
+        self._recent_tags = ListBoxTagsSuggestionsFavourites( self, self._service_key, activate_callable, sort_tags = False )
         
         QP.AddToLayout( vbox, clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -319,7 +319,7 @@ class RelatedTagsPanel( QW.QWidget ):
         self._button_3.clicked.connect( self.EventSuggestedRelatedTags3 )
         self._button_3.setMinimumWidth( 30 )
         
-        self._related_tags = ListBoxTagsSuggestionsRelated( self, activate_callable )
+        self._related_tags = ListBoxTagsSuggestionsRelated( self, service_key, activate_callable )
         
         button_hbox = QP.HBoxLayout()
         
@@ -437,7 +437,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         self._script_management = ClientGUIParsing.ScriptManagementControl( self )
         
-        self._tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = True )
+        self._tags = ListBoxTagsSuggestionsFavourites( self, self._service_key, activate_callable, sort_tags = True )
         
         self._add_all = ClientGUICommon.BetterButton( self, 'add all', self._tags.ActivateAll )
         

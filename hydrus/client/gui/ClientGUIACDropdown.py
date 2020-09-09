@@ -60,15 +60,45 @@ def InsertTagPredicates( predicates: list, tag_service_key: bytes, parsed_autoco
         
         tag_predicate = parsed_autocomplete_text.GetImmediateFileSearchPredicate()
         
-        ( ideal_sibling_predicate, other_sibling_predicates ) = HG.client_controller.tag_siblings_manager.ExpandPredicate( tag_service_key, tag_predicate )
+        actual_tag = tag_predicate.GetValue()
         
-        for predicate in other_sibling_predicates:
+        ideal_predicate = None
+        other_matching_predicates = []
+        
+        for predicate in predicates:
+            
+            # this works due to __hash__
+            if predicate == tag_predicate:
+                
+                ideal_predicate = predicate.GetIdealPredicate()
+                
+                continue
+                
+            
+            matchable_search_texts = predicate.GetMatchableSearchTexts()
+            
+            if len( matchable_search_texts ) <= 1:
+                
+                continue
+                
+            
+            if actual_tag in matchable_search_texts:
+                
+                other_matching_predicates.append( predicate )
+                
+            
+        
+        for predicate in other_matching_predicates:
             
             PutAtTopOfMatches( predicates, predicate, insert_if_does_not_exist = insert_if_does_not_exist )
             
         
         PutAtTopOfMatches( predicates, tag_predicate, insert_if_does_not_exist = insert_if_does_not_exist )
-        PutAtTopOfMatches( predicates, ideal_sibling_predicate, insert_if_does_not_exist = insert_if_does_not_exist )
+        
+        if ideal_predicate is not None:
+            
+            PutAtTopOfMatches( predicates, ideal_predicate, insert_if_does_not_exist = insert_if_does_not_exist )
+            
         
     
 def ReadFetch(
@@ -203,6 +233,11 @@ def ReadFetch(
                     
                     predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, tag_search_context, file_service_key, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
+                    if job_key.IsCancelled():
+                        
+                        return
+                        
+                    
                     if is_explicit_wildcard:
                         
                         matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
@@ -223,44 +258,22 @@ def ReadFetch(
             
         else:
             
-            # it is possible that media will change between calls to this, so don't cache it
-            # it's also quick as hell, so who cares
-            
-            tags_managers = []
-            
-            for m in media:
+            if not isinstance( results_cache, ClientSearch.PredicateResultsCacheMedia ):
                 
-                if m.IsCollection():
-                    
-                    tags_managers.extend( m.GetSingletonsTagsManagers() )
-                    
-                else:
-                    
-                    tags_managers.append( m.GetTagsManager() )
-                    
+                # it is possible that media will change between calls to this, so don't cache it
                 
-            
-            if job_key.IsCancelled():
+                tags_managers = []
                 
-                return
-                
-            
-            current_tags_to_count = collections.Counter()
-            pending_tags_to_count = collections.Counter()
-            
-            include_current_tags = tag_search_context.include_current_tags
-            include_pending_tags = tag_search_context.include_pending_tags
-            
-            for group_of_tags_managers in HydrusData.SplitListIntoChunks( tags_managers, 1000 ):
-                
-                if include_current_tags:
+                for m in media:
                     
-                    current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ) )
-                    
-                
-                if include_pending_tags:
-                    
-                    pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ] ) )
+                    if m.IsCollection():
+                        
+                        tags_managers.extend( m.GetSingletonsTagsManagers() )
+                        
+                    else:
+                        
+                        tags_managers.append( m.GetTagsManager() )
+                        
                     
                 
                 if job_key.IsCancelled():
@@ -268,22 +281,53 @@ def ReadFetch(
                     return
                     
                 
-            
-            tags_to_do = set()
-            
-            tags_to_do.update( current_tags_to_count.keys() )
-            tags_to_do.update( pending_tags_to_count.keys() )
+                current_tags_to_count = collections.Counter()
+                pending_tags_to_count = collections.Counter()
+                
+                include_current_tags = tag_search_context.include_current_tags
+                include_pending_tags = tag_search_context.include_pending_tags
+                
+                for group_of_tags_managers in HydrusData.SplitListIntoChunks( tags_managers, 1000 ):
+                    
+                    if include_current_tags:
+                        
+                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ) )
+                        
+                    
+                    if include_pending_tags:
+                        
+                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ] ) )
+                        
+                    
+                    if job_key.IsCancelled():
+                        
+                        return
+                        
+                    
+                
+                tags_to_do = set()
+                
+                tags_to_do.update( current_tags_to_count.keys() )
+                tags_to_do.update( pending_tags_to_count.keys() )
+                
+                tags_to_count = { tag : ( current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do }
+                
+                if job_key.IsCancelled():
+                    
+                    return
+                    
+                
+                predicates = HG.client_controller.Read( 'media_predicates', tag_search_context, tags_to_count, parsed_autocomplete_text.inclusive, job_key = job_key )
+                
+                results_cache = ClientSearch.PredicateResultsCacheMedia( predicates )
+                
             
             if job_key.IsCancelled():
                 
                 return
                 
             
-            # so potentially just fetch the preds from db here with tags_to_full_counts dict, to get sibling population and so on
-            
-            predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, parsed_autocomplete_text.inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
-            
-            predicates = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
+            predicates = results_cache.FilterPredicates( tag_service_key, autocomplete_search_text )
             
             if job_key.IsCancelled():
                 
@@ -573,7 +617,7 @@ class ListBoxTagsACWrite( ListBoxTagsAC ):
         
         predicate = term
         
-        return predicate.ToString( sibling_service_key = self._service_key )
+        return predicate.ToString( tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
     
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
@@ -2418,6 +2462,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         predicates = parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates )
         
         self._favourites_list.SetPredicates( predicates )
+        
+    
+    def SetDisplayTagServiceKey( self, service_key ):
+        
+        self._display_tag_service_key = service_key
         
     
     def SetExpandParents( self, expand_parents ):

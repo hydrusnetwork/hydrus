@@ -19,6 +19,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
@@ -1301,6 +1302,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._test_result_st.setObjectName( '' )
             
+            self._test_result_st.setText( test_result_text )
+            self._test_result_st.style().polish( self._test_result_st )
+            
         else:
             
             test_tags = HydrusText.DeserialiseNewlinedTexts( test_input )
@@ -1309,69 +1313,91 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_filter = self.GetValue()
             
+            self._test_result_st.setObjectName( '' )
+            
+            self._test_result_st.setText( '' )
+            self._test_result_st.style().polish( self._test_result_st )
+            
             if self._only_show_blacklist:
                 
-                results = []
-                
-                for test_tag in test_tags:
+                def work_callable():
                     
-                    sibling_tags = HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, test_tag )
+                    results = []
                     
-                    results.append( False not in ( tag_filter.TagOK( sibling_tag, apply_unnamespaced_rules_to_namespaced_tags = True ) for sibling_tag in sibling_tags ) )
+                    tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, test_tags )
                     
-                
-            else:
-                
-                results = [ tag_filter.TagOK( test_tag ) for test_tag in test_tags ]
-                
-            
-            all_good = False not in results
-            all_bad = True not in results
-            
-            if len( results ) == 1:
-                
-                if all_good:
+                    for ( test_tag, siblings ) in tags_to_siblings.items():
+                        
+                        results.append( False not in ( tag_filter.TagOK( sibling_tag, apply_unnamespaced_rules_to_namespaced_tags = True ) for sibling_tag in siblings ) )
+                        
                     
-                    test_result_text = 'tag passes!'
-                    
-                    self._test_result_st.setObjectName( 'HydrusValid' )
-                    
-                else:
-                    
-                    test_result_text = 'tag blocked!'
-                    
-                    self._test_result_st.setObjectName( 'HydrusInvalid' )
+                    return results
                     
                 
             else:
                 
-                if all_good:
+                def work_callable():
                     
-                    test_result_text = 'all pass!'
+                    results = [ tag_filter.TagOK( test_tag ) for test_tag in test_tags ]
                     
-                    self._test_result_st.setObjectName( 'HydrusValid' )
-                    
-                elif all_bad:
-                    
-                    test_result_text = 'all blocked!'
-                    
-                    self._test_result_st.setObjectName( 'HydrusInvalid' )
-                    
-                else:
-                    
-                    c = collections.Counter()
-                    
-                    c.update( results )
-                    
-                    test_result_text = '{} pass, {} blocked!'.format( HydrusData.ToHumanInt( c[ True ] ), HydrusData.ToHumanInt( c[ False ] ) )
-                    
-                    self._test_result_st.setObjectName( 'HydrusInvalid' )
+                    return results
                     
                 
             
-        
-        self._test_result_st.setText( test_result_text )
-        self._test_result_st.style().polish( self._test_result_st )
+            def publish_callable( results ):
+                
+                all_good = False not in results
+                all_bad = True not in results
+                
+                if len( results ) == 1:
+                    
+                    if all_good:
+                        
+                        test_result_text = 'tag passes!'
+                        
+                        self._test_result_st.setObjectName( 'HydrusValid' )
+                        
+                    else:
+                        
+                        test_result_text = 'tag blocked!'
+                        
+                        self._test_result_st.setObjectName( 'HydrusInvalid' )
+                        
+                    
+                else:
+                    
+                    if all_good:
+                        
+                        test_result_text = 'all pass!'
+                        
+                        self._test_result_st.setObjectName( 'HydrusValid' )
+                        
+                    elif all_bad:
+                        
+                        test_result_text = 'all blocked!'
+                        
+                        self._test_result_st.setObjectName( 'HydrusInvalid' )
+                        
+                    else:
+                        
+                        c = collections.Counter()
+                        
+                        c.update( results )
+                        
+                        test_result_text = '{} pass, {} blocked!'.format( HydrusData.ToHumanInt( c[ True ] ), HydrusData.ToHumanInt( c[ False ] ) )
+                        
+                        self._test_result_st.setObjectName( 'HydrusInvalid' )
+                        
+                    
+                
+                self._test_result_st.setText( test_result_text )
+                self._test_result_st.style().polish( self._test_result_st )
+                
+            
+            async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+            
+            async_job.start()
+            
         
     
     def EventSimpleBlacklistNamespaceCheck( self, index ):
@@ -1964,7 +1990,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
-            self._tags_box.ChangeTagService( self._tag_service_key )
+            self._tags_box.SetTagServiceKey( self._tag_service_key )
             
             self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, media, self.AddTags )
             

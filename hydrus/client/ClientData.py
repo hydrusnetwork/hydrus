@@ -255,7 +255,7 @@ def MergePredicates( predicates, add_namespaceless = False ):
                 
             
         
-        for ( unnamespaced_predicate, count ) in list(subtag_nonzero_instance_counter.items()):
+        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
             
             # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
             

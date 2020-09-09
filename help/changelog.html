@@ -8,6 +8,44 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 411</h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed the 'system:(like/dislike) rating = x' search predicate string, which was saying 'unknown' rather than 'like/dislike' in several cases</li>
+					<li>fixed a 'current_count' error in the new file search optimisation code for tag searches where the tag did not exist for any files in the domain (i.e. autocomplete count=0). thank you to users for helpful reports here</li>
+					<li>fixed the recent file search optimisation code to handle 'system:time imported' when it was mixed with tags or search predicates that would pre-populate the query file pool with file domain cross-referenced files. sorry for the trouble!</li>
+					<li>the forced delay overhead for table analysis is reduced from 0.1s to 0.02s. whenever many mostly empty tables need to be analyzed (like on first boot shutdown, when it is usually 100+ tables), it now zips by</li>
+					<li>.</li>
+					<li>siblings/tag improvements:</li>
+					<li>typing a shorthand sibling like 'lotr' into an 'all known tags' 'read' autocomplete - like on a default search page - now reliably discovers and matches text entry to ideal sibling results like 'series:lord of the rings'. this was previously buggy and unreliable--it now allows the match using better db knowledge, even when the merged 'all known tags' services involved disagree on siblings</li>
+					<li>when typing tags into a 'searching immediately' page that has media, the autocomplete count results that only refer to that media will now match shorthand sibling inputs to the ideal result. media-populated tag search now takes a little bump of extra CPU to fetch results (they are now passed through the db to get nice siblings info), so it is also cached for the duration of your typing (previously, the counts were re-computed on every new keystroke, so this should be significantly smoother to work with on large pages even if that first keystroke takes a moment to give results)</li>
+					<li>when typing into a 'write' autocomplete, like in manage tags, the process that promotes the entry text and known siblings to that entry and a potential ideal sibling result to the top of the list is now more sane. it now also only uses results with nonzero count. we'll see how this last change works out IRL</li>
+					<li>when typing into a 'read' or 'write' autocomplete, the pre-search tag insert no longer has sibling insertion/swapping. it was unreliable before, with weird sibling-swapping in the short moment before real results returned. if you have slow results and often quick-add tags into search pages or manage tags, let me know how this works for you</li>
+					<li>the 'additional tags' tag input dialog off the tag import options edit panel now shows the 'will display as' label</li>
+					<li>the 'favourite', 'file lookup', and 'recent' tag suggestion panels now show the 'will display as' label</li>
+					<li>the 'related' suggestion panel, which works on a slightly different system, now shows the 'will display as' label</li>
+					<li>the 'tag suggestions' options panel's 'favourite tags' edit lookup and list now displays 'will display as' labels and correctly finds service-specific siblings in its results (e.g. you type 'lotr', it also finds 'series:lord of the rings')</li>
+					<li>all autocomplete tag filtering should be just that little bit faster as you type</li>
+					<li>filtering cached autocomplete results based on subsequent search text is now faster</li>
+					<li>autocomplete inputs should no longer return 'ghost' results that have no current/pending count when one of the 'include current/pending' buttons is deactivated</li>
+					<li>the new database autocomplete predicate generation routine now checks for 'cancel search' signals, saving CPU time as you type</li>
+					<li>the slow 'regen chains' maintenance tasks now process sibling chains in random order, smoothing out the 500/100,000 progress label, which previously took about 80% of time on the first 20% of ids due to IRL tag distribution</li>
+					<li>.</li>
+					<li>the last UI-side siblings work is cleared:</li>
+					<li>the UI-side tag siblings cache is no longer used. the sometimes multi-second 'loading tag siblings' step of boot no longer happens!</li>
+					<li>media autocomplete fetches are now asynchronously populated with siblings data via the db</li>
+					<li>the exact-match and sibling 'insert' predicates at the top of pre-load and post-load read and write autocompletes now rely exclusively on db data for sibling matching</li>
+					<li>taglists now present 'will display as' labels asynchronously and are better about updating those labels when the list's underlying tag service changes</li>
+					<li>the taglist right-click menu that shows siblings to copy now fetches that submenu's contents asynchronously from the database</li>
+					<li>the test panel on a blacklisting tag filter now asynchronously fetches tag siblings to test against from the database</li>
+					<li>the actual blacklist tag filter test now fetches tag siblings to test against from the database</li>
+					<li>reworked my custom tag listbox to handle asynchronous text decoration, and unified sibling decoration for media taglists and string taglists</li>
+					<li>updated my old async updater class to be more flexible for different job types, and cleaned the code that already used it</li>
+					<li>wrote a simple class for one-shot async jobs</li>
+					<li>wrote a simple db lookup for UI-side tag sibling chain members</li>
+					<li>wrote a simple db lookup for UI-side tag ideal siblings</li>
+					<li>bunch of misc sibling, db, and ui work and cleanup to make all this work</li>
+				</ul>
 				<li><h3>version 410</h3></li>
 				<ul>
 					<li>general work:</li>

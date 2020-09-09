@@ -3008,8 +3008,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = False
             
-            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel )
-            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._favourites.SetTagServiceKey, show_paste_button = True )
+            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, show_sibling_text = False )
+            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
             
@@ -3260,7 +3260,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = False
             
-            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._suggested_favourites.SetTagServiceKey, show_paste_button = True )
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
             
@@ -3426,9 +3426,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 favourites = self._new_options.GetSuggestedTagsFavourites( self._current_suggested_favourites_service )
                 
             
+            self._suggested_favourites.SetTagServiceKey( self._current_suggested_favourites_service )
+            
             self._suggested_favourites.SetTags( favourites )
             
             self._suggested_favourites_input.SetTagService( self._current_suggested_favourites_service )
+            self._suggested_favourites_input.SetDisplayTagServiceKey( self._current_suggested_favourites_service )
             
         
         def UpdateOptions( self ):

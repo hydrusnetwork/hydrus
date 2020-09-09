@@ -4689,9 +4689,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             tag_service_key = file_search_context.GetTagSearchContext().service_key
             
-            self._current_selection_tags_list.ChangeTagService( tag_service_key )
+            self._current_selection_tags_list.SetTagServiceKey( tag_service_key )
             
-            self._tag_autocomplete.tagServiceChanged.connect( self._current_selection_tags_list.ChangeTagService )
+            self._tag_autocomplete.tagServiceChanged.connect( self._current_selection_tags_list.SetTagServiceKey )
             
         else:
             

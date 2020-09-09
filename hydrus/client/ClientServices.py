@@ -579,7 +579,7 @@ class ServiceLocalRatingLike( ServiceLocalRating ):
             
             return 'not set'
             
-        elif isinstance( rating, float ):
+        elif isinstance( rating, ( float, int ) ):
             
             if rating < 0.5:
                 

@@ -1248,6 +1248,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._ideal_sibling = None
         self._siblings = None
         
+        if predicate_type == PREDICATE_TYPE_TAG:
+            
+            self._matchable_search_texts = { self._value }
+            
+        else:
+            
+            self._matchable_search_texts = set()
+            
+        
     
     def __eq__( self, other ):
         
@@ -1506,6 +1515,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetIdealPredicate( self ):
+        
+        if self._ideal_sibling is None:
+            
+            return None
+            
+        else:
+            
+            return Predicate( PREDICATE_TYPE_TAG, self._ideal_sibling, self._inclusive )
+            
+        
+    
     def GetInclusive( self ):
         
         # patch from an upgrade mess-up ~v144
@@ -1562,9 +1583,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSiblings( self ):
+    def GetMatchableSearchTexts( self ):
         
-        return self._siblings
+        return self._matchable_search_texts
         
     
     def GetTextsAndNamespaces( self, or_under_construction = False ):
@@ -1631,7 +1652,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def ToString( self, with_count: bool = True, sibling_service_key: typing.Optional[ bytes ] = None, render_for_user: bool = False, or_under_construction: bool = False ):
+    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, render_for_user: bool = False, or_under_construction: bool = False ):
         
         count_text = ''
         
@@ -2237,27 +2258,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             base += count_text
             
-            if sibling_service_key is not None:
+            if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
                 
-                if self._ideal_sibling is not None:
+                if self._ideal_sibling is not None and self._ideal_sibling != tag:
                     
-                    if self._ideal_sibling != tag:
-                        
-                        base += ' (will display as ' + self._ideal_sibling + ')'
-                        
-                    
-                else:
-                    
-                    siblings_manager = HG.client_controller.tag_siblings_manager
-                    
-                    sibling = siblings_manager.GetSibling( sibling_service_key, tag )
-                    
-                    if sibling != tag:
-                        
-                        sibling = ClientTags.RenderTag( sibling, render_for_user )
-                        
-                        base += ' (will display as ' + sibling + ')'
-                        
+                    base += ' (will display as ' + self._ideal_sibling + ')'
                     
                 
             
@@ -2356,9 +2361,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._inclusive = inclusive
         
     
-    def SetSiblings( self, siblings: typing.Set[ str ] ):
+    def SetKnownSiblings( self, siblings: typing.Set[ str ] ):
         
         self._siblings = siblings
+        
+        if self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            self._matchable_search_texts = { self._value }.union( self._siblings )
+            
+        else:
+            
+            self._matchable_search_texts = set()
+            
         
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
@@ -2420,8 +2434,6 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
     
     re_predicate = compile_re( search_text )
     
-    siblings_manager = HG.client_controller.tag_siblings_manager
-    
     matches = []
     
     for predicate in predicates:
@@ -2433,25 +2445,7 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
             continue
             
         
-        sibling_tags = predicate.GetSiblings()
-        
-        if sibling_tags is None:
-            
-            tag = value
-            
-            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                possible_tags = ( tag, )
-                
-            else:
-                
-                possible_tags = siblings_manager.GetAllSiblings( service_key, tag )
-                
-            
-        else:
-            
-            possible_tags = sibling_tags
-            
+        possible_tags = predicate.GetMatchableSearchTexts()
         
         searchable_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
         
@@ -2728,7 +2722,7 @@ class PredicateResultsCache( object ):
     
     def FilterPredicates( self, service_key: bytes, search_text: str ):
         
-        return []
+        return FilterPredicatesBySearchText( service_key, search_text, self._predicates )
         
     
     def GetPredicates( self ):
@@ -2745,6 +2739,11 @@ class PredicateResultsCacheInit( PredicateResultsCache ):
     
 class PredicateResultsCacheSystem( PredicateResultsCache ):
     
+    pass
+    
+class PredicateResultsCacheMedia( PredicateResultsCache ):
+    
+    # we could do a bunch of 'valid while media hasn't changed since last time', but experimentally, this is swapped out with a system cache on every new blank input, so no prob
     pass
     
 class PredicateResultsCacheTag( PredicateResultsCache ):
@@ -2788,10 +2787,5 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
                 return False
                 
             
-        
-    
-    def FilterPredicates( self, service_key: bytes, search_text: str ):
-        
-        return FilterPredicatesBySearchText( service_key, search_text, self._predicates )
         
     

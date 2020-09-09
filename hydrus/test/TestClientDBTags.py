@@ -242,9 +242,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             # start out, no sibs
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             test_no_sibs( force_no_local_files = True )
             
@@ -288,9 +288,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'content_updates', service_keys_to_content_updates )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), { 'process these' : 'nope' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), { 'mc bad' : 'mc wrong', 'pc bad' : 'pc wrong', 'pp bad' : 'pp wrong', 'sameus aran' : 'zelda', 'link' : 'zelda' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), { 'process these' : 'nope' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), { 'mc bad' : 'mc wrong', 'pc bad' : 'pc wrong', 'pp bad' : 'pp wrong', 'sameus aran' : 'zelda', 'link' : 'zelda' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             test_no_sibs()
             
@@ -314,9 +314,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'content_updates', service_keys_to_content_updates )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             test_no_sibs()
             
@@ -339,9 +339,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'content_updates', service_keys_to_content_updates )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'samus metroid' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), { 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'samus metroid' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), { 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
             
             for do_regen_sibs in ( False, True ):
                 
@@ -435,9 +435,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'tag_sibling_application', master_service_keys_to_applicable_service_keys )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             test_no_sibs()
             
@@ -447,9 +447,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'tag_sibling_application', master_service_keys_to_applicable_service_keys )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'character:samus aran', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'character:samus aran', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'character:samus aran', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'character:samus aran', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
             
             for do_regen_sibs in ( False, True ):
                 
@@ -556,9 +556,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'content_updates', service_keys_to_content_updates )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             test_no_sibs()
             
@@ -589,25 +589,25 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'tag_sibling_application', master_service_keys_to_applicable_service_keys )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), { 'process these' : 'good answer', 'lmao' : 'good answer' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), { 'process these' : 'good answer', 'lmao' : 'good answer' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             master_service_keys_to_applicable_service_keys = { my_service_key : [], processing_service_key : [ processing_service_key, public_service_key ], public_service_key : [] }
             
             self._write( 'tag_sibling_application', master_service_keys_to_applicable_service_keys )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), { 'process these' : 'good answer', 'lmao' : 'good answer' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), { 'process these' : 'good answer', 'lmao' : 'good answer' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             master_service_keys_to_applicable_service_keys = { my_service_key : [], processing_service_key : [ processing_service_key, my_service_key, public_service_key ], public_service_key : [] }
             
             self._write( 'tag_sibling_application', master_service_keys_to_applicable_service_keys )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_ideals', processing_service_key ), { 'process these' : 'good answer', 'lmao' : 'good answer' } )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', processing_service_key ), { 'process these' : 'good answer', 'lmao' : 'good answer' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
             content_updates = []
             
@@ -619,9 +619,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._write( 'content_updates', service_keys_to_content_updates )
             
-            self.assertEqual( self._read( 'tag_siblings_ideals', my_service_key ), {} )
-            self.assertEqual( len( self._read( 'tag_siblings_ideals', processing_service_key ) ), 2 )
-            self.assertEqual( self._read( 'tag_siblings_ideals', public_service_key ), {} )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', my_service_key ), {} )
+            self.assertEqual( len( self._read( 'tag_siblings_all_ideals', processing_service_key ) ), 2 )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', public_service_key ), {} )
             
         
 

@@ -577,7 +577,7 @@ class QtAwareJob( HydrusThreading.SingleJob ):
         return self._MyWindowDead()
         
     
-class QtAwareRepeatingJob(HydrusThreading.RepeatingJob):
+class QtAwareRepeatingJob( HydrusThreading.RepeatingJob ):
     
     def __init__( self, controller, scheduler, window, initial_delay, period, work_callable ):
         

@@ -1,4 +1,5 @@
 import collections
+import itertools
 import os
 import random
 import threading
@@ -358,7 +359,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _CheckTagsVeto( self, tags, tag_import_options: ClientImportOptions.TagImportOptions ):
         
-        tag_import_options.CheckTagsVeto( tags )
+        tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, tags )
+        
+        all_chain_tags = set( itertools.chain.from_iterable( tags_to_siblings.values() ) )
+        
+        tag_import_options.CheckTagsVeto( tags, all_chain_tags )
         
     
     def _GetSerialisableInfo( self ):

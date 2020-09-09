@@ -1320,16 +1320,11 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CheckTagsVeto( self, tags: typing.Collection[ str ] ):
+    def CheckTagsVeto( self, tags: typing.Collection[ str ], sibling_tags: typing.Collection[ str ] ):
         
         tags = set( tags )
         
-        sibling_tags = set()
-        
-        for tag in tags:
-            
-            sibling_tags.update( HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, tag ) )
-            
+        sibling_tags = set( sibling_tags )
         
         for test_tags in ( tags, sibling_tags ):
             

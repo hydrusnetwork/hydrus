@@ -5,34 +5,65 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client.gui import QtPorting as QP
 
-class AsyncQtUpdater( object ):
+# this does one thing neatly
+class AsyncQtJob( object ):
     
-    def __init__( self, win ):
+    def __init__( self, win, work_callable, publish_callable ):
         
         # ultimate improvement here is to move to QObject/QThread and do the notifications through signals and slots (which will disconnect on object deletion)
         
         self._win = win
+        self._work_callable = work_callable
+        self._publish_callable = publish_callable
+        
+    
+    def _doWork( self ):
+        
+        def qt_deliver_result( result ):
+            
+            if not QP.isValid( self._win ):
+                
+                return
+                
+            
+            self._publish_callable( result )
+            
+        
+        result = self._work_callable()
+        
+        try:
+            
+            HG.client_controller.CallBlockingToQt( self._win, qt_deliver_result, result )
+            
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            
+            return
+            
+        
+    
+    def start( self ):
+        
+        HG.client_controller.CallToThread( self._doWork )
+        
+    
+# this can refresh dirty stuff n times and won't spam work
+class AsyncQtUpdater( object ):
+    
+    def __init__( self, win, loading_callable, work_callable, publish_callable ):
+        
+        # ultimate improvement here is to move to QObject/QThread and do the notifications through signals and slots (which will disconnect on object deletion)
+        
+        self._win = win
+        
+        self._loading_callable = loading_callable
+        self._work_callable = work_callable
+        self._publish_callable = publish_callable
         
         self._calllater_waiting = False
         self._work_needs_to_restart = False
         self._is_working = False
         
         self._lock = threading.Lock()
-        
-    
-    def _getResult( self ):
-        
-        raise NotImplementedError()
-        
-    
-    def _publishLoading( self ):
-        
-        pass
-        
-    
-    def _publishResult( self, result ):
-        
-        raise NotImplementedError()
         
     
     def _doWork( self ):
@@ -46,7 +77,7 @@ class AsyncQtUpdater( object ):
                 return
                 
             
-            self._publishResult( result )
+            self._publish_callable( result )
             
         
         with self._lock:
@@ -58,7 +89,7 @@ class AsyncQtUpdater( object ):
         
         try:
             
-            result = self._getResult()
+            result = self._work_callable()
             
             try:
                 
@@ -107,7 +138,7 @@ class AsyncQtUpdater( object ):
                 
             elif not self._calllater_waiting:
                 
-                self._publishLoading()
+                self._loading_callable()
                 
                 self._calllater_waiting = True
                 
@@ -115,7 +146,7 @@ class AsyncQtUpdater( object ):
                 
             
         
-
+    
 class FastThreadToGUIUpdater( object ):
     
     def __init__( self, win, func ):

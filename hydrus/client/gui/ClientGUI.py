@@ -278,116 +278,6 @@ def THREADUploadPending( service_key ):
         HG.client_controller.pub( 'notify_new_pending' )
         
     
-class BonedUpdater( ClientGUIAsync.AsyncQtUpdater ):
-    
-    def _getResult( self ):
-        
-        boned_stats = HG.client_controller.Read( 'boned_stats' )
-        
-        return boned_stats
-        
-    
-    def _publishLoading( self ):
-        
-        self._job_key = ClientThreading.JobKey()
-        
-        self._job_key.SetVariable( 'popup_text_1', 'Loading Statistics\u2026' )
-        
-        HG.client_controller.pub( 'message', self._job_key )
-        
-    
-    def _publishResult( self, result ):
-        
-        self._job_key.Delete()
-        
-        boned_stats = result
-        
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self._win, 'review your fate' )
-        
-        panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
-        
-        frame.SetPanel( panel )
-        
-    
-class MenuUpdaterFile( ClientGUIAsync.AsyncQtUpdater ):
-    
-    def _getResult( self ):
-        
-        import_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
-        export_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
-        
-        return ( import_folder_names, export_folder_names )
-        
-    
-    def _publishLoading( self ):
-        
-        self._win.DisableMenu( 'file' )
-        
-    
-    def _publishResult( self, result ):
-        
-        ( import_folder_names, export_folder_names ) = result
-        
-        ( menu, label ) = self._win.GenerateMenuInfoFile( import_folder_names, export_folder_names )
-        
-        self._win.ReplaceMenu( 'file', menu, label )
-        
-    
-class MenuUpdaterPages( ClientGUIAsync.AsyncQtUpdater ):
-    
-    def _getResult( self ):
-        
-        gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-        
-        if len( gui_session_names ) > 0:
-            
-            gui_session_names_to_backup_timestamps = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-            
-        else:
-            
-            gui_session_names_to_backup_timestamps = {}
-            
-        
-        return ( gui_session_names, gui_session_names_to_backup_timestamps )
-        
-    
-    def _publishLoading( self ):
-        
-        self._win.DisableMenu( 'pages' )
-        
-    
-    def _publishResult( self, result ):
-        
-        ( gui_session_names, gui_session_names_to_backup_timestamps ) = result
-        
-        ( menu, label ) = self._win.GenerateMenuInfoPages( gui_session_names, gui_session_names_to_backup_timestamps )
-        
-        self._win.ReplaceMenu( 'pages', menu, label )
-        
-    
-class MenuUpdaterPending( ClientGUIAsync.AsyncQtUpdater ):
-    
-    def _getResult( self ):
-        
-        nums_pending = HG.client_controller.Read( 'nums_pending' )
-        
-        return nums_pending
-        
-    
-    def _publishLoading( self ):
-        
-        self._win.DisableMenu( 'pending' )
-        
-    
-    def _publishResult( self, result ):
-        
-        nums_pending = result
-        
-        ( menu_or_none, label ) = self._win.GenerateMenuInfoPending( nums_pending )
-        
-        self._win.ReplaceMenu( 'pending', menu_or_none, label )
-        
-    
 class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def __init__( self, controller ):
@@ -1995,6 +1885,130 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _InitialiseMenubarGetBonesUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def work_callable():
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_text_1', 'Loading Statistics\u2026' )
+            
+            HG.client_controller.pub( 'message', job_key )
+            
+            boned_stats = HG.client_controller.Read( 'boned_stats' )
+            
+            return ( job_key, boned_stats )
+            
+        
+        def publish_callable( result ):
+            
+            ( job_key, boned_stats ) = result
+            
+            job_key.Delete()
+            
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review your fate' )
+            
+            panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
+            
+            frame.SetPanel( panel )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
+    def _InitialiseMenubarGetFileMenuUpdater( self ):
+        
+        def loading_callable():
+            
+            self.DisableMenu( 'file' )
+            
+        
+        def work_callable():
+            
+            import_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+            export_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+            
+            return ( import_folder_names, export_folder_names )
+            
+        
+        def publish_callable( result ):
+            
+            ( import_folder_names, export_folder_names ) = result
+            
+            ( menu, label ) = self.GenerateMenuInfoFile( import_folder_names, export_folder_names )
+            
+            self.ReplaceMenu( 'file', menu, label )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
+    def _InitialiseMenubarGetPagesMenuUpdater( self ):
+        
+        def loading_callable():
+            
+            self.DisableMenu( 'pages' )
+            
+        
+        def work_callable():
+            
+            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            
+            if len( gui_session_names ) > 0:
+                
+                gui_session_names_to_backup_timestamps = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+                
+            else:
+                
+                gui_session_names_to_backup_timestamps = {}
+                
+            
+            return ( gui_session_names, gui_session_names_to_backup_timestamps )
+            
+        
+        def publish_callable( result ):
+            
+            ( gui_session_names, gui_session_names_to_backup_timestamps ) = result
+            
+            ( menu, label ) = self.GenerateMenuInfoPages( gui_session_names, gui_session_names_to_backup_timestamps )
+            
+            self.ReplaceMenu( 'pages', menu, label )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
+    def _InitialiseMenubarGetPendingMenuUpdater( self ):
+        
+        def loading_callable():
+            
+            self.DisableMenu( 'pending' )
+            
+        
+        def work_callable():
+            
+            nums_pending = HG.client_controller.Read( 'nums_pending' )
+            
+            return nums_pending
+            
+        
+        def publish_callable( result ):
+            
+            nums_pending = result
+            
+            ( menu_or_none, label ) = self.GenerateMenuInfoPending( nums_pending )
+            
+            self.ReplaceMenu( 'pending', menu_or_none, label )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
     def _InitialiseMenubar( self ):
         
         self._menubar = QW.QMenuBar( self )
@@ -2004,11 +2018,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._menu_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._menubar, self.RefreshMenu )
         self._dirty_menus = set()
         
-        self._menu_updater_file = MenuUpdaterFile( self )
-        self._menu_updater_pages = MenuUpdaterPages( self )
-        self._menu_updater_pending = MenuUpdaterPending( self )
+        self._menu_updater_file = self._InitialiseMenubarGetFileMenuUpdater()
+        self._menu_updater_pages = self._InitialiseMenubarGetPagesMenuUpdater()
+        self._menu_updater_pending = self._InitialiseMenubarGetPendingMenuUpdater()
         
-        self._boned_updater = BonedUpdater( self )
+        self._boned_updater = self._InitialiseMenubarGetBonesUpdater()
         
         self.setMenuBar( self._menubar )
         

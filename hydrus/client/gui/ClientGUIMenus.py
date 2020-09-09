@@ -13,7 +13,9 @@ def AppendMenu( menu, submenu, label ):
     label = SanitiseLabel( label )
     
     submenu.setTitle( label )
-    menu.addMenu( submenu )
+    menu_action = menu.addMenu( submenu )
+    
+    return menu_action
     
 def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **kwargs ):
     

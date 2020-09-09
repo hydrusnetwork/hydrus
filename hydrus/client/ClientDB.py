@@ -625,7 +625,7 @@ class DB( HydrusDB.HydrusDB ):
                     self._controller.frame_splash_status.SetText( 'analyzing ' + name )
                     job_key.SetVariable( 'popup_text_1', 'analyzing ' + name )
                     
-                    time.sleep( 0.1 )
+                    time.sleep( 0.02 )
                     
                     started = HydrusData.GetNowPrecise()
                     
@@ -1073,7 +1073,12 @@ class DB( HydrusDB.HydrusDB ):
         
         num_to_do = len( ideal_tag_ids_to_chain_tag_ids )
         
-        for ( i, ( ideal_tag_id, chain_tag_ids ) ) in enumerate( ideal_tag_ids_to_chain_tag_ids.items() ):
+        ideal_tag_ids_in_random_order = list( ideal_tag_ids_to_chain_tag_ids.keys() )
+        random.shuffle( ideal_tag_ids_in_random_order )
+        
+        for ( i, ideal_tag_id ) in enumerate( ideal_tag_ids_in_random_order ):
+            
+            chain_tag_ids = ideal_tag_ids_to_chain_tag_ids[ ideal_tag_id ]
             
             if status_hook is not None:
                 
@@ -1805,6 +1810,9 @@ class DB( HydrusDB.HydrusDB ):
         
         num_sibs_to_do = len( ideal_tag_ids_to_chain_tag_ids )
         
+        ideal_tag_ids_in_random_order = list( ideal_tag_ids_to_chain_tag_ids.keys() )
+        random.shuffle( ideal_tag_ids_in_random_order )
+        
         for ( f_i, file_service_id ) in enumerate( file_service_ids ):
             
             f_vr_s = HydrusData.ConvertValueRangeToPrettyString( f_i + 1, len( file_service_ids ) )
@@ -1825,7 +1833,9 @@ class DB( HydrusDB.HydrusDB ):
             
             # new solution:
             
-            for ( i, ( ideal_tag_id, chain_tag_ids ) ) in enumerate( ideal_tag_ids_to_chain_tag_ids.items() ):
+            for ( i, ideal_tag_id ) in enumerate( ideal_tag_ids_in_random_order ):
+                
+                chain_tag_ids = ideal_tag_ids_to_chain_tag_ids[ ideal_tag_id ]
                 
                 if status_hook is not None:
                     
@@ -5494,52 +5504,124 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( petitioned_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
         
     
-    def _GeneratePredicatesFromTagIdsAndCounts( self, display_tag_service_id, tag_ids_to_full_counts, inclusive ):
+    def _GeneratePredicatesFromTagIdsAndCounts( self, tag_display_type: int, display_tag_service_id: int, tag_ids_to_full_counts, inclusive, job_key = None ):
         
         tag_ids = set( tag_ids_to_full_counts.keys() )
         
-        if display_tag_service_id != self._combined_tag_service_id:
-            
-            tag_ids_that_are_chained = self._CacheTagSiblingsLookupFilterChained( display_tag_service_id, tag_ids )
-            
-            tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsLookupGetIdeals( display_tag_service_id, tag_ids_that_are_chained )
-            
-            ideal_tag_ids_to_chain_tag_ids = self._CacheTagSiblingsLookupGetChains( display_tag_service_id, set( tag_ids_to_ideal_tag_ids.values() ) )
-            
-        else:
-            
-            tag_ids_to_ideal_tag_ids = {}
-            
-            ideal_tag_ids_to_chain_tag_ids = {}
-            
-        
-        tag_ids_we_want_to_look_up = set( tag_ids ).union( tag_ids_to_ideal_tag_ids.values() ).union( itertools.chain.from_iterable( ideal_tag_ids_to_chain_tag_ids.values() ) )
-        
-        self._PopulateTagIdsToTagsCache( tag_ids_we_want_to_look_up )
-        
-        ideal_tag_ids_to_chain_tags = { ideal_tag_id : { self._tag_ids_to_tags_cache[ chain_tag_id ] for chain_tag_id in chain_tag_ids } for ( ideal_tag_id, chain_tag_ids ) in ideal_tag_ids_to_chain_tag_ids.items() }
-        
         predicates = []
         
-        for ( tag_id, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tag_ids_to_full_counts.items():
+        if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
             
-            tag = self._tag_ids_to_tags_cache[ tag_id ]
-            
-            predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count )
-            
-            if tag_id in tag_ids_to_ideal_tag_ids:
+            if display_tag_service_id != self._combined_tag_service_id:
                 
-                ideal_tag_id = tag_ids_to_ideal_tag_ids[ tag_id ]
+                tag_ids_that_are_chained = self._CacheTagSiblingsLookupFilterChained( display_tag_service_id, tag_ids )
                 
-                if ideal_tag_id != tag_id:
+                tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsLookupGetIdeals( display_tag_service_id, tag_ids_that_are_chained )
+                
+                ideal_tag_ids_to_chain_tag_ids = self._CacheTagSiblingsLookupGetChains( display_tag_service_id, set( tag_ids_to_ideal_tag_ids.values() ) )
+                
+            else:
+                
+                # shouldn't ever happen with storage display
+                
+                tag_ids_to_ideal_tag_ids = {}
+                
+                ideal_tag_ids_to_chain_tag_ids = {}
+                
+            
+            tag_ids_we_want_to_look_up = set( tag_ids ).union( tag_ids_to_ideal_tag_ids.values() ).union( itertools.chain.from_iterable( ideal_tag_ids_to_chain_tag_ids.values() ) )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            self._PopulateTagIdsToTagsCache( tag_ids_we_want_to_look_up )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            ideal_tag_ids_to_chain_tags = { ideal_tag_id : { self._tag_ids_to_tags_cache[ chain_tag_id ] for chain_tag_id in chain_tag_ids } for ( ideal_tag_id, chain_tag_ids ) in ideal_tag_ids_to_chain_tag_ids.items() }
+            
+            for ( tag_id, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tag_ids_to_full_counts.items():
+                
+                tag = self._tag_ids_to_tags_cache[ tag_id ]
+                
+                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count )
+                
+                if tag_id in tag_ids_to_ideal_tag_ids:
                     
-                    predicate.SetIdealSibling( self._tag_ids_to_tags_cache[ ideal_tag_id ] )
+                    ideal_tag_id = tag_ids_to_ideal_tag_ids[ tag_id ]
+                    
+                    if ideal_tag_id != tag_id:
+                        
+                        predicate.SetIdealSibling( self._tag_ids_to_tags_cache[ ideal_tag_id ] )
+                        
+                    
+                    predicate.SetKnownSiblings( ideal_tag_ids_to_chain_tags[ ideal_tag_id ] )
                     
                 
-                predicate.SetSiblings( ideal_tag_ids_to_chain_tags[ ideal_tag_id ] )
+                predicates.append( predicate )
                 
             
-            predicates.append( predicate )
+        elif tag_display_type == ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS:
+            
+            tag_ids_to_known_chain_tag_ids = collections.defaultdict( set )
+            
+            if display_tag_service_id == self._combined_tag_service_id:
+                
+                search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                search_tag_service_ids = ( display_tag_service_id, )
+                
+            
+            for search_tag_service_id in search_tag_service_ids:
+                
+                tag_ids_that_are_chained = self._CacheTagSiblingsLookupFilterChained( search_tag_service_id, tag_ids )
+                
+                tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsLookupGetIdeals( search_tag_service_id, tag_ids_that_are_chained )
+                
+                ideal_tag_ids_to_chain_tag_ids = self._CacheTagSiblingsLookupGetChains( search_tag_service_id, set( tag_ids_to_ideal_tag_ids.values() ) )
+                
+                for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids.items():
+                    
+                    tag_ids_to_known_chain_tag_ids[ tag_id ].update( ideal_tag_ids_to_chain_tag_ids[ ideal_tag_id ] )
+                    
+                
+            
+            tag_ids_we_want_to_look_up = set( tag_ids ).union( itertools.chain.from_iterable( tag_ids_to_known_chain_tag_ids.values() ) )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            self._PopulateTagIdsToTagsCache( tag_ids_we_want_to_look_up )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            for ( tag_id, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tag_ids_to_full_counts.items():
+                
+                tag = self._tag_ids_to_tags_cache[ tag_id ]
+                
+                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count )
+                
+                if tag_id in tag_ids_to_known_chain_tag_ids:
+                    
+                    chain_tags = { self._tag_ids_to_tags_cache[ chain_tag_id ] for chain_tag_id in tag_ids_to_known_chain_tag_ids[ tag_id ] }
+                    
+                    predicate.SetKnownSiblings( chain_tags )
+                    
+                
+                predicates.append( predicate )
+                
             
         
         return predicates
@@ -5610,6 +5692,11 @@ class DB( HydrusDB.HydrusDB ):
             if not include_pending:
                 
                 pending_count = 0
+                
+            
+            if current_count == 0 and pending_count == 0:
+                
+                continue
                 
             
             if tag_id in ids_to_count:
@@ -5881,7 +5968,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            predicates = self._GeneratePredicatesFromTagIdsAndCounts( display_tag_service_id, ids_to_count, inclusive )
+            predicates = self._GeneratePredicatesFromTagIdsAndCounts( tag_display_type, display_tag_service_id, ids_to_count, inclusive, job_key = job_key )
             
             all_predicates.extend( predicates )
             
@@ -6647,12 +6734,6 @@ class DB( HydrusDB.HydrusDB ):
             files_info_predicates.append( 'has_audio = {}'.format( int( has_audio ) ) )
             
         
-        if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
-            
-            if 'min_import_timestamp' in simple_preds: files_info_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_import_timestamp' ] ) )
-            if 'max_import_timestamp' in simple_preds: files_info_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_import_timestamp' ] ) )
-            
-        
         if 'min_width' in simple_preds: files_info_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
         if 'width' in simple_preds: files_info_predicates.append( 'width = ' + str( simple_preds[ 'width' ] ) )
         if 'max_width' in simple_preds: files_info_predicates.append( 'width < ' + str( simple_preds[ 'max_width' ] ) )
@@ -6886,6 +6967,25 @@ class DB( HydrusDB.HydrusDB ):
             
         
         #
+        
+        if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
+            
+            import_timestamp_predicates = []
+            
+            if 'min_import_timestamp' in simple_preds: import_timestamp_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_import_timestamp' ] ) )
+            if 'max_import_timestamp' in simple_preds: import_timestamp_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_import_timestamp' ] ) )
+            
+            if len( import_timestamp_predicates ) > 0:
+                
+                pred_string = ' AND '.join( import_timestamp_predicates )
+                
+                import_timestamp_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ? AND {};'.format( pred_string ), ( file_service_id, ) ) )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, import_timestamp_hash_ids )
+                
+                have_cross_referenced_file_service = True
+                
+            
         
         modified_timestamp_predicates = []
         
@@ -7718,15 +7818,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( current_min, current_max, pending_min, pending_max ) = ids_to_count[ tag_id ]
                 
-            
-            if tag_search_context.include_current_tags:
+                if tag_search_context.include_current_tags:
+                    
+                    count += current_min
+                    
                 
-                count += current_min
-                
-            
-            if tag_search_context.include_current_tags:
-                
-                count += pending_min
+                if tag_search_context.include_current_tags:
+                    
+                    count += pending_min
+                    
                 
             
             # experimentally, file lookups are about 2.5x as slow as tag lookups
@@ -8554,6 +8654,25 @@ class DB( HydrusDB.HydrusDB ):
         return table_names
         
     
+    def _GetMediaPredicates( self, tag_search_context: ClientSearch.TagSearchContext, tags_to_counts, inclusive, job_key = None ):
+        
+        display_tag_service_id = self._GetServiceId( tag_search_context.display_service_key )
+        
+        max_current_count = None
+        max_pending_count = None
+        
+        tag_ids_to_full_counts = { self._GetTagId( tag ) : ( current_count, max_current_count, pending_count, max_pending_count ) for ( tag, ( current_count, pending_count ) ) in tags_to_counts.items() }
+        
+        if job_key is not None and job_key.IsCancelled():
+            
+            return []
+            
+        
+        predicates = self._GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, display_tag_service_id, tag_ids_to_full_counts, inclusive, job_key = job_key )
+        
+        return predicates
+        
+    
     def _GetMediaResults( self, hash_ids: typing.Iterable[ int ] ):
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
@@ -9183,7 +9302,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_full_counts = { tag_id : ( current_count, None, pending_count, None ) for ( tag_id, current_count ) in results }
         
-        predicates = self._GeneratePredicatesFromTagIdsAndCounts( service_id, tag_ids_to_full_counts, inclusive )
+        predicates = self._GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_STORAGE, service_id, tag_ids_to_full_counts, inclusive )
         
         return predicates
         
@@ -9884,6 +10003,82 @@ class DB( HydrusDB.HydrusDB ):
         return statuses_to_pairs
         
     
+    def _GetTagSiblingsForTags( self, service_key, tags ):
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            tag_service_ids = ( self._GetServiceId( service_key ), )
+            
+        
+        existing_tags = { tag for tag in tags if self._TagExists( tag ) }
+        
+        existing_tag_ids = { self._GetTagId( tag ) for tag in existing_tags }
+        
+        tag_ids_to_chain_tag_ids = collections.defaultdict( set )
+        
+        for tag_service_id in tag_service_ids:
+            
+            for tag_id in existing_tag_ids:
+                
+                chain_tag_ids = self._CacheTagSiblingsLookupGetChainMembers( tag_service_id, tag_id )
+                
+                tag_ids_to_chain_tag_ids[ tag_id ].update( chain_tag_ids )
+                
+            
+        
+        all_tag_ids = set( tag_ids_to_chain_tag_ids.keys() )
+        all_tag_ids.update( itertools.chain.from_iterable( tag_ids_to_chain_tag_ids.values() ) )
+        
+        self._PopulateTagIdsToTagsCache( all_tag_ids )
+        
+        tags_to_siblings = { self._tag_ids_to_tags_cache[ tag_id ] : { self._tag_ids_to_tags_cache[ chain_tag_id ] for chain_tag_id in chain_tag_ids } for ( tag_id, chain_tag_ids ) in tag_ids_to_chain_tag_ids.items() }
+        
+        for tag in tags:
+            
+            if tag not in existing_tags:
+                
+                tags_to_siblings[ tag ] = { tag }
+                
+            
+        
+        return tags_to_siblings
+        
+    
+    def _GetTagSiblingsIdealsForTags( self, service_key, tags ):
+        
+        tags_to_ideals = { tag : tag for tag in tags }
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            return tags_to_ideals
+            
+        
+        tag_service_id = self._GetServiceId( service_key )
+        
+        existing_tags = { tag for tag in tags if self._TagExists( tag ) }
+        
+        existing_tag_ids = { self._GetTagId( tag ) for tag in existing_tags }
+        
+        existing_tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsLookupGetIdeals( tag_service_id, existing_tag_ids )
+        
+        interesting_tag_ids_to_ideal_tag_ids = { tag_id : ideal_tag_id for ( tag_id, ideal_tag_id ) in existing_tag_ids_to_ideal_tag_ids.items() if tag_id != ideal_tag_id }
+        
+        all_interesting_tag_ids = set( itertools.chain.from_iterable( interesting_tag_ids_to_ideal_tag_ids.items() ) )
+        
+        self._PopulateTagIdsToTagsCache( all_interesting_tag_ids )
+        
+        for ( tag_id, ideal_tag_id ) in interesting_tag_ids_to_ideal_tag_ids.items():
+            
+            tags_to_ideals[ self._tag_ids_to_tags_cache[ tag_id ] ] = self._tag_ids_to_tags_cache[ ideal_tag_id ]
+            
+        
+        return tags_to_ideals
+        
+    
     def _GetTagSiblingsIdeals( self, service_key ):
         
         tag_service_id = self._GetServiceId( service_key )
@@ -9892,13 +10087,7 @@ class DB( HydrusDB.HydrusDB ):
         
         pair_ids = self._c.execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_tag_siblings_lookup_table_name ) ).fetchall()
         
-        all_tag_ids = set()
-        
-        for ( bad_tag_id, good_tag_id ) in pair_ids:
-            
-            all_tag_ids.add( bad_tag_id )
-            all_tag_ids.add( good_tag_id )
-            
+        all_tag_ids = set( itertools.chain.from_iterable( pair_ids ) )
         
         self._PopulateTagIdsToTagsCache( all_tag_ids )
         
@@ -12469,7 +12658,6 @@ class DB( HydrusDB.HydrusDB ):
             if notify_new_siblings:
                 
                 self.pub_after_job( 'notify_new_force_refresh_tags_data' ) # we can do better here, figuring out which hash_ids were affected and only doing them after_job
-                self.pub_after_job( 'notify_new_siblings' )
                 self.pub_after_job( 'notify_new_parents' )
                 
             elif notify_new_parents:
@@ -12882,6 +13070,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'maintenance_due': result = self._GetMaintenanceDue( *args, **kwargs )
+        elif action == 'media_predicates': result = self._GetMediaPredicates( *args, **kwargs )
         elif action == 'media_result': result = self._GetMediaResultFromHash( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
@@ -12912,7 +13101,9 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
-        elif action == 'tag_siblings_ideals': result = self._GetTagSiblingsIdeals( *args, **kwargs )
+        elif action == 'tag_siblings_all_ideals': result = self._GetTagSiblingsIdeals( *args, **kwargs )
+        elif action == 'tag_siblings_ideals': result = self._GetTagSiblingsIdealsForTags( *args, **kwargs )
+        elif action == 'tag_siblings_lookup': result = self._GetTagSiblingsForTags( *args, **kwargs )
         elif action == 'tag_sibling_application': result = self._GetTagSiblingApplication( *args, **kwargs )
         elif action == 'potential_duplicates_count': result = self._DuplicatesGetPotentialDuplicatesCount( *args, **kwargs )
         elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
@@ -13177,7 +13368,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         self.pub_after_job( 'notify_new_force_refresh_tags_data' )
-        self.pub_after_job( 'notify_new_siblings' )
         
     
     def _RelocateClientFiles( self, prefix, source, dest ):
@@ -17223,7 +17413,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         self.pub_after_job( 'notify_new_force_refresh_tags_data' )
-        self.pub_after_job( 'notify_new_siblings' )
         
     
     def _Vacuum( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None, force_vacuum = False ):

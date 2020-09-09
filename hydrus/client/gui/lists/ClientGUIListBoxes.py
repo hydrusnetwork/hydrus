@@ -1,5 +1,6 @@
 import collections
 import os
+import threading
 import typing
 
 from qtpy import QtCore as QC
@@ -16,6 +17,7 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -913,7 +915,7 @@ class ListBox( QW.QScrollArea ):
     
     TEXT_X_PADDING = 3
     
-    def __init__( self, parent, height_num_chars = 10 ):
+    def __init__( self, parent, height_num_chars = 10, has_async_text_info = False ):
         
         QW.QScrollArea.__init__( self, parent )
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -937,6 +939,18 @@ class ListBox( QW.QScrollArea ):
         self._minimum_height_num_chars = 8
         
         self._num_rows_per_page = 0
+        
+        #
+        
+        self._has_async_text_info = has_async_text_info
+        self._terms_to_async_text_info = {}
+        self._pending_async_text_info_terms = set()
+        self._currently_fetching_async_text_info_terms = set()
+        self._async_text_info_lock = threading.Lock()
+        self._async_text_info_shared_data = dict()
+        self._async_text_info_updater = self._InitialiseAsyncTextInfoUpdater()
+        
+        #
         
         self.setFont( QW.QApplication.font() )
         
@@ -1022,6 +1036,11 @@ class ListBox( QW.QScrollArea ):
         if was_selected_before:
             
             self._selected_terms.add( term )
+            
+        
+        if self._has_async_text_info:
+            
+            self._StartAsyncTextInfoLookup( term )
             
         
     
@@ -1342,6 +1361,55 @@ class ListBox( QW.QScrollArea ):
         
         
     
+    def _InitialiseAsyncTextInfoUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        work_callable = self._InitialiseAsyncTextInfoUpdaterWorkCallable()
+        
+        def publish_callable( terms_to_info ):
+            
+            with self._async_text_info_lock:
+                
+                self._currently_fetching_async_text_info_terms.difference_update( terms_to_info.keys() )
+                
+                self._terms_to_async_text_info.update( terms_to_info )
+                
+            
+            self._RefreshTexts( set( terms_to_info.keys() ) )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
+    def _InitialiseAsyncTextInfoUpdaterWorkCallable( self ):
+        
+        async_lock = self._async_text_info_lock
+        currently_fetching = self._currently_fetching_async_text_info_terms
+        pending = self._pending_async_text_info_terms
+        
+        def work_callable():
+            
+            with async_lock:
+                
+                to_lookup = set( pending )
+                
+                pending.clear()
+                
+                currently_fetching.update( to_lookup )
+                
+            
+            terms_to_info = { term : None for term in to_lookup }
+            
+            return terms_to_info
+            
+        
+        return work_callable
+        
+    
     def _IsSelected( self, index ):
         
         try:
@@ -1435,9 +1503,22 @@ class ListBox( QW.QScrollArea ):
             
         
     
-    def _RefreshTexts( self ):
+    def _RefreshTexts( self, only_these_terms = None ):
         
-        self._terms_to_texts = { term : self._GetTextFromTerm( term ) for term in self._terms }
+        if only_these_terms:
+            
+            for term in only_these_terms:
+                
+                if term in self._terms_to_texts:
+                    
+                    self._terms_to_texts[ term ] = self._GetTextFromTerm( term )
+                    
+                
+            
+        else:
+            
+            self._terms_to_texts = { term : self._GetTextFromTerm( term ) for term in self._terms }
+            
         
         self.widget().update()
         
@@ -1512,6 +1593,24 @@ class ListBox( QW.QScrollArea ):
             
         
         self._ordered_terms.sort( key = lexicographic_key )
+        
+    
+    def _StartAsyncTextInfoLookup( self, term ):
+        
+        with self._async_text_info_lock:
+            
+            if term not in self._terms_to_async_text_info and term not in self._currently_fetching_async_text_info_terms:
+                
+                self._pending_async_text_info_terms.add( term )
+                
+                self._async_text_info_updater.update()
+                
+            
+        
+    
+    def _GetAsyncTextInfoLookupCallable( self ):
+        
+        return lambda terms: {}
         
     
     def keyPressEvent( self, event ):
@@ -2201,46 +2300,68 @@ class ListBoxTags( ListBox ):
                 
                 if len( selected_actual_tags ) == 1:
                     
+                    siblings_menu = QW.QMenu( copy_menu )
+                    
+                    siblings_menu_action = ClientGUIMenus.AppendMenu( copy_menu, siblings_menu, 'loading siblings\u2026' )
+                    
                     ( selected_tag, ) = selected_actual_tags
                     
-                    ( selected_namespace, selected_subtag ) = HydrusTags.SplitTag( selected_tag )
-                    
-                    sibling_tags_seen = set()
-                    
-                    sibling_tags_seen.add( selected_tag )
-                    sibling_tags_seen.add( selected_subtag )
-                    
-                    siblings = set( HG.client_controller.tag_siblings_manager.GetAllSiblings( CC.COMBINED_TAG_SERVICE_KEY, selected_tag ) )
-                    
-                    siblings.difference_update( sibling_tags_seen )
-                    
-                    if len( siblings ) > 0:
+                    def work_callable():
                         
-                        siblings = HydrusTags.SortNumericTags( siblings )
+                        selected_tag_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, ( selected_tag, ) )
                         
-                        siblings_menu = QW.QMenu( copy_menu )
+                        siblings = selected_tag_to_siblings[ selected_tag ]
                         
-                        for sibling in siblings:
+                        return siblings
+                        
+                    
+                    def publish_callable( siblings ):
+                        
+                        ( selected_namespace, selected_subtag ) = HydrusTags.SplitTag( selected_tag )
+                        
+                        sibling_tags_seen = set()
+                        
+                        sibling_tags_seen.add( selected_tag )
+                        sibling_tags_seen.add( selected_subtag )
+                        
+                        siblings.difference_update( sibling_tags_seen )
+                        
+                        if len( siblings ) > 0:
                             
-                            if sibling not in sibling_tags_seen:
+                            siblings = HydrusTags.SortNumericTags( siblings )
+                            
+                            for sibling in siblings:
                                 
-                                ClientGUIMenus.AppendMenuItem( siblings_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
+                                if sibling not in sibling_tags_seen:
+                                    
+                                    ClientGUIMenus.AppendMenuItem( siblings_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
+                                    
+                                    sibling_tags_seen.add( sibling )
+                                    
                                 
-                                sibling_tags_seen.add( sibling )
+                                ( sibling_namespace, sibling_subtag ) = HydrusTags.SplitTag( sibling )
+                                
+                                if sibling_subtag not in sibling_tags_seen:
+                                    
+                                    ClientGUIMenus.AppendMenuItem( siblings_menu, sibling_subtag, 'Copy the selected sibling subtag to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling_subtag )
+                                    
+                                    sibling_tags_seen.add( sibling_subtag )
+                                    
                                 
                             
-                            ( sibling_namespace, sibling_subtag ) = HydrusTags.SplitTag( sibling )
+                            siblings_menu.setTitle( 'siblings' )
                             
-                            if sibling_subtag not in sibling_tags_seen:
-                                
-                                ClientGUIMenus.AppendMenuItem( siblings_menu, sibling_subtag, 'Copy the selected sibling subtag to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling_subtag )
-                                
-                                sibling_tags_seen.add( sibling_subtag )
-                                
+                        else:
+                            
+                            copy_menu.removeAction( siblings_menu_action )
+                            
+                            ClientGUIMenus.DestroyMenu( siblings_menu )
                             
                         
-                        ClientGUIMenus.AppendMenu( copy_menu, siblings_menu, 'siblings' )
-                        
+                    
+                    async_job = ClientGUIAsync.AsyncQtJob( siblings_menu, work_callable, publish_callable )
+                    
+                    async_job.start()
                     
                 
                 if self._HasCounts():
@@ -2911,20 +3032,109 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         return namespace_colours
         
     
-class ListBoxTagsStrings( ListBoxTags ):
+class ListBoxTagsSiblingCapable( ListBoxTags ):
     
-    def __init__( self, parent, service_key = None, show_sibling_text = True, sort_tags = True ):
+    def __init__( self, parent, service_key = None, show_sibling_text = True, **kwargs ):
         
-        ListBoxTags.__init__( self, parent )
-        
-        if service_key is not None:
+        if service_key is None:
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
         self._service_key = service_key
         self._show_sibling_text = show_sibling_text
+        
+        has_async_text_info = self._show_sibling_text
+        
+        ListBoxTags.__init__( self, parent, has_async_text_info = has_async_text_info, **kwargs )
+        
+    
+    def _AddSiblingSuffix( self, term, tag_string ):
+        
+        if term in self._terms_to_async_text_info:
+            
+            result = self._terms_to_async_text_info[ term ]
+            
+            if result is not None:
+                
+                ideal = result
+                
+                tag_string = '{} (will display as {})'.format( tag_string, ClientTags.RenderTag( ideal, True ) )
+                
+            
+        
+        return tag_string
+        
+    
+    def _InitialiseAsyncTextInfoUpdaterWorkCallable( self ):
+        
+        if not self._show_sibling_text:
+            
+            return ListBoxTags._InitialiseAsyncTextInfoUpdaterWorkCallable( self )
+            
+        
+        self._async_text_info_shared_data[ 'service_key' ] = self._service_key
+        
+        async_text_info_shared_data = self._async_text_info_shared_data
+        async_lock = self._async_text_info_lock
+        currently_fetching = self._currently_fetching_async_text_info_terms
+        pending = self._pending_async_text_info_terms
+        
+        def work_callable():
+            
+            with async_lock:
+                
+                to_lookup = list( pending )
+                
+                pending.clear()
+                
+                currently_fetching.update( to_lookup )
+                
+                service_key = async_text_info_shared_data[ 'service_key' ]
+                
+            
+            terms_to_info = { term : None for term in to_lookup }
+            
+            for batch_to_lookup in HydrusData.SplitListIntoChunks( to_lookup, 500 ):
+                
+                db_tags_to_ideals = HG.client_controller.Read( 'tag_siblings_ideals', service_key, set( batch_to_lookup ) )
+                
+                for ( tag, ideal ) in db_tags_to_ideals.items():
+                    
+                    if ideal != tag:
+                        
+                        terms_to_info[ tag ] = ideal
+                        
+                    
+                
+            
+            return terms_to_info
+            
+        
+        return work_callable
+        
+    
+    def SetTagServiceKey( self, service_key ):
+        
+        self._service_key = service_key
+        
+        with self._async_text_info_lock:
+            
+            self._async_text_info_shared_data[ 'service_key' ] = self._service_key
+            
+            self._pending_async_text_info_terms.clear()
+            self._currently_fetching_async_text_info_terms.clear()
+            self._terms_to_async_text_info = {}
+            
+        
+    
+class ListBoxTagsStrings( ListBoxTagsSiblingCapable ):
+    
+    def __init__( self, parent, service_key = None, show_sibling_text = True, sort_tags = True ):
+        
         self._sort_tags = sort_tags
+        
+        ListBoxTagsSiblingCapable.__init__( self, parent, service_key = service_key, show_sibling_text = show_sibling_text )
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -2952,20 +3162,13 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def _GetTextFromTerm( self, term ):
         
-        siblings_manager = HG.client_controller.tag_siblings_manager
-        
         tag = term
         
         tag_string = ClientTags.RenderTag( tag, True )
         
         if self._show_sibling_text:
             
-            sibling = siblings_manager.GetSibling( self._service_key, tag )
-            
-            if sibling != tag:
-                
-                tag_string += ' (will display as ' + ClientTags.RenderTag( sibling, True ) + ')'
-                
+            tag_string = self._AddSiblingSuffix( term, tag_string )
             
         
         return tag_string
@@ -2983,16 +3186,16 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._DataHasChanged()
         
     
+    def SetTagServiceKey( self, service_key ):
+        
+        ListBoxTagsSiblingCapable.SetTagServiceKey( self, service_key )
+        
+        self._RecalcTags()
+        
+    
     def GetTags( self ):
         
         return set( self._terms )
-        
-    
-    def SetTagServiceKey( self, service_key ):
-        
-        self._service_key = service_key
-        
-        self._RecalcTags()
         
     
     def SetTags( self, tags ):
@@ -3120,23 +3323,26 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         self._RemoveTags( tags )
         
     
-class ListBoxTagsMedia( ListBoxTags ):
+class ListBoxTagsMedia( ListBoxTagsSiblingCapable ):
     
     render_for_user = True
     
-    def __init__( self, parent, tag_display_type, include_counts = True, show_sibling_description = False ):
+    def __init__( self, parent, tag_display_type, service_key = None, show_sibling_text = False, include_counts = True ):
         
-        ListBoxTags.__init__( self, parent, height_num_chars = 24 )
+        if service_key is None:
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        ListBoxTagsSiblingCapable.__init__( self, parent, service_key = service_key, show_sibling_text = show_sibling_text, height_num_chars = 24 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
         self._last_media = set()
         
-        self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
         self._tag_display_type = tag_display_type
         
         self._include_counts = include_counts
-        self._show_sibling_description = show_sibling_description
         
         self._current_tags_to_count = collections.Counter()
         self._deleted_tags_to_count = collections.Counter()
@@ -3192,16 +3398,9 @@ class ListBoxTagsMedia( ListBoxTags ):
             if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X)'
             
         
-        if self._show_sibling_description:
+        if self._show_sibling_text:
             
-            sibling = HG.client_controller.tag_siblings_manager.GetSibling( self._tag_service_key, tag )
-            
-            if sibling != tag:
-                
-                sibling = ClientTags.RenderTag( sibling, self.render_for_user )
-                
-                tag_string += ' (will display as ' + sibling + ')'
-                
+            tag_string = self._AddSiblingSuffix( term, tag_string )
             
         
         return tag_string
@@ -3282,9 +3481,9 @@ class ListBoxTagsMedia( ListBoxTags ):
         self._DataHasChanged()
         
     
-    def ChangeTagService( self, service_key ):
+    def SetTagServiceKey( self, service_key ):
         
-        self._tag_service_key = service_key
+        ListBoxTagsSiblingCapable.SetTagServiceKey( self, service_key )
         
         self.SetTagsByMedia( self._last_media )
         
@@ -3311,7 +3510,7 @@ class ListBoxTagsMedia( ListBoxTags ):
         media = set( media )
         media = media.difference( self._last_media )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._tag_service_key, self._tag_display_type )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count.update( current_tags_to_count )
         self._deleted_tags_to_count.update( deleted_tags_to_count )
@@ -3337,7 +3536,7 @@ class ListBoxTagsMedia( ListBoxTags ):
         
         media = set( media )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._tag_service_key, self._tag_display_type )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count = current_tags_to_count
         self._deleted_tags_to_count = deleted_tags_to_count
@@ -3369,14 +3568,14 @@ class ListBoxTagsMedia( ListBoxTags ):
         removees = self._last_media.difference( media )
         adds = media.difference( self._last_media )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._tag_service_key, self._tag_display_type )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count.subtract( current_tags_to_count )
         self._deleted_tags_to_count.subtract( deleted_tags_to_count )
         self._pending_tags_to_count.subtract( pending_tags_to_count )
         self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( adds, self._tag_service_key, self._tag_display_type )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( adds, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count.update( current_tags_to_count )
         self._deleted_tags_to_count.update( deleted_tags_to_count )
@@ -3451,9 +3650,9 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def ChangeTagService( self, service_key ):
+    def SetTagServiceKey( self, service_key ):
         
-        self._tags_box.ChangeTagService( service_key )
+        self._tags_box.SetTagServiceKey( service_key )
         
     
     def EventSort( self, index ):
@@ -3500,7 +3699,7 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
     def __init__( self, parent, enter_func, delete_func ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, include_counts = True, show_sibling_description = True )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, show_sibling_text = True, include_counts = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func
@@ -3521,3 +3720,4 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
             self._delete_func( set( self._selected_terms ) )
             
         
+    

@@ -506,13 +506,13 @@ class DialogInputNamespaceRegex( Dialog ):
     
 class DialogInputTags( Dialog ):
     
-    def __init__( self, parent, service_key, tags, expand_parents = True, message = '' ):
+    def __init__( self, parent, service_key, tags, expand_parents = True, message = '', show_sibling_text = False ):
         
         Dialog.__init__( self, parent, 'input tags' )
         
         self._service_key = service_key
         
-        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key )
+        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key, show_sibling_text = show_sibling_text )
         
         self._expand_parents = expand_parents
         
