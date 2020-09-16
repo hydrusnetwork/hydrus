@@ -1580,6 +1580,10 @@ class EditTagSiblingApplication( ClientGUIScrolledPanels.EditPanel ):
             
             self._master_service_key = master_service_key
             
+            warning = 'BE CAREFUL WITH THIS. Applying tens of thousands of siblings to a tag service with hundreds of millions of tags (e.g. adding the PTR siblings to the PTR) can take a hell of a lot of CPU and HDD. On an SSD, it can be 20 minutes. On an HDD, it can be many hours.'
+            warning += os.linesep * 2
+            warning += 'A future version of this system will recalculate sibling application nicely in the background, but for now it is ugly and uninterruptable, blocking other work. Do not apply big siblings here if you are not prepared to wait.'
+            
             message = 'Normally, a tag service applies its own siblings to itself. If, however, you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings.'
             message += os.linesep * 2
             message += 'If there are conflicts, the services at the top of the list have precedence.'
@@ -1587,6 +1591,10 @@ class EditTagSiblingApplication( ClientGUIScrolledPanels.EditPanel ):
             #
             
             self._display_box = ClientGUICommon.StaticBox( self, 'sibling application' )
+            
+            self._warning = ClientGUICommon.BetterStaticText( self._display_box, label = warning )
+            self._warning.setWordWrap( True )
+            self._warning.setObjectName( 'HydrusWarning' )
             
             self._message = ClientGUICommon.BetterStaticText( self._display_box, label = message )
             self._message.setWordWrap( True )
@@ -1601,6 +1609,7 @@ class EditTagSiblingApplication( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
+            self._display_box.Add( self._warning, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._display_box.Add( self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._display_box.Add( self._service_keys_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
             

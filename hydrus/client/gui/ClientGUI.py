@@ -1816,11 +1816,27 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None, destination_page_key = None, show_destination_page = True, allow_watchers = True, allow_other_recognised_urls = True, allow_unrecognised_urls = True ):
+    def _ImportURL(
+        self,
+        url,
+        filterable_tags = None,
+        additional_service_keys_to_tags = None,
+        destination_page_name = None,
+        destination_page_key = None,
+        show_destination_page = True,
+        allow_watchers = True,
+        allow_other_recognised_urls = True,
+        allow_unrecognised_urls = True
+        ):
         
-        if service_keys_to_tags is None:
+        if filterable_tags is None:
             
-            service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            filterable_tags = set()
+            
+        
+        if additional_service_keys_to_tags is None:
+            
+            additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
         url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
@@ -1853,7 +1869,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 management_panel = page.GetManagementPanel()
                 
-                management_panel.PendURL( url, service_keys_to_tags = service_keys_to_tags )
+                management_panel.PendURL( url, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
                 
                 return ( url, '"{}" URL added successfully.'.format( match_name ) )
                 
@@ -1873,7 +1889,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 management_panel = page.GetManagementPanel()
                 
-                management_panel.PendURL( url, service_keys_to_tags = service_keys_to_tags )
+                management_panel.PendURL( url, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
                 
                 return ( url, '"{}" URL added successfully.'.format( match_name ) )
                 
@@ -2691,7 +2707,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 else:
                     
-                    return
+                    raise HydrusExceptions.CancelledException()
                     
                 
             
@@ -2727,7 +2743,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 else:
                     
-                    return
+                    raise HydrusExceptions.CancelledException()
                     
                 
             
@@ -2755,38 +2771,39 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def THREAD_do_it( controller ):
             
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_text_1', 'Waiting for current subscription work to finish.' )
+            
+            controller.pub( 'message', job_key )
+            
             with self._delayed_dialog_lock:
-                
-                original_pause_status = controller.options[ 'pause_subs_sync' ]
-                
-                controller.options[ 'pause_subs_sync' ] = True
                 
                 try:
                     
-                    if HG.client_controller.subscriptions_manager.SubscriptionsRunning():
+                    try:
                         
-                        job_key = ClientThreading.JobKey()
+                        original_pause_status = controller.options[ 'pause_subs_sync' ]
                         
-                        try:
+                        controller.options[ 'pause_subs_sync' ] = True
+                        
+                        if HG.client_controller.subscriptions_manager.SubscriptionsRunning():
                             
-                            job_key.SetVariable( 'popup_text_1', 'Waiting for subs to finish.' )
-                            
-                            controller.pub( 'message', job_key )
-                            
-                            while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
-                                
-                                time.sleep( 0.1 )
-                                
-                                if HG.view_shutdown:
+                                while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
                                     
-                                    return
+                                    time.sleep( 0.1 )
+                                    
+                                    if HG.view_shutdown:
+                                        
+                                        return
+                                        
                                     
                                 
                             
-                        finally:
-                            
-                            job_key.Delete()
-                            
+                        
+                    finally:
+                        
+                        job_key.Delete()
                         
                     
                     subscriptions = HG.client_controller.subscriptions_manager.GetSubscriptions()
@@ -2806,7 +2823,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     try:
                         
+                        done_job_key = ClientThreading.JobKey()
+                        
                         ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status )
+                        
+                        done_job_key.SetVariable( 'popup_text_1', 'Saving subscription changes.' )
+                        
+                        controller.pub( 'message', done_job_key )
                         
                         HG.client_controller.WriteSynchronous(
                         'serialisable_atomic',
@@ -2824,6 +2847,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     except HydrusExceptions.CancelledException:
                         
                         HG.client_controller.subscriptions_manager.Wake()
+                        
+                    finally:
+                        
+                        done_job_key.Delete()
                         
                     
                 finally:
@@ -5437,11 +5464,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ImportFiles( paths )
         
     
-    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page ):
+    def ImportURLFromAPI( self, url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page ):
         
         try:
             
-            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page )
+            ( normalised_url, result_text ) = self._ImportURL( url, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page )
             
             return ( normalised_url, result_text )
             
@@ -5504,9 +5531,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._canvas_frames = [ frame for frame in self._canvas_frames if QP.isValid( frame ) ]
         
     
-    def NewPageImportHDD( self, paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success ):
+    def NewPageImportHDD( self, paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
         
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         

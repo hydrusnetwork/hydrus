@@ -219,23 +219,23 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
 def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
-    first_second_lines = GetFFMPEGInfoLines( path, count_frames_manually = True, only_first_second = True )
+    lines_for_first_second = GetFFMPEGInfoLines( path, count_frames_manually = True, only_first_second = True )
     
-    ( has_video, video_format ) = ParseFFMPEGVideoFormat( first_second_lines )
+    ( has_video, video_format ) = ParseFFMPEGVideoFormat( lines_for_first_second )
     
     if not has_video:
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'File did not appear to have a video stream!' )
         
     
-    resolution = ParseFFMPEGVideoResolution( first_second_lines )
+    resolution = ParseFFMPEGVideoResolution( lines_for_first_second )
     
-    ( file_duration_in_s, stream_duration_in_s ) = ParseFFMPEGDuration( first_second_lines )
+    ( file_duration_in_s, stream_duration_in_s ) = ParseFFMPEGDuration( lines_for_first_second )
     
     # this will have to be fixed when I add audio, and dynamically accounted for on dual vid/audio rendering
     duration = stream_duration_in_s
     
-    ( fps, confident_fps ) = ParseFFMPEGFPS( first_second_lines )
+    ( fps, confident_fps ) = ParseFFMPEGFPS( lines_for_first_second )
     
     if duration is None and not confident_fps:
         
@@ -252,15 +252,13 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         
         force_count_frames_manually = True
         
-        num_frames_inferrence_likely_odd = True # i.e. inferrence not possible!
-        
     else:
         
         num_frames_estimate = int( duration * fps )
         
         # if file is big or long, don't try to force a manual count when one not explicitly asked for
         # we don't care about a dropped frame on a 10min vid tbh
-        num_frames_seems_ok_to_count = num_frames_estimate < 2400
+        num_frames_seems_ok_to_count = duration < 15 or num_frames_estimate < 2400
         file_is_ok_size = os.path.getsize( path ) < 128 * 1024 * 1024
         
         if num_frames_seems_ok_to_count and file_is_ok_size:
@@ -471,11 +469,11 @@ def ParseFFMPEGDuration( lines ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading duration!' )
         
     
-def ParseFFMPEGFPS( first_second_lines ):
+def ParseFFMPEGFPS( lines_for_first_second ):
     
     try:
         
-        line = ParseFFMPEGVideoLine( first_second_lines )
+        line = ParseFFMPEGVideoLine( lines_for_first_second )
         
         # get the frame rate
         
@@ -511,7 +509,7 @@ def ParseFFMPEGFPS( first_second_lines ):
                 
             
         
-        num_frames_in_first_second = ParseFFMPEGNumFramesManually( first_second_lines )
+        num_frames_in_first_second = ParseFFMPEGNumFramesManually( lines_for_first_second )
         
         confident = len( possible_results ) <= 1
         
@@ -524,7 +522,7 @@ def ParseFFMPEGFPS( first_second_lines ):
             
             # in some cases, fps is 0.77 and tbr is incorrectly 20. extreme values cause bad results. let's default to slowest, but test our actual first second for most legit-looking
             
-            sensible_first_second = num_frames_in_first_second > 1
+            sensible_first_second = 1 <= num_frames_in_first_second <= 288
             
             fps = min( possible_results )
             

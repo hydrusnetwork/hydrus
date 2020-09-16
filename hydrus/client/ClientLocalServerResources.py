@@ -1240,17 +1240,33 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
             raise HydrusExceptions.BadRequestException( 'Given URL was empty!' )
             
         
-        service_keys_to_tags = None
+        filterable_tags = set()
         
-        if 'service_names_to_tags' in request.parsed_request_args:
-            
-            service_keys_to_tags = ClientTags.ServiceKeysToTags()
+        if 'filterable_tags' in request.parsed_request_args:
             
             request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
             
-            service_names_to_tags = request.parsed_request_args.GetValue( 'service_names_to_tags', dict )
+            filterable_tags = request.parsed_request_args.GetValue( 'filterable_tags', list )
             
-            for ( service_name, tags ) in service_names_to_tags.items():
+            filterable_tags = HydrusTags.CleanTags( filterable_tags )
+            
+        
+        additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
+        
+        if 'service_names_to_tags' in request.parsed_request_args or 'service_names_to_additional_tags' in request.parsed_request_args:
+            
+            request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
+            
+            if 'service_names_to_tags' in request.parsed_request_args:
+                
+                service_names_to_additional_tags = request.parsed_request_args.GetValue( 'service_names_to_tags', dict )
+                
+            else:
+                
+                service_names_to_additional_tags = request.parsed_request_args.GetValue( 'service_names_to_additional_tags', dict )
+                
+            
+            for ( service_name, tags ) in service_names_to_additional_tags.items():
                 
                 try:
                     
@@ -1268,7 +1284,7 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
                     continue
                     
                 
-                service_keys_to_tags[ service_key ] = tags
+                additional_service_keys_to_tags[ service_key ] = tags
                 
             
         
@@ -1290,7 +1306,7 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         def do_it():
             
-            return HG.client_controller.gui.ImportURLFromAPI( url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page )
+            return HG.client_controller.gui.ImportURLFromAPI( url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page )
             
         
         try:

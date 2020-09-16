@@ -18,6 +18,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -37,7 +38,7 @@ from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing import ClientImportSubscriptionLegacy # keep this here so the serialisable stuff is registered, it has to be imported somewhere
 
-def AsyncGetQueryHeadersQualityInfo( win: QW.QWidget, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call ):
+def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
     
     data = []
     
@@ -86,16 +87,9 @@ def AsyncGetQueryHeadersQualityInfo( win: QW.QWidget, query_headers: typing.Iter
         data.append( ( query_header.GetHumanName(), num_inbox, num_archived, num_deleted ) )
         
     
-    try:
-        
-        HG.client_controller.CallBlockingToQt( win, call, data )
-        
-    except HydrusExceptions.QtDeadWindowException:
-        
-        pass
-        
+    return data
     
-def AsyncGetQueryLogContainers( win: QW.QWidget, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], receiving_call, action_call ):
+def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
     
     query_log_containers = []
     
@@ -105,22 +99,22 @@ def AsyncGetQueryLogContainers( win: QW.QWidget, query_headers: typing.Iterable[
             
             query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
             
-        except HydrusExceptions.DataMissing:
+        except HydrusExceptions.DBException as e:
             
-            continue
+            if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                
+                continue
+                
+            else:
+                
+                raise
+                
             
         
         query_log_containers.append( query_log_container )
         
     
-    try:
-        
-        HG.client_controller.CallBlockingToQt( win, receiving_call, query_log_containers, action_call )
-        
-    except HydrusExceptions.QtDeadWindowException:
-        
-        pass
-        
+    return query_log_containers
     
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -360,18 +354,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _CATCHQueryLogContainers( self, query_log_containers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ], action_call: HydrusData.Call ):
-        
-        self.setEnabled( True )
-        
-        for query_log_container in query_log_containers:
-            
-            self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
-            
-        
-        action_call()
-        
-    
     def _CheckerOptionsUpdated( self, checker_options ):
         
         checker_options = self._checker_options.GetValue()
@@ -531,7 +513,30 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self.setEnabled( False )
             
-            HG.client_controller.CallToThread( AsyncGetQueryLogContainers, self, query_headers, self._CATCHQueryLogContainers, call )
+            def work_callable():
+                
+                result = GetQueryLogContainers( missing_query_headers )
+                
+                return result
+                
+            
+            def publish_callable( result ):
+                
+                query_log_containers = result
+                
+                for query_log_container in query_log_containers:
+                    
+                    self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
+                    
+                
+                self.setEnabled( True )
+                
+                call()
+                
+            
+            async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+            
+            async_call.start()
             
         else:
             
@@ -620,12 +625,26 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query_headers = self._query_headers.GetData( only_selected = True )
         
-        HG.client_controller.CallToThread( AsyncGetQueryHeadersQualityInfo, self, query_headers, self._CopyQualityInfo )
+        def work_callable():
+            
+            result = GetQueryHeadersQualityInfo( query_headers )
+            
+            return result
+            
+        
+        def publish_callable( result ):
+            
+            self.setEnabled( True )
+            
+            self._CopyQualityInfo( result )
+            
+        
+        async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_call.start()
         
     
     def _CopyQualityInfo( self, data ):
-        
-        self.setEnabled( True )
         
         data_strings = []
         
@@ -656,12 +675,26 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query_headers = self._query_headers.GetData( only_selected = True )
         
-        HG.client_controller.CallToThread( AsyncGetQueryHeadersQualityInfo, self, query_headers, self._ShowQualityInfo )
+        def work_callable():
+            
+            result = GetQueryHeadersQualityInfo( query_headers )
+            
+            return result
+            
+        
+        def publish_callable( result ):
+            
+            self.setEnabled( True )
+            
+            self._ShowQualityInfo( result )
+            
+        
+        async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_call.start()
         
     
     def _ShowQualityInfo( self, data ):
-        
-        self.setEnabled( True )
         
         data_strings = []
         
@@ -995,6 +1028,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def GetValue( self ) -> ClientImportSubscriptions.Subscription:
+        
+        if not self.isEnabled():
+            
+            raise HydrusExceptions.VetoException( 'It looks like a long-running job is still working. Please wait for it to finish before applying this dialog.' )
+            
         
         name = self._name.text()
         
@@ -1396,18 +1434,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
-    def _CATCHQueryLogContainers( self, query_log_containers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ], action_call: HydrusData.Call ):
-        
-        self.setEnabled( True )
-        
-        for query_log_container in query_log_containers:
-            
-            self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
-            
-        
-        action_call()
-        
-    
     def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
         
         ( name, gug_key_and_name, query_headers, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
@@ -1566,7 +1592,30 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self.setEnabled( False )
             
-            HG.client_controller.CallToThread( AsyncGetQueryLogContainers, self, query_headers, self._CATCHQueryLogContainers, call )
+            def work_callable():
+                
+                result = GetQueryLogContainers( missing_query_headers )
+                
+                return result
+                
+            
+            def publish_callable( result ):
+                
+                query_log_containers = result
+                
+                for query_log_container in query_log_containers:
+                    
+                    self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
+                    
+                
+                self.setEnabled( True )
+                
+                call()
+                
+            
+            async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+            
+            async_call.start()
             
         else:
             
@@ -1616,7 +1665,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             done_call = lambda: done.set()
             
-            HG.client_controller.CallToThread( AsyncGetQueryLogContainers, self, missing_query_headers, self._CATCHQueryLogContainers, done_call )
+            self._DoAsyncGetQueryLogContainers( missing_query_headers, done_call )
             
             while True:
                 
@@ -2245,6 +2294,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def GetValue( self ) -> typing.List[ ClientImportSubscriptions.Subscription ]:
+        
+        if not self.isEnabled():
+            
+            raise HydrusExceptions.VetoException( 'It looks like a long-running job is still working. Please wait for it to finish before applying this dialog.' )
+            
         
         subscriptions = self._subscriptions.GetData()
         

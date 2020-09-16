@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 412</h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>added Hydrus Web, https://github.com/floogulinc/hydrus-web, to the Client API page. It allows you to access your client from any web browser</li>
+					<li>added Anime Boxes, https://www.animebox.es/, to the Client API page. This booru-browsing application can now browse hydrus!</li>
+					<li>the /add_urls/add_url command's 'service_names_to_tags' parameter now correctly acts like 'additional' tags, and is no longer filtered by any tag import options that may apply. that old name still works, but the more specific synonym 'service_names_to_additional_tags' is now supported and recommended (issue #456)</li>
+					<li>the /add_urls/add_url command now takes a 'filterable_tags' parameter, which will be merged with any parsed tags and will be filtered in the same per-service way according to the current tag import options.</li>
+					<li>the client api help is updated to talk about this, and the client api version is now 14</li>
+					<li>updated client api help to talk about http/https</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the 407->408 update step now opens a yes/no dialog before it happens to talk about the big amount of CPU and HDD work coming up. it offers the previous 'full' version that takes all the work, and a 'lite' version that applies no siblings and is much cheaper. if you have been waiting on a PTR-syncing HDD client, this should let you update in significantly less time. there is still some copy work in lite mode, but it should not be such a killer</li>
+					<li>the 'manage where tag siblings apply' dialog now has big red warning text talking about the current large CPU/HDD involved in very big changes</li>
+					<li>a bunch of file-location loading and searching across the program has the opportunity to run very slightly faster, particularly on large systems. update will take a few seconds to make these new indices</li>
+					<li>namespace and subtag tag searches and other cross-references now have the opportunity to run faster. update will take another couple of minutes to drop and remake new indices</li>
+					<li>gave tag and wildcard search a complete pass, fixing and bettering my recent optimisations, and compressing the core tag search optimisation code to one location. thank you for the feedback everyone, and sorry for the recent trouble as we have migrated to the new sibling and optimisation systems</li>
+					<li>gave untagged/has_tags/has_count searches a similar pass, mostly fixing up namespace filtering</li>
+					<li>gave the new siblings code a similar pass, ensuring a couple of fetches always run the fast way</li>
+					<li>gave url search and fetch code a similar pass, accounting better for domain cross-referencing and file cross-referencing</li>
+					<li>fixed a typo bug when approving/denying repository file and mapping petitions</li>
+					<li>fixed a bug when right-clicking a selection of multiple tags that shares a single subtag (e.g. 'samus aran' and 'character:samus aran')</li>
+					<li>thanks to some nice examples of unusual videos that were reported as 1,000fps, I improved my fallback ffmpeg metadata parsing to deal with weird situations more cleverly. some ~1,000fps files now reparse correctly to sensible values, but some either really produce 1000 updates a second due to malformation or bad creation, or are just handled that way due to a bug in ffmpeg that we will have to wait for a fix for</li>
+					<li>the hydrus jpeg mime type is now the correct image/jpeg, not image/jpg, thanks to users for noticing this (issue #646)</li>
+					<li>searching for similar files now requires up to 10,000x less sqlite query initiation overhead for large queries. the replacement system has overhead of its own, but it should be faster overall</li>
+					<li>improved error handling when a database cannot connect due to file system issues</li>
+					<li>the edit subscription(s) panels should be better about disabling the ui while heavy jobs, like large subscription resets, are running</li>
+					<li>the edit subscription(s) panels now do not allow an 'apply' if a big job is currently disabling the ui</li>
+					<li>cancelling a manage subscriptions call when missing query logs were detected no longer causes a little error</li>
+					<li>if a long-running asynchronous subscription job lasts beyond its parent's life, it now handles errors better</li>
+					<li>.</li>
+					<li>boring details:</li>
+					<li>improved a pre-optimisation decision tool for tag search that consults the autocomplete cache for expected end counts in order to make a better decision. it now handles subtag searches and multiple namespace/subtag searches such as for wildcards</li>
+					<li>wrote fast tag lookup tools for subtag and multiple namespace/subtag</li>
+					<li>fixed some bad simple tag search optimisation code, which was doing things in the wrong order!</li>
+					<li>optimised simple tag search optimisations when doing subtag searches</li>
+					<li>polished simple tag search code a bit more</li>
+					<li>added brief comments to all the new cross joins to reinforce their intention</li>
+					<li>greatly simplified the multiple namespace/subtag search used by wildcards</li>
+					<li>fixed and extended tag unit tests for blacklist, filterable, additional, service application, overwrite deleted filterable, and overwrite deleted additional</li>
+					<li>added a unit test for tag whitelist</li>
+					<li>extended the whole 'external tags' pipeline to discriminate between filterable and additional external tags, and cleaned up several parts of the related code</li>
+					<li>moved the edit subscription panel asynchronous info fetch code to my new async job object</li>
+					<li>cleaned up one last ugly 'fetch query log containers' async call in edit subscriptions panel</li>
+					<li>moved the edit subscription(s) panels asynchronous log container code to my new async job object</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 411</h3></li>
 				<ul>
 					<li>misc:</li>

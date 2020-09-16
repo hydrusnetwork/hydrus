@@ -2278,13 +2278,10 @@ class ListBoxTags( ListBox ):
                 
                 if len( selected_copyable_subtag_strings ) == 1:
                     
-                    ( selection_string, ) = selected_copyable_tag_strings 
-                    
-                    ( namespace, subtag ) = HydrusTags.SplitTag( selection_string )
-                    
-                    if namespace != '':
+                    # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
+                    if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
                         
-                        sub_selection_string = subtag
+                        ( sub_selection_string, ) = selected_copyable_subtag_strings
                         
                         ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
                         

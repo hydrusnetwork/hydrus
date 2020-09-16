@@ -251,11 +251,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
                 
-            except HydrusExceptions.DBException:
+            except HydrusExceptions.DBException as e:
                 
-                self._DealWithMissingQueryLogContainerError( query_header )
-                
-                break
+                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                    
+                    self._DealWithMissingQueryLogContainerError( query_header )
+                    
+                    break
+                    
+                else:
+                    
+                    raise
+                    
                 
             
             try:
@@ -595,11 +602,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
                 
-            except HydrusExceptions.DBException:
+            except HydrusExceptions.DBException as e:
                 
-                self._DealWithMissingQueryLogContainerError( query_header )
-                
-                break
+                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                    
+                    self._DealWithMissingQueryLogContainerError( query_header )
+                    
+                    break
+                    
+                else:
+                    
+                    raise
+                    
                 
             
             try:
@@ -963,11 +977,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
                 
-            except HydrusExceptions.DBException:
+            except HydrusExceptions.DBException as e:
                 
-                self._DealWithMissingQueryLogContainerError( query_header )
-                
-                break
+                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                    
+                    self._DealWithMissingQueryLogContainerError( query_header )
+                    
+                    break
+                    
+                else:
+                    
+                    raise
+                    
                 
             
             query_header.SyncToQueryLogContainer( self._checker_options, query_log_container )

@@ -27,7 +27,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Local File Import'
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, paths = None, file_import_options = None, paths_to_service_keys_to_tags = None, delete_after_success = None ):
+    def __init__( self, paths = None, file_import_options = None, paths_to_additional_service_keys_to_tags = None, delete_after_success = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -56,9 +56,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     pass
                     
                 
-                if path in paths_to_service_keys_to_tags:
+                if path in paths_to_additional_service_keys_to_tags:
                     
-                    file_seed.SetFixedServiceKeysToTags( paths_to_service_keys_to_tags[ path ] )
+                    file_seed.SetExternalAdditionalServiceKeysToTags( paths_to_additional_service_keys_to_tags[ path ] )
                     
                 
                 file_seeds.append( file_seed )
@@ -104,15 +104,15 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
             
-            paths_to_service_keys_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in serialisable_paths_to_tags.items() }
+            paths_to_additional_service_keys_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in serialisable_paths_to_tags.items() }
             
             for file_seed in file_seed_cache.GetFileSeeds():
                 
                 path = file_seed.file_seed_data
                 
-                if path in paths_to_service_keys_to_tags:
+                if path in paths_to_additional_service_keys_to_tags:
                     
-                    file_seed.SetFixedServiceKeysToTags( paths_to_service_keys_to_tags[ path ] )
+                    file_seed.SetExternalAdditionalServiceKeysToTags( paths_to_additional_service_keys_to_tags[ path ] )
                     
                 
             

@@ -125,11 +125,11 @@ def CreateManagementControllerImportSimpleDownloader():
     
     return management_controller
     
-def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success ):
+def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success ):
     
     management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
-    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_service_keys_to_tags = paths_to_service_keys_to_tags, delete_after_success = delete_after_success )
+    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_additional_service_keys_to_tags = paths_to_additional_service_keys_to_tags, delete_after_success = delete_after_success )
     
     management_controller.SetVariable( 'hdd_import', hdd_import )
     
@@ -294,9 +294,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
                 file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
                 
-                paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in list(paths_to_tags.items()) }
+                paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in additional_service_keys_to_tags } for ( path, additional_service_keys_to_tags ) in paths_to_tags.items() }
                 
-                hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_service_keys_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_additional_service_keys_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                 
                 serialisable_serialisables[ 'hdd_import' ] = hdd_import.GetSerialisableTuple()
                 
@@ -2517,18 +2517,23 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
         
     
-    def _AddURLs( self, urls, service_keys_to_tags = None ):
+    def _AddURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
         
-        if service_keys_to_tags is None:
+        if filterable_tags is None:
             
-            service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            filterable_tags = set()
+            
+        
+        if additional_service_keys_to_tags is None:
+            
+            additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
         first_result = None
         
         for url in urls:
             
-            result = self._multiple_watcher_import.AddURL( url, service_keys_to_tags )
+            result = self._multiple_watcher_import.AddURL( url, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
             
             if result is not None and first_result is None:
                 
@@ -3206,14 +3211,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
-    def PendURL( self, url, service_keys_to_tags = None ):
+    def PendURL( self, url, filterable_tags = None, additional_service_keys_to_tags = None ):
         
-        if service_keys_to_tags is None:
+        if filterable_tags is None:
             
-            service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            filterable_tags = set()
             
         
-        self._AddURLs( ( url, ), service_keys_to_tags )
+        if additional_service_keys_to_tags is None:
+            
+            additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            
+        
+        self._AddURLs( ( url, ), filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
         
     
     def SetSearchFocus( self ):
@@ -3753,16 +3763,21 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
     
-    def _PendURLs( self, urls, service_keys_to_tags = None ):
+    def _PendURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
         
-        if service_keys_to_tags is None:
+        if filterable_tags is None:
             
-            service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            filterable_tags = set()
+            
+        
+        if additional_service_keys_to_tags is None:
+            
+            additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
         urls = [ url for url in urls if url.startswith( 'http' ) ]
         
-        self._urls_import.PendURLs( urls, service_keys_to_tags )
+        self._urls_import.PendURLs( urls, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
         
         self._UpdateImportStatus()
         
@@ -3802,14 +3817,19 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
     
-    def PendURL( self, url, service_keys_to_tags = None ):
+    def PendURL( self, url, filterable_tags = None, additional_service_keys_to_tags = None ):
         
-        if service_keys_to_tags is None:
+        if filterable_tags is None:
             
-            service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            filterable_tags = set()
             
         
-        self._PendURLs( ( url, ), service_keys_to_tags )
+        if additional_service_keys_to_tags is None:
+            
+            additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            
+        
+        self._PendURLs( ( url, ), filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
         
     
     def SetSearchFocus( self ):

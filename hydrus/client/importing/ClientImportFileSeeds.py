@@ -303,7 +303,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
     SERIALISABLE_NAME = 'File Import'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, file_seed_type: int = None, file_seed_data: str = None ):
         
@@ -330,7 +330,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self._referral_url = None
         
-        self._fixed_service_keys_to_tags = ClientTags.ServiceKeysToTags()
+        self._external_filterable_tags = set()
+        self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
         self._urls = set()
         self._tags = set()
@@ -368,20 +369,22 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_fixed_service_keys_to_tags = self._fixed_service_keys_to_tags.GetSerialisableTuple()
+        serialisable_external_filterable_tags = list( self._external_filterable_tags )
+        serialisable_external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags.GetSerialisableTuple()
         
         serialisable_urls = list( self._urls )
         serialisable_tags = list( self._tags )
         serialisable_hashes = [ ( hash_type, hash.hex() ) for ( hash_type, hash ) in list(self._hashes.items()) if hash is not None ]
         
-        return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_fixed_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
+        return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_fixed_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
+        ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
         
-        self._fixed_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_fixed_service_keys_to_tags )
+        self._external_filterable_tags = set( serialisable_external_filterable_tags )
+        self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
         
         self._urls = set( serialisable_urls )
         self._tags = set( serialisable_tags )
@@ -463,13 +466,26 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_urls, serialisable_tags, serialisable_hashes ) = old_serialisable_info
             
-            fixed_service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
-            serialisable_fixed_service_keys_to_tags = fixed_service_keys_to_tags.GetSerialisableTuple()
+            serialisable_external_additional_service_keys_to_tags = external_additional_service_keys_to_tags.GetSerialisableTuple()
             
-            new_serialisable_info = ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_fixed_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
+            new_serialisable_info = ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes ) = old_serialisable_info
+            
+            external_filterable_tags = set()
+            
+            serialisable_external_filterable_tags = list( external_filterable_tags )
+            
+            new_serialisable_info = ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
+            
+            return ( 4, new_serialisable_info )
             
         
     
@@ -988,9 +1004,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetFixedServiceKeysToTags( self, service_keys_to_tags ):
+    def SetExternalAdditionalServiceKeysToTags( self, service_keys_to_tags ):
         
-        self._fixed_service_keys_to_tags = ClientTags.ServiceKeysToTags( service_keys_to_tags )
+        self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( service_keys_to_tags )
+        
+    
+    def SetExternalFilterableTags( self, tags ):
+        
+        self._external_filterable_tags = set( tags )
         
     
     def SetHash( self, hash ):
@@ -1195,7 +1216,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         for file_seed in file_seeds:
                             
-                            file_seed._fixed_service_keys_to_tags = self._fixed_service_keys_to_tags.Duplicate()
+                            file_seed.SetExternalFilterableTags( self._external_filterable_tags )
+                            file_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
                             
                             file_seed._urls.update( self._urls )
                             file_seed._tags.update( self._tags )
@@ -1428,7 +1450,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if tag_import_options is None:
             
-            for ( service_key, content_updates ) in ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( ( hash, ), self._fixed_service_keys_to_tags ).items():
+            for ( service_key, content_updates ) in ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( ( hash, ), self._external_additional_service_keys_to_tags ).items():
                 
                 service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
@@ -1439,7 +1461,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             media_result = HG.client_controller.Read( 'media_result', hash )
             
-            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, media_result, set( self._tags ), external_service_keys_to_tags = self._fixed_service_keys_to_tags ).items():
+            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, media_result, set( self._tags ), external_filterable_tags = self._external_filterable_tags, external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags ).items():
                 
                 service_keys_to_content_updates[ service_key ].extend( content_updates )
                 

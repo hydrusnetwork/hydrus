@@ -1687,6 +1687,11 @@ class ContentUpdate( object ):
             
         
     
+    def GetRow( self ):
+        
+        return self._row
+        
+    
     def GetWeight( self ):
         
         return len( self.GetHashes() )

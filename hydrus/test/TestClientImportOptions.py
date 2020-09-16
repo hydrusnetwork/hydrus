@@ -605,15 +605,9 @@ class TestTagImportOptions( unittest.TestCase ):
         self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), True )
         
     
-    def test_filter( self ):
+    def test_blacklist( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
-        example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
-        
-        media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
-        
-        #
         
         tag_blacklist = ClientTags.TagFilter()
         
@@ -623,26 +617,46 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_import_options = ClientImportOptions.TagImportOptions( tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
-        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
+        with self.assertRaises( HydrusExceptions.VetoException ):
+            
+            tag_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
+            
         
-        self.assertIn( example_service_key, result )
+        with self.assertRaises( HydrusExceptions.VetoException ):
+            
+            tag_import_options.CheckTagsVeto( { 'bodysuit' }, { 'series:metroid' } )
+            
         
-        self.assertEqual( len( result ), 1 )
-        
-        content_updates = result[ example_service_key ]
-        
-        filtered_tags = { 'bodysuit', 'character:samus aran' }
-        
-        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        tag_import_options.CheckTagsVeto( { 'bodysuit' }, set() )
         
     
-    def test_external_additional_tags( self ):
+    def test_whitelist( self ):
         
-        some_tags = {}
+        example_service_key = HG.test_controller.example_tag_repo_service_key
+        
+        tag_whitelist = [ 'bodysuit' ]
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        with self.assertRaises( HydrusExceptions.VetoException ):
+            
+            tag_import_options.CheckTagsVeto( { 'series:metroid' }, set() )
+            
+        
+        tag_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
+        tag_import_options.CheckTagsVeto( { 'series:metroid' }, { 'bodysuit' } )
+        
+    
+    def test_external_tags( self ):
+        
+        some_tags = set()
         example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
         
-        external_service_keys_to_tags = { example_service_key : { 'bodysuit', 'character:samus aran', 'series:metroid' } }
+        external_filterable_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        external_additional_service_keys_to_tags = { example_service_key : { 'series:evangelion' } }
         
         media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
         
@@ -652,7 +666,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
-        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_service_keys_to_tags = external_service_keys_to_tags )
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_filterable_tags = external_filterable_tags, external_additional_service_keys_to_tags = external_additional_service_keys_to_tags )
         
         self.assertIn( example_service_key, result )
         
@@ -660,9 +674,33 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = result[ example_service_key ]
         
-        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid', 'series:evangelion' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
-        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        self.assertEqual( result_tags, filtered_tags )
+        
+        #
+        
+        get_tags_filter = ClientTags.TagFilter()
+        
+        get_tags_filter.SetRule( 'series:', CC.FILTER_BLACKLIST )
+        
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = get_tags_filter ) }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_filterable_tags = external_filterable_tags, external_additional_service_keys_to_tags = external_additional_service_keys_to_tags )
+        
+        self.assertIn( example_service_key, result )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        content_updates = result[ example_service_key ]
+        
+        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:evangelion' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates }
+        
+        self.assertEqual( result_tags, filtered_tags )
         
     
     def test_services( self ):
@@ -688,14 +726,15 @@ class TestTagImportOptions( unittest.TestCase ):
         self.assertIn( example_service_key_1, result )
         self.assertNotIn( example_service_key_2, result )
         
-        self.assertTrue( len( result ), 2 )
+        self.assertTrue( len( result ) == 1 )
         
         content_updates_1 = result[ example_service_key_1 ]
         
-        self.assertEqual( len( content_updates_1 ), 3 )
+        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:evangelion' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates_1 }
         
     
-    def test_overwrite_deleted_regular( self ):
+    def test_overwrite_deleted_filterable( self ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
@@ -718,8 +757,9 @@ class TestTagImportOptions( unittest.TestCase ):
         content_updates = result[ example_service_key ]
         
         filtered_tags = { 'character:samus aran' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
-        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        self.assertEqual( result_tags, filtered_tags )
         
         #
         
@@ -736,27 +776,26 @@ class TestTagImportOptions( unittest.TestCase ):
         content_updates = result[ example_service_key ]
         
         filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
-        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        self.assertEqual( result_tags, filtered_tags )
         
     
-    def test_overwrite_deleted_external_additional_tags( self ):
+    def test_overwrite_deleted_additional( self ):
         
-        some_tags = {}
+        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HG.test_controller.example_tag_repo_service_key
-        
-        external_service_keys_to_tags = { example_service_key : { 'bodysuit', 'character:samus aran', 'series:metroid' } }
         
         media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = some_tags ) }
         
         tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
-        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_service_keys_to_tags = external_service_keys_to_tags )
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
         self.assertIn( example_service_key, result )
         
@@ -765,16 +804,17 @@ class TestTagImportOptions( unittest.TestCase ):
         content_updates = result[ example_service_key ]
         
         filtered_tags = { 'character:samus aran' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
-        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        self.assertEqual( result_tags, filtered_tags )
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True, additional_tags = some_tags ) }
         
         tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
-        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_service_keys_to_tags = external_service_keys_to_tags )
+        result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
         self.assertIn( example_service_key, result )
         
@@ -783,8 +823,9 @@ class TestTagImportOptions( unittest.TestCase ):
         content_updates = result[ example_service_key ]
         
         filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
-        self.assertTrue( len( content_updates ), len( filtered_tags ) )
+        self.assertEqual( result_tags, filtered_tags )
         
     
 class TestServiceTagImportOptions( unittest.TestCase ):

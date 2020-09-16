@@ -11,19 +11,25 @@
 			<p>By default, the Client API is not turned on. Go to <i>services->manage services</i> and give it a port to get it started. I recommend you not allow non-local connections (i.e. only requests from the same computer will work) to start with.</p>
 			<p>The Client API should start immediately. It will only be active while the client is open. To test it is running all correct (and assuming you used the default port of 45869), try loading this:</p>
 			<a href="http://127.0.0.1:45869"><pre>http://127.0.0.1:45869</pre></a>
-			<p>You should get a welcome page. For now, the Client API is http only.</p>
-			<p>Then go to its entry in <i>services->review services</i>. Each external program trying to access the API will need its own access key, which is the familiar 64-character hexadecimal used in many places in hydrus. You can enter the details manually from the review services panel and then copy/paste the key to your external program, or you can have the program request its own access while a mini-dialog launched from the review services panel waits to catch the request.</p>
-			<h3>Support created by hydrus users:</h3>
+			<p>You should get a welcome page. By default, the Client API is HTTP, which means it is ok for communication on the same computer or across your home network (e.g. your computer's web browser talking to your computer's hydrus), but not secure for transmission across the internet (e.g. your phone to your home computer). You can turn on HTTPS, but due to technical complexities it will give itself a self-signed 'certificate', so the security is good but imperfect, and whatever is talking to it (e.g. your web browser looking at <a href="https://127.0.0.1:45869">https://127.0.0.1:45869</a>) may need to add an exception.</p>
+			<p>The Client API is still experimental and sometimes not user friendly. If you want to talk to your home computer across the internet, you will need some networking experience. You'll need a static IP or reverse proxy service or dynamic domain solution like no-ip.org so your device can locate it, and potentially port-forwarding on your router to expose the port. If you have a way of hosting a domain and have a signed certificate (e.g. from <a href="https://letsencrypt.org/">Let's Encrypt</a>), you can overwrite the client.crt and client.key files in your 'db' directory and HTTPS hydrus should host with those.</p>
+			<p>Once the API is running, go to its entry in <i>services->review services</i>. Each external program trying to access the API will need its own access key, which is the familiar 64-character hexadecimal used in many places in hydrus. You can enter the details manually from the review services panel and then copy/paste the key to your external program, or the program may have the ability to request its own access while a mini-dialog launched from the review services panel waits to catch the request.</p>
+			<h3>Browsers and tools created by hydrus users:</h3>
 			<ul>
-				<li><a href="https://gitgud.io/prkc/hydrus-companion">https://gitgud.io/prkc/hydrus-companion</a> - Hydrus Companion, a browser extension for hydrus.</li>
-				<li><a href="https://gitgud.io/prkc/dolphin-hydrus-actions">https://gitgud.io/prkc/dolphin-hydrus-actions</a> - Adds Hydrus right-click context menu actions to Dolphin file manager.</li>
-				<li><a href="https://gitgud.io/koto/hydrus-dd">https://gitgud.io/koto/hydrus-dd</a> - DeepDanbooru neural network tagging for Hydrus</li>
+				<li><a href="https://gitgud.io/prkc/hydrus-companion">https://gitgud.io/prkc/hydrus-companion</a> - Hydrus Companion, a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support</li>
+				<li><a href="https://github.com/floogulinc/hydrus-web">https://github.com/floogulinc/hydrus-web</a> - Hydrus Web, a web client for hydrus (allows phone browsing of hydrus)</li>
+				<li><a href="https://www.animebox.es/">https://www.animebox.es/</a> - Anime Boxes now supports adding your client as a Hydrus Server</li>
 				<li><a href="https://gitgud.io/koto/hydrus-archive-delete">https://gitgud.io/koto/hydrus-archive-delete</a> - Archive/Delete filter in your web browser</li>
+				<li><a href="https://gitgud.io/koto/hydrus-dd">https://gitgud.io/koto/hydrus-dd</a> - DeepDanbooru neural network tagging for Hydrus</li>
+				<li><a href="https://gitgud.io/prkc/dolphin-hydrus-actions">https://gitgud.io/prkc/dolphin-hydrus-actions</a> - Adds Hydrus right-click context menu actions to Dolphin file manager.</li>
+			</ul>
+			<h3>Library modules created by hydrus users:</h3>
+			<ul>
 				<li><a href="https://gitlab.com/cryzed/hydrus-api">https://gitlab.com/cryzed/hydrus-api</a> - A python module that talks to the API.</li>
 				<li><a href="https://github.com/cravxx/hydrus.js">https://github.com/cravxx/hydrus.js</a> - A node.js module that talks to the API.</li>
 			</ul>
 			<h3>API</h3>
-			<p>If the API returns anything but actual files on 200, it should always return JSON. On 4XX and 5XX, assume it will return plain text, sometimes a raw traceback. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.</p>
+			<p>On 200 OK, the API returns JSON for everything except actual file/thumbnail requests. On 4XX and 5XX, assume it will return plain text, sometimes a raw traceback. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.</p>
 			<h3>Access and permissions</h3>
 			<p>The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.</p>
 			<p>Access is required for every request. You can provide this as an http header, like so:</p>
@@ -458,23 +464,63 @@
 							<li>destination_page_key : (optional page identifier for the page to receive the url)</li>
 							<li>destination_page_name : (optional page name to receive the url)</li>
 							<li>show_destination_page : (optional, defaulting to false, controls whether the UI will change pages on add)</li>
-							<li>service_names_to_tags : (optional tags to give to any files imported from this url)</li>
+							<li>service_names_to_additional_tags : (optional tags to give to any files imported from this url)</li>
+							<li>filterable_tags : (optional tags to be filtered by any tag import options that applies to the URL)</li>
+							<li><i>service_names_to_tags : (obsolete, legacy synonym for service_names_to_additional_tags)</i></li>
 						</ul>
 					</li>
 					<p>If you specify a destination_page_name and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.</p>
 					<p>Alternately, destination_page_key defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the <a href="#manage_pages_get_pages">/manage_pages/get_pages</a> call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.</p> 
 					<p>show_destination_page defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.</p>
-					<p>The service_names_to_tags uses the same system as for /add_tags/add_tags. You will need 'add tags' permission, or this will 403.</p>
+					<p>service_names_to_additional_tags uses the same data structure as for /add_tags/add_tags. You will need 'add tags' permission, or this will 403. These tags work exactly as 'additional' tags work in a <i>tag import options</i>. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.</p>
+					<p>filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a <i>tag import options</i>, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.</p>
 					<li>
-						<p>Example request body:</p>
+						<p>Example request bodies:</p>
 						<ul>
 							<li>
 <pre>{
 	"url" : "https://8ch.net/tv/res/1846574.html",
 	"destination_page_name" : "kino zone",
-	"service_names_to_tags" : {
+	"service_names_to_additional_tags" : {
 		"my tags" : [ "as seen on /tv/" ]
 	}
+}</pre>
+							</li>
+							<li>
+<pre>{
+	"url" : "https://safebooru.org/index.php?page=post&s=view&id=3195917"
+	"filterable_tags" : [
+		"1girl",
+		"artist name",
+		"creator:azto dio",
+		"blonde hair",
+		"blue eyes",
+		"breasts",
+		"character name",
+		"commentary",
+		"english commentary",
+		"formal",
+		"full body",
+		"glasses",
+		"gloves",
+		"hair between eyes",
+		"high heels",
+		"highres",
+		"large breasts",
+		"long hair",
+		"long sleeves",
+		"looking at viewer",
+		"series:metroid",
+		"mole",
+		"mole under mouth",
+		"patreon username",
+		"ponytail",
+		"character:samus aran",
+		"solo",
+		"standing",
+		"suit",
+		"watermark"
+	]
 }</pre>
 							</li>
 						</ul>

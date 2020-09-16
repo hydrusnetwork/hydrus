@@ -2942,14 +2942,14 @@ class DB( HydrusDB.HydrusDB ):
         
         select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_files_table_name + ' WHERE service_hash_id = ? GROUP BY account_id;'
         
-        count = collections.Counter()
+        counter = collections.Counter()
         
         for ( account_id, count ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ):
             
-            count[ account_id ] += count
+            counter[ account_id ] += count
             
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in count.items() ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in counter.items() ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
@@ -2960,14 +2960,14 @@ class DB( HydrusDB.HydrusDB ):
         
         select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ? GROUP BY account_id;'
         
-        count = collections.Counter()
+        counter = collections.Counter()
         
         for ( account_id, count ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ):
             
-            count[ account_id ] += count
+            counter[ account_id ] += count
             
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in count.items() ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in counter.items() ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         

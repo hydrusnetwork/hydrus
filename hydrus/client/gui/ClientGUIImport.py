@@ -1492,7 +1492,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        paths_to_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
+        paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
         
         for page in self._tag_repositories.GetPages():
             
@@ -1505,11 +1505,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                     continue
                     
                 
-                paths_to_service_keys_to_tags[ path ][ service_key ] = tags
+                paths_to_additional_service_keys_to_tags[ path ][ service_key ] = tags
                 
             
         
-        return paths_to_service_keys_to_tags
+        return paths_to_additional_service_keys_to_tags
         
     
     class _Panel( QW.QWidget ):

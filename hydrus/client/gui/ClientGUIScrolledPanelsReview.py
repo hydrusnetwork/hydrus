@@ -2784,11 +2784,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    paths_to_service_keys_to_tags = panel.GetValue()
+                    paths_to_additional_service_keys_to_tags = panel.GetValue()
                     
                     delete_after_success = self._delete_after_success.isChecked()
                     
-                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
                     
                     self._OKParent()
                     
@@ -2818,11 +2818,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             file_import_options = self._file_import_options.GetValue()
             
-            paths_to_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
+            paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
             
             delete_after_success = self._delete_after_success.isChecked()
             
-            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
             
         
         self._OKParent()
