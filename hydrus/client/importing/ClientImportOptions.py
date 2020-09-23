@@ -1371,13 +1371,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
-        for ( service_key, service_tag_import_options ) in self._service_keys_to_service_tag_import_options.items():
-            
-            service_filterable_tags = set( filterable_tags )
-            
-            service_filterable_tags.update( external_filterable_tags )
-            
-            service_filterable_tags = parents_manager.ExpandTags( service_key, service_filterable_tags )
+        for service_key in HG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES ):
             
             service_additional_tags = set()
             
@@ -1388,11 +1382,24 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             service_additional_tags = parents_manager.ExpandTags( service_key, service_additional_tags )
             
-            service_tags = service_tag_import_options.GetTags( service_key, status, media_result, service_filterable_tags, service_additional_tags )
+            if service_key in self._service_keys_to_service_tag_import_options:
+                
+                service_tag_import_options = self._service_keys_to_service_tag_import_options[ service_key ]
+                
+                service_filterable_tags = set( filterable_tags )
+                
+                service_filterable_tags.update( external_filterable_tags )
+                
+                service_filterable_tags = parents_manager.ExpandTags( service_key, service_filterable_tags )
+                
+                service_tags = service_tag_import_options.GetTags( service_key, status, media_result, service_filterable_tags, service_additional_tags )
+                
+            else:
+                
+                service_tags = service_additional_tags
+                
             
             if len( service_tags ) > 0:
-                
-                service_tags = parents_manager.ExpandTags( service_key, service_tags )
                 
                 service_keys_to_tags[ service_key ] = service_tags
                 

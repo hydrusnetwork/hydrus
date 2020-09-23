@@ -1749,8 +1749,6 @@ class DB( HydrusDB.HydrusDB ):
             
             with HydrusDB.TemporaryIntegerTable( self._c, other_chain_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
                 
-                self._AnalyzeTempTable( temp_tag_ids_table_name )
-                
                 # although this is mickey-mouse, it does work, and real fast
                 # temp hashes to mappings to temp tags
                 other_chain_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {}.hash_id = {}.hash_id );'.format( temp_hash_ids_table_name, mappings_table_name, temp_tag_ids_table_name, mappings_table_name, temp_hash_ids_table_name ) ) )
@@ -1938,11 +1936,11 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.executemany( 'DELETE FROM ' + cache_display_pending_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, ideal_tag_id ) for hash_id in deletable_hash_ids ) )
             
-            num_deleted = self._GetRowCount()
+            num_rescinded = self._GetRowCount()
             
-            if num_deleted > 0:
+            if num_rescinded > 0:
                 
-                self._c.execute( 'UPDATE ' + specific_display_ac_cache_table_name + ' SET pending_count = pending_count - ? WHERE tag_id = ?;', ( num_deleted, ideal_tag_id ) )
+                self._c.execute( 'UPDATE ' + specific_display_ac_cache_table_name + ' SET pending_count = pending_count - ? WHERE tag_id = ?;', ( num_rescinded, ideal_tag_id ) )
                 
                 self._c.execute( 'DELETE FROM ' + specific_display_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ideal_tag_id, 0, 0 ) )
                 
@@ -2455,12 +2453,14 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsLookupGetIdeals( tag_service_id, set( tag_ids ) )
         
-        sibling_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
+        ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
         
-        with HydrusDB.TemporaryIntegerTable( self._c, sibling_tag_ids, 'tag_id' ) as temp_table_name:
+        sibling_tag_ids = set( ideal_tag_ids )
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, ideal_tag_ids, 'ideal_tag_id' ) as temp_table_name:
             
             # temp tags to lookup
-            sibling_tag_ids.update( self._STI( self._c.execute( 'SELECT bad_tag_id FROM {} CROSS JOIN {} ON ( ideal_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) ) )
+            sibling_tag_ids.update( self._STI( self._c.execute( 'SELECT bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) ) )
             
         
         return sibling_tag_ids
@@ -2488,9 +2488,7 @@ class DB( HydrusDB.HydrusDB ):
         with HydrusDB.TemporaryIntegerTable( self._c, ideal_tag_ids, 'ideal_tag_id' ) as temp_table_name:
             
             # temp tags to lookup
-            bads_and_ideals = self._c.execute( 'SELECT bad_tag_id, ideal_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) )
-            
-            ideal_tag_ids_to_chain_members = HydrusData.BuildKeyToSetDict( ( ( ideal_tag_id, bad_tag_id ) for ( bad_tag_id, ideal_tag_id ) in bads_and_ideals ) )
+            ideal_tag_ids_to_chain_members = HydrusData.BuildKeyToSetDict( self._c.execute( 'SELECT ideal_tag_id, bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) )
             
         
         # this returns ideal in the chain, and chains of size 1
@@ -13757,6 +13755,118 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RepairInvalidTags( self, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+        
+        invalid_tag_ids_and_tags = set()
+        
+        BLOCK_SIZE = 1000
+        
+        select_statement = 'SELECT tag_id FROM tags;'
+        
+        bad_tag_count = 0
+        
+        for ( i, group_of_tag_ids ) in enumerate( HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, select_statement, BLOCK_SIZE ) ):
+            
+            if job_key is not None:
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusData.ToHumanInt( i * BLOCK_SIZE ), HydrusData.ToHumanInt( bad_tag_count ) )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                
+            
+            for tag_id in group_of_tag_ids:
+                
+                tag = self._GetTag( tag_id )
+                
+                try:
+                    
+                    cleaned_tag = HydrusTags.CleanTag( tag )
+                    
+                except:
+                    
+                    cleaned_tag = 'unrecoverable invalid tag'
+                    
+                
+                if tag != cleaned_tag:
+                    
+                    invalid_tag_ids_and_tags.add( ( tag_id, tag, cleaned_tag ) )
+                    
+                    bad_tag_count += 1
+                    
+                
+            
+        
+        for ( i, ( tag_id, tag, cleaned_tag ) ) in enumerate( invalid_tag_ids_and_tags ):
+            
+            if job_key is not None:
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'Fixing bad tags: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, bad_tag_count ) )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                
+            
+            existing_tags = set()
+            
+            potential_new_cleaned_tag = cleaned_tag
+            
+            while self._TagExists( potential_new_cleaned_tag ):
+                
+                existing_tags.add( potential_new_cleaned_tag )
+                
+                potential_new_cleaned_tag = HydrusData.GetNonDupeName( cleaned_tag, existing_tags )
+                
+            
+            cleaned_tag = potential_new_cleaned_tag
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( cleaned_tag )
+            
+            namespace_id = self._GetNamespaceId( namespace )
+            subtag_id = self._GetSubtagId( subtag )
+            
+            self._c.execute( 'UPDATE tags SET namespace_id = ?, subtag_id = ? WHERE tag_id = ?;', ( namespace_id, subtag_id, tag_id ) )
+            
+            try:
+                
+                HydrusData.Print( 'Invalid tag fixing: {} replaced with {}'.format( repr( tag ), repr( cleaned_tag ) ) )
+                
+            except:
+                
+                HydrusData.Print( 'Invalid tag fixing: Could not even print the bad tag to the log! It is now known as {}'.format( repr( cleaned_tag ) ) )
+                
+            
+        
+        if job_key is not None:
+            
+            if not job_key.IsCancelled():
+                
+                if bad_tag_count == 0:
+                    
+                    message = 'Invalid tag scanning: No bad tags found!'
+                    
+                else:
+                    
+                    message = 'Invalid tag scanning: {} bad tags found and fixed! They have been written to the log.'.format( HydrusData.ToHumanInt( bad_tag_count ) )
+                    
+                
+                HydrusData.Print( message )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                
+            
+            job_key.Finish()
+            
+        
+    
     def _RepopulateMappingsFromCache( self, job_key = None ):
         
         BLOCK_SIZE = 10000
@@ -17081,9 +17191,45 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'DROP INDEX IF EXISTS tags_subtag_id_namespace_id_index;' )
                 
-                self._controller.frame_splash_status.SetSubtext( 'creating new tag indices' )
+                self._controller.frame_splash_status.SetSubtext( 'creating first new tag index' )
                 
-                self._CreateIndex( 'external_master.tags', [ 'namespace_id', 'subtag_id' ], unique = True )
+                try:
+                    
+                    self._CreateIndex( 'external_master.tags', [ 'namespace_id', 'subtag_id' ], unique = True )
+                    
+                except Exception as e:
+                    
+                    if 'unique' in str( e ) or 'constraint' in str( e ):
+                        
+                        message = 'Hey, unfortunately, it looks like your master tag definition table had a duplicate entry. This is generally harmless, but it _is_ an invalid state. It probably happened because of a very old bug or other storage conversion incident. The new indices for v412 fix this up right now, but it will need some more work. It could take a while on an HDD. It will start when you ok this message, so kill this program in Task Manager now if you want to cancel out.'
+                        
+                        BlockingSafeShowMessage( message )
+                        
+                        self._c.execute( 'ALTER TABLE tags RENAME TO tags_old;' )
+                        
+                        self._controller.frame_splash_status.SetSubtext( 'running deduplication' )
+                        
+                        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );' )
+                        self._CreateIndex( 'external_master.tags', [ 'namespace_id', 'subtag_id' ], unique = True )
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO tags SELECT * FROM tags_old;' )
+                        
+                        self._controller.frame_splash_status.SetSubtext( 'cleaning up deduplication' )
+                        
+                        self._c.execute( 'DROP TABLE tags_old;' )
+                        
+                        message = 'Ok, looks like the deduplication worked! There is a small chance you will get a tag definition error notification in the coming days or months. Do not worry too much--hydrus will generally fix itself, but let hydev know if it causes a bigger problem.'
+                        
+                        BlockingSafeShowMessage( message )
+                        
+                    else:
+                        
+                        raise
+                        
+                    
+                
+                self._controller.frame_splash_status.SetSubtext( 'creating second new tag index' )
+                
                 self._CreateIndex( 'external_master.tags', [ 'subtag_id' ] )
                 
                 self._controller.frame_splash_status.SetSubtext( 'optimising new tag indices' )
@@ -17772,6 +17918,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )
         elif action == 'remove_potential_pairs': self._DuplicatesRemovePotentialPairsFromHashes( *args, **kwargs )
         elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
+        elif action == 'repair_invalid_tags': self._RepairInvalidTags( *args, **kwargs )
         elif action == 'reprocess_repository': self._ReprocessRepository( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )

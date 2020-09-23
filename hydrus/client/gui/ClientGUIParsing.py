@@ -3183,6 +3183,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 example_parsing_context = self._test_panel.GetExampleParsingContext()
                 
                 example_parsing_context[ 'url' ] = url
+                example_parsing_context[ 'post_index' ] = '0'
                 
                 self._test_panel.SetExampleParsingContext( example_parsing_context )
                 
@@ -4327,6 +4328,7 @@ class TestPanel( QW.QWidget ):
             example_parsing_context = self._example_parsing_context.GetValue()
             
             example_parsing_context[ 'url' ] = url
+            example_parsing_context[ 'post_index' ] = '0'
             
             self._example_parsing_context.SetValue( example_parsing_context )
             
@@ -4478,6 +4480,11 @@ class TestPanel( QW.QWidget ):
             
         
         try:
+            
+            if 'post_index' in test_data.parsing_context:
+                
+                del test_data.parsing_context[ 'post_index' ]
+                
             
             results_text = obj.ParsePretty( test_data.parsing_context, test_data.texts[0] )
             
@@ -4772,6 +4779,8 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         try:
             
             test_data = self.GetTestData()
+            
+            test_data.parsing_context[ 'post_index' ] = 0
             
             if formula is None:
                 

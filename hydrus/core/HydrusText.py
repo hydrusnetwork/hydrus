@@ -103,7 +103,7 @@ def NonFailingUnicodeDecode( data, encoding ):
     except UnicodeDecodeError:
         
         unicode_replacement_character = u'\ufffd'
-        null_character = '\0x0'
+        null_character = '\x00'
         
         text = str( data, encoding, errors = 'replace' )
         

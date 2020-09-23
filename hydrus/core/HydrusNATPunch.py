@@ -97,7 +97,7 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     if 'x.x.x.x:' + str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in stdout:
         
-        raise HydrusExceptions.FirewallException( 'The UPnP mapping of ' + internal_client + ':' + internal_port + '->external:' + external_port + ' already exists as a port forward. If this UPnP mapping is automatic, please disable it.' )
+        raise HydrusExceptions.FirewallException( 'The UPnP mapping of ' + internal_client + ':' + str( internal_port ) + '->external:' + str( external_port ) + ' already exists as a port forward. If this UPnP mapping is automatic, please disable it.' )
         
     
     if stdout is not None and 'failed with code' in stdout:
@@ -229,7 +229,10 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
-    if stderr is not None and len( stderr ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + stderr )
+    if stderr is not None and len( stderr ) > 0:
+        
+        raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + stderr )
+        
     
 
 class ServicesUPnPManager( object ):

@@ -364,6 +364,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             parsing_context[ 'gallery_url' ] = self.url
             parsing_context[ 'url' ] = url_to_check
+            parsing_context[ 'post_index' ] = '0'
             
             all_parse_results = parser.Parse( parsing_context, parsing_text )
             

@@ -659,175 +659,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _AutoServerSetup( self ):
-        
-        def do_it():
-            
-            host = '127.0.0.1'
-            port = HC.DEFAULT_SERVER_ADMIN_PORT
-            
-            if HydrusNetworking.LocalPortInUse( port ):
-                
-                HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
-                
-                return
-                
-            else:
-                
-                try:
-                    
-                    HydrusData.ShowText( 'Starting server\u2026' )
-                    
-                    db_param = '-d=' + self._controller.GetDBDir()
-                    
-                    if HC.PLATFORM_WINDOWS:
-                        
-                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
-                        
-                    else:
-                        
-                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server' )
-                        
-                    
-                    if os.path.exists( server_frozen_path ):
-                        
-                        cmd = [ server_frozen_path, db_param ]
-                        
-                    else:
-                        
-                        python_executable = sys.executable
-                        
-                        if python_executable.endswith( 'client.exe' ) or python_executable.endswith( 'client' ):
-                            
-                            raise Exception( 'Could not automatically set up the server--could not find server executable or python executable.' )
-                            
-                        
-                        if 'pythonw' in python_executable:
-                            
-                            python_executable = python_executable.replace( 'pythonw', 'python' )
-                            
-                        
-                        server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
-                        
-                        cmd = [ python_executable, server_script_path, db_param ]
-                        
-                    
-                    sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
-                    
-                    HydrusData.CheckProgramIsNotShuttingDown()
-                    
-                    subprocess.Popen( cmd, **sbp_kwargs )
-                    
-                    time_waited = 0
-                    
-                    while not HydrusNetworking.LocalPortInUse( port ):
-                        
-                        time.sleep( 3 )
-                        
-                        time_waited += 3
-                        
-                        if time_waited > 30:
-                            
-                            raise Exception( 'The server\'s port did not appear!' )
-                            
-                        
-                    
-                except:
-                    
-                    HydrusData.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
-                    
-                    return
-                    
-                
-            
-            time.sleep( 5 )
-            
-            HydrusData.ShowText( 'Creating admin service\u2026' )
-            
-            admin_service_key = HydrusData.GenerateKey()
-            service_type = HC.SERVER_ADMIN
-            name = 'local server admin'
-            
-            admin_service = ClientServices.GenerateService( admin_service_key, service_type, name )
-            
-            all_services = list( self._controller.services_manager.GetServices() )
-            
-            all_services.append( admin_service )
-            
-            self._controller.SetServices( all_services )
-            
-            time.sleep( 1 )
-            
-            admin_service = self._controller.services_manager.GetService( admin_service_key ) # let's refresh it
-            
-            credentials = HydrusNetwork.Credentials( host, port )
-            
-            admin_service.SetCredentials( credentials )
-            
-            time.sleep( 1 )
-            
-            response = admin_service.Request( HC.GET, 'access_key', { 'registration_key' : b'init' } )
-            
-            access_key = response[ 'access_key' ]
-            
-            credentials = HydrusNetwork.Credentials( host, port, access_key )
-            
-            admin_service.SetCredentials( credentials )
-            
-            #
-            
-            HydrusData.ShowText( 'Admin service initialised.' )
-            
-            QP.CallAfter( ClientGUIFrames.ShowKeys, 'access', (access_key,) )
-            
-            #
-            
-            time.sleep( 5 )
-            
-            HydrusData.ShowText( 'Creating tag and file services\u2026' )
-            
-            response = admin_service.Request( HC.GET, 'services' )
-            
-            serverside_services = response[ 'services' ]
-            
-            service_key = HydrusData.GenerateKey()
-            
-            tag_service = HydrusNetwork.GenerateService( service_key, HC.TAG_REPOSITORY, 'tag service', HC.DEFAULT_SERVICE_PORT )
-            
-            serverside_services.append( tag_service )
-            
-            service_key = HydrusData.GenerateKey()
-            
-            file_service = HydrusNetwork.GenerateService( service_key, HC.FILE_REPOSITORY, 'file service', HC.DEFAULT_SERVICE_PORT + 1 )
-            
-            serverside_services.append( file_service )
-            
-            response = admin_service.Request( HC.POST, 'services', { 'services' : serverside_services } )
-            
-            service_keys_to_access_keys = response[ 'service_keys_to_access_keys' ]
-            
-            deletee_service_keys = []
-            
-            with HG.dirty_object_lock:
-                
-                self._controller.WriteSynchronous( 'update_server_services', admin_service_key, serverside_services, service_keys_to_access_keys, deletee_service_keys )
-                
-                self._controller.RefreshServices()
-                
-            
-            HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
-            
-        
-        text = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, text )
-        
-        if result == QW.QDialog.Accepted:
-            
-            self._controller.CallToThread( do_it )
-            
-        
-    
     def _BackupDatabase( self ):
         
         path = self._new_options.GetNoneableString( 'backup_path' )
@@ -3212,6 +3043,28 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RepairInvalidTags( self ):
+        
+        message = 'This will scan all your tags and repair any that are invalid. This might mean taking out unrenderable characters or cleaning up improper whitespace. If there is a tag collision once cleaned, it may add a (1)-style number on the end.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags, it can take a long time, during which the gui may hang. If it finds bad tags, you should restart the program once it is complete.'
+        message += os.linesep * 2
+        message += 'If you have not had tag rendering problems, there is no reason to run this.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetVariable( 'popup_title', 'repairing invalid tags' )
+            
+            self._controller.pub( 'message', job_key )
+            
+            self._controller.Write( 'repair_invalid_tags', job_key = job_key )
+            
+        
+    
     def _RepopulateMappingsTables( self ):
         
         message = 'WARNING: Do not run this for no reason!'
@@ -3361,6 +3214,261 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.pub( 'notify_new_export_folders' )
         
     
+    def _RunClientAPITest( self ):
+        
+        # this is not to be a comprehensive test of client api functions, but a holistic sanity check to make sure everything is wired up right at UI level, with a live functioning client
+        
+        from hydrus.client import ClientAPI
+        
+        def do_it():
+            
+            # job key
+            
+            client_api_service = HG.client_controller.services_manager.GetService( CC.CLIENT_API_SERVICE_KEY )
+            
+            port = client_api_service.GetPort()
+            
+            was_running_before = port is not None
+            
+            if not was_running_before:
+                
+                port = 6666
+                
+                client_api_service._port = port
+                
+                HG.client_controller.RestartClientServerServices()
+                
+                time.sleep( 5 )
+                
+            
+            #
+            
+            api_permissions = ClientAPI.APIPermissions( name = 'hydrus test access', basic_permissions = list( ClientAPI.ALLOWED_PERMISSIONS ), search_tag_filter = ClientTags.TagFilter() )
+            
+            access_key = api_permissions.GetAccessKey()
+            
+            HG.client_controller.client_api_manager.AddAccess( api_permissions )
+            
+            #
+            
+            try:
+                
+                job_key = ClientThreading.JobKey()
+                
+                job_key.SetVariable( 'popup_title', 'client api test' )
+                
+                HG.client_controller.pub( 'message', job_key )
+                
+                import requests
+                import json
+                
+                s = requests.Session()
+                
+                s.verify = False
+                
+                s.headers[ 'Hydrus-Client-API-Access-Key' ] = access_key.hex()
+                s.headers[ 'Content-Type' ] = 'application/json'
+                
+                if client_api_service.UseHTTPS():
+                    
+                    schema = 'https'
+                    
+                else:
+                    
+                    schema = 'http'
+                    
+                
+                api_base = '{}://127.0.0.1:{}'.format( schema, port )
+                
+                #
+                
+                r = s.get( '{}/api_version'.format( api_base ) )
+                
+                j = r.json()
+                
+                if j[ 'version' ] != HC.CLIENT_API_VERSION:
+                    
+                    HydrusData.ShowText( 'version incorrect!: {}, {}'.format( j[ 'version' ], HC.CLIENT_API_VERSION ) )
+                    
+                
+                #
+                
+                job_key.SetVariable( 'popup_text_1', 'add url test' )
+                
+                local_tag_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
+                
+                local_tag_service = random.choice( local_tag_services )
+                
+                local_tag_service_name = local_tag_service.GetName()
+                
+                samus_url = 'https://safebooru.org/index.php?page=post&s=view&id=3195917'
+                samus_hash_hex = '78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538'
+                samus_test_tag = 'client api test tag'
+                samus_test_tag_filterable = 'client api test tag filterable'
+                destination_page_name = 'client api test'
+                
+                request_args = {}
+                
+                request_args[ 'url' ] = samus_url
+                request_args[ 'destination_page_name' ] = destination_page_name
+                request_args[ 'service_names_to_additional_tags' ] = {
+                    local_tag_service_name : [ samus_test_tag ]
+                }
+                request_args[ 'filterable_tags' ] = [
+                    samus_test_tag_filterable
+                ]
+                
+                data = json.dumps( request_args )
+                
+                r = s.post( '{}/add_urls/add_url'.format( api_base ), data = data )
+                
+                time.sleep( 0.25 )
+                
+                #
+                
+                job_key.SetVariable( 'popup_text_1', 'get session test' )
+                
+                def get_client_api_page():
+                    
+                    r = s.get( '{}/manage_pages/get_pages'.format( api_base ) )
+                    
+                    pages_to_process = [ r.json()[ 'pages' ] ]
+                    pages = []
+                    
+                    while len( pages_to_process ) > 0:
+                        
+                        page_to_process = pages_to_process.pop()
+                        
+                        if page_to_process[ 'page_type' ] == ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES:
+                            
+                            pages_to_process.extend( page_to_process[ 'pages' ] )
+                            
+                        else:
+                            
+                            pages.append( page_to_process )
+                            
+                        
+                    
+                    for page in pages:
+                        
+                        if page[ 'name' ] == destination_page_name:
+                            
+                            return page
+                            
+                        
+                    
+                
+                client_api_page = get_client_api_page()
+                
+                if client_api_page is None:
+                    
+                    raise Exception( 'Could not find download page!' )
+                    
+                
+                destination_page_key_hex = client_api_page[ 'page_key' ]
+                
+                def get_hash_ids():
+                    
+                    r = s.get( '{}/manage_pages/get_page_info?page_key={}'.format( api_base, destination_page_key_hex ) )
+                    
+                    hash_ids = r.json()[ 'page_info' ][ 'media' ][ 'hash_ids' ]
+                    
+                    return hash_ids
+                    
+                
+                hash_ids = get_hash_ids()
+                
+                if len( hash_ids ) == 0:
+                    
+                    time.sleep( 3 )
+                    
+                
+                hash_ids = get_hash_ids()
+                
+                if len( hash_ids ) == 0:
+                    
+                    raise Exception( 'The download page had no hashes!' )
+                    
+                
+                #
+                
+                def get_hash_ids_to_hashes_and_tag_info():
+                    
+                    r = s.get( '{}/get_files/file_metadata?file_ids={}'.format( api_base, json.dumps( hash_ids ) ) )
+                    
+                    hash_ids_to_hashes_and_tag_info = {}
+                    
+                    for item in r.json()[ 'metadata' ]:
+                        
+                        hash_ids_to_hashes_and_tag_info[ item[ 'file_id' ] ] = ( item[ 'hash' ], item[ 'service_names_to_statuses_to_tags' ] )
+                        
+                    
+                    return hash_ids_to_hashes_and_tag_info
+                    
+                
+                hash_ids_to_hashes_and_tag_info = get_hash_ids_to_hashes_and_tag_info()
+                
+                samus_hash_id = None
+                
+                for ( hash_id, ( hash_hex, tag_info ) ) in hash_ids_to_hashes_and_tag_info.items():
+                    
+                    if hash_hex == samus_hash_hex:
+                        
+                        samus_hash_id = hash_id
+                        
+                    
+                
+                if samus_hash_id is None:
+                    
+                    raise Exception( 'Could not find the samus hash!' )
+                    
+                
+                samus_tag_info = hash_ids_to_hashes_and_tag_info[ samus_hash_id ][1]
+                
+                if samus_test_tag not in samus_tag_info[ local_tag_service_name ][ str( HC.CONTENT_STATUS_CURRENT ) ]:
+                    
+                    raise Exception( 'Did not have the tag!' )
+                    
+                
+                #
+                
+                def qt_session_gubbins():
+                    
+                    self.ProposeSaveGUISession( 'last session' )
+                    
+                    page = self._notebook.GetPageFromPageKey( bytes.fromhex( destination_page_key_hex ) )
+                    
+                    self._notebook.ShowPage( page )
+                    
+                    self._notebook.CloseCurrentPage()
+                    
+                    self.ProposeSaveGUISession( 'last session' )
+                    
+                
+                HG.client_controller.CallBlockingToQt( HG.client_controller.gui, qt_session_gubbins )
+                
+            finally:
+                
+                #
+                
+                HG.client_controller.client_api_manager.DeleteAccess( ( access_key, ) )
+                
+                #
+                
+                if not was_running_before:
+                    
+                    client_api_service._port = None
+                    
+                    HG.client_controller.RestartClientServerServices()
+                    
+                
+                job_key.Delete()
+                
+            
+        
+        HG.client_controller.CallToThread( do_it )
+        
+    
     def _RunUITest( self ):
         
         def qt_open_pages():
@@ -3398,6 +3506,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             t += 0.25
             
             HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE))
+            
+            t += 0.25
+            
+            HG.client_controller.CallLaterQtSafe(self, t, self.ProposeSaveGUISession, 'last session' )
             
             return page_of_pages
             
@@ -3545,6 +3657,175 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
         HG.client_controller.CallToThread( do_it )
+        
+    
+    def _RunServerTest( self ):
+        
+        def do_it():
+            
+            host = '127.0.0.1'
+            port = HC.DEFAULT_SERVER_ADMIN_PORT
+            
+            if HydrusNetworking.LocalPortInUse( port ):
+                
+                HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
+                
+                return
+                
+            else:
+                
+                try:
+                    
+                    HydrusData.ShowText( 'Starting server\u2026' )
+                    
+                    db_param = '-d=' + self._controller.GetDBDir()
+                    
+                    if HC.PLATFORM_WINDOWS:
+                        
+                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
+                        
+                    else:
+                        
+                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server' )
+                        
+                    
+                    if os.path.exists( server_frozen_path ):
+                        
+                        cmd = [ server_frozen_path, db_param ]
+                        
+                    else:
+                        
+                        python_executable = sys.executable
+                        
+                        if python_executable.endswith( 'client.exe' ) or python_executable.endswith( 'client' ):
+                            
+                            raise Exception( 'Could not automatically set up the server--could not find server executable or python executable.' )
+                            
+                        
+                        if 'pythonw' in python_executable:
+                            
+                            python_executable = python_executable.replace( 'pythonw', 'python' )
+                            
+                        
+                        server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
+                        
+                        cmd = [ python_executable, server_script_path, db_param ]
+                        
+                    
+                    sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
+                    
+                    HydrusData.CheckProgramIsNotShuttingDown()
+                    
+                    subprocess.Popen( cmd, **sbp_kwargs )
+                    
+                    time_waited = 0
+                    
+                    while not HydrusNetworking.LocalPortInUse( port ):
+                        
+                        time.sleep( 3 )
+                        
+                        time_waited += 3
+                        
+                        if time_waited > 30:
+                            
+                            raise Exception( 'The server\'s port did not appear!' )
+                            
+                        
+                    
+                except:
+                    
+                    HydrusData.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
+                    
+                    return
+                    
+                
+            
+            time.sleep( 5 )
+            
+            HydrusData.ShowText( 'Creating admin service\u2026' )
+            
+            admin_service_key = HydrusData.GenerateKey()
+            service_type = HC.SERVER_ADMIN
+            name = 'local server admin'
+            
+            admin_service = ClientServices.GenerateService( admin_service_key, service_type, name )
+            
+            all_services = list( self._controller.services_manager.GetServices() )
+            
+            all_services.append( admin_service )
+            
+            self._controller.SetServices( all_services )
+            
+            time.sleep( 1 )
+            
+            admin_service = self._controller.services_manager.GetService( admin_service_key ) # let's refresh it
+            
+            credentials = HydrusNetwork.Credentials( host, port )
+            
+            admin_service.SetCredentials( credentials )
+            
+            time.sleep( 1 )
+            
+            response = admin_service.Request( HC.GET, 'access_key', { 'registration_key' : b'init' } )
+            
+            access_key = response[ 'access_key' ]
+            
+            credentials = HydrusNetwork.Credentials( host, port, access_key )
+            
+            admin_service.SetCredentials( credentials )
+            
+            #
+            
+            HydrusData.ShowText( 'Admin service initialised.' )
+            
+            QP.CallAfter( ClientGUIFrames.ShowKeys, 'access', (access_key,) )
+            
+            #
+            
+            time.sleep( 5 )
+            
+            HydrusData.ShowText( 'Creating tag and file services\u2026' )
+            
+            response = admin_service.Request( HC.GET, 'services' )
+            
+            serverside_services = response[ 'services' ]
+            
+            service_key = HydrusData.GenerateKey()
+            
+            tag_service = HydrusNetwork.GenerateService( service_key, HC.TAG_REPOSITORY, 'tag service', HC.DEFAULT_SERVICE_PORT )
+            
+            serverside_services.append( tag_service )
+            
+            service_key = HydrusData.GenerateKey()
+            
+            file_service = HydrusNetwork.GenerateService( service_key, HC.FILE_REPOSITORY, 'file service', HC.DEFAULT_SERVICE_PORT + 1 )
+            
+            serverside_services.append( file_service )
+            
+            response = admin_service.Request( HC.POST, 'services', { 'services' : serverside_services } )
+            
+            service_keys_to_access_keys = response[ 'service_keys_to_access_keys' ]
+            
+            deletee_service_keys = []
+            
+            with HG.dirty_object_lock:
+                
+                self._controller.WriteSynchronous( 'update_server_services', admin_service_key, serverside_services, service_keys_to_access_keys, deletee_service_keys )
+                
+                self._controller.RefreshServices()
+                
+            
+            HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
+            
+        
+        text = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.CallToThread( do_it )
+            
         
     
     def _SaveSplitterPositions( self ):
@@ -4533,6 +4814,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
             ClientGUIMenus.AppendMenuItem( submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
+            ClientGUIMenus.AppendMenuItem( submenu, 'fix invalid tags', 'Scan the database for invalid tags.', self._RepairInvalidTags )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check and repair' )
             
@@ -4910,7 +5192,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, 'last session' )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
             
             ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
             
@@ -4944,7 +5225,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenu( debug, network_actions, 'network actions' )
             
-            ClientGUIMenus.AppendMenuItem( debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
+            tests = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuItem( tests, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
+            ClientGUIMenus.AppendMenuItem( tests, 'run the client api test', 'Run hydrus_dev\'s weekly Client API Test. Guaranteed to work and not mess up your session, ha ha.', self._RunClientAPITest )
+            ClientGUIMenus.AppendMenuItem( tests, 'run the server test', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._RunServerTest )
+            
+            ClientGUIMenus.AppendMenu( debug, tests, 'tests, do not touch' )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
             

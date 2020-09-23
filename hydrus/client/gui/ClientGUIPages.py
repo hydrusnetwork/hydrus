@@ -1274,18 +1274,23 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return [ self.widget( i ) for i in range( self.count() ) ]
         
     
-    def _GetPageFromName( self, page_name ):
+    def _GetPageFromName( self, page_name, only_media_pages = False ):
         
         for page in self._GetPages():
             
             if page.GetName() == page_name:
                 
-                return page
+                do_not_do_it = only_media_pages and isinstance( page, PagesNotebook )
+                
+                if not do_not_do_it:
+                    
+                    return page
+                    
                 
             
             if isinstance( page, PagesNotebook ):
                 
-                result = page._GetPageFromName( page_name )
+                result = page._GetPageFromName( page_name, only_media_pages = only_media_pages )
                 
                 if result is not None:
                     
@@ -2741,7 +2746,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
-        page = self._GetPageFromName( page_name )
+        page = self._GetPageFromName( page_name, only_media_pages = True )
         
         if page is None:
             

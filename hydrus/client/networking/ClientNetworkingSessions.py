@@ -130,6 +130,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         http_proxy = HG.client_controller.new_options.GetNoneableString( 'http_proxy' )
         https_proxy = HG.client_controller.new_options.GetNoneableString( 'https_proxy' )
+        no_proxy = HG.client_controller.new_options.GetNoneableString( 'no_proxy' )
         
         if http_proxy is not None:
             
@@ -139,6 +140,11 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         if https_proxy is not None:
             
             self._proxies_dict[ 'https' ] = https_proxy
+            
+        
+        if ( http_proxy is not None or https_proxy is not None ) and no_proxy is not None:
+            
+            self._proxies_dict[ 'no_proxy' ] = no_proxy
             
         
     

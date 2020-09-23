@@ -924,19 +924,19 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 for ( content_action, tags ) in actions_to_tags.items():
                     
-                    content_action = int( content_action )
-                    
                     tags = list( tags )
+                    
+                    if len( tags ) == 0:
+                        
+                        continue
+                        
                     
                     if isinstance( tags[0], str ):
                         
                         tags = HydrusTags.CleanTags( tags )
                         
                     
-                    if len( tags ) == 0:
-                        
-                        continue
-                        
+                    content_action = int( content_action )
                     
                     if service.GetServiceType() == HC.LOCAL_TAG:
                         
@@ -961,8 +961,6 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                     
                     if content_action == HC.CONTENT_UPDATE_PETITION:
-                        
-                        tags = list( tags )
                         
                         if isinstance( tags[0], str ):
                             

@@ -2749,6 +2749,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return num_frames / duration
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_NUM_COLLECTION_FILES:
+                
+                def sort_key( x ):
+                    
+                    return ( x.GetNumFiles(), isinstance( x, MediaCollection ) )
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_NUM_FRAMES:
                 
                 def sort_key( x ):
@@ -2913,6 +2920,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FRAMERATE ] = ( 'slowest first', 'fastest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_COLLECTION_FILES ] = ( 'fewest first', 'most first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_FRAMES ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )

@@ -315,6 +315,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._http_proxy = ClientGUICommon.NoneableTextCtrl( proxy_panel )
             self._https_proxy = ClientGUICommon.NoneableTextCtrl( proxy_panel )
+            self._no_proxy = ClientGUICommon.NoneableTextCtrl( proxy_panel )
             
             #
             
@@ -322,6 +323,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._http_proxy.SetValue( self._new_options.GetNoneableString( 'http_proxy' ) )
             self._https_proxy.SetValue( self._new_options.GetNoneableString( 'https_proxy' ) )
+            self._no_proxy.SetValue( self._new_options.GetNoneableString( 'no_proxy' ) )
             
             self._network_timeout.setValue( self._new_options.GetInteger( 'network_timeout' ) )
             self._connection_error_wait_time.setValue( self._new_options.GetInteger( 'connection_error_wait_time' ) )
@@ -363,7 +365,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            text = 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port". It should take affect immediately on dialog ok.'
+            text = 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port" to use for http and https traffic. It should take effect immediately on dialog ok.'
+            text += os.linesep * 2
+            text += 'no_proxy takes the form of comma-separated hosts/domains, just as in curl or the NO_PROXY environment variable. When http and/or https proxies are set, they will not be used for these.'
             text += os.linesep * 2
             
             if ClientNetworkingSessions.SOCKS_PROXY_OK:
@@ -387,6 +391,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'http: ', self._http_proxy ) )
             rows.append( ( 'https: ', self._https_proxy ) )
+            rows.append( ( 'no_proxy: ', self._no_proxy ) )
             
             gridbox = ClientGUICommon.WrapInGrid( proxy_panel, rows )
             
@@ -409,6 +414,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableString( 'http_proxy', self._http_proxy.GetValue() )
             self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )
+            self._new_options.SetNoneableString( 'no_proxy', self._no_proxy.GetValue() )
             
             self._new_options.SetInteger( 'network_timeout', self._network_timeout.value() )
             self._new_options.SetInteger( 'connection_error_wait_time', self._connection_error_wait_time.value() )

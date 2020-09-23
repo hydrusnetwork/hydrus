@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 413</h3></li>
+				<ul>
+					<li>added 'sort by number of files in collection' file sort type. it obviously only does anything interesting if you are collecting by something</li>
+					<li>when you enter a tag from a manage tags suggested tags column with a double-click, the tag input box is now immediately focused. entering it with a keyboard action does not move the focus</li>
+					<li>wrote a new routine for the 'check and repair' database menu that scans for and fixes invalid tags. this might be some system:tag that snuck in, superfluous unicode whitespace, or some weird website encoding that results in null characters, or any other old tag that has since become invalid. tag translations are written to the log</li>
+					<li>added an experimental 'post_index' CONTEXT VARIABLE to subsidiary page parsers--whenever a non-vetoed post has pursuable URLs, this value is incremented by one. this is an attempt to generate a # 0,1,2,3 series. feedback on this would be appreciated, so I can formalise and document it</li>
+					<li>added 'no_proxy' option for the options->connection page. it uses comma-separated host/domains, just like for curl or the NO_PROXY environment variable. it defaults to 127.0.0.1. in future, options will be added to auto-inherit proxy info from environment variables</li>
+					<li>fixed an error when subscriptions try to publish to a page name when a 'page of pages' already has that name</li>
+					<li>activated some old 'clean url' parsing tech I wrote but never plugged in that helps parsing urls from source fields on sites that start with non-url gubbins</li>
+					<li>fixed the v411->v412 update step to account for a tags table that has duplicate entries (this shouldn't ever happen, but it seems some legacy bug or storage conversion indicent may have caused this for some users). if a unique constraint error is raised, the update step now gives a little message box and does dedupe work</li>
+					<li>fixed an issue where the 'will display as' tag was rendering without namespace when 'hide namespace in normal views' was on</li>
+					<li>fixed a recent character encoding routine that was supposed to filter out null characters</li>
+					<li>fixed some UPnP error reporting</li>
+					<li>_may_ have fixed an odd and seemingly rare 'paintevent' issue when expanding the popup toaster from collapsed state--it may also have been a qt bug, and fixed in the new qt:</li>
+					<li>updated qt to 5.15.1 for windows and linux builds. it fixes a couple of odd issues like 'unclicking' to select a menu item (issue #296)</li>
+					<li>added session save to holistic ui test suite</li>
+					<li>misc code cleanup</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>wrote a client test for the help menu so I can test some basic functions holistically, hoping to stop some recent typo bugs from happening again</li>
+					<li>did a couple of hotfixes for v412 to deal with some client api url pending bugs. the links in the 412 release now point to new fixed builds</li>
+					<li>fixed an issue setting additional tags via the client api when the respective service's tag import options are not set to get anything</li>
+					<li>fixed a 500 error with /add_tags/add_tags when a tags parameter is an empty list</li>
+					<li>fixed the /manage_pages/get_page_info client api help to show the 'page_info' key in the example response</li>
+				</ul>
 				<li><h3>version 412</h3></li>
 				<ul>
 					<li>client api:</li>

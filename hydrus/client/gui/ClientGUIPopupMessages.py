@@ -582,6 +582,8 @@ class PopupMessageManager( QW.QWidget ):
         
         self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
         
+        self._summary_bar.expandCollapse.connect( self.ExpandCollapse )
+        
         HG.client_controller.CallLaterQtSafe(self, 0.5, self.AddMessage, job_key)
         
         HG.client_controller.CallLaterQtSafe(self, 1.0, job_key.Delete)
@@ -997,6 +999,7 @@ class PopupMessageManager( QW.QWidget ):
             
             self._message_panel.show()
             
+        
         self.MakeSureEverythingFits()
         
     
@@ -1260,6 +1263,8 @@ class PopupMessageDialogPanel( QW.QWidget ):
 
 class PopupMessageSummaryBar( PopupWindow ):
     
+    expandCollapse = QC.Signal()
+    
     def __init__( self, parent, manager ):
         
         PopupWindow.__init__( self, parent, manager )
@@ -1282,7 +1287,7 @@ class PopupMessageSummaryBar( PopupWindow ):
     
     def ExpandCollapse( self ):
         
-        self._manager.ExpandCollapse()
+        self.expandCollapse.emit()
         
         current_text = self._expand_collapse.text()
         

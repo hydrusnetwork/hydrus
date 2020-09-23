@@ -2039,6 +2039,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.sub( self, 'CheckboxExpandParents', 'checkbox_manager_inverted' )
             
+            self._suggested_tags.mouseActivationOccurred.connect( self.SetTagBoxFocus )
+            
         
         def _EnterTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             

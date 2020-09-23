@@ -297,7 +297,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def _AddData( self, data ):
         
-        self._SetNoneDupeName( data )
+        self._SetNonDupeName( data )
         
         pretty_data = self._data_to_pretty_callable( data )
         
@@ -369,7 +369,7 @@ class AddEditDeleteListBox( QW.QWidget ):
                 break
                 
             
-            self._SetNoneDupeName( new_data )
+            self._SetNonDupeName( new_data )
             
             pretty_new_data = self._data_to_pretty_callable( new_data )
             
@@ -577,7 +577,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         self.listBoxChanged.emit()
         
     
-    def _SetNoneDupeName( self, obj ):
+    def _SetNonDupeName( self, obj ):
         
         pass
         
@@ -688,7 +688,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
 class AddEditDeleteListBoxUniqueNamedObjects( AddEditDeleteListBox ):
     
-    def _SetNoneDupeName( self, obj ):
+    def _SetNonDupeName( self, obj ):
         
         disallowed_names = { o.GetName() for o in self.GetData() }
         
@@ -912,6 +912,7 @@ class QueueListBox( QW.QWidget ):
 class ListBox( QW.QScrollArea ):
     
     listBoxChanged = QC.Signal()
+    mouseActivationOccurred = QC.Signal()
     
     TEXT_X_PADDING = 3
     
@@ -1710,6 +1711,8 @@ class ListBox( QW.QScrollArea ):
     def EventDClick( self, event ):
         
         self._Activate()
+        
+        self.mouseActivationOccurred.emit()
         
     
     def EventMouseSelect( self, event ):
@@ -3056,7 +3059,7 @@ class ListBoxTagsSiblingCapable( ListBoxTags ):
                 
                 ideal = result
                 
-                tag_string = '{} (will display as {})'.format( tag_string, ClientTags.RenderTag( ideal, True ) )
+                tag_string = '{} (will display as {})'.format( tag_string, ideal )
                 
             
         
