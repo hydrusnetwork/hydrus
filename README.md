@@ -1,4 +1,5 @@
 ## Hydrus Network (Client and Server)
+------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The hydrus network client is an application written for Anon and other internet-fluent media nerds who have large image/swf/webm collections. It browses with tags instead of folders, a little like a booru on your desktop. Advanced users can share tags and files anonymously through custom servers that any user may run. Everything is free, privacy is the first concern, and the source code is included with the release. Releases are available for Windows, Linux, and macOS.
 
@@ -19,5 +20,6 @@ The client can do quite a lot! Please check out the help inside the release or [
 * [patreon](https://www.patreon.com/hydrus_dev)
 
 ## Attribution
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 I use a number of the Silk Icons by Mark James at famfamfam.com.
