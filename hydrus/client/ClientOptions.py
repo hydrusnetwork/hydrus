@@ -131,7 +131,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'set_search_focus_on_page_change' ] = False
         
         self._dictionary[ 'booleans' ][ 'allow_remove_on_manage_tags_input' ] = True
-        self._dictionary[ 'booleans' ][ 'add_parents_on_manage_tags' ] = True
         self._dictionary[ 'booleans' ][ 'yes_no_on_remove_on_manage_tags' ] = True
         
         self._dictionary[ 'booleans' ][ 'activate_window_on_tag_search_page_activation' ] = False
@@ -170,6 +169,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'file_maintenance_during_idle' ] = True
         self._dictionary[ 'booleans' ][ 'file_maintenance_during_active' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'tag_display_maintenance_during_idle' ] = True
+        self._dictionary[ 'booleans' ][ 'tag_display_maintenance_during_active' ] = True
         
         self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
         

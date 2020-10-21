@@ -519,8 +519,10 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'PRAGMA temp_store = 2;' ) # use memory for temp store exclusively
                 
-        
+            
             self._AttachExternalDatabases()
+            
+            self._c.execute( 'PRAGMA cache_size = -250000;' )
             
             self._c.execute( 'ATTACH ":memory:" AS mem;' )
             

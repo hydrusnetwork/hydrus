@@ -205,9 +205,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         tags = HydrusTags.CleanTags( tags )
         
-        parents_manager = HG.client_controller.tag_parents_manager
-        
-        tags = parents_manager.ExpandTags( self._service_key, tags )
         tags = HG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, self._service_key, tags )
         
         return tags
@@ -707,21 +704,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             HG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
             
-            tag_parents_manager = HG.client_controller.tag_parents_manager
-            
-            parents = set()
-            
-            for tag in tags:
-                
-                some_parents = tag_parents_manager.GetParents( self._service_key, tag )
-                
-                parents.update( some_parents )
-                
-            
             if len( tags ) > 0:
                 
                 self._tags.AddTags( tags )
-                self._tags.AddTags( parents )
                 
                 self._refresh_callable()
                 
@@ -731,28 +716,15 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             HG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
             
-            tag_parents_manager = HG.client_controller.tag_parents_manager
-            
-            parents = set()
-            
-            for tag in tags:
-                
-                some_parents = tag_parents_manager.GetParents( self._service_key, tag )
-                
-                parents.update( some_parents )
-                
-            
             if len( tags ) > 0:
                 
                 self._single_tags.AddTags( tags )
-                self._single_tags.AddTags( parents )
                 
                 for path in self._selected_paths:
                     
                     current_tags = self._paths_to_single_tags[ path ]
                     
                     current_tags.update( tags )
-                    current_tags.update( parents )
                     
                 
                 self._refresh_callable()

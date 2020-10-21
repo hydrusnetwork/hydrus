@@ -298,7 +298,7 @@
 						<li>hashes : (a list of SHA256 hashes)</li>
 						<li>service_names_to_tags : (an Object of service names to lists of tags to be 'added' to the files)</li>
 						<li>service_names_to_actions_to_tags : (an Object of service names to content update actions to lists of tags)</li>
-						<li>add_siblings_and_parents : (an optional boolean, defaulting to true)</li>
+						<li>add_siblings_and_parents : <i>obsolete, now does nothing</i></li>
 					</ul>
 					<p>You can use either 'hash' or 'hashes', and you can use either the simple add-only 'service_names_to_tags' or the advanced 'service_names_to_actions_to_tags'.</p>
 					<p>The service names are as in the <i>/add_tags/get_tag_services</i> call.</p>
@@ -312,7 +312,6 @@
 						<li>5 - Rescind a petition from a tag repository.</li>
 					</ul>
 					<p>When you petition a tag from a repository, a 'reason' for the petition is typically needed. If you send a normal list of tags here, a default reason of "Petitioned from API" will be given. If you want to set your own reason, you can instead give a list of [ tag, reason ] pairs.</p>
-					<p>By default, any 'add' or 'pend' action, including the simpler 'service_names_to_tags' structure, will collapse tags according to their siblings and add appropriate tag parents. This does not apply to non-'add' actions. You can turn this off by setting the 'add_siblings_and_parents' parameter to false.</p>
 					<p>Some example requests:</p>
 					<p>Adding some tags to a file:</p>
 <pre>{

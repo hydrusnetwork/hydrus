@@ -205,7 +205,7 @@ def ReadFetch(
                 
                 if not results_cache.CanServeTagResults( strict_search_text, True ):
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
                     
                     results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                     
@@ -231,7 +231,7 @@ def ReadFetch(
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, tag_search_context, file_service_key, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
                     if job_key.IsCancelled():
                         
@@ -291,12 +291,12 @@ def ReadFetch(
                     
                     if include_current_tags:
                         
-                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ) )
+                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ) )
                         
                     
                     if include_pending_tags:
                         
-                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ] ) )
+                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ] ) )
                         
                     
                     if job_key.IsCancelled():
@@ -478,7 +478,19 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
     
     if expand_parents:
         
-        matches = HG.client_controller.tag_parents_manager.ExpandPredicates( display_tag_service_key, matches )
+        expanded_matches = []
+        
+        for match in matches:
+            
+            expanded_matches.append( match )
+            
+            if match.HasParentPredicates():
+                
+                expanded_matches.extend( match.GetParentPredicates() )
+                
+            
+        
+        matches = expanded_matches
         
     
     HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
@@ -2415,11 +2427,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         InsertTagPredicates( stub_predicates, self._display_tag_service_key, parsed_autocomplete_text )
         
-        if self._expand_parents:
-            
-            stub_predicates = HG.client_controller.tag_parents_manager.ExpandPredicates( self._display_tag_service_key, stub_predicates )
-            
-        
         AppendLoadingPredicate( stub_predicates )
         
         HG.client_controller.CallLaterQtSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
@@ -2456,10 +2463,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         favourite_tags = sorted( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
         predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
-        
-        parents_manager = HG.client_controller.tag_parents_manager
-        
-        predicates = parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates )
         
         self._favourites_list.SetPredicates( predicates )
         

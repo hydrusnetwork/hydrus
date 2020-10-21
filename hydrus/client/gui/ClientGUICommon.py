@@ -1818,6 +1818,16 @@ class TextAndGauge( QW.QWidget ):
         self.setLayout( vbox )
         
     
+    def SetText( self, text ):
+        
+        if not self or not QP.isValid( self ):
+            
+            return
+            
+        
+        self._st.setText( text )
+        
+    
     def SetValue( self, text, value, range ):
         
         if not self or not QP.isValid( self ):

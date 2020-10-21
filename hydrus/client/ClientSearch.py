@@ -1247,6 +1247,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         self._ideal_sibling = None
         self._siblings = None
+        self._parents = None
+        self._parent_predicates = set()
         
         if predicate_type == PREDICATE_TYPE_TAG:
             
@@ -1588,6 +1590,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._matchable_search_texts
         
     
+    def GetParentPredicates( self ):
+        
+        return self._parent_predicates
+        
+    
     def GetTextsAndNamespaces( self, or_under_construction = False ):
         
         if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
@@ -1621,6 +1628,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type
         
     
+    def HasParentPredicates( self ):
+        
+        return len( self._parent_predicates ) > 0
+        
+    
     def IsInclusive( self ):
         
         return self._inclusive
@@ -1652,7 +1664,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, render_for_user: bool = False, or_under_construction: bool = False ):
+    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ):
         
         count_text = ''
         
@@ -2359,6 +2371,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def SetInclusive( self, inclusive ):
         
         self._inclusive = inclusive
+        
+    
+    def SetKnownParents( self, parents: typing.Set[ str ] ):
+        
+        self._parents = parents
+        
+        self._parent_predicates = [ Predicate( PREDICATE_TYPE_PARENT, parent ) for parent in self._parents ]
         
     
     def SetKnownSiblings( self, siblings: typing.Set[ str ] ):

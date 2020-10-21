@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
 
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientTags
 
 class MediaResultCache( object ):
     
@@ -64,6 +65,14 @@ class MediaResultCache( object ):
         with self._lock:
             
             return { hash_id for hash_id in hash_ids if hash_id in self._hash_ids_to_media_results }
+            
+        
+    
+    def FilterFilesWithTags( self, tags: typing.Collection[ str ] ):
+        
+        with self._lock:
+            
+            return { hash_id for ( hash_id, media_result ) in self._hash_ids_to_media_results.items() if media_result.GetTagsManager().HasAnyOfTheseTags( tags, ClientTags.TAG_DISPLAY_STORAGE ) }
             
         
     

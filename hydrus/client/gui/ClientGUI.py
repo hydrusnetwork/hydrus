@@ -79,7 +79,7 @@ from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 
-MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
+MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 
 def THREADUploadPending( service_key ):
     
@@ -2717,6 +2717,27 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _ManageTagDisplayApplication( self ):
+        
+        title = 'manage where tag siblings and parents apply'
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+            
+            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = self._controller.Read( 'tag_display_application' )
+            
+            panel = ClientGUITags.EditTagDisplayApplication( dlg, master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                ( edited_master_service_keys_to_sibling_applicable_service_keys, edited_master_service_keys_to_parent_applicable_service_keys ) = panel.GetValue()
+                
+                self._controller.Write( 'tag_display_application', edited_master_service_keys_to_sibling_applicable_service_keys, edited_master_service_keys_to_parent_applicable_service_keys )
+                
+            
+        
+    
     def _ManageTagParents( self ):
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, 'manage tag parents' ) as dlg:
@@ -2738,33 +2759,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             dlg.SetPanel( panel )
             
             dlg.exec()
-            
-        
-    
-    def _ManageTagSiblingsApplication( self ):
-        
-        title = 'manage where tag siblings apply'
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
-            
-            master_service_keys_to_applicable_service_keys = self._controller.Read( 'tag_sibling_application' )
-            
-            panel = ClientGUITags.EditTagSiblingApplication( dlg, master_service_keys_to_applicable_service_keys )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                edited_master_service_keys_to_applicable_service_keys = panel.GetValue()
-                
-                job_key = ClientThreading.JobKey()
-                
-                job_key.SetVariable( 'popup_title', 'calculating new tag sibling application' )
-                
-                self._controller.pub( 'modal_message', job_key )
-                
-                self._controller.Write( 'tag_sibling_application', edited_master_service_keys_to_applicable_service_keys, job_key = job_key )
-                
             
         
     
@@ -2999,7 +2993,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         message = 'This will delete and then recreate the tag \'display\' mappings cache, which is used for user-presented tag searching, loading, and autocomplete counts. This is useful if miscounting (particularly related to siblings/parents) has somehow occurred.'
         message += os.linesep * 2
-        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang.'
+        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. All siblings and parents will have to be resynced.'
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
@@ -3015,7 +3009,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         message = 'This will delete and then recreate the entire tag \'storage\' mappings cache, which is used for raw tag searching, loading, and autocomplete counts. This is useful if miscounting has somehow occurred.'
         message += os.linesep * 2
-        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It necessarily involves a regeneration of the tag display mappings cache, which relies on the storage cache.'
+        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It necessarily involves a regeneration of the tag display mappings cache, which relies on the storage cache. All siblings and parents will have to be resynced.'
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
@@ -3111,11 +3105,27 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RegenerateTagParentsLookupCache( self ):
+        
+        message = 'This will delete and then recreate the tag parents lookup cache, which is used for all basic tag parents operations. This is useful if it has become damaged or otherwise desynchronised.'
+        message += os.linesep * 2
+        message += 'It should only take a second or two.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'regenerate_tag_parents_cache' )
+            
+        
+    
     def _RegenerateTagSiblingsLookupCache( self ):
         
         message = 'This will delete and then recreate the tag siblings lookup cache, which is used for all basic tag sibling operations. This is useful if it has become damaged or otherwise desynchronised.'
         message += os.linesep * 2
-        message += 'It may take a long time, and the gui may hang. It necessarily involves a regeneration of the tag display mappings cache, which relies on the lookup.'
+        message += 'It should only take a second or two. It necessarily involves a regeneration of the tag parents lookup cache.'
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
@@ -3173,6 +3183,15 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
         
         panel = ClientGUIServices.ReviewServicesPanel( frame, self._controller )
+        
+        frame.SetPanel( panel )
+        
+    
+    def _ReviewTagDisplayMaintenance( self ):
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'tag display maintenance' )
+        
+        panel = ClientGUITags.ReviewTagDisplayMaintenancePanel( frame )
         
         frame.SetPanel( panel )
         
@@ -4820,12 +4839,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateTagSearchCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache', 'Delete and recreate the tag display mappings cache, fixing any miscounts.', self._RegenerateTagDisplayMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag definition search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateTagSearchCache )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
@@ -5003,6 +5026,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
                     
                     if can_create_accounts:
+                        
                         ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
                         
                     
@@ -5013,6 +5037,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                     
                     if can_overrule_accounts and service.GetServiceType() == HC.FILE_REPOSITORY:
+                        
                         ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
                         
                     
@@ -5080,19 +5105,52 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenuItem( menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
             
-            ClientGUIMenus.AppendSeparator( menu )
+            return ( menu, '&services' )
+            
+        
+        def tags():
+            
+            menu = QW.QMenu( self )
             
             ClientGUIMenus.AppendMenuItem( menu, 'tag migration', 'Migrate tags from one place to another.', self._MigrateTags )
             
             ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag display and search', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
-            ClientGUIMenus.AppendMenuItem( menu, 'manage where tag siblings apply', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblingsApplication )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
-            #ClientGUIMenus.AppendMenuItem( menu, 'manage where tag parents apply', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagParentsApplication )
             ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
             
-            return ( menu, '&services' )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage where tag siblings and parents apply', 'Set which services\' siblings and parents apply where.', self._ManageTagDisplayApplication )
+            
+            #
+            
+            tag_display_maintenance_menu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review tag sibling/parent maintenance', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
+            ClientGUIMenus.AppendSeparator( tag_display_maintenance_menu )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_display_maintenance_during_idle' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during idle time', 'Control whether tag display maintenance can work during idle time.', current_value, func )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_display_maintenance_during_active' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during normal time', 'Control whether tag display maintenance can work during normal time.', current_value, func )
+            
+            ClientGUIMenus.AppendMenu( menu, tag_display_maintenance_menu, 'sibling/parent sync' )
+            
+            #
+            
+            return ( menu, '&tags' )
             
         
         def help():
@@ -5247,6 +5305,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'database': result = database()
         elif name == 'network': result = network()
         elif name == 'services': result = services()
+        elif name == 'tags': result = tags()
         elif name == 'help': result = help()
         
         # hackery dackery doo

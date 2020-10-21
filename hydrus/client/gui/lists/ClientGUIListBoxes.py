@@ -1948,6 +1948,11 @@ class ListBoxTags( ListBox ):
         return set()
         
     
+    def _GetFallbackServiceKey( self ):
+        
+        return CC.COMBINED_TAG_SERVICE_KEY
+        
+    
     def _GetNamespaceColours( self ):
         
         return HC.options[ 'namespace_colours' ]
@@ -2258,13 +2263,145 @@ class ListBoxTags( ListBox ):
         
         if len( self._ordered_terms ) > 0:
             
+            selected_actual_tags = self._GetSelectedActualTags()
+            
             menu = QW.QMenu()
+            
+            fallback_service_key = self._GetFallbackServiceKey()
+            
+            can_launch_sibling_and_parent_dialogs = len( selected_actual_tags ) > 0 and self.can_spawn_new_windows
+            can_show_siblings_and_parents = len( selected_actual_tags ) == 1 and fallback_service_key != CC.COMBINED_TAG_SERVICE_KEY
+            
+            if can_show_siblings_and_parents or can_launch_sibling_and_parent_dialogs:
+                
+                siblings_and_parents_menu = QW.QMenu( menu )
+                
+                if can_show_siblings_and_parents:
+                    
+                    siblings_menu = QW.QMenu( siblings_and_parents_menu )
+                    parents_menu = QW.QMenu( siblings_and_parents_menu )
+                    
+                    ClientGUIMenus.AppendMenu( siblings_and_parents_menu, siblings_menu, 'loading siblings\u2026' )
+                    ClientGUIMenus.AppendMenu( siblings_and_parents_menu, parents_menu, 'loading parents\u2026' )
+                    
+                    ( selected_tag, ) = selected_actual_tags
+                    
+                    def sp_work_callable():
+                        
+                        selected_tag_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', fallback_service_key, ( selected_tag, ) )
+                        
+                        siblings_and_parents = selected_tag_to_siblings_and_parents[ selected_tag ]
+                        
+                        return siblings_and_parents
+                        
+                    
+                    def sp_publish_callable( siblings_and_parents ):
+                        
+                        ( sibling_chain_members, ideal_tag, descendants, ancestors ) = siblings_and_parents
+                        
+                        if len( sibling_chain_members ) <= 1:
+                            
+                            siblings_menu.setTitle( 'no siblings' )
+                            
+                        else:
+                            
+                            siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( len( sibling_chain_members ) - 1 ) ) )
+                            
+                            if ideal_tag == selected_tag:
+                                
+                                ideal_label = 'is the ideal tag'
+                                
+                            else:
+                                
+                                ideal_label = 'ideal: {}'.format( ideal_tag )
+                                
+                            
+                            ClientGUIMenus.AppendMenuLabel( siblings_menu, ideal_label )
+                            
+                            ClientGUIMenus.AppendSeparator( siblings_menu )
+                            
+                            sibling_chain_members_list = list( sibling_chain_members )
+                            
+                            ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, sibling_chain_members_list )
+                            
+                            for sibling in sibling_chain_members_list:
+                                
+                                if sibling == ideal_tag:
+                                    
+                                    continue
+                                    
+                                
+                                ClientGUIMenus.AppendMenuLabel( siblings_menu, sibling )
+                                
+                            
+                        
+                        if len( descendants ) + len( ancestors ) == 0:
+                            
+                            parents_menu.setTitle( 'no parents' )
+                            
+                        else:
+                            
+                            parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( len( ancestors ) ), HydrusData.ToHumanInt( len( descendants ) ) ) )
+                            
+                            if len( ancestors ) > 0:
+                                
+                                ancestors_list = list( ancestors )
+                                
+                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, ancestors_list )
+                                
+                                for ancestor in ancestors_list:
+                                    
+                                    ClientGUIMenus.AppendMenuLabel( parents_menu, 'parent: {}'.format( ancestor ) )
+                                    
+                                
+                            
+                            if len( descendants ) > 0:
+                                
+                                ClientGUIMenus.AppendSeparator( parents_menu )
+                                
+                                descendants_list = list( descendants )
+                                
+                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, descendants_list )
+                                
+                                for descendant in descendants_list:
+                                    
+                                    ClientGUIMenus.AppendMenuLabel( parents_menu, 'child: {}'.format( descendant ) )
+                                    
+                                
+                            
+                        
+                    
+                    async_job = ClientGUIAsync.AsyncQtJob( siblings_and_parents_menu, sp_work_callable, sp_publish_callable )
+                    
+                    async_job.start()
+                    
+                
+                if can_launch_sibling_and_parent_dialogs:
+                    
+                    ClientGUIMenus.AppendSeparator( siblings_and_parents_menu )
+                    
+                    if len( selected_actual_tags ) == 1:
+                        
+                        ( tag, ) = selected_actual_tags
+                        
+                        text = tag
+                        
+                    else:
+                        
+                        text = 'selection'
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, siblings_and_parents_menu, 'siblings and parents' )
+                
             
             copy_menu = QW.QMenu( menu )
             
             selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
             selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
-            selected_actual_tags = self._GetSelectedActualTags()
             
             if len( selected_copyable_tag_strings ) == 1:
                 
@@ -2300,13 +2437,13 @@ class ListBoxTags( ListBox ):
                 
                 if len( selected_actual_tags ) == 1:
                     
-                    siblings_menu = QW.QMenu( copy_menu )
+                    siblings_copy_menu = QW.QMenu( copy_menu )
                     
-                    siblings_menu_action = ClientGUIMenus.AppendMenu( copy_menu, siblings_menu, 'loading siblings\u2026' )
+                    siblings_copy_menu_action = ClientGUIMenus.AppendMenu( copy_menu, siblings_copy_menu, 'loading siblings\u2026' )
                     
                     ( selected_tag, ) = selected_actual_tags
                     
-                    def work_callable():
+                    def s_work_callable():
                         
                         selected_tag_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, ( selected_tag, ) )
                         
@@ -2315,7 +2452,7 @@ class ListBoxTags( ListBox ):
                         return siblings
                         
                     
-                    def publish_callable( siblings ):
+                    def s_publish_callable( siblings ):
                         
                         ( selected_namespace, selected_subtag ) = HydrusTags.SplitTag( selected_tag )
                         
@@ -2334,7 +2471,7 @@ class ListBoxTags( ListBox ):
                                 
                                 if sibling not in sibling_tags_seen:
                                     
-                                    ClientGUIMenus.AppendMenuItem( siblings_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
+                                    ClientGUIMenus.AppendMenuItem( siblings_copy_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
                                     
                                     sibling_tags_seen.add( sibling )
                                     
@@ -2343,23 +2480,23 @@ class ListBoxTags( ListBox ):
                                 
                                 if sibling_subtag not in sibling_tags_seen:
                                     
-                                    ClientGUIMenus.AppendMenuItem( siblings_menu, sibling_subtag, 'Copy the selected sibling subtag to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling_subtag )
+                                    ClientGUIMenus.AppendMenuItem( siblings_copy_menu, sibling_subtag, 'Copy the selected sibling subtag to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling_subtag )
                                     
                                     sibling_tags_seen.add( sibling_subtag )
                                     
                                 
                             
-                            siblings_menu.setTitle( 'siblings' )
+                            siblings_copy_menu.setTitle( 'siblings' )
                             
                         else:
                             
-                            copy_menu.removeAction( siblings_menu_action )
+                            copy_menu.removeAction( siblings_copy_menu_action )
                             
-                            ClientGUIMenus.DestroyMenu( siblings_menu )
+                            ClientGUIMenus.DestroyMenu( siblings_copy_menu )
                             
                         
                     
-                    async_job = ClientGUIAsync.AsyncQtJob( siblings_menu, work_callable, publish_callable )
+                    async_job = ClientGUIAsync.AsyncQtJob( siblings_copy_menu, s_work_callable, s_publish_callable )
                     
                     async_job.start()
                     
@@ -2558,25 +2695,6 @@ class ListBoxTags( ListBox ):
                     
                 
                 ClientGUIMenus.AppendMenuItem( menu, label, description, set_favourite_tags, selected_tag )
-                
-            
-            if len( selected_actual_tags ) > 0 and self.can_spawn_new_windows:
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                if len( selected_actual_tags ) == 1:
-                    
-                    ( tag, ) = selected_actual_tags
-                    
-                    text = tag
-                    
-                else:
-                    
-                    text = 'selection'
-                    
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
-                ClientGUIMenus.AppendMenuItem( menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
                 
             
             CGC.core().PopupMenu( self, menu )
@@ -3032,9 +3150,9 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         return namespace_colours
         
     
-class ListBoxTagsSiblingCapable( ListBoxTags ):
+class ListBoxTagsDisplayCapable( ListBoxTags ):
     
-    def __init__( self, parent, service_key = None, show_sibling_text = True, **kwargs ):
+    def __init__( self, parent, service_key = None, show_display_decorators = True, **kwargs ):
         
         if service_key is None:
             
@@ -3042,14 +3160,14 @@ class ListBoxTagsSiblingCapable( ListBoxTags ):
             
         
         self._service_key = service_key
-        self._show_sibling_text = show_sibling_text
+        self._show_display_decorators = show_display_decorators
         
-        has_async_text_info = self._show_sibling_text
+        has_async_text_info = self._show_display_decorators
         
         ListBoxTags.__init__( self, parent, has_async_text_info = has_async_text_info, **kwargs )
         
     
-    def _AddSiblingSuffix( self, term, tag_string ):
+    def _AddDisplayDecoratorSuffix( self, term, tag_string ):
         
         if term in self._terms_to_async_text_info:
             
@@ -3057,18 +3175,31 @@ class ListBoxTagsSiblingCapable( ListBoxTags ):
             
             if result is not None:
                 
-                ideal = result
+                ( ideal, parents ) = result
                 
-                tag_string = '{} (will display as {})'.format( tag_string, ideal )
+                if ideal is not None:
+                    
+                    tag_string = '{} (will display as {})'.format( tag_string, ideal )
+                    
+                
+                if parents is not None:
+                    
+                    tag_string = '{} ({} parents)'.format( tag_string, HydrusData.ToHumanInt( len( parents ) ) )
+                    
                 
             
         
         return tag_string
         
     
+    def _GetFallbackServiceKey( self ):
+        
+        return self._service_key
+        
+    
     def _InitialiseAsyncTextInfoUpdaterWorkCallable( self ):
         
-        if not self._show_sibling_text:
+        if not self._show_display_decorators:
             
             return ListBoxTags._InitialiseAsyncTextInfoUpdaterWorkCallable( self )
             
@@ -3097,15 +3228,9 @@ class ListBoxTagsSiblingCapable( ListBoxTags ):
             
             for batch_to_lookup in HydrusData.SplitListIntoChunks( to_lookup, 500 ):
                 
-                db_tags_to_ideals = HG.client_controller.Read( 'tag_siblings_ideals', service_key, set( batch_to_lookup ) )
+                db_tags_to_ideals_and_parents = HG.client_controller.Read( 'tag_display_decorators', service_key, set( batch_to_lookup ) )
                 
-                for ( tag, ideal ) in db_tags_to_ideals.items():
-                    
-                    if ideal != tag:
-                        
-                        terms_to_info[ tag ] = ideal
-                        
-                    
+                terms_to_info.update( db_tags_to_ideals_and_parents )
                 
             
             return terms_to_info
@@ -3128,13 +3253,13 @@ class ListBoxTagsSiblingCapable( ListBoxTags ):
             
         
     
-class ListBoxTagsStrings( ListBoxTagsSiblingCapable ):
+class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
     
-    def __init__( self, parent, service_key = None, show_sibling_text = True, sort_tags = True ):
+    def __init__( self, parent, service_key = None, show_display_decorators = True, sort_tags = True ):
         
         self._sort_tags = sort_tags
         
-        ListBoxTagsSiblingCapable.__init__( self, parent, service_key = service_key, show_sibling_text = show_sibling_text )
+        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators )
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -3166,9 +3291,9 @@ class ListBoxTagsStrings( ListBoxTagsSiblingCapable ):
         
         tag_string = ClientTags.RenderTag( tag, True )
         
-        if self._show_sibling_text:
+        if self._show_display_decorators:
             
-            tag_string = self._AddSiblingSuffix( term, tag_string )
+            tag_string = self._AddDisplayDecoratorSuffix( term, tag_string )
             
         
         return tag_string
@@ -3188,7 +3313,7 @@ class ListBoxTagsStrings( ListBoxTagsSiblingCapable ):
     
     def SetTagServiceKey( self, service_key ):
         
-        ListBoxTagsSiblingCapable.SetTagServiceKey( self, service_key )
+        ListBoxTagsDisplayCapable.SetTagServiceKey( self, service_key )
         
         self._RecalcTags()
         
@@ -3229,9 +3354,9 @@ class ListBoxTagsStrings( ListBoxTagsSiblingCapable ):
     
 class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
-    def __init__( self, parent, service_key = None, removed_callable = None, show_sibling_text = True ):
+    def __init__( self, parent, service_key = None, removed_callable = None, show_display_decorators = True ):
         
-        ListBoxTagsStrings.__init__( self, parent, service_key = service_key, show_sibling_text = show_sibling_text )
+        ListBoxTagsStrings.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators )
         
         self._removed_callable = removed_callable
         
@@ -3323,18 +3448,18 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         self._RemoveTags( tags )
         
     
-class ListBoxTagsMedia( ListBoxTagsSiblingCapable ):
+class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
     render_for_user = True
     
-    def __init__( self, parent, tag_display_type, service_key = None, show_sibling_text = False, include_counts = True ):
+    def __init__( self, parent, tag_display_type, service_key = None, show_display_decorators = False, include_counts = True ):
         
         if service_key is None:
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        ListBoxTagsSiblingCapable.__init__( self, parent, service_key = service_key, show_sibling_text = show_sibling_text, height_num_chars = 24 )
+        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators, height_num_chars = 24 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
@@ -3386,21 +3511,47 @@ class ListBoxTagsMedia( ListBoxTagsSiblingCapable ):
         
         if self._include_counts:
             
-            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ToHumanInt( self._current_tags_to_count[ tag ] ) + ')'
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ToHumanInt( self._pending_tags_to_count[ tag ] ) + ')'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ToHumanInt( self._petitioned_tags_to_count[ tag ] ) + ')'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ToHumanInt( self._deleted_tags_to_count[ tag ] ) + ')'
+            if self._show_current and tag in self._current_tags_to_count:
+                
+                tag_string += ' (' + HydrusData.ToHumanInt( self._current_tags_to_count[ tag ] ) + ')'
+                
+            
+            if self._show_pending and tag in self._pending_tags_to_count:
+                
+                tag_string += ' (+' + HydrusData.ToHumanInt( self._pending_tags_to_count[ tag ] ) + ')'
+                
+            
+            if self._show_petitioned and tag in self._petitioned_tags_to_count:
+                
+                tag_string += ' (-' + HydrusData.ToHumanInt( self._petitioned_tags_to_count[ tag ] ) + ')'
+                
+            
+            if self._show_deleted and tag in self._deleted_tags_to_count:
+                
+                tag_string += ' (X' + HydrusData.ToHumanInt( self._deleted_tags_to_count[ tag ] ) + ')'
+                
             
         else:
             
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+)'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-)'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X)'
+            if self._show_pending and tag in self._pending_tags_to_count:
+                
+                tag_string += ' (+)'
+                
+            
+            if self._show_petitioned and tag in self._petitioned_tags_to_count:
+                
+                tag_string += ' (-)'
+                
+            
+            if self._show_deleted and tag in self._deleted_tags_to_count:
+                
+                tag_string += ' (X)'
+                
             
         
-        if self._show_sibling_text:
+        if self._show_display_decorators:
             
-            tag_string = self._AddSiblingSuffix( term, tag_string )
+            tag_string = self._AddDisplayDecoratorSuffix( term, tag_string )
             
         
         return tag_string
@@ -3483,7 +3634,7 @@ class ListBoxTagsMedia( ListBoxTagsSiblingCapable ):
     
     def SetTagServiceKey( self, service_key ):
         
-        ListBoxTagsSiblingCapable.SetTagServiceKey( self, service_key )
+        ListBoxTagsDisplayCapable.SetTagServiceKey( self, service_key )
         
         self.SetTagsByMedia( self._last_media )
         
@@ -3699,7 +3850,7 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
     def __init__( self, parent, enter_func, delete_func ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, show_sibling_text = True, include_counts = True )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, show_display_decorators = True, include_counts = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func

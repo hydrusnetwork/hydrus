@@ -277,7 +277,7 @@ class Controller( object ):
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
         self.tag_display_manager = ClientTagsHandling.TagDisplayManager()
-        self.tag_parents_manager = ClientManagers.TagParentsManager( self )
+        
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         

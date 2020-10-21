@@ -8,9 +8,10 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 
 TAG_DISPLAY_STORAGE = 0
-TAG_DISPLAY_SIBLINGS_AND_PARENTS = 1
+TAG_DISPLAY_ACTUAL = 1
 TAG_DISPLAY_SINGLE_MEDIA = 2
 TAG_DISPLAY_SELECTION_LIST = 3
+TAG_DISPLAY_IDEAL = 4
 
 def ConvertTagSliceToString( tag_slice ):
     

@@ -560,9 +560,6 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         tags = HydrusTags.CleanTags( tags )
         
-        parents_manager = HG.client_controller.tag_parents_manager
-        
-        tags = parents_manager.ExpandTags( service_key, tags )
         tags = HG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, service_key, tags )
         
         return tags
@@ -1365,8 +1362,6 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
-        parents_manager = HG.client_controller.tag_parents_manager
-        
         filterable_tags = HydrusTags.CleanTags( filterable_tags )
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags()
@@ -1380,8 +1375,6 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 service_additional_tags.update( external_additional_service_keys_to_tags[ service_key ] )
                 
             
-            service_additional_tags = parents_manager.ExpandTags( service_key, service_additional_tags )
-            
             if service_key in self._service_keys_to_service_tag_import_options:
                 
                 service_tag_import_options = self._service_keys_to_service_tag_import_options[ service_key ]
@@ -1389,8 +1382,6 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 service_filterable_tags = set( filterable_tags )
                 
                 service_filterable_tags.update( external_filterable_tags )
-                
-                service_filterable_tags = parents_manager.ExpandTags( service_key, service_filterable_tags )
                 
                 service_tags = service_tag_import_options.GetTags( service_key, status, media_result, service_filterable_tags, service_additional_tags )
                 

@@ -1002,7 +1002,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._rule_type = ClientGUICommon.BetterChoice( self )
         
-        self._rule_type.addItem( 'search descendents', ClientParsing.HTML_RULE_TYPE_DESCENDING )
+        self._rule_type.addItem( 'search descendants', ClientParsing.HTML_RULE_TYPE_DESCENDING )
         self._rule_type.addItem( 'walk back up ancestors', ClientParsing.HTML_RULE_TYPE_ASCENDING )
         
         self._tag_name = QW.QLineEdit( self )

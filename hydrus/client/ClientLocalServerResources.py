@@ -855,8 +855,6 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
         
         #
         
-        add_siblings_and_parents = request.parsed_request_args.GetValue( 'add_siblings_and_parents', bool, default_value = True )
-        
         service_keys_to_content_updates = collections.defaultdict( list )
         
         if 'service_names_to_tags' in request.parsed_request_args:
@@ -890,13 +888,6 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 else:
                     
                     content_action = HC.CONTENT_UPDATE_PEND
-                    
-                
-                if add_siblings_and_parents:
-                    
-                    parents_manager = HG.client_controller.tag_parents_manager
-                    
-                    tags = parents_manager.ExpandTags( service_key, tags )
                     
                 
                 content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
@@ -951,13 +942,6 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                             
                             continue
                             
-                        
-                    
-                    if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and add_siblings_and_parents:
-                        
-                        parents_manager = HG.client_controller.tag_parents_manager
-                        
-                        tags = parents_manager.ExpandTags( service_key, tags )
                         
                     
                     if content_action == HC.CONTENT_UPDATE_PETITION:

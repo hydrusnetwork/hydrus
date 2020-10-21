@@ -3014,7 +3014,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = False
             
-            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, show_sibling_text = False )
+            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, show_display_decorators = False )
             self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #

@@ -1,6 +1,7 @@
 import collections
 import itertools
 import os
+import time
 import typing
 
 from qtpy import QtCore as QC
@@ -202,6 +203,177 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         )
         
         return tag_autocomplete_options
+        
+    
+class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ):
+        
+        master_service_keys_to_sibling_applicable_service_keys = collections.defaultdict( list, master_service_keys_to_sibling_applicable_service_keys )
+        master_service_keys_to_parent_applicable_service_keys = collections.defaultdict( list, master_service_keys_to_parent_applicable_service_keys )
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
+        
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services_notebook, 100 )
+        
+        self._tag_services_notebook.setMinimumWidth( min_width )
+        
+        #
+        
+        services = list( HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
+        
+        select_service_key = services[0].GetServiceKey()
+        
+        for service in services:
+            
+            master_service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            sibling_applicable_service_keys = master_service_keys_to_sibling_applicable_service_keys[ master_service_key ]
+            parent_applicable_service_keys = master_service_keys_to_parent_applicable_service_keys[ master_service_key ]
+            
+            page = self._Panel( self._tag_services_notebook, master_service_key, sibling_applicable_service_keys, parent_applicable_service_keys )
+            
+            select = master_service_key == select_service_key
+            
+            self._tag_services_notebook.addTab( page, name )
+            
+            if select:
+                
+                self._tag_services_notebook.setCurrentWidget( page )
+                
+            
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        master_service_keys_to_sibling_applicable_service_keys = collections.defaultdict( list )
+        master_service_keys_to_parent_applicable_service_keys = collections.defaultdict( list )
+        
+        for page in self._tag_services_notebook.GetPages():
+            
+            ( master_service_key, sibling_applicable_service_keys, parent_applicable_service_keys ) = page.GetValue()
+            
+            master_service_keys_to_sibling_applicable_service_keys[ master_service_key ] = sibling_applicable_service_keys
+            master_service_keys_to_parent_applicable_service_keys[ master_service_key ] = parent_applicable_service_keys
+            
+        
+        return ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys )
+        
+    
+    class _Panel( QW.QWidget ):
+        
+        def __init__( self, parent: QW.QWidget, master_service_key: bytes, sibling_applicable_service_keys: typing.Sequence[ bytes ], parent_applicable_service_keys: typing.Sequence[ bytes ] ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._master_service_key = master_service_key
+            
+            message = 'While a tag service normally applies its own siblings and parents to itself, it does not have to. If you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings or parents at all.'
+            message += os.linesep * 2
+            message += 'If there are conflicts, the services at the top of the list have precedence. Parents are collapsed by sibling rules before they are applied.'
+            message += os.linesep * 2
+            message += 'New sibling and parent rules will be calculated in the background, so changes will not be instant. You can review the current \'sync\' under _services->display sync_.'
+            
+            self._message = ClientGUICommon.BetterStaticText( self, label = message )
+            self._message.setWordWrap( True )
+            
+            #
+            
+            self._sibling_box = ClientGUICommon.StaticBox( self, 'sibling application' )
+            
+            #
+            
+            self._sibling_service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._sibling_box, 4, HG.client_controller.services_manager.GetName, add_callable = self._AddSibling )
+            
+            #
+            
+            self._sibling_service_keys_listbox.AddDatas( sibling_applicable_service_keys )
+            
+            #
+            
+            self._parent_box = ClientGUICommon.StaticBox( self, 'parent application' )
+            
+            #
+            
+            self._parent_service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._sibling_box, 4, HG.client_controller.services_manager.GetName, add_callable = self._AddParent )
+            
+            #
+            
+            self._parent_service_keys_listbox.AddDatas( parent_applicable_service_keys )
+            
+            #
+            
+            self._sibling_box.Add( self._sibling_service_keys_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._parent_box.Add( self._parent_service_keys_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._sibling_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._parent_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.setLayout( vbox )
+            
+        
+        def _AddParent( self ):
+            
+            current_service_keys = self._parent_service_keys_listbox.GetData()
+            
+            return self._AddService( current_service_keys )
+            
+        
+        def _AddService( self, current_service_keys ):
+            
+            allowed_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            
+            allowed_services = [ service for service in allowed_services if service.GetServiceKey() not in current_service_keys ]
+            
+            if len( allowed_services ) == 0:
+                
+                QW.QMessageBox.information( self, 'Information', 'You have all the current tag services applied to this service.' )
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetName() ) for service in allowed_services ]
+            
+            try:
+                
+                service_key = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which service?', choice_tuples )
+                
+                return service_key
+                
+            except HydrusExceptions.CancelledException:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+        def _AddSibling( self ):
+            
+            current_service_keys = self._sibling_service_keys_listbox.GetData()
+            
+            return self._AddService( current_service_keys )
+            
+        
+        def GetValue( self ):
+            
+            return ( self._master_service_key, self._sibling_service_keys_listbox.GetData(), self._parent_service_keys_listbox.GetData() )
+            
         
     
 class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1508,156 +1680,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-class EditTagSiblingApplication( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, master_service_keys_to_applicable_service_keys ):
-        
-        master_service_keys_to_applicable_service_keys = collections.defaultdict( list, master_service_keys_to_applicable_service_keys )
-        
-        
-        
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
-        
-        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services_notebook, 100 )
-        
-        self._tag_services_notebook.setMinimumWidth( min_width )
-        
-        #
-        
-        services = list( HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
-        
-        select_service_key = services[0].GetServiceKey()
-        
-        for service in services:
-            
-            master_service_key = service.GetServiceKey()
-            name = service.GetName()
-            
-            applicable_service_keys = master_service_keys_to_applicable_service_keys[ master_service_key ]
-            
-            page = self._Panel( self._tag_services_notebook, master_service_key, applicable_service_keys )
-            
-            select = master_service_key == select_service_key
-            
-            self._tag_services_notebook.addTab( page, name )
-            
-            if select:
-                
-                self._tag_services_notebook.setCurrentWidget( page )
-                
-            
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.widget().setLayout( vbox )
-        
-    
-    def GetValue( self ):
-        
-        master_service_keys_to_applicable_service_keys = collections.defaultdict( list )
-        
-        for page in self._tag_services_notebook.GetPages():
-            
-            ( master_service_key, applicable_service_keys ) = page.GetValue()
-            
-            master_service_keys_to_applicable_service_keys[ master_service_key ] = applicable_service_keys
-            
-        
-        return master_service_keys_to_applicable_service_keys
-        
-    
-    class _Panel( QW.QWidget ):
-        
-        def __init__( self, parent: QW.QWidget, master_service_key: bytes, applicable_service_keys: typing.Sequence[ bytes ] ):
-            
-            QW.QWidget.__init__( self, parent )
-            
-            self._master_service_key = master_service_key
-            
-            warning = 'BE CAREFUL WITH THIS. Applying tens of thousands of siblings to a tag service with hundreds of millions of tags (e.g. adding the PTR siblings to the PTR) can take a hell of a lot of CPU and HDD. On an SSD, it can be 20 minutes. On an HDD, it can be many hours.'
-            warning += os.linesep * 2
-            warning += 'A future version of this system will recalculate sibling application nicely in the background, but for now it is ugly and uninterruptable, blocking other work. Do not apply big siblings here if you are not prepared to wait.'
-            
-            message = 'Normally, a tag service applies its own siblings to itself. If, however, you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings.'
-            message += os.linesep * 2
-            message += 'If there are conflicts, the services at the top of the list have precedence.'
-            
-            #
-            
-            self._display_box = ClientGUICommon.StaticBox( self, 'sibling application' )
-            
-            self._warning = ClientGUICommon.BetterStaticText( self._display_box, label = warning )
-            self._warning.setWordWrap( True )
-            self._warning.setObjectName( 'HydrusWarning' )
-            
-            self._message = ClientGUICommon.BetterStaticText( self._display_box, label = message )
-            self._message.setWordWrap( True )
-            
-            #
-            
-            self._service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._display_box, 6, HG.client_controller.services_manager.GetName, add_callable = self._Add )
-            
-            #
-            
-            self._service_keys_listbox.AddDatas( applicable_service_keys )
-            
-            #
-            
-            self._display_box.Add( self._warning, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._display_box.Add( self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._display_box.Add( self._service_keys_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            #
-            
-            vbox = QP.VBoxLayout()
-            
-            QP.AddToLayout( vbox, self._display_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.addStretch( 1 )
-            
-            self.setLayout( vbox )
-            
-        
-        def _Add( self ):
-            
-            ( master_service_key, current_service_keys ) = self.GetValue()
-            
-            allowed_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
-            
-            allowed_services = [ service for service in allowed_services if service.GetServiceKey() not in current_service_keys ]
-            
-            if len( allowed_services ) == 0:
-                
-                QW.QMessageBox.information( self, 'Information', 'You have all the current tag services applied to this service.' )
-                
-                raise HydrusExceptions.VetoException()
-                
-            
-            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetName() ) for service in allowed_services ]
-            
-            try:
-                
-                service_key = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which service?', choice_tuples )
-                
-                return service_key
-                
-            except HydrusExceptions.CancelledException:
-                
-                raise HydrusExceptions.VetoException()
-                
-            
-        
-        def GetValue( self ):
-            
-            return ( self._master_service_key, self._service_keys_listbox.GetData() )
-            
-        
-    
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, file_service_key, media, immediate_commit = False, canvas_key = None ):
@@ -1964,10 +1986,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items = []
             
-            check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipExpandParents, lambda: self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
-            
-            menu_items.append( ( 'check', 'auto-add entered tags\' parents on add/pend action', 'If checked, adding any tag that has parents will also add those parents.', check_manager ) )
-            
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'allow_remove_on_manage_tags_input' )
             
             menu_items.append( ( 'check', 'allow remove/petition result on tag input for already existing tag', 'If checked, inputting a tag that already exists will try to remove it.', check_manager ) )
@@ -1995,7 +2013,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            expand_parents = self._new_options.GetBoolean( 'add_parents_on_manage_tags' )
+            expand_parents = True
             
             self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
@@ -2036,8 +2054,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
                 
-            
-            HG.client_controller.sub( self, 'CheckboxExpandParents', 'checkbox_manager_inverted' )
             
             self._suggested_tags.mouseActivationOccurred.connect( self.SetTagBoxFocus )
             
@@ -2279,15 +2295,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         recent_tags.add( tag )
                         
-                        if self._new_options.GetBoolean( 'add_parents_on_manage_tags' ):
-                            
-                            tag_parents_manager = HG.client_controller.tag_parents_manager
-                            
-                            parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
-                            
-                            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
-                            
-                        
                     
                     content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ), reason = reason ) )
                     
@@ -2379,15 +2386,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 HG.client_controller.pub( 'clipboard', 'text', text )
                 
-            
-        
-        def _FlipExpandParents( self ):
-            
-            value = not self._new_options.GetBoolean( 'add_parents_on_manage_tags' )
-            
-            self._new_options.SetBoolean( 'add_parents_on_manage_tags', value )
-            
-            self._add_tag_box.SetExpandParents( value )
             
         
         def _FlipShowDeleted( self ):
@@ -2491,11 +2489,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self.EnterTags( tags, only_add = only_add )
                 
-            
-        
-        def CheckboxExpandParents( self ):
-            
-            self._add_tag_box.SetExpandParents( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
             
         
         def CleanBeforeDestroy( self ):
@@ -2760,8 +2753,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
-            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
-            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_display_decorators = False )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_display_decorators = False )
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
@@ -2785,6 +2778,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' + os.linesep + '.' )
+            self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
+            self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
             tags_box = QP.HBoxLayout()
@@ -2800,6 +2795,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._sync_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -3413,7 +3409,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def THREADInitialise( self, tags, service_key ):
             
-            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs ):
+            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, needs_sync_work ):
                 
                 if not self or not QP.isValid( self ):
                     
@@ -3423,7 +3419,23 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.setText( 'Files with a tag on the left will also be given the tag on the right.'+os.linesep+'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
+                self._status_st.setText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
+                
+                if needs_sync_work:
+                    
+                    self._sync_status_st.setText( 'This tag service may not be fully synced to its siblings and parents. Changes from this dialog may not appear immediately.' )
+                    
+                    self._sync_status_st.setObjectName( 'HydrusWarning' )
+                    
+                else:
+                    
+                    self._sync_status_st.setText( 'This tag service seems to be fully synced to its siblings and parents. Changes to parents should be reflected soon after closing the dialog.' )
+                    
+                    self._sync_status_st.setObjectName( 'HydrusValid' )
+                    
+                
+                self._sync_status_st.style().polish( self._sync_status_st )
+                
                 self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
                 self._child_input.setEnabled( True )
@@ -3441,11 +3453,15 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
             
+            status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
+            
+            work_to_do = status[ 'num_siblings_to_sync' ] + status[ 'num_parents_to_sync' ] > 0
+            
             current_statuses_to_pairs = collections.defaultdict( set )
             
             current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in list(original_statuses_to_pairs.items()) } )
             
-            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs )
+            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, work_to_do )
             
         
     
@@ -3589,7 +3605,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
-            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_display_decorators = False )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
@@ -3611,6 +3627,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' )
+            self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
+            self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
             new_sibling_box = QP.VBoxLayout()
@@ -3632,6 +3650,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._sync_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -4317,7 +4336,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def THREADInitialise( self, tags, service_key ):
             
-            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs ):
+            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, needs_sync_work ):
                 
                 if not self or not QP.isValid( self ):
                     
@@ -4328,6 +4347,22 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 self._status_st.setText( 'Tags on the left will be appear as those on the right.' )
+                
+                if needs_sync_work:
+                    
+                    self._sync_status_st.setText( 'This tag service may not be fully synced to its siblings. Changes from this dialog may not appear immediately.' )
+                    
+                    self._sync_status_st.setObjectName( 'HydrusWarning' )
+                    
+                else:
+                    
+                    self._sync_status_st.setText( 'This tag service seems to be fully synced to its siblings. Changes to siblings should be reflected soon after closing the dialog.' )
+                    
+                    self._sync_status_st.setObjectName( 'HydrusValid' )
+                    
+                
+                self._sync_status_st.style().polish( self._sync_status_st )
+                
                 self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
                 self._old_input.setEnabled( True )
@@ -4345,11 +4380,242 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
             
+            status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
+            
+            work_to_do = status[ 'num_siblings_to_sync' ] > 0
+            
             current_statuses_to_pairs = collections.defaultdict( set )
             
             current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
             
-            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs )
+            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, work_to_do )
+            
+        
+    
+class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
+        
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services_notebook, 100 )
+        
+        self._tag_services_notebook.setMinimumWidth( min_width )
+        
+        #
+        
+        services = list( HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
+        
+        select_service_key = services[0].GetServiceKey()
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_services_notebook, service_key )
+            
+            self._tag_services_notebook.addTab( page, name )
+            
+            if service_key == select_service_key:
+                
+                self._tag_services_notebook.setCurrentWidget( page )
+                
+            
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        message = 'Figuring out how tags should appear according to sibling and parent application rules takes time. When you set new rules, the changes do not happen immediately--the client catches up in the background. You can review current progress and force faster sync here.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = message )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    class _Panel( QW.QWidget ):
+        
+        def __init__( self, parent, service_key ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._service_key = service_key
+            
+            self._siblings_and_parents_st = ClientGUICommon.BetterStaticText( self )
+            
+            self._progress = ClientGUICommon.TextAndGauge( self )
+            
+            self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._StartRefresh )
+            
+            self._go_faster_button = ClientGUICommon.BetterButton( self, 'work hard now!', self._SyncFaster )
+            
+            button_hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( button_hbox, self._refresh_button, CC.FLAGS_CENTER )
+            QP.AddToLayout( button_hbox, self._go_faster_button, CC.FLAGS_CENTER )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._siblings_and_parents_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._progress, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+            self._refresh_values_updater = self._InitialiseRefreshValuesUpdater()
+            
+            HG.client_controller.sub( self, 'NotifyRefresh', 'notify_new_tag_display_sync_status' )
+            HG.client_controller.sub( self, '_StartRefresh', 'notify_new_tag_display_application' )
+            
+            self._StartRefresh()
+            
+        
+        def _InitialiseRefreshValuesUpdater( self ):
+            
+            service_key = self._service_key
+            
+            def loading_callable():
+                
+                self._progress.SetText( 'refreshing\u2026' )
+                
+                self._refresh_button.setEnabled( False )
+                
+                # keep button available to slow down
+                running_fast_and_button_is_slow = HG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ) and 'slow' in self._go_faster_button.text()
+                
+                if not running_fast_and_button_is_slow:
+                    
+                    self._go_faster_button.setEnabled( False )
+                    
+                
+            
+            def work_callable():
+                
+                status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
+                
+                time.sleep( 0.1 ) # for user feedback more than anything
+                
+                return status
+                
+            
+            def publish_callable( result ):
+                
+                status = result
+                
+                num_siblings_to_sync = status[ 'num_siblings_to_sync' ]
+                num_parents_to_sync = status[ 'num_parents_to_sync' ]
+                
+                num_items_to_regen = num_siblings_to_sync + num_parents_to_sync
+                
+                if num_items_to_regen == 0:
+                    
+                    message = 'All synced!'
+                    
+                elif num_parents_to_sync == 0:
+                    
+                    message = '{} siblings to sync.'.format( HydrusData.ToHumanInt( num_siblings_to_sync ) )
+                    
+                elif num_siblings_to_sync == 0:
+                    
+                    message = '{} parents to sync.'.format( HydrusData.ToHumanInt( num_parents_to_sync ) )
+                    
+                else:
+                    
+                    message = '{} siblings and {} parents to sync.'.format( HydrusData.ToHumanInt( num_siblings_to_sync ), HydrusData.ToHumanInt( num_parents_to_sync ) )
+                    
+                
+                self._siblings_and_parents_st.setText( message )
+                
+                #
+                
+                num_actual_rows = status[ 'num_actual_rows' ]
+                num_ideal_rows = status[ 'num_ideal_rows' ]
+                
+                if num_items_to_regen == 0:
+                    
+                    if num_ideal_rows == 0:
+                        
+                        message = 'No siblings/parents applying to this service.'
+                        
+                    else:
+                        
+                        message = '{} rules, all synced!'.format( HydrusData.ToHumanInt( num_ideal_rows ) )
+                        
+                    
+                    value = 1
+                    range = 1
+                    
+                    sync_possible = False
+                    
+                else:
+                    
+                    value = None
+                    range = None
+                    
+                    if num_ideal_rows == 0:
+                        
+                        message = 'Removing all siblings/parents, {} rules remaining.'.format( HydrusData.ToHumanInt( num_actual_rows ) )
+                        
+                    else:
+                        
+                        message = '{} rules applied now, moving to {}.'.format( HydrusData.ToHumanInt( num_actual_rows ), HydrusData.ToHumanInt( num_ideal_rows ) )
+                        
+                        if num_actual_rows <= num_ideal_rows:
+                            
+                            value = num_actual_rows
+                            range = num_ideal_rows
+                            
+                        
+                    
+                    sync_possible = True
+                    
+                
+                self._progress.SetValue( message, value, range )
+                
+                self._refresh_button.setEnabled( True )
+                
+                self._go_faster_button.setVisible( sync_possible )
+                self._go_faster_button.setEnabled( sync_possible )
+                
+                if HG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ):
+                    
+                    self._go_faster_button.setText( 'slow down!' )
+                    
+                else:
+                    
+                    self._go_faster_button.setText( 'work hard now!' )
+                    
+                
+            
+            return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+            
+        
+        def _StartRefresh( self ):
+            
+            self._refresh_values_updater.update()
+            
+        
+        def _SyncFaster( self ):
+            
+            HG.client_controller.tag_display_maintenance_manager.FlipSyncFaster( self._service_key )
+            
+            self._StartRefresh()
+            
+        
+        def NotifyRefresh( self, service_key ):
+            
+            if service_key == self._service_key:
+                
+                self._StartRefresh()
+                
             
         
     

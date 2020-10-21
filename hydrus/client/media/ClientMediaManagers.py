@@ -590,7 +590,7 @@ class TagsManager( object ):
         
         self._tag_display_types_to_service_keys_to_statuses_to_tags = {
             ClientTags.TAG_DISPLAY_STORAGE : service_keys_to_statuses_to_storage_tags,
-            ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS : service_keys_to_statuses_to_display_tags
+            ClientTags.TAG_DISPLAY_ACTUAL : service_keys_to_statuses_to_display_tags
         }
         
         self._cache_is_dirty = True
@@ -613,7 +613,7 @@ class TagsManager( object ):
             
             source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_STORAGE ]
             
-            destination_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ]
+            destination_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_ACTUAL ]
             
             for ( service_key, source_statuses_to_tags ) in source_service_keys_to_statuses_to_tags.items():
                 
@@ -639,8 +639,8 @@ class TagsManager( object ):
             
             cache_jobs = []
             
-            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
-            cache_jobs.append( ( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, ClientTags.TAG_DISPLAY_SELECTION_LIST ) )
+            cache_jobs.append( ( ClientTags.TAG_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
+            cache_jobs.append( ( ClientTags.TAG_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_SELECTION_LIST ) )
             
             for ( source_tag_display_type, dest_tag_display_type ) in cache_jobs:
                 
@@ -723,7 +723,7 @@ class TagsManager( object ):
             
         
         # [[( service_key, statuses_to_tags )]]
-        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).items() ) for tags_manager in tags_managers )
+        s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL ).items() ) for tags_manager in tags_managers )
         
         # [(service_key, statuses_to_tags)]
         flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
@@ -963,6 +963,18 @@ class TagsManager( object ):
             
         
     
+    def HasAnyOfTheseTags( self, tags, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            
+            return True in ( tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] or tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] for tag in tags )
+            
+        
+    
     def NewTagDisplayRules( self ):
         
         with self._lock:
@@ -1029,7 +1041,7 @@ class TagsManager( object ):
             # this does not need to do clever sibling collapse, because in this case, the db forces tagsmanager refresh
             # so this is just handling things for non-sibling tags
             
-            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS )
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
             
             statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             

@@ -261,13 +261,18 @@ class Controller( HydrusController.HydrusController ):
         self._doing_fast_exit = True
         
     
-    def _ShutdownSubscriptionsManager( self ):
+    def _ShutdownManagers( self ):
         
-        self.subscriptions_manager.Shutdown()
+        managers = [ self.subscriptions_manager, self.tag_display_maintenance_manager ]
+        
+        for manager in managers:
+            
+            manager.Shutdown()
+            
         
         started = HydrusData.GetNow()
         
-        while not self.subscriptions_manager.IsShutdown():
+        while False in ( manager.IsShutdown() for manager in managers ):
             
             time.sleep( 0.1 )
             
@@ -949,6 +954,10 @@ class Controller( HydrusController.HydrusController ):
         
         self.tag_display_manager = tag_display_manager
         
+        self.tag_display_maintenance_manager = ClientTagsHandling.TagDisplayMaintenanceManager( self )
+        
+        self.tag_display_maintenance_manager.Start()
+        
         #
         
         self.frame_splash_status.SetSubtext( 'favourite searches' )
@@ -972,7 +981,6 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetSubtext( 'tag parents' )
         
-        self.tag_parents_manager = ClientManagers.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
         def qt_code():
@@ -1723,9 +1731,9 @@ class Controller( HydrusController.HydrusController ):
         
         if not self._doing_fast_exit:
             
-            self.frame_splash_status.SetText( 'waiting for subscriptions to exit' )
+            self.frame_splash_status.SetText( 'waiting for managers to exit' )
             
-            self._ShutdownSubscriptionsManager()
+            self._ShutdownManagers()
             
             self.frame_splash_status.SetText( 'waiting for daemons to exit' )
             

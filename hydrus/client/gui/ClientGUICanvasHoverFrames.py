@@ -618,7 +618,6 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             QP.AddToLayout( self._comparison_statements_vbox, panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
-        
         #
         
         top_button_hbox = QP.HBoxLayout()

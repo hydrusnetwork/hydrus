@@ -50,6 +50,8 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
         
         tag = value
         
+        rows = [ ( tag, hashes ) ]
+        
         can_add = False
         can_pend = False
         can_delete = False
@@ -100,17 +102,9 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
         
         if service_type == HC.LOCAL_TAG:
             
-            tags = [ tag ]
-            
             if can_add:
                 
                 content_update_action = HC.CONTENT_UPDATE_ADD
-                
-                tag_parents_manager = HG.client_controller.tag_parents_manager
-                
-                parents = tag_parents_manager.GetParents( service_key, tag )
-                
-                tags.extend( parents )
                 
             elif can_delete:
                 
@@ -121,35 +115,19 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
                 return True
                 
             
-            rows = [ ( tag, hashes ) for tag in tags ]
-            
         else:
             
             if can_rescind_petition:
                 
                 content_update_action = HC.CONTENT_UPDATE_RESCIND_PETITION
                 
-                rows = [ ( tag, hashes ) ]
-                
             elif can_pend:
                 
-                tags = [ tag ]
-                
                 content_update_action = HC.CONTENT_UPDATE_PEND
-                
-                tag_parents_manager = HG.client_controller.tag_parents_manager
-                
-                parents = tag_parents_manager.GetParents( service_key, tag )
-                
-                tags.extend( parents )
-                
-                rows = [ ( tag, hashes ) for tag in tags ]
                 
             elif can_rescind_pend:
                 
                 content_update_action = HC.CONTENT_UPDATE_RESCIND_PEND
-                
-                rows = [ ( tag, hashes ) ]
                 
             elif can_petition:
                 
@@ -164,8 +142,6 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
                         content_update_action = HC.CONTENT_UPDATE_PETITION
                         
                         reason = dlg.GetValue()
-                        
-                        rows = [ ( tag, hashes ) ]
                         
                     else:
                         

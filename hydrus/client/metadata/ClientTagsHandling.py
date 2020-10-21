@@ -1,8 +1,13 @@
 import collections
+import random
 import threading
+import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
@@ -198,6 +203,263 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS ] = TagAutocompleteOptions
 
+class TagDisplayMaintenanceManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._service_keys_to_needs_work = {}
+        
+        self._go_faster = set()
+        
+        self._last_loop_work_time = 0.5
+        
+        self._shutdown = False
+        self._mainloop_finished = False
+        
+        self._wake_event = threading.Event()
+        self._new_data_event = threading.Event()
+        
+        self._lock = threading.Lock()
+        
+        self._controller.sub( self, 'Shutdown', 'shutdown' )
+        self._controller.sub( self, 'NotifyNewDisplayData', 'notify_new_tag_display_application' )
+        
+    
+    def _GetAfterWorkWaitTime( self, service_key ):
+        
+        with self._lock:
+            
+            if service_key in self._go_faster:
+                
+                if service_key in self._service_keys_to_needs_work and not self._service_keys_to_needs_work[ service_key ]:
+                    
+                    self._go_faster.discard( service_key )
+                    
+                
+                return 0.1
+                
+            
+        
+        if self._controller.CurrentlyIdle():
+            
+            return 0.5
+            
+        else:
+            
+            return 2.5
+            
+        
+    
+    def _GetServiceKeyToWorkOn( self ):
+        
+        if len( self._go_faster ) > 0:
+            
+            service_keys_that_need_work = list( self._go_faster )
+            
+        else:
+            
+            service_keys_that_need_work = [ service_key for ( service_key, needs_work ) in self._service_keys_to_needs_work.items() if needs_work ]
+            
+            if len( service_keys_that_need_work ) == 0:
+                
+                raise HydrusExceptions.NotFoundException( 'No service keys need work!' )
+                
+            
+        
+        ( service_key, ) = random.sample( service_keys_that_need_work, 1 )
+        
+        return service_key
+        
+    
+    def _GetWorkTime( self, service_key ):
+        
+        with self._lock:
+            
+            if service_key in self._go_faster:
+                
+                ideally = 15
+                
+                base = max( 0.5, self._last_loop_work_time )
+                
+                accelerating_time = min( base * 1.2, ideally )
+                
+                return accelerating_time
+                
+            
+        
+        if self._controller.CurrentlyIdle():
+            
+            return 15
+            
+        else:
+            
+            return 0.5
+            
+        
+    
+    def _WorkPermitted( self ):
+        
+        if len( self._go_faster ) > 0:
+            
+            return True
+            
+        
+        if self._controller.CurrentlyIdle():
+            
+            if self._controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                
+                return True
+                
+            
+        else:
+            
+            if self._controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _WorkToDo( self ):
+        
+        can_do_work = False
+        
+        service_keys = self._controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+        
+        for service_key in service_keys:
+            
+            if service_key not in self._service_keys_to_needs_work:
+                
+                status = self._controller.Read( 'tag_display_maintenance_status', service_key )
+                
+                self._service_keys_to_needs_work[ service_key ] = status[ 'num_siblings_to_sync' ] + status[ 'num_parents_to_sync' ] > 0
+                
+            
+            if self._service_keys_to_needs_work[ service_key ]:
+                
+                can_do_work = True
+                
+            
+        
+        return can_do_work
+        
+    
+    def CurrentlyGoingFaster( self, service_key ):
+        
+        with self._lock:
+            
+            return service_key in self._go_faster
+            
+        
+    
+    def FlipSyncFaster( self, service_key ):
+        
+        with self._lock:
+            
+            if service_key in self._go_faster:
+                
+                self._go_faster.discard( service_key )
+                
+            else:
+                
+                self._go_faster.add( service_key )
+                
+            
+        
+        self._controller.pub( 'notify_new_tag_display_sync_status', service_key )
+        
+        self.Wake()
+        
+    
+    def IsShutdown( self ):
+        
+        return self._mainloop_finished
+        
+    
+    def MainLoop( self ):
+        
+        try:
+            
+            INIT_WAIT = 10
+            
+            self._wake_event.wait( INIT_WAIT )
+            
+            while not ( HG.view_shutdown or self._shutdown ):
+                
+                if self._WorkPermitted() and self._WorkToDo():
+                    
+                    try:
+                        
+                        service_key = self._GetServiceKeyToWorkOn()
+                        
+                    except HydrusExceptions.NotFoundException:
+                        
+                        time.sleep( 5 )
+                        
+                        continue
+                        
+                    
+                    work_time = self._GetWorkTime( service_key )
+                    
+                    still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, work_time )
+                    
+                    self._service_keys_to_needs_work[ service_key ] = still_needs_work
+                    
+                    wait_time = self._GetAfterWorkWaitTime( service_key )
+                    
+                    self._last_loop_work_time = work_time
+                    
+                else:
+                    
+                    wait_time = 10
+                    
+                
+                self._wake_event.wait( wait_time )
+                
+                self._wake_event.clear()
+                
+                if self._new_data_event.is_set():
+                    
+                    self._service_keys_to_needs_work = {}
+                    
+                    self._new_data_event.clear()
+                    
+                
+            
+        finally:
+            
+            self._mainloop_finished = True
+            
+        
+    
+    def NotifyNewDisplayData( self ):
+        
+        self._new_data_event.set()
+        
+        self.Wake()
+        
+    
+    def Shutdown( self ):
+        
+        self._shutdown = True
+        
+        self.Wake()
+        
+    
+    def Start( self ):
+        
+        self._controller.CallToThreadLongRunning( self.MainLoop )
+        
+    
+    def Wake( self ):
+        
+        self._wake_event.set()
+        
+    
 class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER
@@ -468,6 +730,89 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER ] = TagDisplayManager
 
+class TagParentsStructure( object ):
+    
+    def __init__( self ):
+        
+        self._tags_to_ancestors = collections.defaultdict( set )
+        self._tags_to_descendants = collections.defaultdict( set )
+        
+        # some sort of structure for 'bad cycles' so we can later raise these to the user to fix
+        
+    
+    def AddPair( self, child: object, parent: object ):
+        
+        # disallowed parents are:
+        # A -> A
+        # larger loops
+        
+        if child == parent:
+            
+            return
+            
+        
+        if parent in self._tags_to_ancestors:
+            
+            if child in self._tags_to_ancestors[ parent ]:
+                
+                # this is a loop!
+                
+                return
+                
+            
+        
+        if child in self._tags_to_ancestors and parent in self._tags_to_ancestors[ child ]:
+            
+            # already in
+            
+            return
+            
+        
+        # let's now join these two families together
+        
+        new_ancestors = { parent }
+        
+        if parent in self._tags_to_ancestors:
+            
+            new_ancestors.update( self._tags_to_ancestors[ parent ] )
+            
+        
+        new_descendants = { child }
+        
+        if child in self._tags_to_descendants:
+            
+            new_descendants.update( self._tags_to_descendants[ child ] )
+            
+        
+        # every (grand)parent now gets all new (grand)kids
+        for ancestor in new_ancestors:
+            
+            self._tags_to_descendants[ ancestor ].update( new_descendants )
+            
+        
+        # every (grand)kid now gets all new (grand)parents
+        for descendant in new_descendants:
+            
+            self._tags_to_ancestors[ descendant ].update( new_ancestors )
+            
+        
+    
+    def GetTagsToAncestors( self ):
+        
+        return self._tags_to_ancestors
+        
+    
+    def IterateDescendantAncestorPairs( self ):
+        
+        for ( descandant, ancestors ) in self._tags_to_ancestors.items():
+            
+            for ancestor in ancestors:
+                
+                yield ( descandant, ancestor )
+                
+            
+        
+    
 class TagSiblingsStructure( object ):
     
     def __init__( self ):
@@ -554,3 +899,4 @@ class TagSiblingsStructure( object ):
         
         return self._bad_tags_to_ideal_tags
         
+    

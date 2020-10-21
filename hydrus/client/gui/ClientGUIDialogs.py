@@ -506,13 +506,13 @@ class DialogInputNamespaceRegex( Dialog ):
     
 class DialogInputTags( Dialog ):
     
-    def __init__( self, parent, service_key, tags, expand_parents = True, message = '', show_sibling_text = False ):
+    def __init__( self, parent, service_key, tags, expand_parents = True, message = '', show_display_decorators = False ):
         
         Dialog.__init__( self, parent, 'input tags' )
         
         self._service_key = service_key
         
-        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key, show_sibling_text = show_sibling_text )
+        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key, show_display_decorators = show_display_decorators )
         
         self._expand_parents = expand_parents
         
@@ -564,25 +564,9 @@ class DialogInputTags( Dialog ):
 
     def EnterTags( self, tags ):
         
-        tag_parents_manager = HG.client_controller.tag_parents_manager
-        
-        parents = set()
-        
-        for tag in tags:
-            
-            some_parents = tag_parents_manager.GetParents( self._service_key, tag )
-            
-            parents.update( some_parents )
-            
-        
         if len( tags ) > 0:
             
             self._tags.EnterTags( tags )
-            
-            if self._expand_parents:
-                
-                self._tags.AddTags( parents )
-                
             
         
     

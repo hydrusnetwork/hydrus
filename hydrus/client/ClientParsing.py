@@ -1398,7 +1398,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         
         if self._rule_type == HTML_RULE_TYPE_DESCENDING:
             
-            s = 'search descendents for'
+            s = 'search descendants for'
             
             if self._tag_index is None:
                 

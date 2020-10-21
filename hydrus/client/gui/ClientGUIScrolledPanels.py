@@ -113,7 +113,10 @@ class ResizingScrolledPanel( QW.QScrollArea ):
     
     def WidgetJustSized( self, width_larger, height_larger ):
         
-        widget_size_hint = self.widget().minimumSizeHint()
+        widget_minimum_size_hint = self.widget().minimumSizeHint()
+        widget_normal_size_hint = self.widget().sizeHint()
+        
+        widget_size_hint = QC.QSize( max( widget_minimum_size_hint.width(), widget_normal_size_hint.width() ), max( widget_minimum_size_hint.height(), widget_normal_size_hint.height() ) )
         
         my_size = self.size()
         

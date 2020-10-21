@@ -10,6 +10,50 @@
 			<ul>
 				<li><h3>version 413</h3></li>
 				<ul>
+					<li>tl;dr: you don't have to do anything. if you haven't heard of a tag parent before, no worries. the database should work better now</li>
+					<li>.</li>
+					<li>top level:</li>
+					<li>parents are now completely virtual! this means that when you add a tag parent, the tags that 'fill in' to make it show do not really exist in storage, only in a computed cache. if you decide to undo the parent, the implications are recalculated and the virtual tags disappear, with no permanent changes made. also, petitioning a parent will 'preview' the delete, just as siblings now does</li>
+					<li>siblings and parents are now unified, and the logic is improved. all parents apply to all siblings, so no more worries about retro-active filling-in. the siblings and parents code is now basically 'nice'. this was a lot of quite complicated work, and it solves a number of lingering issues from the original prototypes I made several years ago. I will still do some smaller work and little fixes I am sure in the near future, but the 'big' siblings and parents work is done!</li>
+					<li>like with the recent siblings change, the client no longer needs to do the 'loading parent tags' step when booting--everything is now handled at the db level</li>
+					<li>like with the recent siblings change, you can now edit which services apply their parents to which service, now under _services->manage where siblings and parents apply_</li>
+					<li>in the _manage tags_ dialog (and some other places), tags with parent implications now show a '(x parents)' after their label, much like the 'will display as' sibling suffix. I do not like this, but I ran out of time. I hope to add a more advanced actual listing of virtual tags with a nice 'ghostly' colour or similar in future</li>
+					<li>right-clicking on a tag in a specific tag domain now shows a 'siblings and parents' submenu with detailed info on all known siblings and parents in that domain</li>
+					<li>'tag' menu entries are moved from the top 'services' menu to a new 'tags' menu. 'pending', when available, is also moved right</li>
+					<li>the process of changing siblings or parents, or which services apply where, is no longer a CPU-laggy process! actual changes, however, may not appear immediately. a maintenance task now tracks what is currently applied and what is 'ideal', and slowly migrates to the ideal in the background in little chunks. in most situations, the changes are very quick, but if you are behind due to big recent changes, they may be delayed. you can manage when this maintenance runs and see the current status under _tags->siblings/parents sync_. this is an entirely new thing, so feedback on IRL work would be appreciated--there may be some kinds of siblings or parents that cause a whole bunch of annoying lag</li>
+					<li>the PTR has a lot of non-virtual parents that were hard-added in older versions over the years. most are fine, but some are like the 'shadow'->'shadow the hedgehog' debacle. now the source of the problem is fundamentally solved, this problem will reduce over time. with luck, before the end of the year, no more will be added at all, and thanks to the janitors, the worst offenders should be chipped away</li>
+					<li>during all this work, a bug with tag siblings and parents repository processing has been revealed (some users do not 'get' all siblings/parents for some reason). now the system is nice and undoable, this will be more easily addressed in coming weeks, with automatic retroactive fixes rolling out to all clients</li>
+					<li>.</li>
+					<li>boring details:</li>
+					<li>like with siblings, wrote a parents structure object that constructs the parents tree without loops more simply and reliably. it populates a new parents quick-lookup table in the database, for which a full suite of lookup and maintenance methods are written</li>
+					<li>parents and siblings virtual tag presentation is now unified into a single 'display' (i.e. vs 'storage') system with a more granular tag implication algebra (essentially 0-n rows of 'if A is in storage, show B in display' for every tag) that can calculate new and updated display tags and counts without having to do the expensive 'clear-and-regen' that 408-413 used</li>
+					<li>wrote functions to quickly add or remove a display implication to the 'all known files' or specific file service tag display cache</li>
+					<li>migrated all the combined and specific tag display cache update code (add/remove files, add/remove mappings, add/remove sibling/parent, add/remove sibling/parent application, and misc regen maintenance calls) to use the implication system instead of the sibling 'ideal' system (basically moving from 1->1 to 1->n)</li>
+					<li>completely rewrote the complicated 'all known files' cache 'with tags' and 'with and without tags' lookup routines to use much less overhead in general and to use a single, albeit complicated, count-based query that carefully chooses whether to select the 'with tags' and 'without tags' portions using tags or files where available as the primary selector based on existing autocomplete count data</li>
+					<li>replaced all usage of the old ui-side 'tag parents manager' object. as parents pop in virtually and do not need to be bundled intentionally to various content updates, this was mostly just clearing now-surplus code, but for instance in 'write' autocomplete searches, the parents that appear below search results are now generated at the db level on first search, rather than looked-up live in UI time</li>
+					<li>the parents and siblings lookup tables are now split into two views: what the display cache currently holds, and what it ideally should hold. when adding new sibling or parent data, only the fast ideal table is changed</li>
+					<li>a new complicated maintenance function now takes actual and ideal data for a particular unsynced tag, hashes out the implication changes needed to effect a migration, and performs it</li>
+					<li>a new maintenance manager and accompanying db code now track and manage calls to migrate actual to ideal display presentation, and to update UI afterwards</li>
+					<li>as tag display changes are now more frequent, I have made the routine that refreshes tag UI after sibling/parent changes more efficient. tag display now only refreshes for files that have the affected tags in a particular change</li>
+					<li>wrote the UI panel and dialog to show and hurry up current sync status, and all the background hooks for that</li>
+					<li>added 'tag parents lookup' entry to the database 'regenerate' menu. this routine and the 'siblings' variant are now very quick thanks to the new actual/ideal maintenance system</li>
+					<li>updated my sibling unit tests to deal with the new actual->ideal syncing</li>
+					<li>improved the speed of mappings cache updates when deleting files</li>
+					<li>deleted all the old combined/specific 'regen chain' code and the sibling-based 'get sole/any tagged files' search code</li>
+					<li>optimised and generally cleaned a bunch of the new cache code, particularly cutting out overhead for unusual/small situations</li>
+					<li>fixed a counting bug with 'all known files' tag counts when rescinding pending tags</li>
+					<li>fixed a bug in the siblings display code where deleting or pend-rescinding all of the multiple tags that have the same ideal sibling in the same transaction (e.g. if both A and B sibling to C, and a file has both A and B, and you remove them in one manage tags dialog apply) would not remove the current/pending ideal (issue #571)</li>
+					<li>the 'add_siblings_and_parents' parameter on /add_tags/add_tags client api command is now obsolete! the help is updated to reflect this</li>
+					<li>cleaned up just a bunch of db/ui/tag code mate</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed an issue where long-running 'similar files' search was not cleaning its memory use properly as the job was going on, resulting in out-of-mem errors on very large clients (issue #669)</li>
+					<li>thanks to user submission, rolling in a fix for the default pixiv tag search downloader</li>
+					<li>cloudscraper updated to 1.2.48</li>
+					<li>removed surplus executables from linux and macOS builds (win32 upnpc exe was causing anti-virus false positive on mac lmao)</li>
+				</ul>
+				<li><h3>version 413</h3></li>
+				<ul>
 					<li>added 'sort by number of files in collection' file sort type. it obviously only does anything interesting if you are collecting by something</li>
 					<li>when you enter a tag from a manage tags suggested tags column with a double-click, the tag input box is now immediately focused. entering it with a keyboard action does not move the focus</li>
 					<li>wrote a new routine for the 'check and repair' database menu that scans for and fixes invalid tags. this might be some system:tag that snuck in, superfluous unicode whitespace, or some weird website encoding that results in null characters, or any other old tag that has since become invalid. tag translations are written to the log</li>
