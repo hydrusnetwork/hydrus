@@ -50,7 +50,11 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         root.putChild( b'add_files', add_files )
         
-        add_files.putChild( b'add_file', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFile( self._service, self._client_requests_domain ) )
+        add_files.putChild( b'add_file', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesAddFile( self._service, self._client_requests_domain ) )
+        add_files.putChild( b'delete_files', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( self._service, self._client_requests_domain ) )
+        add_files.putChild( b'undelete_files', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( self._service, self._client_requests_domain ) )
+        add_files.putChild( b'archive_files', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( self._service, self._client_requests_domain ) )
+        add_files.putChild( b'unarchive_files', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( self._service, self._client_requests_domain ) )
         
         add_tags = NoResource()
         

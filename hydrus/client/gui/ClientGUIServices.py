@@ -415,7 +415,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
             keys = set( self._deletee_account_type_keys_to_new_account_type_keys.keys() )
             values = set( self._deletee_account_type_keys_to_new_account_type_keys.values() )
             
-            return len( keys.intersection( values ) ) > 0
+            return HydrusData.SetsIntersect( keys, values )
             
         
         while key_transfer_not_collapsed():

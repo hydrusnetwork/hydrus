@@ -42,6 +42,18 @@ DISCRIMINANT_ARCHIVE = 3
 DISCRIMINANT_DOWNLOADING = 4
 DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH = 5
 
+DIRECTION_UP = 0
+DIRECTION_LEFT = 1
+DIRECTION_RIGHT = 2
+DIRECTION_DOWN = 3
+
+directions_alignment_string_lookup = {}
+
+directions_alignment_string_lookup[ DIRECTION_UP ] = 'top'
+directions_alignment_string_lookup[ DIRECTION_LEFT ] = 'left'
+directions_alignment_string_lookup[ DIRECTION_RIGHT ] = 'right'
+directions_alignment_string_lookup[ DIRECTION_DOWN ] = 'bottom'
+
 DUMPER_NOT_DUMPED = 0
 DUMPER_DUMPED_OK = 1
 DUMPER_RECOVERABLE_ERROR = 2

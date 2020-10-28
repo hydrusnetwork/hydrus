@@ -1814,7 +1814,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             for ( update_index, ( update_hashes, begin, end ) ) in data:
                 
-                if len( hashes.intersection( update_hashes ) ) > 0:
+                if HydrusData.SetsIntersect( hashes, update_hashes ):
                     
                     return end
                     

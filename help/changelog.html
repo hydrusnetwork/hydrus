@@ -8,7 +8,18 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
-				<li><h3>version 413</h3></li>
+				<li><h3>version 415</h3></li>
+				<ul>
+					<li>in _options->gui pages_ you can now set the main window's page tab alignment to top/left/right/bottom (previously it was just top/left). this property now updates for all page of pages on options ok, it no longer needs client restart (issue #642)</li>
+					<li>the maintenance task that migrates tag display from the current values to the ideal application now works in significantly smaller steps. big lag from adding hundreds of childen to one parent (or similar siblings) should now be radically reduced</li>
+					<li>rejiggered some layout in the new tag display dialogs</li>
+					<li>added green/red texts to the new tag display dialogs to talk about when sync can work atm and how fast to expect changes to apply</li>
+					<li>reordered the new tag 'siblings/parents info' right-click menu so the dynamic 'has x siblings/parents' submenus are on the bottom</li>
+					<li>added basic client api calls for /add_files/..., delete_files, undelete_files, archive_files, and unarchive_files. they take 'hash' and 'hashes' parameters. I am throwing these out at the end of the week, so they don't have documentation or proper unit tests, but feel free to play with them (issue #393)</li>
+					<li>sped up some UI refresh on content update for very large sessions</li>
+					<li>sped up right-click tag/file menu any/all select actions on very large file sessions</li>
+				</ul>
+				<li><h3>version 414</h3></li>
 				<ul>
 					<li>tl;dr: you don't have to do anything. if you haven't heard of a tag parent before, no worries. the database should work better now</li>
 					<li>.</li>

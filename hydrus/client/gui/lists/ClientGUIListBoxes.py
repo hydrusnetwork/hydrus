@@ -2276,7 +2276,26 @@ class ListBoxTags( ListBox ):
                 
                 siblings_and_parents_menu = QW.QMenu( menu )
                 
+                if can_launch_sibling_and_parent_dialogs:
+                    
+                    if len( selected_actual_tags ) == 1:
+                        
+                        ( tag, ) = selected_actual_tags
+                        
+                        text = tag
+                        
+                    else:
+                        
+                        text = 'selection'
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                    
+                
                 if can_show_siblings_and_parents:
+                    
+                    ClientGUIMenus.AppendSeparator( siblings_and_parents_menu )
                     
                     siblings_menu = QW.QMenu( siblings_and_parents_menu )
                     parents_menu = QW.QMenu( siblings_and_parents_menu )
@@ -2374,25 +2393,6 @@ class ListBoxTags( ListBox ):
                     async_job = ClientGUIAsync.AsyncQtJob( siblings_and_parents_menu, sp_work_callable, sp_publish_callable )
                     
                     async_job.start()
-                    
-                
-                if can_launch_sibling_and_parent_dialogs:
-                    
-                    ClientGUIMenus.AppendSeparator( siblings_and_parents_menu )
-                    
-                    if len( selected_actual_tags ) == 1:
-                        
-                        ( tag, ) = selected_actual_tags
-                        
-                        text = tag
-                        
-                    else:
-                        
-                        text = 'selection'
-                        
-                    
-                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
-                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, siblings_and_parents_menu, 'siblings and parents' )
@@ -2611,7 +2611,7 @@ class ListBoxTags( ListBox ):
                         predicates_selection_string = 'selected'
                         
                     
-                    some_selected_in_current = len( predicates.intersection( current_predicates ) ) > 0
+                    some_selected_in_current = HydrusData.SetsIntersect( predicates, current_predicates )
                     
                     if some_selected_in_current:
                         
@@ -2625,7 +2625,7 @@ class ListBoxTags( ListBox ):
                         ClientGUIMenus.AppendMenuItem( menu, 'require {} for current search'.format( predicates_selection_string ), 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
                         
                     
-                    some_selected_are_excluded_explicitly = len( inverse_predicates.intersection( current_predicates ) ) > 0
+                    some_selected_are_excluded_explicitly = HydrusData.SetsIntersect( inverse_predicates, current_predicates )
                     
                     if some_selected_are_excluded_explicitly:
                         

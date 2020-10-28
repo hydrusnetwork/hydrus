@@ -1214,6 +1214,27 @@ def RestartProcess():
     
     os.execv( exe, args )
     
+def SetsIntersect( a, b ):
+    
+    # not a.isdisjoint( b )
+    
+    if not isinstance( a, set ):
+        
+        a = set( a )
+        
+    
+    if not isinstance( b, set ):
+        
+        b = set( b )
+        
+    
+    if len( a ) > len( b ):
+        
+        ( a, b ) = ( b, a )
+        
+    
+    return True in ( i in b for i in a )
+    
 def SmoothOutMappingIterator( xs, n ):
     
     # de-spikifies mappings, so if there is ( tag, 20k files ), it breaks that up into manageable chunks

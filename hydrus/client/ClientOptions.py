@@ -180,8 +180,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'pause_all_watcher_checkers' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_gallery_searches' ] = False
         
-        self._dictionary[ 'booleans' ][ 'notebook_tabs_on_left' ] = False
-        
         self._dictionary[ 'booleans' ][ 'popup_message_force_min_width' ] = False
         
         self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
@@ -281,6 +279,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         #
         
         self._dictionary[ 'integers' ] = {}
+        
+        self._dictionary[ 'integers' ][ 'notebook_tab_alignment' ] = CC.DIRECTION_UP
         
         self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
         

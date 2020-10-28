@@ -936,6 +936,13 @@ class Page( QW.QSplitter ):
         self._management_panel.REPEATINGPageUpdate()
         
     
+directions_for_notebook_tabs = {}
+
+directions_for_notebook_tabs[ CC.DIRECTION_UP ] = QW.QTabWidget.North
+directions_for_notebook_tabs[ CC.DIRECTION_LEFT ] = QW.QTabWidget.West
+directions_for_notebook_tabs[ CC.DIRECTION_RIGHT ] = QW.QTabWidget.East
+directions_for_notebook_tabs[ CC.DIRECTION_DOWN ] = QW.QTabWidget.South
+
 class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def __init__( self, parent, controller, name ):
@@ -944,15 +951,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._parent_notebook = parent
         
-        # this is disabled for now because it seems borked in Qt
-        if controller.new_options.GetBoolean( 'notebook_tabs_on_left' ):
-            
-            self.setTabPosition( QW.QTabWidget.West )
-            
-        else:
-            
-            self.setTabPosition( QW.QTabWidget.North )
-            
+        direction = controller.new_options.GetInteger( 'notebook_tab_alignment' )
+        
+        self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
         self._controller = controller
         
@@ -968,7 +969,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
-        self._controller.sub( self, '_UpdatePageTabEliding', 'notify_new_options' )
+        self._controller.sub( self, '_UpdateOptions', 'notify_new_options' )
         
         self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
@@ -981,7 +982,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._previous_page_index = -1
         
-        self._UpdatePageTabEliding()
+        self._UpdateOptions()
         
     
     def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
@@ -999,7 +1000,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def _UpdatePageTabEliding( self ):
+    def _UpdateOptions( self ):
         
         if HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
             
@@ -1009,6 +1010,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self.tabBar().setElideMode( QC.Qt.ElideNone )
             
+        
+        direction = HG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
+        
+        self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
     
     def _UpdatePreviousPageIndex( self ):

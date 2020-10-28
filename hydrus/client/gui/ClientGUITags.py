@@ -250,6 +250,41 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
+        message = 'While a tag service normally applies its own siblings and parents to itself, it does not have to. If you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings or parents at all.'
+        message += os.linesep * 2
+        message += 'If there are conflicts, the services at the top of the list have precedence. Parents are collapsed by sibling rules before they are applied.'
+        
+        self._message = ClientGUICommon.BetterStaticText( self, label = message )
+        self._message.setWordWrap( True )
+        
+        self._sync_status = ClientGUICommon.BetterStaticText( self )
+        
+        self._sync_status.setWordWrap( True )
+        
+        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+            
+            self._sync_status.setText( 'Siblings and parents are set to sync all the time. Changes will start applying as soon as you ok this dialog.' )
+            
+            self._sync_status.setObjectName( 'HydrusValid' )
+            
+        else:
+            
+            if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                
+                self._sync_status.setText( 'Siblings and parents are only set to sync during idle time. Changes here will only start to apply when you are not using the client.' )
+                
+            else:
+                
+                self._sync_status.setText( 'Siblings and parents are not set to sync in the background at any time. If there is sync work to do, you will have to force it to run using the \'review\' window under _tags->siblings and parents sync_.' )
+                
+            
+            self._sync_status.setObjectName( 'HydrusWarning' )
+            
+        
+        self._sync_status.style().polish( self._sync_status )
+        
+        QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._sync_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -278,15 +313,6 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             QW.QWidget.__init__( self, parent )
             
             self._master_service_key = master_service_key
-            
-            message = 'While a tag service normally applies its own siblings and parents to itself, it does not have to. If you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings or parents at all.'
-            message += os.linesep * 2
-            message += 'If there are conflicts, the services at the top of the list have precedence. Parents are collapsed by sibling rules before they are applied.'
-            message += os.linesep * 2
-            message += 'New sibling and parent rules will be calculated in the background, so changes will not be instant. You can review the current \'sync\' under _services->display sync_.'
-            
-            self._message = ClientGUICommon.BetterStaticText( self, label = message )
-            self._message.setWordWrap( True )
             
             #
             
@@ -322,7 +348,6 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._sibling_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, self._parent_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             
@@ -2563,7 +2588,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     for m in self._media:
                         
-                        if len( m.GetHashes().intersection( content_update.GetHashes() ) ) > 0:
+                        if HydrusData.SetsIntersect( m.GetHashes(), content_update.GetHashes() ):
                             
                             m.GetMediaResult().ProcessContentUpdate( service_key, content_update )
                             
@@ -4431,13 +4456,47 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Figuring out how tags should appear according to sibling and parent application rules takes time. When you set new rules, the changes do not happen immediately--the client catches up in the background. You can review current progress and force faster sync here.'
         
-        st = ClientGUICommon.BetterStaticText( self, label = message )
-        st.setWordWrap( True )
+        self._message = ClientGUICommon.BetterStaticText( self, label = message )
+        self._message.setWordWrap( True )
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._sync_status = ClientGUICommon.BetterStaticText( self )
+        
+        self._sync_status.setWordWrap( True )
+        
+        self._UpdateStatusText()
+        
+        QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._sync_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+        HG.client_controller.sub( self, '_UpdateStatusText', 'notify_new_menu_option' )
+        
+    
+    def _UpdateStatusText( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+            
+            self._sync_status.setText( 'Siblings and parents are set to sync all the time. If there is work to do here, it should be cleared out in real time as you watch.' )
+            
+            self._sync_status.setObjectName( 'HydrusValid' )
+            
+        else:
+            
+            if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                
+                self._sync_status.setText( 'Siblings and parents are only set to sync during idle time. If there is work to do here, it should be cleared out when you are not using the client.' )
+                
+            else:
+                
+                self._sync_status.setText( 'Siblings and parents are not set to sync in the background at any time. If there is work to do here, you can force it now by clicking \'work now!\' button.' )
+                
+            
+            self._sync_status.setObjectName( 'HydrusWarning' )
+            
+        
+        self._sync_status.style().polish( self._sync_status )
         
     
     class _Panel( QW.QWidget ):
@@ -4591,7 +4650,14 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 else:
                     
-                    self._go_faster_button.setText( 'work hard now!' )
+                    if not HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                        
+                        self._go_faster_button.setText( 'work now!' )
+                        
+                    else:
+                        
+                        self._go_faster_button.setText( 'work hard now!' )
+                        
                     
                 
             

@@ -1427,7 +1427,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._default_new_page_goes.addItem( CC.new_page_goes_string_lookup[ value], value )
                 
             
-            self._notebook_tabs_on_left = QW.QCheckBox( self._pages_panel )
+            self._notebook_tab_alignment = ClientGUICommon.BetterChoice( self._pages_panel )
+            
+            for value in [ CC.DIRECTION_UP, CC.DIRECTION_LEFT, CC.DIRECTION_RIGHT, CC.DIRECTION_DOWN ]:
+                
+                self._notebook_tab_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
+                
             
             self._total_pages_warning = QP.MakeQSpinBox( self._pages_panel, min=5, max=500 )
             
@@ -1497,7 +1502,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_new_page_goes.SetValue( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
-            self._notebook_tabs_on_left.setChecked( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
+            self._notebook_tab_alignment.SetValue( self._new_options.GetInteger( 'notebook_tab_alignment' ) )
             
             self._max_page_name_chars.setValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
             
@@ -1537,7 +1542,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'By default, put new page tabs on (requires restart): ', self._default_new_page_goes ) )
-            rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
+            rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             
@@ -1598,7 +1603,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'default_gui_session' ] = self._default_gui_session.currentText()
             
-            self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.isChecked() )
+            self._new_options.SetInteger( 'notebook_tab_alignment', self._notebook_tab_alignment.GetValue() )
             
             self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.value() )
             
@@ -2151,7 +2156,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 pretty_preview_show_action += ', start with embed button'
                 
             
-            no_show = len( set( ( media_show_action, preview_show_action ) ).intersection( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV } ) ) == 0
+            no_show = { media_show_action, preview_show_action }.isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV } )
             
             if no_show:
                 

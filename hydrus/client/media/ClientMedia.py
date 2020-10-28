@@ -1134,11 +1134,13 @@ class MediaList( object ):
                 
                 if and_or_or == 'AND':
                     
-                    return sum( ( 1 for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ).intersection( select_tags ) ) == len( select_tags ) ) )
+                    select_tags = set( select_tags )
+                    
+                    return sum( ( 1 for m in flat_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) ) ) )
                     
                 elif and_or_or == 'OR':
                     
-                    return sum( ( 1 for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ).intersection( select_tags ) ) > 0 ) )
+                    return sum( ( 1 for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), select_tags ) ) )
                     
                 
             
@@ -1213,11 +1215,13 @@ class MediaList( object ):
                 
                 if and_or_or == 'AND':
                     
-                    filtered_media = [ m for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ).intersection( select_tags ) ) == len( select_tags ) ]
+                    select_tags = set( select_tags )
+                    
+                    filtered_media = [ m for m in flat_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) ) ]
                     
                 elif and_or_or == 'OR':
                     
-                    filtered_media = [ m for m in flat_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ).intersection( select_tags ) ) > 0 ]
+                    filtered_media = [ m for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), select_tags ) ]
                     
                 
             
@@ -1277,11 +1281,13 @@ class MediaList( object ):
                 
                 if and_or_or == 'AND':
                     
-                    filtered_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ).intersection( select_tags ) ) == len( select_tags ) }
+                    select_tags = set( select_tags )
+                    
+                    filtered_media = { m for m in self._sorted_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) ) }
                     
                 elif and_or_or == 'OR':
                     
-                    filtered_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ).intersection( select_tags ) ) > 0 }
+                    filtered_media = { m for m in self._sorted_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), select_tags ) }
                     
                 
             

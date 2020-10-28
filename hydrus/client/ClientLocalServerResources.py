@@ -766,12 +766,14 @@ class HydrusResourceClientAPIRestrictedAccountVerify( HydrusResourceClientAPIRes
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedAddFile( HydrusResourceClientAPIRestricted ):
+class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_FILES )
         
+    
+class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request ):
         
@@ -817,6 +819,146 @@ class HydrusResourceClientAPIRestrictedAddFile( HydrusResourceClientAPIRestricte
         body = json.dumps( body_dict )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        hashes = set()
+        
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args.GetValue( 'hash', bytes )
+            
+            hashes.add( hash )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            
+            hashes.update( more_hashes )
+            
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        hashes = set()
+        
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args.GetValue( 'hash', bytes )
+            
+            hashes.add( hash )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            
+            hashes.update( more_hashes )
+            
+        
+        # expand this to take file service and reason
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+        
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        hashes = set()
+        
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args.GetValue( 'hash', bytes )
+            
+            hashes.add( hash )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            
+            hashes.update( more_hashes )
+            
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        hashes = set()
+        
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args.GetValue( 'hash', bytes )
+            
+            hashes.add( hash )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            
+            hashes.update( more_hashes )
+            
+        
+        # expand this to take file service, if and when we move to multiple trashes or whatever
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes )
+        
+        service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
         

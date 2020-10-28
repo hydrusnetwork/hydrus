@@ -891,7 +891,7 @@ class DB( HydrusDB.HydrusDB ):
                 other_implied_by_tag_ids = set( implied_by_tag_ids )
                 other_implied_by_tag_ids.discard( storage_tag_id )
                 
-                # get the count of pending that are tagged by storage_tag_id but not tagged by any of the other implications
+                # get the count of pending that are tagged by storage_tag_id but not tagged by any of the other implied_by
                 
                 num_pending_to_be_rescinded = self._GetWithAndWithoutTagsForFilesFileCount( HC.CONTENT_STATUS_PENDING, tag_service_id, ( storage_tag_id, ), other_implied_by_tag_ids, hash_ids, temp_hash_ids_table_name, file_service_ids_to_hash_ids )
                 
@@ -964,7 +964,7 @@ class DB( HydrusDB.HydrusDB ):
                 other_implied_by_tag_ids = set( implied_by_tag_ids )
                 other_implied_by_tag_ids.discard( storage_tag_id )
                 
-                # get the count of current that are tagged by storage_tag_id but not tagged by any of the other implications
+                # get the count of current that are tagged by storage_tag_id but not tagged by any of the other implied_by
                 
                 num_deletable = self._GetWithAndWithoutTagsForFilesFileCount( HC.CONTENT_STATUS_CURRENT, tag_service_id, ( storage_tag_id, ), other_implied_by_tag_ids, hash_ids, temp_hash_ids_table_name, file_service_ids_to_hash_ids )
                 
@@ -2341,36 +2341,38 @@ class DB( HydrusDB.HydrusDB ):
             actual_sibling_rows = set( self._c.execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) )
             ideal_sibling_rows = set( self._c.execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_ideal_tag_siblings_lookup_table_name ) ) )
             
-            sibling_tag_ids_to_sync = { ideal_tag_id for ( bad_tag_id, ideal_tag_id ) in ideal_sibling_rows.symmetric_difference( actual_sibling_rows ) }
+            sibling_rows_to_remove = actual_sibling_rows.difference( ideal_sibling_rows )
+            sibling_rows_to_add = ideal_sibling_rows.difference( actual_sibling_rows )
             
             ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
             
             actual_parent_rows = set( self._c.execute( 'SELECT child_tag_id, ancestor_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) )
             ideal_parent_rows = set( self._c.execute( 'SELECT child_tag_id, ancestor_tag_id FROM {};'.format( cache_ideal_tag_parents_lookup_table_name ) ) )
             
-            parent_tag_ids_to_sync = { ancestor_tag_id for ( child_tag_id, ancestor_tag_id ) in ideal_parent_rows.symmetric_difference( actual_parent_rows ) }
+            parent_rows_to_remove = actual_parent_rows.difference( ideal_parent_rows )
+            parent_rows_to_add = ideal_parent_rows.difference( actual_parent_rows )
             
             num_actual_rows = len( actual_sibling_rows ) + len( actual_parent_rows )
             num_ideal_rows = len( ideal_sibling_rows ) + len( ideal_parent_rows )
             
-            self._service_ids_to_display_application_status[ service_id ] = ( sibling_tag_ids_to_sync, parent_tag_ids_to_sync, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
             
         
-        ( sibling_tag_ids_to_sync, parent_tag_ids_to_sync, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ service_id ]
+        ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ service_id ]
         
-        return ( sibling_tag_ids_to_sync, parent_tag_ids_to_sync, num_actual_rows, num_ideal_rows )
+        return ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
         
     
     def _CacheTagDisplayGetApplicationStatusNumbers( self, service_key ):
         
         service_id = self._GetServiceId( service_key )
         
-        ( sibling_tag_ids_to_sync, parent_tag_ids_to_sync, num_actual_rows, num_ideal_rows ) = self._CacheTagDisplayGetApplicationStatus( service_id )
+        ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._CacheTagDisplayGetApplicationStatus( service_id )
         
         status = {}
         
-        status[ 'num_siblings_to_sync' ] = len( sibling_tag_ids_to_sync )
-        status[ 'num_parents_to_sync' ] = len( parent_tag_ids_to_sync )
+        status[ 'num_siblings_to_sync' ] = len( sibling_rows_to_add ) + len( sibling_rows_to_remove )
+        status[ 'num_parents_to_sync' ] = len( parent_rows_to_add ) + len( parent_rows_to_remove )
         status[ 'num_actual_rows' ] = num_actual_rows
         status[ 'num_ideal_rows' ] = num_ideal_rows
         
@@ -2784,149 +2786,347 @@ class DB( HydrusDB.HydrusDB ):
         
         time_started = HydrusData.GetNowFloat()
         
-        tag_ids_altered = set()
-        
         tag_service_id = self._GetServiceId( service_key )
         
-        ( sibling_tag_ids_to_sync, parent_tag_ids_to_sync, num_actual_rows, num_ideal_rows ) = self._CacheTagDisplayGetApplicationStatus( tag_service_id )
+        all_tag_ids_altered = set()
         
-        while len( sibling_tag_ids_to_sync ) + len( parent_tag_ids_to_sync ) > 0 and not HydrusData.TimeHasPassedFloat( time_started + work_time ):
+        ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._CacheTagDisplayGetApplicationStatus( tag_service_id )
+        
+        while len( sibling_rows_to_add ) + len( sibling_rows_to_remove ) + len( parent_rows_to_add ) + len( parent_rows_to_remove ) > 0 and not HydrusData.TimeHasPassedFloat( time_started + work_time ):
             
-            # I had the idea that it might be easier to do siblings first, then parents, but now I have resolved to do this by chain, rather than portion of chain, that may not be true
+            # ok, so it turns out that migrating entire chains at once was sometimes laggy for certain large parent chains like 'azur lane'
+            # imagine the instance where we simply want to parent a hundred As to a single B--we obviously don't have to do all that in one go
+            # therefore, we are now going to break the migration into smaller pieces
             
-            if len( sibling_tag_ids_to_sync ) > 0:
-                
-                ( tag_id_to_sync, ) = random.sample( sibling_tag_ids_to_sync, 1 )
-                
-            else:
-                
-                ( tag_id_to_sync, ) = random.sample( parent_tag_ids_to_sync, 1 )
-                
+            # I spent a large amount of time trying to figure out a way to _completely_ sync subsets of a chain's tags. this was a gigantic logical pain and complete sync couldn't get neat subsets in certain situations
             
+            #█▓█▓███▓█▓███████████████████████████████▓▓▓███▓████████████████
+            #█▓▓█▓▓▓▓▓███████████████████▓▓▓▓▓▓▓▓▓██████▓▓███▓███████████████
+            #█▓███▓████████████████▓▒░              ░▒▓██████████████████████
+            #█▓▓▓▓██████████████▒      ░░░░░░░░░░░░     ▒▓███████████████████
+            #█▓█▓████████████▓░    ░░░░░░░░░░░░░░░░░ ░░░  ░▓█████████████████
+            #██████████████▓    ░░▒▒▒▒▒░░ ░░░    ░░ ░ ░░░░  ░████████████████
+            #█████████████▒  ░░░▒▒▒▒░░░░░░░░       ░   ░░░░   ████▓▓█████████
+            #▓▓██████████▒ ░░░░▒▓▒░▒▒░░   ░░░       ░ ░ ░░░░░  ███▓▓▓████████
+            #███▓███████▒ ▒▒▒░░▒▒▒▒░░░      ░          ░░░ ░░░  ███▓▓▓███████
+            #██████████▓ ▒▒░▒░▒░▒▒▒▒▒░▒░ ░░             ░░░░░ ░  ██▓▓▓███████
+            #█████▓▓▓█▒ ▒▒░▒░░░░▒▒░░░░░▒░                ░ ░ ▒▒▒  ██▓▓███████
+            #▓▓▓▓▓▓▓█░ ▒▓░░▒░░▒▒▒▒▓░░░░░▒░░             ░ ░░▒▒▒▒░ ▒██▓█▓▓▓▓▓▓
+            #▓▓▓▓███▓ ▒▒▒░░░▒▒░░▒░▒▒░░   ░░░░░           ░░░▒░ ▒░▒ ███▓▓▓▓▓▓▓
+            #███████▓░▒▒▒▒▒▒░░░▒▒▒░░░░      ░           ░░░ ░░░▒▒░ ░██▓████▓▓
+            #▓▓█▓███▒▒▒▓▒▒▓░░▒░▒▒▒▒░░░░░ ░         ░   ░ ░░░░░░▒░░░ ██▓█████▓
+            #▒▒▓▓▓▓▓▓▒▓▓░░▓▒ ▒▒░▒▒▒▒▒░░                     ░░ ░░░▒░▒▓▓██████
+            #▒▒▓▓▓▓▓▓▒▒▒░▒▒▓░░░▒▒▒▒▒▒░                       ░░░░▒▒░▒▓▓▓▓▓▓▓▓
+            #▓▒▓▓▓▓▓▓▒▓░ ▒▒▒▓▒▒░░▒▒▒▒▒▒░▒▒▒▒▒▒▒▒▒▒▒░░░░░▒░▒░░░▒░▒▒▒░▓█▓▓▓▓▓▓▓
+            #▓▒▒▓▓▓▓▓▓▓▓░ ▒▒▒▓▒▓▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▒▒▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓
+            #▓▓▓▓▓▓▓▓▓▓▓▓▒░▒▒▒░▒▒▓▒▒▒░░▒▓▓▓██▓▓▓░░░░░▒▒▒▓▓▒ ░▒▒▒▒▒▒▓▓▓▓▒▒▒▓▓▓
+            #█▓█▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▓▓▓▒▒▒▓▓▓▓▒▒▒▓█▓   ░▓▓▒▒▓█▓▒░▒▒▒▒▓█▓█▓▓▓▓▓▓▓
+            #█████▓▒▓▓▓▓▓▒▓▓▒▒▒▒▒▒▒▒▒▒▓▒░▒▓▒░░ ░▒▒  ░░░  ▓█▓▓▓▒▒▒▒█▓▒▒▒▓▓▓▓▓▒
+            #█████▓▓▓█▓▓▓▓▒▓▓▓▒▒▒▒▒▒░▒▒░░░░   ░░░▒░  ▒ ░  ░ ░▒░░▒▓▓▓▒▒▒▒▒▒▒▒░
+            #████▓▓▓███▓▓▓▓▓▓▓▒▒▒▒░░  ▒▒░   ░░░░▒▒   ░▒░▒░  ░░ ░▓█▓▓▒▒▒▒░░▒▒▒
+            #███▓▓▓█████▓▓▓▒▒▓▒▒▒▒▒░░  ░ ░░▒░ ░▒▒▒    ▒░░▒░░   ▒▓▒▒▒░▒▒▒▒▓▓▓▒
+            #████▓███████▓▒▒▒░▒▒▓▓▓▒▒░░   ░   ▒▒▓██▒▒▓▓░  ░░░░▒▒░▒▒▒▒▒▓▒▓▒▓▒▒
+            #████████████▒░▒██░▒▓▓▓▓▓▒▒▒░░░░  ▒▓▒▓▓▓▒░▒▒░  ▒▒▒▓▒▒▒▒▓▒▒▓▓▓▒▒▒▒
+            #████▓▓▓▓▓▓▒▓▒  ▓▓  ▒▓▓▓▓▓▓▒▒▒░░░░░    ░ ░░░▒░░▒▒▒▒▒▒ ▒▓▒▒▒▒▒▒▒▒▒
+            #▓░░░░░░░▒▒▓▓▓  ▒█▒  ▒▒▓▒▒▒▒▒▒░░░░ ░░░   ░ ░ ▒░▒▒▒▒▒░░▒▓▒▒▒▒▒▒▒▓▒
+            #▒▒░░░▒▒▒▒▓▒▒▓▒░ ░▒▒▒▒▓▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▒▒▓▓▓▓▒░▒▒▒▒▒░░▒▓▒▒▒▒▒▒▒▓▒▒
+            #▓▒▒▒▓▓▓▓▓▒▒▒▒▒▓▓▒▓██▓▓▓▒▒▒▒▒░░▒▒▒▒░░░▒▒░░▒▒▓▒░░▒▓▓▓▒▓▓▒▒▒▒▒▒▒▒▒▒
+            #▓▒▓▓▓▓▒▒▒▒▒▒▒▒▒▒▓▓▒▓▓▓▓▓▒▒▒▒░░░░░░▒▒▒▒▒▒░░ ░▒░░▒▒▒▒▒▒▒▒▒▒▓▒▓▓▓▓▒
+            #▓▒▒▒▒▒▓▓▓▒▓▓▓▓▓▓▓▒▒▒▓▓▓▓▓▒▒▒░░░░░░░     ░░░░░▒▒▓▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓
+            #▓▓▓▓▓▓▓▓▒▒▒▒▒▓▓▓▒▓▒▒▓▓▓▓▓▓▓▒▒▒░░░░░░     ░░▒▒▒▒▓▒▒▒▒▒▒▒▓▒▒▓▓▓▓▓▓
+            #▓▓▓▓▓▓▓▒▒▒▒▓▓▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒░░▒▒░░░▒▒▓▓▓▒▒█▓▒▓▒▒▒▓▓▒▒▓▓▓▓▓▓
+            #█▓▓▓▓▒▒▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓██▓▓▓▓▓▓▓▓▓▓▓▓▓▓█▓▓▓▓▒▒░█▓▓▓▓▓▒▒▒▒▒▒▓▓▓▓▓
+            #▓▓▓▒▒▒▒▒▓▓▓▓▓▒▓▓▓▒▒▒▒▒ ░▓▓▓▓▓▓▓▓▓██▓█▓▓▓▒▓▒░░░ ▓▓▒▓▒▒▒▒▒▒▒▒▒▓▓▓▒
+            #
+            #                         IN MEMORIAM
+            #     tag_ids_to_trunkward_additional_implication_work_weight
             #
             
-            # ok, so it is atm too complicated to figure out incremental sub-chain actual->ideal migration, so what we are going to do is just get all possible ideal/actual chains touched by our to-regen master id and clear and update them all
-            # it is possible that a current ideal chain has stuff in a current actual chain
-            # _and vice versa(!)_
-            # so we'll just do an exhaustive search
+            # I am now moving to table row addition/subtraction. we'll try to move one row at a time and do the smallest amount of work
             
-            tag_ids_to_sync = { tag_id_to_sync }
-            tag_ids_to_lookup = { tag_id_to_sync }
+            # There are potential multi-row optimisations here to reduce total work amount. Stuff like reordering existing chains, reassigning siblings.
+            # e.g. if sibling A->B moves to A->C, we now go:
+            # rescind A->B sibling: remove A->B, add A->A implications
+            # add A->C sibling: remove A->A, add A->C implications
+            # However, multi-row tech requires mixing removes and adds, which means we again stray into Hell Logic Zone 3000. We'll put the thought off.
             
-            while len( tag_ids_to_lookup ) > 0:
-                
-                this_round_tag_ids = set( self._CacheTagDisplayGetChainsMembers( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids_to_lookup ) )
-                this_round_tag_ids.update( self._CacheTagDisplayGetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids_to_lookup ) )
-                
-                new_tag_ids = this_round_tag_ids.difference( tag_ids_to_sync )
-                
-                tag_ids_to_sync.update( new_tag_ids )
-                
-                tag_ids_to_lookup = new_tag_ids
-                
+            # I can always remove a sibling row from actual and stay valid. this does not invalidate ideals in parents table
+            # I can always remove a parent row from actual and stay valid
             
-            actual_tag_ids_to_implications = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids_to_sync )
-            ideal_tag_ids_to_implications = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids_to_sync )
+            # I know I can copy a parent to actual if the tags aren't in any pending removes
+            # I know I can copy a sibling to actual if the tags aren't in any pending removes (I would if there were pending removes indicating merges or something, but there won't be!)
             
-            # if I am feeling very clever, I could potentially add tag_ids_to_migrate_implications, which would be an UPDATE
-            # this would only work for tag_ids that have the same current implied by in actual and ideal (e.g. moving a tag sibling from A->B to B->A)
-            # may be better to do this in a merged add/deleteimplication function that would be able to well detect this with 'same current implied' of count > 0 for that domain
+            # we will remove surplus rows from actual and then add needed rows
             
-            tag_ids_to_delete_implications = {}
-            tag_ids_to_add_implications = {}
+            # There may be multi-row optimisations here to reduce total work amount, I am not sure. Probably for stuff like reordering existing chains. It probably requires mixing removes and adds, which means we stray into hell logic mode, so we'll put the thought off.
             
-            for tag_id in tag_ids_to_sync:
-                
-                actual_implications = actual_tag_ids_to_implications[ tag_id ]
-                ideal_implications = ideal_tag_ids_to_implications[ tag_id ]
-                
-                to_delete = actual_implications.difference( ideal_implications )
-                to_add = ideal_implications.difference( actual_implications )
-                
-                if len( to_delete ) > 0:
-                    
-                    tag_ids_to_delete_implications[ tag_id ] = to_delete
-                    
-                    tag_ids_altered.add( tag_id )
-                    tag_ids_altered.update( to_delete )
-                    
-                
-                if len( to_add ) > 0:
-                    
-                    tag_ids_to_add_implications[ tag_id ] = to_add
-                    
-                    tag_ids_altered.add( tag_id )
-                    tag_ids_altered.update( to_add )
-                    
-                
+            # If we need to remove 1,000 mappings and then add 500 to be correct, we'll be doing 1,500 total no matter the order we do them in. This 1,000/500 is not the sum of all the current rows' individual current estimated work.
+                # When removing, the sum overestimates, when adding, the sum underestimates. The number of sibling/parent rows to change is obviously also the same.
             
-            # ok, now sync our actual tables to ideal
+            # When you remove a row, the other row estimates may stay as weighty, or they may get less. (e.g. removing sibling A->B makes the parent B->C easier to remove later)
+            # When you add a row, the other row estimates may stay as weighty, or they may get more. (e.g. adding parent A->B makes adding the sibling b->B more difficult later on)
+            
+            # The main priority of this function is to reduce each piece of work time.
+            # When removing, we can break down the large jobs by doing small jobs. So, by doing small jobs first, we reduce max job time.
+            # However, if we try that strategy when adding, we actually increase max job time, as those delayed big jobs only have the option of staying the same or getting bigger! We get zoom speed and then clunk mode.
+            # Therefore, when adding, to limit max work time for the whole migration, we want to actually choose the largest jobs first! That work has to be done, and it doesn't get easier!
             
             ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
             ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
             
-            # delete all actual from actual
+            def GetWeightedSiblingRow( sibling_rows, index ):
+                
+                # when you change the sibling A->B in the _lookup table_:
+                # you need to add/remove about A number of mappings for B and all it implies. the weight is: A * count( all the B->X implications )
+                
+                ideal_tag_ids = { i for ( b, i ) in sibling_rows }
+                
+                ideal_tag_ids_to_implies = self._CacheTagDisplayGetTagsToImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+                
+                bad_tag_ids = { b for ( b, i ) in sibling_rows }
+                
+                bad_tag_ids_to_count = self._GetAutocompleteCountsEstimate( ClientTags.TAG_DISPLAY_STORAGE, tag_service_id, self._combined_file_service_id, bad_tag_ids, True, True )
+                
+                weight_and_rows = [ ( bad_tag_ids_to_count[ b ] * len( ideal_tag_ids_to_implies[ i ] ) + 1, ( b, i ) ) for ( b, i ) in sibling_rows ]
+                
+                weight_and_rows.sort()
+                
+                return weight_and_rows[ index ]
+                
             
-            self._c.executemany( 'DELETE FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_actual_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_sync ) )
+            def GetWeightedParentRow( parent_rows, index ):
+                
+                # when you change the parent A->B in the _lookup table_:
+                # you need to add/remove mappings (of B) for all instances of A and all that implies it. the weight is: sum( all the X->A implications )
+                
+                child_tag_ids = { c for ( c, a ) in parent_rows }
+                
+                child_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, child_tag_ids )
+                
+                all_child_tags = set( child_tag_ids )
+                all_child_tags.update( itertools.chain.from_iterable( child_tag_ids_to_implied_by.values() ) )
+                
+                child_tag_ids_to_count = self._GetAutocompleteCountsEstimate( ClientTags.TAG_DISPLAY_STORAGE, tag_service_id, self._combined_file_service_id, all_child_tags, True, True )
+                
+                weight_and_rows = [ ( sum( ( child_tag_ids_to_count[ implied_by ] for implied_by in child_tag_ids_to_implied_by[ c ] ) ), ( c, p ) ) for ( c, p ) in parent_rows ]
+                
+                weight_and_rows.sort()
+                
+                return weight_and_rows[ index ]
+                
             
-            actual_rows_delta = - self._GetRowCount()
+            # first up, the removees. what is in actual but not ideal
             
-            self._c.executemany( 'DELETE FROM {} WHERE child_tag_id = ? OR ancestor_tag_id = ?;'.format( cache_actual_tag_parents_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_sync ) )
+            # if I switch to storing the actual rows in cache, that's nice mate, I can just sample from there, no need for query every time
             
-            actual_rows_delta -= self._GetRowCount()
+            some_removee_sibling_rows = random.sample( sibling_rows_to_remove, min( len( sibling_rows_to_remove ), 20 ) )
+            some_removee_parent_rows = random.sample( parent_rows_to_remove, min( len( parent_rows_to_remove ), 20 ) )
             
-            # insert all ideal into actual
+            if len( some_removee_sibling_rows ) + len( some_removee_parent_rows ) > 0:
+                
+                smallest_sibling_weight = None
+                smallest_sibling_row = None
+                smallest_parent_weight = None
+                smallest_parent_row = None
+                
+                if len( some_removee_sibling_rows ) > 0:
+                    
+                    ( smallest_sibling_weight, smallest_sibling_row ) = GetWeightedSiblingRow( some_removee_sibling_rows, 0 )
+                    
+                
+                if len( some_removee_parent_rows ) > 0:
+                    
+                    ( smallest_parent_weight, smallest_parent_row ) = GetWeightedParentRow( some_removee_parent_rows, 0 )
+                    
+                
+                if smallest_sibling_weight is not None and smallest_parent_weight is not None:
+                    
+                    if smallest_sibling_weight < smallest_parent_weight:
+                        
+                        smallest_parent_weight = None
+                        smallest_parent_row = None
+                        
+                    else:
+                        
+                        smallest_sibling_weight = None
+                        smallest_sibling_row = None
+                        
+                    
+                
+                if smallest_sibling_row is not None:
+                    
+                    chain_tag_ids = self._CacheTagDisplayGetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, smallest_sibling_row )
+                    
+                    previous_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                    
+                    self._c.execute( 'DELETE FROM {} WHERE bad_tag_id = ? AND ideal_tag_id = ?;'.format( cache_actual_tag_siblings_lookup_table_name ), smallest_sibling_row )
+                    
+                    after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                    
+                    sibling_rows_to_remove.discard( smallest_sibling_row )
+                    
+                
+                if smallest_parent_row is not None:
+                    
+                    chain_tag_ids = self._CacheTagDisplayGetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, smallest_parent_row )
+                    
+                    previous_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                    
+                    self._c.execute( 'DELETE FROM {} WHERE child_tag_id = ? AND ancestor_tag_id = ?;'.format( cache_actual_tag_parents_lookup_table_name ), smallest_parent_row )
+                    
+                    after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                    
+                    parent_rows_to_remove.discard( smallest_parent_row )
+                    
+                
+                num_actual_rows -= 1
+                
+            else:
+                
+                # there is nothing to remove, so we'll now go for what is in ideal but not actual
+                
+                some_addee_sibling_rows = random.sample( sibling_rows_to_add, min( len( sibling_rows_to_add ), 20 ) )
+                some_addee_parent_rows = random.sample( parent_rows_to_add, min( len( parent_rows_to_add ), 20 ) )
+                
+                if len( some_addee_sibling_rows ) + len( some_addee_parent_rows ) > 0:
+                    
+                    largest_sibling_weight = None
+                    largest_sibling_row = None
+                    largest_parent_weight = None
+                    largest_parent_row = None
+                    
+                    if len( some_addee_sibling_rows ) > 0:
+                        
+                        ( largest_sibling_weight, largest_sibling_row ) = GetWeightedSiblingRow( some_addee_sibling_rows, -1 )
+                        
+                    
+                    if len( some_addee_parent_rows ) > 0:
+                        
+                        ( largest_parent_weight, largest_parent_row ) = GetWeightedParentRow( some_addee_parent_rows, -1 )
+                        
+                    
+                    if largest_sibling_weight is not None and largest_parent_weight is not None:
+                        
+                        if largest_sibling_weight > largest_parent_weight:
+                            
+                            largest_parent_weight = None
+                            largest_parent_row = None
+                            
+                        else:
+                            
+                            largest_sibling_weight = None
+                            largest_sibling_row = None
+                            
+                        
+                    
+                    if largest_sibling_row is not None:
+                        
+                        chain_tag_ids = self._CacheTagDisplayGetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, largest_sibling_row )
+                        
+                        previous_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_actual_tag_siblings_lookup_table_name ), largest_sibling_row )
+                        
+                        after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                        
+                        sibling_rows_to_add.discard( largest_sibling_row )
+                        
+                    
+                    if largest_parent_row is not None:
+                        
+                        chain_tag_ids = self._CacheTagDisplayGetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, largest_parent_row )
+                        
+                        previous_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO {} ( child_tag_id, ancestor_tag_id ) VALUES ( ?, ? );'.format( cache_actual_tag_parents_lookup_table_name ), largest_parent_row )
+                        
+                        after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, chain_tag_ids )
+                        
+                        parent_rows_to_add.discard( largest_parent_row )
+                        
+                    
+                    num_actual_rows += 1
+                    
+                else:
+                    
+                    del self._service_ids_to_display_application_status[ tag_service_id ]
+                    
+                    break
+                    
+                
             
-            self._c.executemany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) SELECT bad_tag_id, ideal_tag_id FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_actual_tag_siblings_lookup_table_name, cache_ideal_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_sync ) )
+            #
             
-            actual_rows_delta += self._GetRowCount()
+            tag_ids_to_delete_implied_by = collections.defaultdict( set )
+            tag_ids_to_add_implied_by = collections.defaultdict( set )
             
-            self._c.executemany( 'INSERT OR IGNORE INTO {} ( child_tag_id, ancestor_tag_id ) SELECT child_tag_id, ancestor_tag_id FROM {} WHERE child_tag_id = ? OR ancestor_tag_id = ?;'.format( cache_actual_tag_parents_lookup_table_name, cache_ideal_tag_parents_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_sync ) )
+            for tag_id in chain_tag_ids:
+                
+                previous_implied_by = previous_chain_tag_ids_to_implied_by[ tag_id ]
+                after_implied_by = after_chain_tag_ids_to_implied_by[ tag_id ]
+                
+                to_delete = previous_implied_by.difference( after_implied_by )
+                to_add = after_implied_by.difference( previous_implied_by )
+                
+                if len( to_delete ) > 0:
+                    
+                    tag_ids_to_delete_implied_by[ tag_id ] = to_delete
+                    
+                    all_tag_ids_altered.add( tag_id )
+                    all_tag_ids_altered.update( to_delete )
+                    
+                
+                if len( to_add ) > 0:
+                    
+                    tag_ids_to_add_implied_by[ tag_id ] = to_add
+                    
+                    all_tag_ids_altered.add( tag_id )
+                    all_tag_ids_altered.update( to_add )
+                    
+                
             
-            actual_rows_delta += self._GetRowCount()
+            # now do the implications
             
-            # clear and copy siblings and parents and me from actual to ideal for those tags mate
+            # if I am feeling very clever, I could potentially add tag_ids_to_migrate_implied_by, which would be an UPDATE
+            # this would only work for tag_ids that have the same current implied by in actual and ideal (e.g. moving a tag sibling from A->B to B->A)
+            # may be better to do this in a merged add/deleteimplication function that would be able to well detect this with 'same current implied' of count > 0 for that domain
             
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
             
             for file_service_id in file_service_ids:
                 
-                for ( tag_id, implication_tag_ids ) in tag_ids_to_delete_implications.items():
+                for ( tag_id, implication_tag_ids ) in tag_ids_to_delete_implied_by.items():
                     
                     self._CacheSpecificDisplayMappingsDeleteImplications( file_service_id, tag_service_id, implication_tag_ids, tag_id )
                     
                 
-                for ( tag_id, implication_tag_ids ) in tag_ids_to_add_implications.items():
+                for ( tag_id, implication_tag_ids ) in tag_ids_to_add_implied_by.items():
                     
                     self._CacheSpecificDisplayMappingsAddImplications( file_service_id, tag_service_id, implication_tag_ids, tag_id )
                     
                 
             
-            for ( tag_id, implication_tag_ids ) in tag_ids_to_delete_implications.items():
+            for ( tag_id, implication_tag_ids ) in tag_ids_to_delete_implied_by.items():
                 
                 self._CacheCombinedFilesDisplayMappingsDeleteImplications( tag_service_id, implication_tag_ids, tag_id )
                 
             
-            for ( tag_id, implication_tag_ids ) in tag_ids_to_add_implications.items():
+            for ( tag_id, implication_tag_ids ) in tag_ids_to_add_implied_by.items():
                 
                 self._CacheCombinedFilesDisplayMappingsAddImplications( tag_service_id, implication_tag_ids, tag_id )
                 
             
-            sibling_tag_ids_to_sync = sibling_tag_ids_to_sync.difference( tag_ids_to_sync )
-            parent_tag_ids_to_sync = parent_tag_ids_to_sync.difference( tag_ids_to_sync )
-            num_actual_rows += actual_rows_delta
-            
-            self._service_ids_to_display_application_status[ tag_service_id ] = ( sibling_tag_ids_to_sync, parent_tag_ids_to_sync, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ tag_service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
             
         
-        if len( tag_ids_altered ) > 0:
+        if len( all_tag_ids_altered ) > 0:
             
-            self._regen_tags_managers_tag_ids.update( tag_ids_altered )
+            self._regen_tags_managers_tag_ids.update( all_tag_ids_altered )
             
             self.pub_after_job( 'notify_new_tag_display_sync_status', service_key )
             
         
-        still_needs_work = len( sibling_tag_ids_to_sync ) + len( parent_tag_ids_to_sync ) > 0
+        still_needs_work = len( sibling_rows_to_add ) + len( sibling_rows_to_remove ) + len( parent_rows_to_add ) + len( parent_rows_to_remove ) > 0
         
         return still_needs_work
         
@@ -6850,6 +7050,54 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return ids_to_count
+        
+    
+    def _GetAutocompleteCountsEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
+        
+        ids_to_count = collections.Counter()
+        
+        if not include_current_tags and not include_pending_tags:
+            
+            return ids_to_count
+            
+        
+        ids_to_count_statuses = self._GetAutocompleteCountsEstimateStatuses( tag_display_type, tag_service_id, file_service_id, tag_ids )
+        
+        for ( tag_id, ( current_count, pending_count ) ) in ids_to_count_statuses.items():
+            
+            count = 0
+            
+            if include_current_tags:
+                
+                count += current_count
+                
+            
+            if include_current_tags:
+                
+                count += pending_count
+                
+            
+            ids_to_count[ tag_id ] = count
+            
+        
+        return ids_to_count
+        
+    
+    def _GetAutocompleteCountsEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ] ):
+        
+        include_current_tags = True
+        include_pending_tags = True
+        
+        ids_to_count_full = self._GetAutocompleteCounts( tag_display_type, tag_service_id, file_service_id, tag_ids, include_current_tags, include_pending_tags )
+        
+        ids_to_count_statuses = { tag_id : ( 0, 0 ) for tag_id in tag_ids }
+        
+        for ( tag_id, ( current_min, current_max, pending_min, pending_max ) ) in ids_to_count_full.items():
+            
+            ids_to_count_statuses[ tag_id ] = ( current_min, pending_min )
+            
+        
+        return ids_to_count_statuses
         
     
     def _GetAutocompleteCurrentPendingPositiveCountsAndWeights( self, tag_display_type, file_service_id, tag_service_id, tag_ids ):
@@ -18447,8 +18695,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'The new siblings/parents system calculates tags in pieces in the background. If you are on an SSD, this should be no big deal, but if you are on an HDD, it could make normal use laggy.'
                 message += os.linesep * 2
-                message += 'LATE EDIT: It seems that the PTR gives a one-time heavy period of lag. If you select SSD, be warned the client may lock up for a few minutes, one time, soon after boot. Just let it run, or select HDD here to have it do that work when you aren\'t looking.'
-                message += os.linesep * 2
                 message += 'Please let the client know if you are on an HDD to set the calculation to only happen in idle time.'
                 
                 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -18567,6 +18813,28 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 414:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                notebook_tabs_on_left = new_options.GetBoolean( 'notebook_tabs_on_left' )
+                
+                if notebook_tabs_on_left:
+                    
+                    new_options.SetInteger( 'notebook_tab_alignment', CC.DIRECTION_LEFT )
+                    
+                    self._SetJSONDump( new_options )
+                    
+                
+            except Exception as e:
+                
+                # no worries
+                pass
                 
             
         
