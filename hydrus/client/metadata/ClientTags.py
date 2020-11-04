@@ -257,30 +257,28 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         return NotImplemented
         
     
-    def _GetTagSlices( self, tag, apply_unnamespaced_rules_to_namespaced_tags ):
+    def _IterateTagSlices( self, tag, apply_unnamespaced_rules_to_namespaced_tags ):
+        
+        # this guy gets called a lot, so we are making it an iterator
+        
+        yield tag
         
         ( namespace, subtag ) = HydrusTags.SplitTag( tag )
         
-        tag_slices = []
-        
-        tag_slices.append( tag )
-        
         if tag != subtag and apply_unnamespaced_rules_to_namespaced_tags:
             
-            tag_slices.append( subtag )
+            yield subtag
             
         
         if namespace != '':
             
-            tag_slices.append( namespace + ':' )
-            tag_slices.append( ':' )
+            yield '{}:'.format( namespace )
+            yield ':'
             
         else:
             
-            tag_slices.append( '' )
+            yield ''
             
-        
-        return tag_slices
         
     
     def _GetSerialisableInfo( self ):
@@ -295,11 +293,9 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def _TagOK( self, tag, apply_unnamespaced_rules_to_namespaced_tags = False ):
         
-        tag_slices = self._GetTagSlices( tag, apply_unnamespaced_rules_to_namespaced_tags = apply_unnamespaced_rules_to_namespaced_tags )
-        
         blacklist_encountered = False
         
-        for tag_slice in tag_slices:
+        for tag_slice in self._IterateTagSlices( tag, apply_unnamespaced_rules_to_namespaced_tags = apply_unnamespaced_rules_to_namespaced_tags ):
             
             if tag_slice in self._tag_slices_to_rules:
                 

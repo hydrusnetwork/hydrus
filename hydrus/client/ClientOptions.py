@@ -201,6 +201,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active' ] = True
         self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active_on_dupe_filter' ] = False
         
+        self._dictionary[ 'booleans' ][ 'prefix_hash_when_copying' ] = False
         self._dictionary[ 'booleans' ][ 'file_system_waits_on_wakeup' ] = False
         
         self._dictionary[ 'booleans' ][ 'always_show_system_everything' ] = False

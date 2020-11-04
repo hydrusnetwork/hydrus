@@ -73,6 +73,7 @@ class NetworkException( HydrusException ): pass
 class NetworkInfrastructureException( NetworkException ): pass
 class ConnectionException( NetworkInfrastructureException ): pass
 class FirewallException( NetworkInfrastructureException ): pass
+class RouterException( NetworkInfrastructureException ): pass
 class CloudFlareException( NetworkInfrastructureException ): pass
 class BandwidthException( NetworkInfrastructureException ): pass
 class ServerException( NetworkInfrastructureException ): pass

@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 416</h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>the new siblings and parents taglist menus now copy just the actual tag when you click, excluding the 'ideal/child/parent:' prefixes</li>
+					<li>added a checkbox to _options->files and trash_ that allows you to automatically prefix hashes copied to clipboard with their hash type in a booru-lookup friendly manner, such as "md5:2496dabcbd69e3c56a5d8caabb7acde5"</li>
+					<li>the media viewer now remembers if it was previously maximised when you set it to un-fullscreen (before, it would always restore-window-ise)</li>
+					<li>fixed the 'test address' button in _manage services_ for hydrus administration services</li>
+					<li>improved the 'add upnp mapping' error handling to better catch 'already mapped' error, with separate errors for redundant, already-on-but-wrong-port, and already-on-another-computer</li>
+					<li>improved error handling when saving objects to the database, particularly for encoding or giganto-size-session errors</li>
+					<li>rewrote my tag sibling lookup unit tests to deal with more situations</li>
+					<li>wrote similar fairly comprehensive tag parent lookup unit tests</li>
+					<li>.</li>
+					<li>new downloaders:</li>
+					<li>rolling in a user-created thread watcher for warosu. it may be CloudFlare hampered depending on your situation</li>
+					<li>rolling in a prolikewoah thread watcher</li>
+					<li>rolling in a smuglo.li thread watcher</li>
+					<li>.</li>
+					<li>multi-column lists:</li>
+					<li>spent a bunch of time cleaning out how I calculate multi-column list preferred initial width/preferred current width/minimum width, and made the final column more flexible in its resizing. instances of dialog suddenly getting gigantic because of a final column that wants to size itself at 1,000px should be completely gone, and lists that are shrunk due to non-last-column resizing will now adapt to this situation and not try to flex back to total initial width.</li>
+					<li>multi-column lists now have horizontal scrollbars again for those situations where the parent window is thinner than their (now better calculated) minimum size</li>
+					<li>improved the multi-column list num_rows height calculation, it should have less empty space at the bottom for lists that grow as items are entered into them (such as in the download pages)</li>
+					<li>.</li>
+					<li>manage tags megajob speedup:</li>
+					<li>sped up manage tags final application step when entering many tags for many thousands of files at once</li>
+					<li>optimised UI-side per-file tag cache (re)generation, reducing overhead and surplus work</li>
+					<li>granularised UI-side per-file tag cache (re)generation based on the four current tag display contexts--now, if a system (e.g. manage tags dialog) only needs storage tags, the different display tags do not need to be regenerated</li>
+					<li>optimised all tag filtering, which is also used in UI-side tag cache regen</li>
+					<li>overall, giganto manage tag dialog jobs should now be faster in several ways. on my dev machine, adding 6 tags to 10k reasonably tagged files went down from 52s to 4.8. even larger jobs will still need a lump of CPU time, but they should scale more efficiently (what was previously O( num_tag_changes x num_total_mappings ) is now O( num_total_mappings ), and better at that)</li>
+					<li>when a huge number of tags is added at once in the manage tags dialog, 'recent tags' is now populated more carefully</li>
+				</ul>
 				<li><h3>version 415</h3></li>
 				<ul>
 					<li>in _options->gui pages_ you can now set the main window's page tab alignment to top/left/right/bottom (previously it was just top/left). this property now updates for all page of pages on options ok, it no longer needs client restart (issue #642)</li>

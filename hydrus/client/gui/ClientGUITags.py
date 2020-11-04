@@ -1,6 +1,7 @@
 import collections
 import itertools
 import os
+import random
 import time
 import typing
 
@@ -2301,14 +2302,21 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             recent_tags = set()
             
+            medias_and_tags_managers = [ ( m, m.GetTagsManager() ) for m in self._media ]
+            medias_and_sets_of_tags = [ ( m, tm.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ), tm.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ), tm.GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ) for ( m, tm ) in medias_and_tags_managers ]
+            
+            # there is a big CPU hit here as every time you processcontentupdates, the tagsmanagers need to regen caches lmao
+            # so if I refetch current tags etc... for every tag loop, we end up getting 16 million tagok calls etc...
+            # however, as tags is a set, thus with unique members, let's say for now this is ok, don't need to regen just to consult current
+            
             for tag in tags:
                 
-                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
-                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
-                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
-                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
+                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc ]
+                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc ]
+                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc and tag not in mp ]
+                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc and tag not in mpt ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mp ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mpt ]
                 
                 hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
                 
@@ -2343,7 +2351,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            if len( recent_tags ) > 0 and HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
+            num_recent_tags = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
+            
+            if len( recent_tags ) > 0 and num_recent_tags is not None:
+                
+                if len( recent_tags ) > num_recent_tags:
+                    
+                    recent_tags = random.sample( recent_tags, num_recent_tags )
+                    
                 
                 HG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
                 

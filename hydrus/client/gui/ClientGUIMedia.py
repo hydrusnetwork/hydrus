@@ -64,9 +64,16 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
     
     if len( desired_hashes ) > 0:
         
-        hex_hashes = os.linesep.join( [ desired_hash.hex() for desired_hash in desired_hashes ] )
+        text_lines = [ desired_hash.hex() for desired_hash in desired_hashes ]
         
-        HG.client_controller.pub( 'clipboard', 'text', hex_hashes )
+        if HG.client_controller.new_options.GetBoolean( 'prefix_hash_when_copying' ):
+            
+            text_lines = [ '{}:{}'.format( hash_type, hex_hash ) for hex_hash in text_lines ]
+            
+        
+        hex_hashes_text = os.linesep.join( text_lines )
+        
+        HG.client_controller.pub( 'clipboard', 'text', hex_hashes_text )
         
         job_key = ClientThreading.JobKey()
         

@@ -208,6 +208,37 @@ def DoingAFileJoinTagSearchIsFaster( estimated_file_row_count, estimated_tag_row
     
     return estimated_file_row_count * ( file_lookup_speed_ratio + temp_table_overhead ) < estimated_tag_row_count
     
+def GenerateBigSQLiteDumpBuffer( dump ):
+    
+    try:
+        
+        dump_bytes = bytes( dump, 'utf-8' )
+        
+    except Exception as e:
+        
+        HydrusData.PrintException( e )
+        
+        raise Exception( 'While trying to save data to the database, it could not be decoded from UTF-8 to bytes! This could indicate an encoding error, such as Shift JIS sneaking into a downloader page! Please let hydrus dev know about this! Full error was written to the log!' )
+        
+    
+    if len( dump_bytes ) >= 1073741824: # 1GB
+        
+        raise Exception( 'A data object could not save to the database because it was bigger than a buffer limit of 1GB! If your session has hundreds of thousands of files or URLs in it, close some pages NOW! Otherwise, please report this to hydrus dev!' )
+        
+    
+    try:
+        
+        dump_buffer = sqlite3.Binary( dump_bytes )
+        
+    except Exception as e:
+        
+        HydrusData.PrintException( e )
+        
+        raise Exception( 'While trying to save data to the database, it would not form into a buffer! Please let hydrus dev know about this! Full error was written to the log!' )
+        
+    
+    return dump_buffer
+    
 def GenerateCombinedFilesMappingsACCacheTableName( tag_display_type, tag_service_id ):
     
     if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
@@ -15756,7 +15787,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
                 
             
-            dump_buffer = sqlite3.Binary( bytes( dump, 'utf-8' ) )
+            dump_buffer = GenerateBigSQLiteDumpBuffer( dump )
             
             try:
                 
@@ -15789,7 +15820,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             
-            dump_buffer = sqlite3.Binary( bytes( dump, 'utf-8' ) )
+            dump_buffer = GenerateBigSQLiteDumpBuffer( dump )
             
             try:
                 
@@ -15848,7 +15879,7 @@ class DB( HydrusDB.HydrusDB ):
             
             dump = json.dumps( value )
             
-            dump_buffer = sqlite3.Binary( bytes( dump, 'utf-8' ) )
+            dump_buffer = GenerateBigSQLiteDumpBuffer( dump )
             
             try:
                 
@@ -18835,6 +18866,38 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # no worries
                 pass
+                
+            
+        
+        if version == 415:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'warosu thread parser', 'prolikewoah thread api parser', 'smuglo.li thread api parser' ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'warosu thread', 'warosu file', 'prolikewoah thread', 'prolikewoah thread json api', 'smuglo.li thread', 'smuglo.li thread json api' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
                 
             
         

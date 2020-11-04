@@ -95,18 +95,28 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
-    if 'x.x.x.x:' + str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in stdout:
+    if str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in stdout:
         
-        raise HydrusExceptions.FirewallException( 'The UPnP mapping of ' + internal_client + ':' + str( internal_port ) + '->external:' + str( external_port ) + ' already exists as a port forward. If this UPnP mapping is automatic, please disable it.' )
+        raise HydrusExceptions.RouterException( 'The UPnP mapping of ' + internal_client + ':' + str( internal_port ) + '->external:' + str( external_port ) + ' already exists! There is likely something wrong with the existing mappings fetch routine.' )
+        
+    elif str( external_port ) + ' TCP is redirected to internal ' + internal_client in stdout:
+        
+        raise HydrusExceptions.RouterException( 'The UPnP mapping of ' + internal_client + ':' + str( internal_port ) + '->external:' + str( external_port ) + ' already exists, but to a different port on this computer! You will have to remove it, either through hydrus or the router\'s direct interface (probably a web server hosted at its address).' )
+        
+    elif  str( external_port ) + ' TCP is redirected to internal ' in stdout:
+        
+        raise HydrusExceptions.RouterException( 'The UPnP mapping of ' + internal_client + ':' + str( internal_port ) + '->external:' + str( external_port ) + ' already exists, but to a different computer! You will have to remove it, either through hydrus or the router\'s direct interface (probably a web server hosted at its address).' )
         
     
     if stdout is not None and 'failed with code' in stdout:
         
         if 'UnknownError' in stdout:
             
-            raise HydrusExceptions.FirewallException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
+            raise HydrusExceptions.RouterException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
             
         else:
+            
+            
             
             raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
             
@@ -307,9 +317,9 @@ class ServicesUPnPManager( object ):
                     
                     AddUPnPMapping( local_ip, internal_port, upnp_port, protocol, description, duration = duration )
                     
-                except HydrusExceptions.FirewallException:
+                except HydrusExceptions.RouterException:
                     
-                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + upnp_port + ' but it failed due to router error. Please try it manually to get a full log of what happened.' )
+                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + upnp_port + ' but it failed. Please try it manually to get a full log of what happened.' )
                     
                     return
                     

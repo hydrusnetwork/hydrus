@@ -37,17 +37,18 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         QW.QTreeWidget.__init__( self, parent )
         
+        self._creation_time = HydrusData.GetNow()
+        
         self._column_list_type = column_list_type
         
         self._column_list_status: ClientGUIListStatus.ColumnListStatus = HG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        self._original_column_list_status = self._column_list_status
         
         self.setAlternatingRowColors( True )
         self.setColumnCount( self._column_list_status.GetColumnCount() )
         self.setSortingEnabled( False ) # Keeping the custom sort implementation. It would be better to use Qt's native sorting in the future so sort indicators are displayed on the headers as expected.
         self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
         self.setRootIsDecorated( False )
-        
-        self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         
         self._initial_height_num_chars = height_num_chars
         self._forced_height_num_chars = None
@@ -106,14 +107,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         #  \    /  ) _) \    /    )(__  /__\  ) ) )
         #   \/\/  (___)  \/\/    (____)(_)(_)(___/ 
         #
+        # I think this is because of mismatch between set size and min size! So ensuring we never set smaller than that initially should fix this???!?
         
         MIN_SECTION_SIZE_CHARS = 3
         MIN_LAST_SECTION_SIZE_CHARS = 10
         
-        self._min_section_size = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_SECTION_SIZE_CHARS )
-        self._min_last_section_size = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_LAST_SECTION_SIZE_CHARS )
+        self._min_section_width = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_SECTION_SIZE_CHARS )
         
-        self.header().setMinimumSectionSize( self._min_section_size )
+        self.header().setMinimumSectionSize( self._min_section_width )
         
         last_column_index = self._column_list_status.GetColumnCount() - 1
         
@@ -135,12 +136,14 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             if i == last_column_index:
                 
-                width_chars = MIN_LAST_SECTION_SIZE_CHARS
+                width_chars = MIN_SECTION_SIZE_CHARS
                 
             else:
                 
                 width_chars = self._column_list_status.GetColumnWidth( column_type )
                 
+            
+            width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
             
             # ok this is a pain in the neck issue, but fontmetrics changes afte widget init. I guess font gets styled on top afterwards
             # this means that if I use this window's fontmetrics here, in init, then it is different later on, and we get creeping growing columns lmao
@@ -206,6 +209,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._DoStatusChanged()
         
+        self.updateGeometry()
+        
     
     def _DoStatusChanged( self ):
         
@@ -241,7 +246,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             # might need to update this to be 'last non-hidden section', rather than 'last 'visual' section'
             if visual_index == last_column_index and self.verticalScrollBar().isVisible():
                 
-                width_pixels += self.verticalScrollBar().width()
+                width_pixels -= self.verticalScrollBar().width()
                 
             
             width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
@@ -637,6 +642,20 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
+    def _GetRowHeightEstimate( self ):
+        
+        if self.topLevelItemCount() > 0:
+            
+            height = self.rowHeight( self.indexFromItem( self.topLevelItem( 0 ) ) )
+            
+        else:
+            
+            ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, 1 ) )
+            
+        
+        return height
+        
+    
     def minimumSizeHint( self ):
         
         width = 0
@@ -646,7 +665,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             width += self.columnWidth( i )
             
         
-        width += self._min_last_section_size
+        width += self._min_section_width # the last column
         
         width += self.frameWidth() * 2
         
@@ -659,20 +678,22 @@ class BetterListCtrl( QW.QTreeWidget ):
             min_num_rows = self._forced_height_num_chars
             
         
-        # + 2 for header and * 1.25 for magic
-        ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( min_num_rows + 2 ) * 1.25 ) ) )
+        header_size = self.header().sizeHint() # this is better than min size hint for some reason ?( 69, 69 )?
         
-        min_size_hint = QC.QSize( width, height )
+        data_area_height = self._GetRowHeightEstimate() * min_num_rows
+        
+        PADDING = 10
+        
+        min_size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
         
         return min_size_hint
         
     
     def sizeHint( self ):
         
-        # still have an issue here where if the list gets populated with a bunch of stuff and hence gets a vertical scrollbar, it doesn't account for that
-        # something like change this to viewportSizehint and/or doing updateGeometry on add data, if that isn't already done when scrollbars added?
-        
         width = 0
+        
+        # all but last column
         
         for i in range( self.columnCount() - 1 ):
             
@@ -681,12 +702,21 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         #
         
-        # we use the last value saved to options for this column. not what it currently is, but what user saw last
-        # this might be from a few milliseconds ago, or last time dialog was open. main thing is this is a _sensible_ value for this column, to inform panels and so on
+        # ok, we are going full slippery dippery doo now
+        # the issue is: when we first boot up, we want to give a 'hey, it would be nice' size of the last actual recorded final column
+        # HOWEVER, after that: we want to use the current size of the last column
+        # so, if it is the first couple of seconds, lmao. after that, oaml
         
         last_column_type = self._column_list_status.GetColumnTypes()[-1]
         
-        last_column_chars = self._column_list_status.GetColumnWidth( last_column_type )
+        if HydrusData.TimeHasPassed( self._creation_time + 2 ):
+            
+            last_column_chars = self._column_list_status.GetColumnWidth( last_column_type )
+            
+        else:
+            
+            last_column_chars = self._original_column_list_status.GetColumnWidth( last_column_type )
+            
         
         main_tlw = HG.client_controller.GetMainTLW()
         
@@ -705,10 +735,13 @@ class BetterListCtrl( QW.QTreeWidget ):
             num_rows = self._forced_height_num_chars
             
         
-        # + 2 for header and * 1.25 for magic
-        ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( num_rows + 2 ) * 1.25 ) ) )
+        header_size = self.header().sizeHint()
         
-        size_hint = QC.QSize( width, height )
+        data_area_height = self._GetRowHeightEstimate() * num_rows
+        
+        PADDING = 10
+        
+        size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
         
         return size_hint
         

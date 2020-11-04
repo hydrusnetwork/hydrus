@@ -2328,14 +2328,14 @@ class ListBoxTags( ListBox ):
                             
                             if ideal_tag == selected_tag:
                                 
-                                ideal_label = 'is the ideal tag'
+                                ideal_label = 'this is the ideal tag'
                                 
                             else:
                                 
                                 ideal_label = 'ideal: {}'.format( ideal_tag )
                                 
                             
-                            ClientGUIMenus.AppendMenuLabel( siblings_menu, ideal_label )
+                            ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal_tag )
                             
                             ClientGUIMenus.AppendSeparator( siblings_menu )
                             
@@ -2370,7 +2370,9 @@ class ListBoxTags( ListBox ):
                                 
                                 for ancestor in ancestors_list:
                                     
-                                    ClientGUIMenus.AppendMenuLabel( parents_menu, 'parent: {}'.format( ancestor ) )
+                                    ancestor_label = 'parent: {}'.format( ancestor )
+                                    
+                                    ClientGUIMenus.AppendMenuItem( parents_menu, ancestor_label, ancestor_label, HG.client_controller.pub, 'clipboard', 'text', ancestor )
                                     
                                 
                             
@@ -2384,7 +2386,9 @@ class ListBoxTags( ListBox ):
                                 
                                 for descendant in descendants_list:
                                     
-                                    ClientGUIMenus.AppendMenuLabel( parents_menu, 'child: {}'.format( descendant ) )
+                                    descendant_label = 'child: {}'.format( descendant )
+                                    
+                                    ClientGUIMenus.AppendMenuItem( parents_menu, descendant_label, descendant_label, HG.client_controller.pub, 'clipboard', 'text', descendant )
                                     
                                 
                             

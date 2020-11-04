@@ -27,6 +27,8 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
         
         self.destroyed.connect( HG.client_controller.gui.MaintainCanvasFrameReferences )
         
+        self._was_maximised_before_fullscreen = True
+        
     
     def closeEvent( self, event ):
         
@@ -55,7 +57,14 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
         
         if self.isFullScreen():
             
-            self.showNormal()
+            if self._was_maximised_before_fullscreen:
+                
+                self.showMaximized()
+                
+            else:
+                
+                self.showNormal()
+                
             
         else:
             
@@ -63,6 +72,8 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
                 
                 return
                 
+            
+            self._was_maximised_before_fullscreen = self.isMaximized()
             
             self.showFullScreen()
             
