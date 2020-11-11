@@ -987,6 +987,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        headers_panel = ClientGUICommon.StaticBox( self, 'header overrides' )
+        
+        header_overrides = url_class.GetHeaderOverrides()
+        
+        self._header_overrides = ClientGUIStringControls.StringToStringDictControl( headers_panel, header_overrides, min_height = 4 )
+        
+        #
+        
         self._next_gallery_page_panel = ClientGUICommon.StaticBox( self, 'next gallery page' )
         
         self._next_gallery_page_choice = ClientGUICommon.BetterChoice( self._next_gallery_page_panel )
@@ -1095,6 +1103,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_panel.Add( parameters_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        #
+        
+        headers_panel.Add( self._header_overrides, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1140,6 +1151,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, headers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._example_url_classes, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1451,6 +1463,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         netloc = self._netloc.text()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
+        header_overrides = self._header_overrides.GetValue()
         api_lookup_converter = self._api_lookup_converter.GetValue()
         send_referral_url = self._send_referral_url.GetValue()
         referral_url_converter = self._referral_url_converter.GetValue()
@@ -1468,6 +1481,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             netloc = netloc,
             path_components = path_components,
             parameters = parameters,
+            header_overrides = header_overrides,
             api_lookup_converter = api_lookup_converter,
             send_referral_url = send_referral_url,
             referral_url_converter = referral_url_converter,

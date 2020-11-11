@@ -2388,7 +2388,14 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 for ( formula, page_parser ) in self._sub_page_parsers:
                     
-                    posts = formula.Parse( parsing_context, converted_parsing_text )
+                    try:
+                        
+                        posts = formula.Parse( parsing_context, converted_parsing_text )
+                        
+                    except HydrusExceptions.ParseException:
+                        
+                        continue
+                        
                     
                     for ( i, post ) in enumerate( posts ):
                         

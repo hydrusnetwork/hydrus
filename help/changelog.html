@@ -8,6 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 417</h3></li>
+				<ul>
+					<li>the hydrus network version is increased this week from 18 to 19. clients and servers can only talk to each other when they are on the same version, so please update your clients if you wish to keep talking to the PTR, and your own servers if you have a home network setup or similar. if a server and client are on different versions, you will get a polite error when they next try to talk, and sync will be paused</li>
+					<li>added 'run all export folders now' shortcut command to 'main window' shortcut set</li>
+					<li>added shortcuts to the 'main gui' shortcut set for navigating the currently selected page. you can move left, right, to the leftmost on the current row, or to the rightmost. the left and right will cycle up a page of pages layer when at left/rightmost boundaries, letting you iterate through all pages in a depth-first manner</li>
+					<li>updated the default newgrounds parser to deal with artists with more than 60/70 items in one art gallery (essentially, some clever 'next page' fetching now occurs to get older info that in your browser is drawn in as you scroll down). if you have some subscriptions for artists where you know this is true, try doing a full reset on them</li>
+					<li>added realbooru to the hydrus defaults. they also apparently just switched away from a gelbooru 0.2.x site, so if you have a gelbooru parser with a realbooru example URL, I remove that example URL</li>
+					<li>updated the page initial media load routine to my new async job</li>
+					<li>updated the imported file presentation page-publish routine to my new async job</li>
+					<li>when drag and drop or import file presentation now wants to add files to a page that is not yet fully loaded (rare, but possible for large sessions), that page now remembers the files it should add and appends them once load is done. these files-to-be-added are also preserved through a session save, if the client is closed before this long-loading page is initialised</li>
+					<li>updated windows mpv, the reported api version is now 1.09</li>
+					<li>updated windows ffmpeg to 4.3.1</li>
+					<li>updated windows release to sqlite 3.33.0</li>
+					<li>updated windows opencv to 4.4.0</li>
+					<li>just a little thing--I took the source links out of the release post. anyone running from source is probably pulling straight from the github repo anyway</li>
+					<li>cleaned up some misc inelegant string code</li>
+					<li>misc other cleanup</li>
+					<li>.</li>
+					<li>macOS shortcuts:</li>
+					<li>the client's shortcut system now detects macOS-specific 'scroll start/end' states, and will not spam scrolls or errors when these states are held</li>
+					<li>the client's shortcut system now attempts to detect artificial trackpad scroll/wheel events, and adapts the relative speed of scroll event generation according to the respective trackpad velocity. let me know how the hell this works for you in media viewer etc... (issue #710)</li>
+					<li>the client's shortcut system now detects Control and Command as separate and reliable modifiers in macOS, with correct shortcut string rendering (issue #717)</li>
+					<li>.</li>
+					<li>upnp:</li>
+					<li>fixed the awful typos in the upnp add-mapping error handling I changed last week. I am sorry for this!</li>
+					<li>improved the async mappings and external ip fetch routines in upnp dialog. closing the dialog while a job is going on should now be completely ok</li>
+					<li>upnp dialog add, edit, and delete actions are now async (they won't hang the UI while they work)!</li>
+					<li>all the upnp async jobs should now disable the main list controls while they work</li>
+					<li>fixed the 'edit' action on upnp dialog to correctly remove old and existing mappings depending on what was edited</li>
+					<li>when adding a mapping for an (external_port,protocol) that is already mapped, the upnp dialog now asks if you want to overwrite, rather than just failing with a notification</li>
+					<li>after an async action in upnp dialog, and a mappings refresh triggered, the cached external IP should now be properly restored to the status area</li>
+					<li>pulled parsing code out of upnp code and wrote some proper unit tests for this so stupid typo errors should not happen again</li>
+					<li>.</li>
+					<li>parsing:</li>
+					<li>subsidiary page parser separation formulae that throw an exception will now be ignored, as if they parsed nothing. in the weird case that you might receive json or html, you can now create subsidiary parsers for both types, and the one that fails will do so gracefully and silently</li>
+					<li>URL Classes now have a key->value 'header override' value. any time one of these URLs is hit, these headers are added!!! be careful with this, but it may solve some tough problems. also, sorry, the URL Class UI is becoming a hellstack, I need to break it into tabs or similar</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>added documentation for the new add_files commands, delete_files, undelete_files, archive_files, and unarchive_files</li>
+					<li>added unit tests for the new commands</li>
+				</ul>
 				<li><h3>version 416</h3></li>
 				<ul>
 					<li>misc:</li>

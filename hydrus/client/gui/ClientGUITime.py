@@ -539,7 +539,7 @@ class VelocityCtrl( QW.QWidget ):
         
         if unit is not None:
             
-            mid_text = unit + ' ' + mid_text
+            mid_text = '{} {}'.format( unit, mid_text )
             
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,mid_text), CC.FLAGS_CENTER_PERPENDICULAR )

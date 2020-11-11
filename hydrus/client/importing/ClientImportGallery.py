@@ -525,7 +525,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                no_work_text = HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ) + ': ' + self._no_work_until_reason
+                no_work_text = '{}: {}'.format( HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ), self._no_work_until_reason )
                 
                 gallery_status = no_work_text
                 
@@ -639,7 +639,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                no_work_text = HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ) + ': ' + self._no_work_until_reason
+                no_work_text = '{}: {}'.format( HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ), self._no_work_until_reason )
                 
                 gallery_status = no_work_text
                 file_status = no_work_text
@@ -1334,7 +1334,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             if gug is None:
                 
-                HydrusData.ShowText( 'Could not find a Gallery URL Generator for "' + self._gug_key_and_name[1] + '"!' )
+                HydrusData.ShowText( 'Could not find a Gallery URL Generator for "{}"!'.format( self._gug_key_and_name[1] ) )
                 
                 return created_importers
                 
@@ -1349,7 +1349,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 if len( initial_search_urls ) == 0:
                     
-                    HydrusData.ShowText( 'The Gallery URL Generator "' + self._gug_key_and_name[1] + '" did not produce any URLs!' )
+                    HydrusData.ShowText( 'The Gallery URL Generator "{}" did not produce any URLs!'.format( self._gug_key_and_name[1] ) )
                     
                     return created_importers
                     

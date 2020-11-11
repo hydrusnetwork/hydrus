@@ -1559,6 +1559,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetURLClassHeaders( self, url ):
+        
+        with self._lock:
+            
+            url_class = self._GetURLClass( url )
+            
+            if url_class is not None:
+                
+                return url_class.GetHeaderOverrides()
+                
+            else:
+                
+                return {}
+                
+            
+        
+    
     def GetURLClasses( self ):
         
         with self._lock:
@@ -2857,7 +2874,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
     SERIALISABLE_NAME = 'URL Class'
-    SERIALISABLE_VERSION = 9
+    SERIALISABLE_VERSION = 10
     
     def __init__(
         self,
@@ -2868,6 +2885,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         netloc = 'hostname.com',
         path_components = None,
         parameters = None,
+        header_overrides = None,
         api_lookup_converter = None,
         send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED,
         referral_url_converter = None,
@@ -2903,6 +2921,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             parameters[ 'id' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '123456' ), None )
             
         
+        if header_overrides is None:
+            
+            header_overrides = {}
+            
+        
         if api_lookup_converter is None:
             
             api_lookup_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
@@ -2934,6 +2957,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._path_components = path_components
         self._parameters = parameters
+        self._header_overrides = header_overrides
         self._api_lookup_converter = api_lookup_converter
         
         self._send_referral_url = send_referral_url
@@ -3053,23 +3077,25 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_url_class_key = self._url_class_key.hex()
         serialisable_path_components = [ ( string_match.GetSerialisableTuple(), default ) for ( string_match, default ) in self._path_components ]
         serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in list(self._parameters.items()) ]
+        serialisable_header_overrides = list( self._header_overrides.items() )
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         serialisable_referral_url_converter = self._referral_url_converter.GetSerialisableTuple()
         
         booleans = ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment )
         
-        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
+        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
+        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
         
         ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment ) = booleans
         
         self._url_class_key = bytes.fromhex( serialisable_url_class_key )
         self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
         self._parameters = { key : ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( key, ( serialisable_string_match, default ) ) in serialisable_parameters }
+        self._header_overrides = dict( serialisable_header_overrides )
         self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
         self._referral_url_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_referral_url_converter )
         
@@ -3191,6 +3217,19 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 9, new_serialisable_info )
             
         
+        if version == 9:
+            
+            ( serialisable_url_class_key, url_type, preferred_scheme, netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
+            
+            header_overrides = {}
+            
+            serialisable_header_overrides = list( header_overrides.items() )
+            
+            new_serialisable_info = ( serialisable_url_class_key, url_type, preferred_scheme, netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
+            
+            return ( 10, new_serialisable_info )
+            
+        
     
     def AlphabetiseGetParameters( self ):
         
@@ -3236,6 +3275,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return self._api_lookup_converter.Convert( url )
         
     
+    def GetClassKey( self ):
+        
+        return self._url_class_key
+        
+    
     def GetDomain( self ):
         
         return self._netloc
@@ -3251,9 +3295,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta )
         
     
-    def GetClassKey( self ):
+    def GetHeaderOverrides( self ):
         
-        return self._url_class_key
+        return self._header_overrides
         
     
     def GetNextGalleryPage( self, url ):

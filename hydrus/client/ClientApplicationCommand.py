@@ -123,6 +123,11 @@ SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS = 116
 SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL = 117
 SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES = 118
 SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES = 119
+SIMPLE_RUN_ALL_EXPORT_FOLDERS = 120
+SIMPLE_MOVE_PAGES_SELECTION_LEFT = 121
+SIMPLE_MOVE_PAGES_SELECTION_RIGHT = 122
+SIMPLE_MOVE_PAGES_SELECTION_HOME = 123
+SIMPLE_MOVE_PAGES_SELECTION_END = 124
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -177,6 +182,10 @@ simple_enum_to_str_lookup = {
     SIMPLE_MANAGE_FILE_RATINGS : 'manage file ratings',
     SIMPLE_MANAGE_FILE_TAGS : 'manage file tags',
     SIMPLE_MANAGE_FILE_URLS : 'manage file urls',
+    SIMPLE_MOVE_PAGES_SELECTION_LEFT : 'move page selection left (cycles up through page of pages at boundaries)',
+    SIMPLE_MOVE_PAGES_SELECTION_RIGHT : 'move page selection right (cycles up through page of pages at boundaries)',
+    SIMPLE_MOVE_PAGES_SELECTION_HOME : 'move selection to leftmost page',
+    SIMPLE_MOVE_PAGES_SELECTION_END : 'move selection to rightmost page',
     SIMPLE_MOVE_ANIMATION_TO_NEXT_FRAME : 'move animation one frame forward',
     SIMPLE_MOVE_ANIMATION_TO_PREVIOUS_FRAME : 'move animation one frame back',
     SIMPLE_NEW_DUPLICATE_FILTER_PAGE : 'open a new page: duplicate filter',
@@ -208,6 +217,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_REFRESH_PAGE_OF_PAGES_PAGES : 'refresh all pages on current page of pages',
     SIMPLE_REMOVE_FILE_FROM_VIEW : 'remove file from current view',
     SIMPLE_RESTART_APPLICATION : 'exit program: restart',
+    SIMPLE_RUN_ALL_EXPORT_FOLDERS : 'run all export folders now',
     SIMPLE_SET_MEDIA_FOCUS : 'keyboard focus: to the thumbnail grid',
     SIMPLE_SET_SEARCH_FOCUS : 'keyboard focus: to the default text entry of page/dialog',
     SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS : 'keyboard focus: to manage tags\' favourite tags',

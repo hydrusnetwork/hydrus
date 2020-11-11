@@ -1225,7 +1225,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                return self._no_work_until_reason + ' - ' + 'next check ' + ClientData.TimestampToPrettyTimeDelta( self._next_check_time )
+                return '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
                 
             elif self._watcher_status != '' or self._file_status != '':
                 
@@ -1254,7 +1254,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                no_work_text = self._no_work_until_reason + ' - ' + 'next check ' + ClientData.TimestampToPrettyTimeDelta( self._next_check_time )
+                no_work_text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
                 
                 file_status = no_work_text
                 watcher_status = no_work_text

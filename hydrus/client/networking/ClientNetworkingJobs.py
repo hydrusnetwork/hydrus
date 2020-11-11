@@ -289,6 +289,10 @@ class NetworkJob( object ):
             
             referral_url = self.engine.domain_manager.GetReferralURL( self._url, self._referral_url )
             
+            url_headers = self.engine.domain_manager.GetURLClassHeaders( self._url )
+            
+            headers.update( url_headers )
+            
             if HG.network_report_mode:
                 
                 HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( self._url, os.linesep, self._referral_url, os.linesep, referral_url ) )

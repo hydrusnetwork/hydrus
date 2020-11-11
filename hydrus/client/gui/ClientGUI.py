@@ -5112,7 +5112,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             menu = QW.QMenu( self )
             
-            ClientGUIMenus.AppendMenuItem( menu, 'tag migration', 'Migrate tags from one place to another.', self._MigrateTags )
+            ClientGUIMenus.AppendMenuItem( menu, 'migrate tags', 'Migrate tags from one place to another.', self._MigrateTags )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -5367,10 +5367,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for name in export_folder_names:
                 
-                ClientGUIMenus.AppendMenuItem( submenu, name, 'Check this export folder now.', self._RunExportFolder, name )
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Run this export folder now.', self._RunExportFolder, name )
                 
             
-            ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check export folder now' )
+            ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'run export folder now' )
             
         
         ClientGUIMenus.AppendSeparator( i_and_e_submenu )
@@ -6028,6 +6028,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self.HideToSystemTray()
                 
+            elif action == CAC.SIMPLE_MOVE_PAGES_SELECTION_LEFT:
+                
+                self._notebook.MoveSelection( -1 )
+                
+            elif action == CAC.SIMPLE_MOVE_PAGES_SELECTION_RIGHT:
+                
+                self._notebook.MoveSelection( 1 )
+                
+            elif action == CAC.SIMPLE_MOVE_PAGES_SELECTION_HOME:
+                
+                self._notebook.MoveSelectionEnd( -1 )
+                
+            elif action == CAC.SIMPLE_MOVE_PAGES_SELECTION_END:
+                
+                self._notebook.MoveSelectionEnd( 1 )
+                
             elif action == CAC.SIMPLE_REFRESH:
                 
                 self._Refresh()
@@ -6082,6 +6098,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == CAC.SIMPLE_UNCLOSE_PAGE:
                 
                 self._UnclosePage()
+                
+            elif action == CAC.SIMPLE_RUN_ALL_EXPORT_FOLDERS:
+                
+                self._RunExportFolder()
                 
             elif action == CAC.SIMPLE_CHECK_ALL_IMPORT_FOLDERS:
                 

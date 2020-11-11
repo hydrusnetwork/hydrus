@@ -1037,7 +1037,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             note += os.linesep
             note += traceback.format_exc()
             
-            HydrusData.Print( 'Error when processing ' + self.file_seed_data + ' !' )
+            HydrusData.Print( 'Error when processing {}!'.format( self.file_seed_data ) )
             HydrusData.Print( traceback.format_exc() )
             
         
@@ -1237,7 +1237,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, file_seeds )
                         
                         status = CC.STATUS_SUCCESSFUL_AND_NEW
-                        note = 'Found ' + HydrusData.ToHumanInt( num_urls_added ) + ' new URLs.'
+                        note = 'Found {} new URLs.'.format( HydrusData.ToHumanInt( num_urls_added ) )
                         
                         self.SetStatus( status, note = note )
                         
@@ -1284,7 +1284,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                             else:
                                 
-                                raise HydrusExceptions.VetoException( 'Found a URL--' + desired_url + '--but could not understand/parse it!' )
+                                raise HydrusExceptions.VetoException( 'Found a URL--{}--but could not understand/parse it!'.format( desired_url ) )
                                 
                             
                         else:
@@ -1326,7 +1326,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                             
                             status = CC.STATUS_SUCCESSFUL_AND_NEW
-                            note = 'Found ' + HydrusData.ToHumanInt( num_urls_added ) + ' new URLs.'
+                            note = 'Found {} new URLs.'.format( HydrusData.ToHumanInt( num_urls_added ) )
                             
                             self.SetStatus( status, note = note )
                             
@@ -1886,7 +1886,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 ( number_gubbins, file_ext ) = last_component.split( '.' )
                 
-                raw_last_component = 'raw.' + file_ext
+                raw_last_component = 'raw.{}'.format( file_ext )
                 
                 url_components[ -1 ] = raw_last_component
                 
@@ -1915,7 +1915,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 ( gumpf, shorter_rest ) = rest.split( '.', 1 )
                 
-                shorter_url = scheme + '://' + shorter_rest
+                shorter_url = '{}://{}'.format( scheme, shorter_rest )
                 
                 return shorter_url
                 

@@ -476,7 +476,7 @@ class Controller( HydrusController.HydrusController ):
                     break
                     
                 
-                self.frame_splash_status.SetText( 'waiting ' + str( i ) + ' seconds' )
+                self.frame_splash_status.SetText( 'waiting {} seconds'.format( i ) )
                 
                 time.sleep( 1 )
                 
@@ -1137,7 +1137,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self.db.IsDBUpdated():
             
-            HydrusData.ShowText( 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
+            HydrusData.ShowText( 'The client has updated to version {}!'.format( HC.SOFTWARE_VERSION ) )
             
         
         for message in self.db.GetInitialMessages():
@@ -1343,7 +1343,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 path = dlg.GetPath()
                 
-                text = 'Are you sure you want to restore a backup from "' + path + '"?'
+                text = 'Are you sure you want to restore a backup from "{}"?'.format( path )
                 text += os.linesep * 2
                 text += 'Everything in your current database will be deleted!'
                 text += os.linesep * 2

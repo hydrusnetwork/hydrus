@@ -355,7 +355,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             if self._HasPermission( CLIENT_API_PERMISSION_SEARCH_FILES ):
                 
-                p_strings.append( 'Can search: ' + self._search_tag_filter.ToPermittedString() )
+                p_strings.append( 'Can search: {}'.format( self._search_tag_filter.ToPermittedString() ) )
                 
             
             return ''.join( p_strings )
@@ -447,7 +447,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             if len( advanced_string ) > 0:
                 
-                s += ': ' + advanced_string
+                s += ': {}'.format( advanced_string )
                 
             
         

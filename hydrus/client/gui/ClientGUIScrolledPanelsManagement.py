@@ -870,7 +870,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if launch_path is None:
                 
-                pretty_launch_path = 'default: ' + HydrusPaths.GetDefaultLaunchPath()
+                pretty_launch_path = 'default: {}'.format( HydrusPaths.GetDefaultLaunchPath() )
                 
             else:
                 
@@ -887,7 +887,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for ( mime, launch_path ) in self._mime_launch_listctrl.GetData( only_selected = True ):
                 
-                message = 'Enter the new launch path for ' + HC.mime_string_lookup[ mime ]
+                message = 'Enter the new launch path for {}'.format( HC.mime_string_lookup[ mime ] )
                 message += os.linesep * 2
                 message += 'Hydrus will insert the file\'s full path wherever you put %path%, even multiple times!'
                 message += os.linesep * 2

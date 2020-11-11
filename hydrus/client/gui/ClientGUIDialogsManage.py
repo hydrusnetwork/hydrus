@@ -11,8 +11,10 @@ from hydrus.core import HydrusNATPunch
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
@@ -292,15 +294,15 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._status_st = ClientGUICommon.BetterStaticText( self )
         
-        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        self._mappings_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._mappings_list_ctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Remove, activation_callback = self._Edit )
+        self._mappings_list = ClientGUIListCtrl.BetterListCtrl( self._mappings_listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Remove, activation_callback = self._Edit )
         
-        listctrl_panel.SetListCtrl( self._mappings_list_ctrl )
+        self._mappings_listctrl_panel.SetListCtrl( self._mappings_list )
         
-        listctrl_panel.AddButton( 'add custom mapping', self._Add )
-        listctrl_panel.AddButton( 'edit mapping', self._Edit, enabled_only_on_selection = True )
-        listctrl_panel.AddButton( 'remove mapping', self._Remove, enabled_only_on_selection = True )
+        self._mappings_listctrl_panel.AddButton( 'add custom mapping', self._Add )
+        self._mappings_listctrl_panel.AddButton( 'edit mapping', self._Edit, enabled_only_on_single_selection = True )
+        self._mappings_listctrl_panel.AddButton( 'remove mapping', self._Remove, enabled_only_on_selection = True )
         
         self._ok = QW.QPushButton( 'ok', self )
         self._ok.clicked.connect( self.EventOK )
@@ -311,7 +313,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._mappings_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._ok, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
@@ -324,9 +326,11 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._mappings = []
+        self._mappings_lookup = set()
         
-        self._mappings_list_ctrl.Sort()
+        self._mappings_list.Sort()
+        
+        self._external_ip = None
         
         self._started_external_ip_fetch = False
         
@@ -334,8 +338,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
     
     def _Add( self ):
-        
-        do_refresh = False
         
         external_port = HC.DEFAULT_SERVICE_PORT
         protocol = 'TCP'
@@ -349,27 +351,49 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                 
-                for ( existing_description, existing_internal_ip, existing_internal_port, existing_external_port, existing_protocol, existing_lease ) in self._mappings:
+                remove_existing = False
+                
+                if self._MappingExists( external_port, protocol ):
                     
-                    if external_port == existing_external_port and protocol == existing_protocol:
-                        
-                        QW.QMessageBox.critical( self, 'Error', 'That external port already exists!' )
+                    remove_existing = True
+                    
+                    text = '{}:({}) is already mapped! Ok to overwrite whatever it currently is?'
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+                    
+                    if result != QW.QDialog.Accepted:
                         
                         return
                         
                     
                 
-                internal_client = HydrusNATPunch.GetLocalIP()
+                def work_callable():
+                    
+                    if remove_existing:
+                        
+                        HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+                        
+                    
+                    internal_client = HydrusNATPunch.GetLocalIP()
+                    
+                    HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
+                    
+                    return True
+                    
                 
-                HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
+                def publish_callable( result ):
+                    
+                    self._mappings_listctrl_panel.setEnabled( True )
+                    
+                    self._RefreshMappings()
+                    
                 
-                do_refresh = True
+                self._mappings_listctrl_panel.setEnabled( False )
                 
-            
-        
-        if do_refresh:
-            
-            self._RefreshMappings()
+                async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+                
+                async_job.start()
+                
             
         
     
@@ -394,54 +418,67 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def _Edit( self ):
         
-        do_refresh = False
+        selected_mappings = self._mappings_list.GetData( only_selected = True )
         
-        selected_mappings = self._mappings_list_ctrl.GetData( only_selected = True )
-        
-        for selected_mapping in selected_mappings:
+        if len( selected_mappings ) > 0:
             
-            ( description, internal_ip, internal_port, external_port, protocol, duration ) = selected_mapping
+            selected_mapping = selected_mappings[0]
             
-            with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
+            ( description, internal_ip, internal_port, old_external_port, old_protocol, duration ) = selected_mapping
+            
+            with ClientGUIDialogs.DialogInputUPnPMapping( self, old_external_port, old_protocol, internal_port, description, duration ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
                     ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                     
-                    HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+                    remove_old = self._MappingExists( old_external_port, old_protocol )
+                    remove_existing = ( old_external_port != external_port or old_protocol != protocol ) and self._MappingExists( external_port, protocol )
                     
-                    internal_client = HydrusNATPunch.GetLocalIP()
+                    def work_callable():
+                        
+                        if remove_old:
+                            
+                            HydrusNATPunch.RemoveUPnPMapping( old_external_port, old_protocol )
+                            
+                        
+                        if remove_existing:
+                            
+                            HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+                            
+                        
+                        internal_client = HydrusNATPunch.GetLocalIP()
+                        
+                        HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
+                        
+                        return True
+                        
                     
-                    HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
+                    def publish_callable( result ):
+                        
+                        self._mappings_listctrl_panel.setEnabled( True )
+                        
+                        self._RefreshMappings()
+                        
                     
-                    do_refresh = True
+                    self._mappings_listctrl_panel.setEnabled( False )
                     
-                else:
+                    async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
                     
-                    break
+                    async_job.start()
                     
                 
             
         
-        if do_refresh:
-            
-            self._RefreshMappings()
-            
+    
+    def _MappingExists( self, external_port, protocol ):
+        
+        return ( external_port, protocol ) in self._mappings_lookup
         
     
     def _RefreshExternalIP( self ):
         
-        def qt_code( external_ip_text ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._status_st.setText( external_ip_text )
-            
-        
-        def THREADdo_it():
+        def work_callable():
             
             try:
                 
@@ -454,38 +491,26 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 external_ip_text = 'Error finding external IP: ' + str( e )
                 
             
-            QP.CallAfter( qt_code, external_ip_text )
+            return external_ip_text
+            
+        
+        def publish_callable( external_ip_text ):
+            
+            self._external_ip = external_ip_text
+            
+            self._status_st.setText( self._external_ip )
             
         
         self._status_st.setText( 'Loading external IP\u2026' )
         
-        HG.client_controller.CallToThread( THREADdo_it )
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
         
     
     def _RefreshMappings( self ):
         
-        def qt_code( mappings ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._mappings = mappings
-            
-            self._mappings_list_ctrl.SetData( self._mappings )
-            
-            self._status_st.setText( '' )
-            
-            if not self._started_external_ip_fetch:
-                
-                self._started_external_ip_fetch = True
-                
-                self._RefreshExternalIP()
-                
-            
-        
-        def THREADdo_it():
+        def work_callable():
             
             try:
                 
@@ -495,40 +520,95 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 HydrusData.ShowException( e )
                 
+                return e
+                
+            
+            return mappings
+            
+        
+        def publish_callable( result ):
+            
+            if isinstance( result, Exception ):
+                
+                e = result
+                
                 QP.CallAfter( QW.QMessageBox.critical, self, 'Error', 'Could not load mappings:'+os.linesep*2+str(e) )
                 
                 return
                 
             
-            QP.CallAfter( qt_code, mappings )
+            self._mappings_listctrl_panel.setEnabled( True )
+            
+            mappings = result
+            
+            self._mappings_lookup = { ( external_port, protocol ) for ( description, internal_ip, internal_port, external_port, protocol, duration ) in mappings }
+            
+            self._mappings_list.SetData( mappings )
+            
+            self._status_st.setText( '' )
+            
+            if self._external_ip is not None:
+                
+                self._status_st.setText( self._external_ip )
+                
+            elif not self._started_external_ip_fetch:
+                
+                self._started_external_ip_fetch = True
+                
+                self._RefreshExternalIP()
+                
             
         
         self._status_st.setText( 'Refreshing mappings--please wait\u2026' )
         
-        self._mappings_list_ctrl.SetData( [] )
+        self._mappings_list.SetData( [] )
         
-        HG.client_controller.CallToThread( THREADdo_it )
+        self._mappings_listctrl_panel.setEnabled( False )
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
         
     
     def _Remove( self ):
         
-        do_refresh = False
+        text = 'Remove these port mappings?'
+        text += os.linesep * 2
+        text += 'If a mapping does not disappear after a remove, it may be hard-added in the router\'s settings interface. In this case, you will have to go there to fix it.'
         
-        selected_mappings = self._mappings_list_ctrl.GetData( only_selected = True )
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
         
-        for selected_mapping in selected_mappings:
+        if result != QW.QDialog.Accepted:
             
-            ( description, internal_ip, internal_port, external_port, protocol, duration ) = selected_mapping
-            
-            HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
-            
-            do_refresh = True
+            return
             
         
-        if do_refresh:
+        selected_mappings = self._mappings_list.GetData( only_selected = True )
+        
+        def work_callable():
+            
+            for selected_mapping in selected_mappings:
+                
+                ( description, internal_ip, internal_port, external_port, protocol, duration ) = selected_mapping
+                
+                HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+                
+            
+            return True
+            
+        
+        def publish_callable( result ):
+            
+            self._mappings_listctrl_panel.setEnabled( True )
             
             self._RefreshMappings()
             
+        
+        self._mappings_listctrl_panel.setEnabled( False )
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
         
     
     def EventOK( self ):

@@ -56,6 +56,10 @@
 					<h4>Adding Files</h4>
 					<ul>
 						<li><a href="#add_files_add_file">POST /add_files/add_file</a></li>
+						<li><a href="#add_files_delete_files">POST /add_files/delete_files</a></li>
+						<li><a href="#add_files_undelete_files">POST /add_files/undelete_files</a></li>
+						<li><a href="#add_files_archive_files">POST /add_files/archive_files</a></li>
+						<li><a href="#add_files_unarchive_files">POST /add_files/unarchive_files</a></li>
 					</ul>
 					<h4>Adding Tags</h4>
 					<ul>
@@ -225,6 +229,114 @@
 						</ul>
 						<p>A file 'veto' is caused by the file import options (which in this case is the 'quiet' set under the client's <i>options->importing</i>) stopping the file due to its resolution or minimum file size rules, etc...</p>
 						<p>'hash' is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text appropriate to the file status that you may recognise from hydrus's normal import workflow. For an import error, it will always be the full traceback.</p>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder" id="add_files_delete_files">
+				<h3><b>POST /add_files/delete_files</b></h3>
+				<p><i>Tell the client to send files to the trash.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li><p>Arguments (in JSON):</p></li>
+					<ul>
+						<li>hash : (an SHA256 hash for a file in 64 characters of hexadecimal)</li>
+						<li>hashes : (a list of SHA256 hashes)</li>
+					</ul>
+					<li>
+						<p>Example request body:</p>
+						<blockquote><pre>{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}</pre></blockquote>
+					</li>
+					<li><p>Response description: 200 and no content.</p></li>
+					<li>
+						<p>You can use hash or hashes, whichever is more convenient.</p>
+						<p>At the moment, this is only able to send files from 'my files' to the trash, and so it cannot perform physical deletes. There is no error if any files do not currently exist in 'my files'. In future, it will take some sort of file service parameter to do more.</p>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder" id="add_files_undelete_files">
+				<h3><b>POST /add_files/undelete_files</b></h3>
+				<p><i>Tell the client to pull files back out of the trash.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li><p>Arguments (in JSON):</p></li>
+					<ul>
+						<li>hash : (an SHA256 hash for a file in 64 characters of hexadecimal)</li>
+						<li>hashes : (a list of SHA256 hashes)</li>
+					</ul>
+					<li>
+						<p>Example request body:</p>
+						<blockquote><pre>{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}</pre></blockquote>
+					</li>
+					<li><p>Response description: 200 and no content.</p></li>
+					<li>
+						<p>You can use hash or hashes, whichever is more convenient.</p>
+						<p>This is just the reverse of a delete_files--removing files from trash and putting them back in 'my files'. There is no error if any files do not currently exist in 'trash'.</p>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder" id="add_files_archive_files">
+				<h3><b>POST /add_files/archive_files</b></h3>
+				<p><i>Tell the client to archive inboxed files.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li><p>Arguments (in JSON):</p></li>
+					<ul>
+						<li>hash : (an SHA256 hash for a file in 64 characters of hexadecimal)</li>
+						<li>hashes : (a list of SHA256 hashes)</li>
+					</ul>
+					<li>
+						<p>Example request body:</p>
+						<blockquote><pre>{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}</pre></blockquote>
+					</li>
+					<li><p>Response description: 200 and no content.</p></li>
+					<li>
+						<p>You can use hash or hashes, whichever is more convenient.</p>
+						<p>This puts files in the 'archive', taking them out of the inbox. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the archive.</p>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder" id="add_files_unarchive_files">
+				<h3><b>POST /add_files/unarchive_files</b></h3>
+				<p><i>Tell the client re-inbox archived files.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li><p>Arguments (in JSON):</p></li>
+					<ul>
+						<li>hash : (an SHA256 hash for a file in 64 characters of hexadecimal)</li>
+						<li>hashes : (a list of SHA256 hashes)</li>
+					</ul>
+					<li>
+						<p>Example request body:</p>
+						<blockquote><pre>{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}</pre></blockquote>
+					</li>
+					<li><p>Response description: 200 and no content.</p></li>
+					<li>
+						<p>You can use hash or hashes, whichever is more convenient.</p>
+						<p>This puts files back in the inbox, taking them out of the archive. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the inbox.</p>
 					</li>
 				</ul>
 			</div>

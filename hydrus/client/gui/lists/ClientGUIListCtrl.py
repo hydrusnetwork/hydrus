@@ -1369,7 +1369,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting json or png files.'
+        message = 'Try to import the {} dropped files to this list? I am expecting json or png files.'.format( HydrusData.ToHumanInt( len( paths ) ) )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         

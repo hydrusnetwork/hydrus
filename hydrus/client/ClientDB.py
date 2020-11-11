@@ -287,7 +287,7 @@ def GenerateRepositoryUpdatesTableName( service_id ):
     
 def GenerateSpecificFilesTableName( file_service_id, tag_service_id ):
     
-    suffix = str( file_service_id ) + '_' + str( tag_service_id )
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
     cache_files_table_name = 'external_caches.specific_files_cache_{}'.format( suffix )
     
@@ -312,7 +312,7 @@ def GenerateSpecificACCacheTableName( tag_display_type, file_service_id, tag_ser
     
 def GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id ):
     
-    suffix = str( file_service_id ) + '_' + str( tag_service_id )
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
     cache_display_current_mappings_table_name = 'external_caches.specific_display_current_mappings_cache_{}'.format( suffix )
     
@@ -322,7 +322,7 @@ def GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service
     
 def GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ):
     
-    suffix = str( file_service_id ) + '_' + str( tag_service_id )
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
     cache_current_mappings_table_name = 'external_caches.specific_current_mappings_cache_{}'.format( suffix )
     
@@ -5113,10 +5113,10 @@ class DB( HydrusDB.HydrusDB ):
         all_media_ids.update( media_ids_a )
         all_media_ids.update( media_ids_b )
         
-        potential_duplicate_pairs = set()
-        
-        potential_duplicate_pairs.update( self._ExecuteManySelectSingleParam( 'SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs WHERE smaller_media_id = ?;', all_media_ids ) )
-        potential_duplicate_pairs.update( self._ExecuteManySelectSingleParam( 'SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs WHERE larger_media_id = ?;', all_media_ids ) )
+        with HydrusDB.TemporaryIntegerTable( self._c, all_media_ids, 'media_id' ) as temp_media_ids_table_name:
+            
+            potential_duplicate_pairs = set( self._c.execute( 'SELECT smaller_media_id, larger_media_id FROM {} CROSS JOIN potential_duplicate_pairs ON ( smaller_media_id = media_id OR larger_media_id = media_id );'.format( temp_media_ids_table_name ) ).fetchall() )
+            
         
         deletees = []
         
@@ -5313,7 +5313,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             return king_hash_id
-            
             
         
         return None
@@ -6422,13 +6421,6 @@ class DB( HydrusDB.HydrusDB ):
             if len( service_keys_to_content_updates ) > 0:
                 
                 self._ProcessContentUpdates( service_keys_to_content_updates )
-                
-            
-            if duplicate_type == HC.DUPLICATE_WORSE:
-                
-                ( hash_a, hash_b ) = ( hash_b, hash_a )
-                
-                duplicate_type = HC.DUPLICATE_BETTER
                 
             
             hash_id_a = self._GetHashId( hash_a )
@@ -18882,6 +18874,64 @@ class DB( HydrusDB.HydrusDB ):
                 domain_manager.OverwriteDefaultParsers( ( 'warosu thread parser', 'prolikewoah thread api parser', 'smuglo.li thread api parser' ) )
                 
                 domain_manager.OverwriteDefaultURLClasses( ( 'warosu thread', 'warosu file', 'prolikewoah thread', 'prolikewoah thread json api', 'smuglo.li thread', 'smuglo.li thread json api' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 416:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                # realbooru no longer works for the old gelb parsers, so let's jimmy an example urls solution for the update
+                
+                parsers = domain_manager.GetParsers()
+                
+                updated_parsers = []
+                
+                for parser in parsers:
+                    
+                    if 'gelbooru' in parser.GetName():
+                        
+                        example_urls = parser.GetExampleURLs()
+                        
+                        example_urls = [ url for url in example_urls if 'realbooru' not in url ]
+                        
+                        parser.SetExampleURLs( example_urls )
+                        
+                    
+                    updated_parsers.append( parser )
+                    
+                
+                domain_manager.SetParsers( updated_parsers )
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( ( 'realbooru tag search', ) )
+                
+                domain_manager.OverwriteDefaultParsers( ( 'newgrounds gallery page parser', 'realbooru file page parser', 'realbooru gallery page parser' ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'newgrounds art gallery page overflow', 'newgrounds games gallery page overflow', 'newgrounds movies gallery page overflow', 'realbooru file page', 'realbooru gallery page' ) )
                 
                 #
                 

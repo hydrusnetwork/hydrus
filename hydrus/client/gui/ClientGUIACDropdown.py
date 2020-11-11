@@ -1020,20 +1020,13 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        raw_control_modifier = QC.Qt.ControlModifier
-        
-        if HC.PLATFORM_MACOS:
-            
-            raw_control_modifier = QC.Qt.MetaModifier # This way raw_control_modifier always means the Control key, even on Mac. See Qt docs.
-            
-        
         if key in ( QC.Qt.Key_Insert, ):
             
             self._intercept_key_events = not self._intercept_key_events
             
             self._UpdateBackgroundColour()
             
-        elif key == QC.Qt.Key_Space and event.modifiers() & raw_control_modifier:
+        elif key == QC.Qt.Key_Space and event.modifiers() & QC.Qt.ControlModifier:
             
             self._ScheduleResultsRefresh( 0.0 )
             

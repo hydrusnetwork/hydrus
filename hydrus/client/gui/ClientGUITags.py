@@ -2395,7 +2395,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 tlw = HG.client_controller.GetMainTLW()
                 
-                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'tag migration' )
+                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'migrate tags' )
                 
                 panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
                 

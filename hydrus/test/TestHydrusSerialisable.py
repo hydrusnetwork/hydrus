@@ -412,6 +412,11 @@ class TestSerialisables( unittest.TestCase ):
             
             self._dump_and_load_and_test( shortcut, test )
             
+            if HC.PLATFORM_MACOS:
+                
+                s = s.replace( 'ctrl', 'command' )
+                
+            
             self.assertEqual( shortcut.ToString(), s )
             
         

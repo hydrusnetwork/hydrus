@@ -58,6 +58,7 @@ from hydrus.test import TestClientTags
 from hydrus.test import TestClientThreading
 from hydrus.test import TestDialogs
 from hydrus.test import TestFunctions
+from hydrus.test import TestHydrusNATPunch
 from hydrus.test import TestHydrusNetworking
 from hydrus.test import TestHydrusSerialisable
 from hydrus.test import TestHydrusServer
@@ -699,6 +700,7 @@ class Controller( object ):
             TestServerDB,
             TestClientDBDuplicates,
             TestClientDBTags,
+            TestHydrusNATPunch,
             TestClientNetworking,
             TestHydrusNetworking,
             TestClientImportSubscriptions,
@@ -744,6 +746,10 @@ class Controller( object ):
         
         module_lookup[ 'db_duplicates' ] = [
             TestClientDBDuplicates
+        ]
+        
+        module_lookup[ 'nat' ] = [
+            TestHydrusNATPunch
         ]
         
         module_lookup[ 'networking' ] = [

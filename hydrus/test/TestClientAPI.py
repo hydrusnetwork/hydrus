@@ -50,6 +50,21 @@ class TestClientAPI( unittest.TestCase ):
         time.sleep( 1 )
         
     
+    def _compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates ):
+        
+        self.assertEqual( len( service_keys_to_content_updates ), len( expected_service_keys_to_content_updates ) )
+        
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            
+            expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
+            
+            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
+            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
+            
+            self.assertEqual( c_u_tuples, e_c_u_tuples )
+            
+        
+    
     def _test_basics( self, connection ):
         
         #
@@ -449,7 +464,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.getheader( 'Access-Control-Allow-Origin' ), '*' )
         
     
-    def _test_add_files( self, connection, set_up_permissions ):
+    def _test_add_files_add_file( self, connection, set_up_permissions ):
         
         api_permissions = set_up_permissions[ 'add_files' ]
         
@@ -537,6 +552,212 @@ class TestClientAPI( unittest.TestCase ):
         expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : 'ad6d3599a6c489a575eb19c026face97a9cd6579e74728b0ce94a601d232f3c3' , 'note' : 'test note' }
         
         self.assertEqual( response_json, expected_result )
+        
+    
+    def _test_add_files_other_actions( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'add_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        #
+        
+        hash = HydrusData.GenerateKey()
+        hashes = { HydrusData.GenerateKey() for i in range( 10 ) }
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'hash' : hash.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ] }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/undelete_files'
+        
+        body_dict = { 'hash' : hash.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, { hash } ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/undelete_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ] }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/archive_files'
+        
+        body_dict = { 'hash' : hash.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash } ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/archive_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ] }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/unarchive_files'
+        
+        body_dict = { 'hash' : hash.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash } ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/unarchive_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ] }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
     
     def _test_add_tags( self, connection, set_up_permissions ):
@@ -668,17 +889,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self.assertEqual( len( service_keys_to_content_updates ), len( expected_service_keys_to_content_updates ) )
-        
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-            
-            expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
-            
-            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
-            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
-            
-            self.assertEqual( c_u_tuples, e_c_u_tuples )
-            
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
         # add to multiple files
         
@@ -704,17 +915,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self.assertEqual( len( service_keys_to_content_updates ), len( expected_service_keys_to_content_updates ) )
-        
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-            
-            expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
-            
-            c_u_tuples = sorted( ( c_u.ToTuple() for c_u in content_updates ) )
-            e_c_u_tuples = sorted( ( e_c_u.ToTuple() for e_c_u in expected_content_updates ) )
-            
-            self.assertEqual( c_u_tuples, e_c_u_tuples )
-            
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
     
     def _test_add_urls( self, connection, set_up_permissions ):
@@ -1906,7 +2107,8 @@ class TestClientAPI( unittest.TestCase ):
         
         self._test_basics( connection )
         set_up_permissions = self._test_client_api_basics( connection )
-        self._test_add_files( connection, set_up_permissions )
+        self._test_add_files_add_file( connection, set_up_permissions )
+        self._test_add_files_other_actions( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )

@@ -115,7 +115,7 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                raise Exception( 'Cache error! Looking for ' + str( key ) + ', but it was missing.' )
+                raise Exception( 'Cache error! Looking for {}, but it was missing.'.format( key ) )
                 
             
             self._TouchKey( key )
@@ -556,7 +556,7 @@ class ThumbnailCache( object ):
                 
             except Exception as e:
                 
-                summary = 'The thumbnail for file ' + hash.hex() + ' was not loadable. An attempt to regenerate it failed.'
+                summary = 'The thumbnail for file {} was not loadable. An attempt to regenerate it failed.'.format( hash.hex() )
                 
                 self._HandleThumbnailException( e, summary )
                 
@@ -569,7 +569,7 @@ class ThumbnailCache( object ):
                 
             except Exception as e:
                 
-                summary = 'The thumbnail for file ' + hash.hex() + ' was not loadable. It was regenerated, but that file would not render either. Your image libraries or hard drive connection are unreliable. Please inform the hydrus developer what has happened.'
+                summary = 'The thumbnail for file {} was not loadable. It was regenerated, but that file would not render either. Your image libraries or hard drive connection are unreliable. Please inform the hydrus developer what has happened.'.format( hash.hex() )
                 
                 self._HandleThumbnailException( e, summary )
                 
