@@ -1579,6 +1579,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, not self._value )
             
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
+            
+            return Predicate( self._predicate_type, not self._value )
+            
         else:
             
             return None
@@ -1628,6 +1632,28 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type
         
     
+    def GetUnnamespacedCopy( self ):
+        
+        if self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( self._value )
+            
+            return Predicate( self._predicate_type, subtag, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+            
+        
+        return self.GetCopy()
+        
+    
+    def GetValue( self ):
+        
+        return self._value
+        
+    
+    def HasNonZeroCount( self ):
+        
+        return self._min_current_count > 0 or self._min_pending_count > 0
+        
+    
     def HasParentPredicates( self ):
         
         return len( self._parent_predicates ) > 0
@@ -1662,6 +1688,81 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
         return False
+        
+    
+    def IsUIEditable( self, ideal_predicate: "Predicate" ) -> bool:
+        
+        # bleh
+        
+        if self._predicate_type != ideal_predicate.GetType():
+            
+            return False
+            
+        
+        ideal_value = ideal_predicate.GetValue()
+        
+        if self._value is None and ideal_value is not None:
+            
+            return False
+            
+        
+        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            
+            # age_type
+            if self._value[1] != ideal_value[1]:
+                
+                return False
+                
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+            
+            # view_type
+            if self._value[0] != ideal_value[0]:
+                
+                return False
+                
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+            
+            # rule type
+            if self._value[1] != ideal_value[1]:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def SetIdealSibling( self, tag: str ):
+        
+        self._ideal_sibling = tag
+        
+    
+    def SetInclusive( self, inclusive ):
+        
+        self._inclusive = inclusive
+        
+    
+    def SetKnownParents( self, parents: typing.Set[ str ] ):
+        
+        self._parents = parents
+        
+        self._parent_predicates = [ Predicate( PREDICATE_TYPE_PARENT, parent ) for parent in self._parents ]
+        
+    
+    def SetKnownSiblings( self, siblings: typing.Set[ str ] ):
+        
+        self._siblings = siblings
+        
+        if self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            self._matchable_search_texts = { self._value }.union( self._siblings )
+            
+        else:
+            
+            self._matchable_search_texts = set()
+            
         
     
     def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ):
@@ -2341,59 +2442,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return base
         
     
-    def GetUnnamespacedCopy( self ):
-        
-        if self._predicate_type == PREDICATE_TYPE_TAG:
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( self._value )
-            
-            return Predicate( self._predicate_type, subtag, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
-            
-        
-        return self.GetCopy()
-        
-    
-    def GetValue( self ):
-        
-        return self._value
-        
-    
-    def HasNonZeroCount( self ):
-        
-        return self._min_current_count > 0 or self._min_pending_count > 0
-        
-    
-    def SetIdealSibling( self, tag: str ):
-        
-        self._ideal_sibling = tag
-        
-    
-    def SetInclusive( self, inclusive ):
-        
-        self._inclusive = inclusive
-        
-    
-    def SetKnownParents( self, parents: typing.Set[ str ] ):
-        
-        self._parents = parents
-        
-        self._parent_predicates = [ Predicate( PREDICATE_TYPE_PARENT, parent ) for parent in self._parents ]
-        
-    
-    def SetKnownSiblings( self, siblings: typing.Set[ str ] ):
-        
-        self._siblings = siblings
-        
-        if self._predicate_type == PREDICATE_TYPE_TAG:
-            
-            self._matchable_search_texts = { self._value }.union( self._siblings )
-            
-        else:
-            
-            self._matchable_search_texts = set()
-            
-        
-
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
 
 SYSTEM_PREDICATE_INBOX = Predicate( PREDICATE_TYPE_SYSTEM_INBOX, None )

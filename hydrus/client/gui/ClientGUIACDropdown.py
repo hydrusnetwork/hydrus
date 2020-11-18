@@ -508,11 +508,9 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
         self._predicates = {}
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
-        shift_down = QW.QApplication.keyboardModifiers() & QC.Qt.ShiftModifier
-        
-        predicates = [ term for term in self._selected_terms if term.GetType() != ClientSearch.PREDICATE_TYPE_PARENT ]
+        predicates = list( self._selected_terms )
         
         if self._float_mode:
             
@@ -529,6 +527,10 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             self._callable( predicates, shift_down )
             
+            return True
+            
+        
+        return False
         
     
     def SetPredicates( self, predicates ):
@@ -2122,12 +2124,23 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         HG.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
-            self._EnterPredicates( set( self._selected_terms ) )
+            if shift_down:
+                
+                self._EditPredicates( set( self._selected_terms ) )
+                
+            else:
+                
+                self._EnterPredicates( set( self._selected_terms ) )
+                
             
+            return True
+            
+        
+        return False
         
     
     def _CanProvideCurrentPagePredicates( self ):
@@ -2137,7 +2150,47 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _DeleteActivate( self ):
         
-        self._Activate()
+        shift_down = False
+        
+        self._Activate( shift_down )
+        
+    
+    def _EditPredicates( self, predicates ):
+        
+        original_predicates = set( predicates )
+        
+        try:
+            
+            edited_predicates = set( ClientGUISearch.EditPredicates( self, predicates ) )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        non_edited_predicates = original_predicates.intersection( edited_predicates )
+        
+        predicates_to_add = edited_predicates.difference( non_edited_predicates )
+        predicates_to_remove = original_predicates.difference( non_edited_predicates )
+        
+        if len( predicates_to_add ) + len( predicates_to_remove ) == 0:
+            
+            return
+            
+        
+        for predicate in predicates_to_remove:
+            
+            self._RemoveTerm( predicate )
+            
+        
+        for predicate in predicates_to_add:
+            
+            self._AppendTerm( predicate )
+            
+        
+        self._SortByText()
+        
+        self._DataHasChanged()
         
     
     def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True ):

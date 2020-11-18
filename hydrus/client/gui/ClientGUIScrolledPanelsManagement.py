@@ -61,7 +61,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
         self._listbook.AddPage( 'audio', 'audio', self._AudioPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system tray', 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
-        #self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'search', 'search', self._SearchPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
@@ -731,7 +731,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _DefaultFileSystemPredicatesPanel( QW.QWidget ):
+    class _SearchPanel( QW.QWidget ):
         
         def __init__( self, parent, new_options ):
             
@@ -748,35 +748,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._filter_inbox_and_archive_predicates.setChecked( self._new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) )
             
-            self._file_system_predicate_age = ClientGUISearch.PanelPredicateSystemAgeDelta( self )
-            self._file_system_predicate_duration = ClientGUISearch.PanelPredicateSystemDuration( self )
-            self._file_system_predicate_height = ClientGUISearch.PanelPredicateSystemHeight( self )
-            self._file_system_predicate_limit = ClientGUISearch.PanelPredicateSystemLimit( self )
-            self._file_system_predicate_mime = ClientGUISearch.PanelPredicateSystemMime( self )
-            self._file_system_predicate_num_pixels = ClientGUISearch.PanelPredicateSystemNumPixels( self )
-            self._file_system_predicate_num_words = ClientGUISearch.PanelPredicateSystemNumWords( self )
-            self._file_system_predicate_ratio = ClientGUISearch.PanelPredicateSystemRatio( self )
-            self._file_system_predicate_similar_to = ClientGUISearch.PanelPredicateSystemSimilarTo( self )
-            self._file_system_predicate_size = ClientGUISearch.PanelPredicateSystemSize( self )
-            self._file_system_predicate_width = ClientGUISearch.PanelPredicateSystemWidth( self )
-            
             #
             
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._always_show_system_everything, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._filter_inbox_and_archive_predicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -786,22 +764,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'always_show_system_everything', self._always_show_system_everything.isChecked() )
             self._new_options.SetBoolean( 'filter_inbox_and_archive_predicates', self._filter_inbox_and_archive_predicates.isChecked() )
-            
-            system_predicates = HC.options[ 'file_system_predicates' ]
-            
-            system_predicates[ 'age' ] = self._file_system_predicate_age.GetInfo()
-            system_predicates[ 'duration' ] = self._file_system_predicate_duration.GetInfo()
-            system_predicates[ 'hamming_distance' ] = self._file_system_predicate_similar_to.GetInfo()[1]
-            system_predicates[ 'height' ] = self._file_system_predicate_height.GetInfo()
-            system_predicates[ 'limit' ] = self._file_system_predicate_limit.GetInfo()
-            system_predicates[ 'mime' ] = self._file_system_predicate_mime.GetInfo()
-            system_predicates[ 'num_pixels' ] = self._file_system_predicate_num_pixels.GetInfo()
-            system_predicates[ 'num_words' ] = self._file_system_predicate_num_words.GetInfo()
-            system_predicates[ 'ratio' ] = self._file_system_predicate_ratio.GetInfo()
-            system_predicates[ 'size' ] = self._file_system_predicate_size.GetInfo()
-            system_predicates[ 'width' ] = self._file_system_predicate_width.GetInfo()
-            
-            HC.options[ 'file_system_predicates' ] = system_predicates
             
         
     

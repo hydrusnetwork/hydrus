@@ -1859,7 +1859,9 @@ class RadioBox( QW.QFrame ):
                 self._choices[ i ].setChecked( True )
                 
                 return
-    
+                
+            
+        
     
     def GetStringSelection( self ):
 
@@ -1869,6 +1871,10 @@ class RadioBox( QW.QFrame ):
 
         return None
     
+    def SetValue( self, data ):
+        
+        pass
+        
     
     def Select( self, idx ):
     

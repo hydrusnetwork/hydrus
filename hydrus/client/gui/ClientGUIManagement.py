@@ -675,7 +675,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
         self._tag_autocomplete = tag_autocomplete
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
         
@@ -683,6 +683,10 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
             HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
             
+            return True
+            
+        
+        return False
         
     
     def _CanProvideCurrentPagePredicates( self ):

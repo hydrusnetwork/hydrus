@@ -449,6 +449,19 @@ class BetterRadioBox( QP.RadioBox ):
         return self._indices_to_data[ index ]
         
     
+    def SetValue( self, data ):
+        
+        for ( i, d ) in self._indices_to_data.items():
+            
+            if d == data:
+                
+                self.Select( i )
+                
+                return
+                
+            
+        
+    
 class BetterStaticText( QP.EllipsizedLabel ):
     
     def __init__( self, parent, label = None, tooltip_label = False, **kwargs ):

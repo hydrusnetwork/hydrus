@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 418</h3></li>
+				<ul>
+					<li>almost all system predicates are now editable if you shift+double-click them! you can also edit several at once in the same dialog</li>
+					<li>if you double-click on any predicate type that is not editable but does have an inverse version (e.g. archive/inbox, has audio/no audio, and tag/-tag), the inverse version(s) will be swapped in</li>
+					<li>all legacy custom system predicate defaults are eliminated this week. the panels now show a fixed default on launch, and will get a flexible favourites system in future, along with 'recently entered' quick buttons</li>
+					<li>restored the 'show system:everything' and 'hide archive/inbox' options, which were inadvertantly hidden when file system predicate defaults were hidden, to the new _options->search_ panel</li>
+					<li>fixed the borked list height for the file viewing statistics system pred panel checkbox lists</li>
+					<li>fixed an issue where namespace:anything predicates would not propagate to new pages on 'open page with these tags' commands</li>
+					<li>.</li>
+					<li>boring code specifics:</li>
+					<li>updated almost all the system predicate panels to take arbitrary initialisation values, and wrote a 'can I edit this' test for all predicate types to help some finnicky which-panel-and-pred-to-use issues</li>
+					<li>wrote some new filtering code and a little UI to handle editing of system preds</li>
+					<li>cleaned up some of the taglist item activation code</li>
+				</ul>
 				<li><h3>version 417</h3></li>
 				<ul>
 					<li>the hydrus network version is increased this week from 18 to 19. clients and servers can only talk to each other when they are on the same version, so please update your clients if you wish to keep talking to the PTR, and your own servers if you have a home network setup or similar. if a server and client are on different versions, you will get a polite error when they next try to talk, and sync will be paused</li>

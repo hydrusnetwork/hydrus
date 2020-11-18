@@ -69,7 +69,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
             
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
@@ -81,6 +81,10 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
             
             self._DataHasChanged()
             
+            return True
+            
+        
+        return False
         
     
     def ActivateAll( self ):
@@ -111,7 +115,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         self.setMinimumWidth( width )
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
@@ -123,6 +127,10 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             self._DataHasChanged()
             
+            return True
+            
+        
+        return False
         
     
     def _GetTextFromTerm( self, term ):

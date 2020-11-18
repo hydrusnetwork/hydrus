@@ -48,22 +48,6 @@ def GetClientDefaultOptions():
     
     options[ 'regex_favourites' ] = regex_favourites
     
-    system_predicates = {}
-    
-    system_predicates[ 'age' ] = ( '<', 'delta', ( 0, 0, 7, 0 ) )
-    system_predicates[ 'duration' ] = ( '>', 0 )
-    system_predicates[ 'height' ] = ( '=', 1080 )
-    system_predicates[ 'limit' ] = 600
-    system_predicates[ 'mime' ] = HC.IMAGES
-    system_predicates[ 'ratio' ] = ( '=', 16, 9 )
-    system_predicates[ 'size' ] = ( '<', 200, 1024 )
-    system_predicates[ 'width' ] = ( '=', 1920 )
-    system_predicates[ 'num_words' ] = ( '<', 30000 )
-    system_predicates[ 'num_pixels' ] = ( '\u2248', 2, 1000000 )
-    system_predicates[ 'hamming_distance' ] = 5
-    
-    options[ 'file_system_predicates' ] = system_predicates
-    
     default_namespace_colours = {}
     
     default_namespace_colours[ 'system' ] = ( 153, 101, 21 )

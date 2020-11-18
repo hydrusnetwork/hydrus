@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
@@ -25,6 +26,32 @@ from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientRatings
+
+EDIT_SYSTEM_PRED_TYPES = {
+    ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+}
 
 FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
@@ -48,9 +75,47 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
 }
 
-def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
+def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
+    
+    editable_predicates = [ predicate for predicate in predicates if predicate.GetType() in EDIT_SYSTEM_PRED_TYPES ]
+    non_editable_predicates = [ predicate for predicate in predicates if predicate.GetType() not in EDIT_SYSTEM_PRED_TYPES ]
     
     window = widget.window()
+    
+    from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+    
+    if len( editable_predicates ) > 0:
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( window, 'edit predicates' ) as dlg:
+            
+            panel = EditPredicatesPanel( dlg, predicates )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_predicates = panel.GetValue()
+                
+                result = list( non_editable_predicates )
+                result.extend( edited_predicates )
+                
+                return result
+                
+            
+        
+    else:
+        
+        inverse_predicates = [ predicate.GetInverseCopy() for predicate in predicates ]
+        
+        if None not in inverse_predicates:
+            
+            return inverse_predicates
+            
+        
+    
+    raise HydrusExceptions.CancelledException()
+    
+def FilterAndConvertLabelPredicates( predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
     
     good_predicates = []
     
@@ -58,7 +123,34 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientS
         
         predicate = predicate.GetCountlessCopy()
         
-        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        predicate_type = predicate.GetType()
+        
+        if predicate_type in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
+            
+            continue
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_UNTAGGED:
+            
+            predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '=', 0 ) )
+            
+        
+        good_predicates.append( predicate )
+        
+    
+    return good_predicates
+    
+def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
+    
+    window = widget.window()
+    
+    predicates = FilterAndConvertLabelPredicates( predicates )
+    
+    good_predicates = []
+    
+    for predicate in predicates:
+        
+        value = predicate.GetValue()
+        predicate_type = predicate.GetType()
         
         if value is None and predicate_type in FLESH_OUT_SYSTEM_PRED_TYPES:
             
@@ -66,7 +158,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientS
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( window, 'input predicate', hide_buttons = True ) as dlg:
                 
-                panel = InputFileSystemPredicate( dlg, predicate_type )
+                panel = FleshOutPredicatePanel( dlg, predicate )
                 
                 dlg.SetPanel( panel )
                 
@@ -75,14 +167,6 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Iterable[ ClientS
                     good_predicates.extend( panel.GetValue() )
                     
                 
-            
-        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_UNTAGGED:
-            
-            good_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '=', 0 ) ) )
-            
-        elif predicate_type == ClientSearch.PREDICATE_TYPE_LABEL:
-            
-            continue
             
         else:
             
@@ -558,16 +642,204 @@ class MediaSortControl( QW.QWidget ):
         self._UpdateAscLabels()
         
     
-class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
+class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, predicate_type ):
+    def __init__( self, parent, predicates: typing.Collection[ ClientSearch.Predicate ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        predicates = list( predicates )
+        
+        predicates.sort( key = lambda p: p.ToString( with_count = False ) )
+        
+        self._uneditable_predicates = []
+        
+        self._editable_pred_panels = []
+        
+        # I hate this pred comparison stuff, but let's hang in there until we split this stuff up by type mate
+        # then we can just have a dict type->panel_class lookup or whatever
+        # also it would be nice to have proper rating editing here, think about it
+        
+        AGE_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
+        MODIFIED_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
+        KNOWN_URL_EXACT = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', '', '' ) )
+        KNOWN_URL_DOMAIN = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', '', '' ) )
+        KNOWN_URL_REGEX = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'regex', '', '' ) )
+        FILE_VIEWS_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', ), '>', 0 ) )
+        
+        for predicate in predicates:
+            
+            predicate_type = predicate.GetType()
+            
+            if predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
+                
+                if predicate.IsUIEditable( AGE_DELTA_PRED ):
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemAgeDelta( self, predicate ) )
+                    
+                else:
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemAgeDate( self, predicate ) )
+                    
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
+                
+                if predicate.IsUIEditable( MODIFIED_DELTA_PRED ):
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemModifiedDelta( self, predicate ) )
+                    
+                else:
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemModifiedDate( self, predicate ) )
+                    
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemHeight( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemWidth( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemRatio( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemNumPixels( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemDuration( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemFramerate( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemNumFrames( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemFileService( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+                
+                if predicate.IsUIEditable( KNOWN_URL_EXACT ):
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemKnownURLsExactURL( self, predicate ) )
+                    
+                elif predicate.IsUIEditable( KNOWN_URL_DOMAIN ):
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemKnownURLsDomain( self, predicate ) )
+                    
+                elif predicate.IsUIEditable( KNOWN_URL_REGEX ):
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemKnownURLsRegex( self, predicate ) )
+                    
+                else:
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemKnownURLsURLClass( self, predicate ) )
+                    
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemHash( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemLimit( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MIME:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemMime( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemNumTags( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemNumNotes( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemHasNoteName( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemNumWords( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemSimilarTo( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemSize( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemTagAsNumber( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
+                
+                self._editable_pred_panels.append( PanelPredicateSystemDuplicateRelationships( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+                
+                if predicate.IsUIEditable( FILE_VIEWS_PRED ):
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemFileViewingStatsViews( self, predicate ) )
+                    
+                else:
+                    
+                    self._editable_pred_panels.append( PanelPredicateSystemFileViewingStatsViewtime( self, predicate ) )
+                    
+                
+            else:
+                
+                self._uneditable_predicates.append( predicate )
+                
+            
+            
+        
+        vbox = QP.VBoxLayout()
+        
+        for panel in self._editable_pred_panels:
+            
+            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        return_predicates = list( self._uneditable_predicates )
+        
+        for panel in self._editable_pred_panels:
+            
+            return_predicates.extend( panel.GetPredicates() )
+            
+        
+        return return_predicates
+        
+    
+class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, predicate: ClientSearch.Predicate ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        predicate_type = predicate.GetType()
         
         self._predicates = []
         
         label = None
-        editable_pred_panel_classes = []
+        editable_pred_panels = []
         static_pred_buttons = []
         
         if predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
@@ -576,13 +848,13 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ) ) )
             
-            editable_pred_panel_classes.append( PanelPredicateSystemAgeDelta )
-            editable_pred_panel_classes.append( PanelPredicateSystemAgeDate )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemAgeDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemAgeDate, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemModifiedDelta )
-            editable_pred_panel_classes.append( PanelPredicateSystemModifiedDate )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemModifiedDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemModifiedDate, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
@@ -594,10 +866,10 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1280 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 720 ) ) ), forced_label = '720p' ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 3840 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 2160 ) ) ), forced_label = '4k' ) )
             
-            editable_pred_panel_classes.append( PanelPredicateSystemHeight )
-            editable_pred_panel_classes.append( PanelPredicateSystemWidth )
-            editable_pred_panel_classes.append( PanelPredicateSystemRatio )
-            editable_pred_panel_classes.append( PanelPredicateSystemNumPixels )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemHeight, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemWidth, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemRatio, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemNumPixels, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION:
             
@@ -606,20 +878,20 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 30 ) ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 60 ) ), ) ) )
             
-            editable_pred_panel_classes.append( PanelPredicateSystemDuration )
-            editable_pred_panel_classes.append( PanelPredicateSystemFramerate )
-            editable_pred_panel_classes.append( PanelPredicateSystemNumFrames )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemDuration, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemFramerate, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemNumFrames, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemFileService )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemFileService, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsExactURL )
-            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsDomain )
-            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsRegex )
-            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsURLClass )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemKnownURLsExactURL, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemKnownURLsDomain, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemKnownURLsRegex, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemKnownURLsURLClass, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
             
@@ -628,7 +900,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemHash )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemHash, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT:
             
@@ -640,30 +912,30 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 1024 ), ) ) )
             
-            editable_pred_panel_classes.append( PanelPredicateSystemLimit )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemLimit, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MIME:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemMime )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemMime, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
             
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '>', 0 ) ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '=', 0 ) ), ) ) )
             
-            editable_pred_panel_classes.append( PanelPredicateSystemNumTags )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemNumTags, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES:
             
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ), ) ) )
             
-            editable_pred_panel_classes.append( PanelPredicateSystemNumNotes )
-            editable_pred_panel_classes.append( PanelPredicateSystemHasNoteName )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemNumNotes, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemHasNoteName, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemNumWords )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemNumWords, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_RATING:
             
@@ -673,30 +945,32 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             if len( ratings_services ) > 0:
                 
-                editable_pred_panel_classes.append( PanelPredicateSystemRating )
+                editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemRating, predicate ) )
                 
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemSimilarTo )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemSimilarTo, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemSize )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemSize, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemTagAsNumber )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemTagAsNumber, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemDuplicateRelationships )
-            editable_pred_panel_classes.append( PanelPredicateSystemDuplicateKing )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, False ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, True ), ) ) )
+            
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemDuplicateRelationships, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
             
-            editable_pred_panel_classes.append( PanelPredicateSystemFileViewingStatsViews )
-            editable_pred_panel_classes.append( PanelPredicateSystemFileViewingStatsViewtime )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemFileViewingStatsViews, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, PanelPredicateSystemFileViewingStatsViewtime, predicate ) )
             
         
         vbox = QP.VBoxLayout()
@@ -715,14 +989,12 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        for pred_class in editable_pred_panel_classes:
-            
-            panel = self._EditablePredPanel( self, pred_class )
+        for panel in editable_pred_panels:
             
             QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        if len( static_pred_buttons ) > 0 and len( editable_pred_panel_classes ) == 0:
+        if len( static_pred_buttons ) > 0 and len( editable_pred_panels ) == 0:
             
             HG.client_controller.CallAfterQtSafe( static_pred_buttons[0], static_pred_buttons[0].setFocus, QC.Qt.OtherFocusReason )
             
@@ -742,13 +1014,13 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         self.parentWidget().DoOK()
         
     
-    class _EditablePredPanel( QW.QWidget ):
+    class _PredOKPanel( QW.QWidget ):
         
-        def __init__( self, parent, predicate_class ):
+        def __init__( self, parent, predicate_panel_class, predicate ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._predicate_panel = predicate_class( self )
+            self._predicate_panel = predicate_panel_class( self, predicate )
             self._parent = parent
             
             self._ok = QW.QPushButton( 'ok', self )
@@ -831,6 +1103,25 @@ class StaticSystemPredicateButton( QW.QPushButton ):
     
 class PanelPredicateSystem( QW.QWidget ):
     
+    def _GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+        
+        raise NotImplementedError()
+        
+    
+    def _GetPredicateToInitialisePanelWith( self, predicate: ClientSearch.Predicate ) -> ClientSearch.Predicate:
+        
+        # expand this to check the favourites system for UICompatible preds
+        
+        default_predicate = self._GetDefaultPredicate()
+        
+        if predicate.IsUIEditable( default_predicate ):
+            
+            return predicate
+            
+        
+        return default_predicate
+        
+    
     def CheckCanOK( self ):
         
         pass
@@ -843,7 +1134,7 @@ class PanelPredicateSystem( QW.QWidget ):
 
 class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -851,13 +1142,19 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
         
         self._date = QW.QCalendarWidget( self )
         
-        qt_dt = QC.QDate.currentDate()
+        #
         
-        qt_dt.addDays( -7 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        qt_dt = QC.QDate( years, months, days )
         
         self._date.setSelectedDate( qt_dt )
         
-        self._sign.SetStringSelection( '>' )
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -868,6 +1165,19 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+        
+        qt_dt = QC.QDate.currentDate()
+        
+        qt_dt.addDays( -7 )
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'date', ( year, month, day ) ) )
         
     
     def GetPredicates( self ):
@@ -885,7 +1195,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
     
 class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -896,22 +1206,11 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         self._days = QP.MakeQSpinBox( self, max=90, width = 60 )
         self._hours = QP.MakeQSpinBox( self, max=24, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        try:
-            
-            ( sign, age_type, ( years, months, days, hours ) ) = system_predicates[ 'age' ]
-            
-        except:
-            
-            # wew lad. replace this all with proper system pred saving on new_options in future
-            sign = '<'
-            
-            years = 0
-            months = 0
-            days = 7
-            hours = 0
-            
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
@@ -919,6 +1218,8 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         self._months.setValue( months )
         self._days.setValue( days )
         self._hours.setValue( hours )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -938,6 +1239,11 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetStringSelection(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
@@ -947,7 +1253,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
     
 class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -955,13 +1261,19 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
         
         self._date = QW.QCalendarWidget( self )
         
-        qt_dt = QC.QDate.currentDate()
+        #
         
-        qt_dt.addDays( -7 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        qt_dt = QC.QDate( years, months, days )
         
         self._date.setSelectedDate( qt_dt )
         
-        self._sign.SetStringSelection( '>' )
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -972,6 +1284,19 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+        
+        qt_dt = QC.QDate.currentDate()
+        
+        qt_dt.addDays( -7 )
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '>', 'date', ( year, month, day ) ) )
         
     
     def GetPredicates( self ):
@@ -989,7 +1314,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
     
 class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1000,13 +1325,11 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         self._days = QP.MakeQSpinBox( self, max=90 )
         self._hours = QP.MakeQSpinBox( self, max=24 )
         
-        # wew lad. replace this all with proper system pred saving on new_options in future
-        sign = '<'
+        #
         
-        years = 0
-        months = 0
-        days = 7
-        hours = 0
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
@@ -1014,6 +1337,8 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         self._months.setValue( months )
         self._days.setValue( days )
         self._hours.setValue( hours )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1033,6 +1358,11 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetStringSelection(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
@@ -1040,42 +1370,9 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         return predicates
         
     
-class PanelPredicateSystemDuplicateKing( PanelPredicateSystem ):
-    
-    def __init__( self, parent ):
-        
-        PanelPredicateSystem.__init__( self, parent )
-        
-        choices = [ 'is the best quality file of its group', 'is not the best quality file of its group' ]
-        
-        self._king = QP.RadioBox( self, choices = choices, vertical = True )
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._king, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
-        
-        self.setLayout( hbox )
-        
-    
-    def GetPredicates( self ):
-        
-        king_str = self._king.GetStringSelection()
-        
-        king = 'is the' in king_str
-        
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, king ), )
-        
-        return predicates
-        
-    
 class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1091,8 +1388,13 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         #
         
-        self._sign.SetStringSelection( '>' )
-        self._num.setValue( 0 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, num, dupe_type ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        self._num.setValue( num )
+        self._dupe_type.SetValue( dupe_type )
         
         #
         
@@ -1108,6 +1410,15 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '>'
+        num = 0
+        dupe_type = HC.DUPLICATE_MEMBER
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( sign, num, dupe_type ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( self._sign.GetStringSelection(), self._num.value(), self._dupe_type.GetValue() ) ), )
@@ -1117,7 +1428,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
 class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1128,9 +1439,11 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         self._duration_s = QP.MakeQSpinBox( self, max=3599, width = 60 )
         self._duration_ms = QP.MakeQSpinBox( self, max=999, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, ms ) = system_predicates[ 'duration' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, ms ) = predicate.GetValue()
         
         s = ms // 1000
         
@@ -1140,6 +1453,8 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         self._duration_s.setValue( s )
         self._duration_ms.setValue( ms )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1155,6 +1470,14 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '>'
+        duration = 0
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( sign, duration ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( self._sign.GetStringSelection(), self._duration_s.value() * 1000 + self._duration_ms.value() ) ), )
@@ -1164,7 +1487,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
 class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1178,6 +1501,18 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         self._file_service_key = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, current_pending, file_service_key ) = predicate.GetValue()
+        
+        self._sign.SetValue( sign )
+        self._current_pending.SetValue( current_pending )
+        self._file_service_key.SetValue( file_service_key )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:file service:'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1190,6 +1525,15 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = True
+        current_pending = HC.CONTENT_STATUS_CURRENT
+        file_service_key = bytes()
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, current_pending, file_service_key ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._current_pending.GetValue(), self._file_service_key.GetValue() ) ), )
@@ -1199,7 +1543,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
 class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1210,26 +1554,45 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
         
         self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._value = QP.MakeQSpinBox( self, min=0, max=1000000 )
+        self._num = QP.MakeQSpinBox( self, min=0, max=1000000 )
         
         #
         
-        self._viewing_locations.Check( 0 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        self._sign.Select( 3 )
+        ( view_type, viewing_locations, sign, num ) = predicate.GetValue()
         
-        self._value.setValue( 10 )
+        self._viewing_locations.SetCheckedData( viewing_locations )
+        
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
+        
+        self._viewing_locations.setMaximumHeight( height )
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._num.setValue( num )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._value, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        viewing_locations = ( 'media', )
+        sign = '>'
+        num = 10
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, num ) )
         
     
     def GetPredicates( self ):
@@ -1243,16 +1606,16 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
         
         sign = self._sign.GetStringSelection()
         
-        value = self._value.value()
+        num = self._num.value()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, value ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, num ) ), )
         
         return predicates
         
     
 class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1267,11 +1630,21 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         
         #
         
-        self._viewing_locations.Check( 0 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        self._sign.Select( 3 )
+        ( view_type, viewing_locations, sign, time_delta ) = predicate.GetValue()
         
-        self._time_delta.SetValue( 600 )
+        self._viewing_locations.SetCheckedData( viewing_locations )
+        
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
+        
+        self._viewing_locations.setMaximumHeight( height )
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._time_delta.SetValue( time_delta )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1283,6 +1656,15 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        viewing_locations = ( 'media', )
+        sign = '>'
+        time_delta = 600
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', tuple( viewing_locations ), sign, time_delta ) )
         
     
     def GetPredicates( self ):
@@ -1305,7 +1687,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
     
 class PanelPredicateSystemFramerate( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1315,8 +1697,16 @@ class PanelPredicateSystemFramerate( PanelPredicateSystem ):
         
         self._framerate = QP.MakeQSpinBox( self, min = 1, max = 3600, width = 60 )
         
-        self._sign.SetStringSelection( '=' )
-        self._framerate.setValue( 60 )
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, framerate ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        self._framerate.setValue( framerate )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1335,6 +1725,14 @@ class PanelPredicateSystemFramerate( PanelPredicateSystem ):
         self.setLayout( vbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '='
+        framerate = 60
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( sign, framerate ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( self._sign.GetStringSelection(), self._framerate.value() ) ), )
@@ -1344,7 +1742,7 @@ class PanelPredicateSystemFramerate( PanelPredicateSystem ):
     
 class PanelPredicateSystemHash( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1360,6 +1758,20 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( hashes, hash_type ) = predicate.GetValue()
+        
+        hashes_text = os.linesep.join( [ hash.hex() for hash in hashes ] )
+        
+        self._hashes.setPlainText( hashes_text )
+        
+        self._hash_type.SetStringSelection( hash_type )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash='), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1369,6 +1781,14 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        hashes = tuple()
+        hash_type = 'sha256'
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ) )
         
     
     def GetPredicates( self ):
@@ -1397,7 +1817,7 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
     
 class PanelPredicateSystemHasNoteName( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1409,6 +1829,17 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystem ):
         self._name = QW.QLineEdit( self )
         self._name.setFixedWidth( 250 )
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( operator, name ) = predicate.GetValue()
+        
+        self._operator.SetValue( operator )
+        self._name.setText( name )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:note name'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1418,6 +1849,14 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        operator = True
+        name = ''
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( operator, name ) )
         
     
     def GetPredicates( self ):
@@ -1436,7 +1875,7 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystem ):
     
 class PanelPredicateSystemHeight( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1444,13 +1883,17 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         self._height = QP.MakeQSpinBox( self, max=200000, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, height ) = system_predicates[ 'height' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, height ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
         self._height.setValue( height )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1463,6 +1906,14 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '='
+        height = 1080
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( sign, height ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( self._sign.GetStringSelection(), self._height.value() ) ), )
@@ -1472,7 +1923,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1484,6 +1935,17 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
         self._exact_url = QW.QLineEdit( self )
         self._exact_url.setFixedWidth( 250 )
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( operator, rule_type, rule, description ) = predicate.GetValue()
+        
+        self._operator.SetValue( operator )
+        self._exact_url.setText( rule )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1494,6 +1956,16 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        operator = True
+        rule_type = 'exact_match'
+        rule = ''
+        description = ''
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def GetPredicates( self ):
@@ -1524,7 +1996,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1538,6 +2010,17 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
         
         self._domain.setPlaceholderText( 'example.com' )
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( operator, rule_type, rule, description ) = predicate.GetValue()
+        
+        self._operator.SetValue( operator )
+        self._domain.setText( rule )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1548,6 +2031,16 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        operator = True
+        rule_type = 'domain'
+        rule = ''
+        description = ''
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def GetPredicates( self ):
@@ -1578,7 +2071,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1590,6 +2083,17 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         self._regex = QW.QLineEdit( self )
         self._regex.setFixedWidth( 250 )
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( operator, rule_type, rule, description ) = predicate.GetValue()
+        
+        self._operator.SetValue( operator )
+        self._regex.setText( rule )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1600,6 +2104,16 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        operator = True
+        rule_type = 'regex'
+        rule = ''
+        description = ''
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def CheckCanOK( self ):
@@ -1644,7 +2158,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
     
 class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1663,6 +2177,17 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
                 
             
         
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( operator, rule_type, rule, description ) = predicate.GetValue()
+        
+        self._operator.SetValue( operator )
+        self._url_classes.SetValue( rule )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1673,6 +2198,16 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        operator = True
+        rule_type = 'regex'
+        rule = None
+        description = ''
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def GetPredicates( self ):
@@ -1703,17 +2238,21 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
     
 class PanelPredicateSystemLimit( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
         self._limit = QP.MakeQSpinBox( self, max=1000000, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        limit = system_predicates[ 'limit' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        limit = predicate.GetValue()
         
         self._limit.setValue( limit )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1725,6 +2264,13 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        limit = 256
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, limit )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, self._limit.value() ), )
@@ -1734,15 +2280,17 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
     
 class PanelPredicateSystemMime( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
         self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self, HC.SEARCHABLE_MIMES )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        mimes = system_predicates[ 'mime' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        mimes = predicate.GetValue()
         
         if isinstance( mimes, int ):
             
@@ -1750,6 +2298,8 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
             
         
         self._mimes.SetValue( mimes )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1759,6 +2309,13 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        mimes = tuple()
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, mimes )
         
     
     def GetPredicates( self ):
@@ -1772,7 +2329,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1782,15 +2339,19 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         self._unit = QP.RadioBox( self, choices=['pixels','kilopixels','megapixels'] )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, num_pixels, unit ) = system_predicates[ 'num_pixels' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, num_pixels, unit ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
         self._num_pixels.setValue( num_pixels )
         
         self._unit.SetStringSelection( HydrusData.ConvertIntToPixels( unit ) )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1804,6 +2365,15 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '\u2248'
+        num_pixels = 2
+        unit = 1000000
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( sign, num_pixels, unit ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( self._sign.GetStringSelection(), self._num_pixels.value(), HydrusData.ConvertPixelsToInt( self._unit.GetStringSelection() ) ) ), )
@@ -1813,7 +2383,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1823,8 +2393,16 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
         
         self._num_frames = QP.MakeQSpinBox( self, min = 0, max = 1000000, width = 80 )
         
-        self._sign.SetStringSelection( '>' )
-        self._num_frames.setValue( 600 )
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, num_frames ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        self._num_frames.setValue( num_frames )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1837,6 +2415,14 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '>'
+        num_frames = 600
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ( sign, num_frames ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ( self._sign.GetStringSelection(), self._num_frames.value() ) ), )
@@ -1846,7 +2432,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1857,13 +2443,19 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         self._num_tags = QP.MakeQSpinBox( self, max=2000, width = 60 )
         
-        ( namespace, sign, num_tags ) = ( None, '>', 4 )
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( namespace, sign, num_tags ) = predicate.GetValue()
         
         self._namespace.SetValue( namespace )
         
         self._sign.SetStringSelection( sign )
         
         self._num_tags.setValue( num_tags )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1875,6 +2467,15 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        namespace = None
+        sign = '>'
+        num_tags = 4
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( namespace, sign, num_tags ) )
         
     
     def GetPredicates( self ):
@@ -1909,7 +2510,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumNotes( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1917,9 +2518,17 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystem ):
         
         self._num_notes = QP.MakeQSpinBox( self, max = 256, width = 60 )
         
-        self._sign.SetStringSelection( '=' )
+        #
         
-        self._num_notes.setValue( 1 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, num_notes ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._num_notes.setValue( num_notes )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1932,6 +2541,14 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '='
+        num_notes = 1
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( sign, num_notes ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( self._sign.GetStringSelection(), self._num_notes.value() ) ), )
@@ -1941,7 +2558,7 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumWords( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1949,13 +2566,17 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         self._num_words = QP.MakeQSpinBox( self, max=1000000, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, num_words ) = system_predicates[ 'num_words' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, num_words ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
         self._num_words.setValue( num_words )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -1968,6 +2589,14 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '<'
+        num_words = 30000
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( sign, num_words ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( self._sign.GetStringSelection(), self._num_words.value() ) ), )
@@ -1977,7 +2606,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
     
 class PanelPredicateSystemRating( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -1992,6 +2621,8 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         gridbox = QP.GridLayout( cols = 5 )
         
         gridbox.setColumnStretch( 0, 1 )
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
         for service in local_like_services:
             
@@ -2051,6 +2682,16 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        # not used for now. not a great scenario here
+        
+        service_key = None
+        rating_state = ClientRatings.NULL
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', service_key ) )
         
     
     def GetPredicates( self ):
@@ -2141,7 +2782,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
     
 class PanelPredicateSystemRatio( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -2151,15 +2792,19 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         self._height = QP.MakeQSpinBox( self, max=50000, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, width, height ) = system_predicates[ 'ratio' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, width, height ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
         self._width.setValue( width )
         
         self._height.setValue( height )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -2174,6 +2819,15 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        sign = '<'
+        width = 16
+        height = 9
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( sign, width, height ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( self._sign.GetStringSelection(), self._width.value(), self._height.value() ) ), )
@@ -2183,7 +2837,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
     
 class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -2195,13 +2849,21 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         self._max_hamming = QP.MakeQSpinBox( self, max=256, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
         self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
         
-        hamming_distance = system_predicates[ 'hamming_distance' ]
+        ( hashes, hamming_distance ) = predicate.GetValue()
+        
+        hashes_text = os.linesep.join( [ hash.hex() for hash in hashes ] )
+        
+        self._hashes.setPlainText( hashes_text )
         
         self._max_hamming.setValue( hamming_distance )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -2213,6 +2875,14 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        hashes = tuple()
+        max_hamming = 4
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hashes, max_hamming ) )
         
     
     def GetPredicates( self ):
@@ -2234,7 +2904,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
 class PanelPredicateSystemSize( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -2242,13 +2912,17 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         self._bytes = ClientGUIControls.BytesControl( self )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, size, unit ) = system_predicates[ 'size' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, size, unit ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
         self._bytes.SetSeparatedValue( size, unit )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -2259,6 +2933,15 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        sign = '<'
+        size = 200
+        unit = 1024
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( sign, size, unit ) )
         
     
     def GetPredicates( self ):
@@ -2272,7 +2955,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
     
 class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -2286,9 +2969,13 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
         
         #
         
-        self._namespace.setText( 'page' )
-        self._sign.SetStringSelection( '>' )
-        self._num.setValue( 0 )
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( namespace, sign, num ) = predicate.GetValue()
+        
+        self._namespace.setText( namespace )
+        self._sign.SetStringSelection( sign )
+        self._num.setValue( num )
         
         #
         
@@ -2304,6 +2991,15 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
         self.setLayout( hbox )
         
     
+    def _GetDefaultPredicate( self ):
+        
+        namespace = 'page'
+        sign = '>'
+        num = 0
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( namespace, sign, num ) )
+        
+    
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.text(), self._sign.GetStringSelection(), self._num.value() ) ), )
@@ -2313,7 +3009,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
     
 class PanelPredicateSystemWidth( PanelPredicateSystem ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, predicate ):
         
         PanelPredicateSystem.__init__( self, parent )
         
@@ -2321,13 +3017,17 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         self._width = QP.MakeQSpinBox( self, max=200000, width = 60 )
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
+        #
         
-        ( sign, width ) = system_predicates[ 'width' ]
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, width ) = predicate.GetValue()
         
         self._sign.SetStringSelection( sign )
         
         self._width.setValue( width )
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -2338,6 +3038,14 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetDefaultPredicate( self ):
+        
+        sign = '='
+        width = 1920
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( sign, width ) )
         
     
     def GetPredicates( self ):

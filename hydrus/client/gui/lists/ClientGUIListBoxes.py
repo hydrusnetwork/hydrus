@@ -959,7 +959,6 @@ class ListBox( QW.QScrollArea ):
         
         self._widget_event_filter.EVT_LEFT_DOWN( self.EventMouseSelect )
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMouseSelect )
-        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventDClick )
         
     
     def __len__( self ):
@@ -972,12 +971,12 @@ class ListBox( QW.QScrollArea ):
         return QP.isValid( self )
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
-        pass
+        return False
         
     
-    def _ActivateFromKeyboard( self ):
+    def _ActivateFromKeyboard( self, shift_down ):
         
         selected_indices = []
         
@@ -995,9 +994,9 @@ class ListBox( QW.QScrollArea ):
                 
             
         
-        self._Activate()
+        action_occurred = self._Activate( shift_down )
         
-        if len( self._selected_terms ) == 0 and len( selected_indices ) > 0:
+        if action_occurred and len( self._selected_terms ) == 0 and len( selected_indices ) > 0:
             
             ideal_index = min( selected_indices )
             
@@ -1013,6 +1012,8 @@ class ListBox( QW.QScrollArea ):
                     
                 
             
+        
+        return action_occurred
         
     
     def _DeleteActivate( self ):
@@ -1627,7 +1628,7 @@ class ListBox( QW.QScrollArea ):
             
         elif key_code in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
             
-            self._ActivateFromKeyboard()
+            self._ActivateFromKeyboard( shift )
             
         else:
             
@@ -1708,11 +1709,23 @@ class ListBox( QW.QScrollArea ):
             
         
     
-    def EventDClick( self, event ):
+    def mouseDoubleClickEvent( self, event ):
         
-        self._Activate()
-        
-        self.mouseActivationOccurred.emit()
+        if event.button() == QC.Qt.LeftButton:
+            
+            shift_down = event.modifiers() & QC.Qt.ShiftModifier
+            
+            action_occurred = self._Activate( shift_down )
+            
+            if action_occurred:
+                
+                self.mouseActivationOccurred.emit()
+                
+            
+        else:
+            
+            QW.QScrollArea.mouseDoubleClickEvent( self, event )
+            
         
     
     def EventMouseSelect( self, event ):
@@ -2053,10 +2066,7 @@ class ListBoxTags( ListBox ):
             
             if isinstance( term, ClientSearch.Predicate ):
                 
-                if term.GetType() not in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_PARENT ):
-                    
-                    predicates.append( term )
-                    
+                predicates.append( term )
                 
             else:
                 
@@ -2913,7 +2923,7 @@ class ListBoxTagsCensorship( ListBoxTags ):
         self._removed_callable = removed_callable
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
@@ -2933,6 +2943,10 @@ class ListBoxTagsCensorship( ListBoxTags ):
             
             self._DataHasChanged()
             
+            return True
+            
+        
+        return False
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -3048,7 +3062,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._DataHasChanged()
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ):
         
         namespaces = [ namespace for ( namespace, colour ) in self._selected_terms ]
         
@@ -3062,12 +3076,18 @@ class ListBoxTagsColourOptions( ListBoxTags ):
                 
                 self._RemoveNamespaces( namespaces )
                 
+                return True
+                
             
+        
+        return False
         
     
     def _DeleteActivate( self ):
         
-        self._Activate()
+        shift_down = False
+        
+        self._Activate( shift_down )
         
     
     def _GetNamespaceColours( self ):
@@ -3365,7 +3385,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         self._removed_callable = removed_callable
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
@@ -3373,6 +3393,10 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
             
             self._RemoveTags( tags )
             
+            return True
+            
+        
+        return False
         
     
     def _RemoveTags( self, tags ):
@@ -3439,7 +3463,9 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         if key in ClientGUIShortcuts.DELETE_KEYS_QT:
             
-            self._Activate()
+            shift_down = modifier == ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT
+            
+            action_occurred = self._Activate( shift_down )
             
         else:
             
@@ -3843,9 +3869,11 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
         self._canvas_key = canvas_key
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         HG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
+        
+        return True
         
     
 class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
@@ -3860,12 +3888,16 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
         self._delete_func = delete_func
         
     
-    def _Activate( self ):
+    def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
             self._enter_func( set( self._selected_terms ) )
             
+            return True
+            
+        
+        return False
         
     
     def _DeleteActivate( self ):
