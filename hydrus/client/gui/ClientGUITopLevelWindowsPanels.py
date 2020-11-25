@@ -145,7 +145,7 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
             
             if len( message ) > 0:
                 
-                QW.QMessageBox.critical( self, 'Error', message )
+                QW.QMessageBox.warning( self, 'Cannot OK!', message )
                 
             
             return False

@@ -1038,6 +1038,43 @@ def PartitionIteratorIntoLists( pred: typing.Callable[ [ object ], bool ], strea
     
     return ( list( a ), list( b ) )
     
+def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
+    
+    hash_type_to_hex_length = {
+        'md5' : 32,
+        'sha1' : 40,
+        'sha256' : 64,
+        'sha512' : 128
+    }
+    
+    hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
+    
+    # convert md5:abcd to abcd
+    hex_hashes = [ hex_hash.split( ':' )[-1] for hex_hash in hex_hashes ]
+    
+    hex_hashes = [ HydrusText.HexFilter( hex_hash ) for hex_hash in hex_hashes ]
+    
+    expected_hex_length = hash_type_to_hex_length[ hash_type ]
+    
+    bad_hex_hashes = [ hex_hash for hex_hash in hex_hashes if len( hex_hash ) != expected_hex_length ]
+    
+    if len( bad_hex_hashes ):
+        
+        m = 'Sorry, {} hashes should have {} hex characters! These did not:'.format( hash_type, expected_hex_length )
+        m += os.linesep * 2
+        m += os.linesep.join( ( '{} ({} characters)'.format( bad_hex_hash, len( bad_hex_hash ) ) for bad_hex_hash in bad_hex_hashes ) )
+        
+        raise Exception( m )
+        
+    
+    hex_hashes = [ hex_hash for hex_hash in hex_hashes if len( hex_hash ) % 2 == 0 ]
+    
+    hex_hashes = DedupeList( hex_hashes )
+    
+    hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
+    
+    return hashes
+    
 def Print( text ):
     
     try:

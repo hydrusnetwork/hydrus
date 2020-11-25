@@ -9,6 +9,7 @@ except:
     CHARDET_OK = False
     
 import json
+import os
 import re
 
 re_newlines = re.compile( '[\r\n]+' )

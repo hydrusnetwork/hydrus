@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 419</h3></li>
+				<ul>
+					<li>tag lists and editing predicates:</li>
+					<li>you can now set the default value for any editable system predicate. a star button beside each panel lets you set or clear the custom default</li>
+					<li>all editable system predicate panels now put 'recent' predicate buttons up top, for the five most entered predicates of the respective types. this is a little jank and grows pretty tall with multi-pred-type panels, but let me know what you think</li>
+					<li>all tag lists now support drag-selection!</li>
+					<li>taglists now have 'open a new OR page' menu entry when more than one tag is selected</li>
+					<li>when taglists can change the current search, they now have an 'add an OR to current search' menu entry when more than one tag is selected</li>
+					<li>OR Predicates are now editable! they launch their own little autocomplete input that is a little jank because you can technically make nested ORs, but it works!</li>
+					<li>system:rating is now editable! it launches the whole stack every time. the stack alignment is messed up though :/</li>
+					<li>invertible predicates (inbox/archive, tag/-tag, etc...) now flip on double-click only if you have one selected. if you have more than one selected, they appear as invertible buttons along with the rest of the edit UI</li>
+					<li>the active search predicates taglist now has an 'edit search terms' menu entry, if you find shift+double-click a pain</li>
+					<li>when you shift+double-click on more than one tag to add them to the current search, this is now added as an OR</li>
+					<li>similarly if you shift+middle-click on more than one tag, the new page is now an OR</li>
+					<li>when editing predicates, edited predicates now stay selected</li>
+					<li>shift+clicking on an already selected tag no longer adds any new selections (i.e. shift+click filling-in). this should make it nicer to do shift+double-click on selections. furthermore, the 'last clicked' focus ghost (from which a shift+click selection cascade starts) on tag lists is now cleared on edits or removes, which should reduce some other crazy/annoying select behaviour here</li>
+					<li>the list of active search predicates now correctly initialises sorted</li>
+					<li>entering hex hashes into system:hash or :similar_to now has unified hash parsing, auto-removes 'md5:'-style prefixes, and presents detailed error information when a hash is too long or short</li>
+					<li>.</li>
+					<li>faster and snappier file and tag searching:</li>
+					<li>searching for files by complicated wildcard (i.e. a search phrase that includes an asterisk in a non-rightmost character position) is now greatly optimised when the tag does not start with an asterisk (e.g. 'sm*l' is now much faster, '*all' is still hellmode), and now cancels (due to hitting the stop button or changing the query before results come in) much faster thanks to a new unified results fetching and cancel-checking routine</li>
+					<li>rewrote my autocomplete tag search to use the new namespace and subtag lookup code from the virtual siblings and parents system, unifying lookup logic and benefitting from the same new complicated wildcard optimisation and fast-cancel tech</li>
+					<li>autocomplete tag count aggregation (a later step, after the initial lookup) benefits from a little faster cancel tech</li>
+					<li>all file queries based on tag, wildcard, namespace, tag count, and tag existence now use the new fast-cancel tech. if you put in a 'has >4 tags' query and it is taking ages, changing the query or just hitting the 'stop' button should now free up the db pretty fast</li>
+					<li>related tags suggestions also gets the cancel tech and is now more timing precise for tags with either huge or tiny count</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the /get_files/file_metadata call now returns a service_names_to_statuses_to_displayed_tags structure, which reflects the sibling-collapsed and parent-added tags, as displayed to the user in UI. the help is updated to reflect this</li>
+					<li>the client api version is now 15</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed an issue where regenerating the tag definition search cache would not tidy up the 'I am busy' modal dialog once it was done, resulting in a soft lock</li>
+					<li>fixed another upnp error handling bug, this time in the upnp daemon</li>
+					<li>updated Qt to 5.15.2 on Windows and Linux builds. this should fix the unusual button clicking area problem for some custom styles</li>
+					<li>.</li>
+					<li>boring specific code changes:</li>
+					<li>wrote widgets to edit invertible preds and OR preds</li>
+					<li>pulled the messy rating code out of the rating system predicate ui code to their own widgets</li>
+					<li>wrote some special predicate ui definitions and initialisation handling for OR preds and grouped 'multiple' preds (for ratings)</li>
+					<li>refactored search and predicate ui code to a new 'search' module</li>
+					<li>refactored collect and sort widgets away from search code</li>
+					<li>misc layout improvements for system pred edit ui</li>
+				</ul>
 				<li><h3>version 418</h3></li>
 				<ul>
 					<li>almost all system predicates are now editable if you shift+double-click them! you can also edit several at once in the same dialog</li>

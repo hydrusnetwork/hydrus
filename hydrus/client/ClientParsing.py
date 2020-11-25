@@ -2038,6 +2038,11 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                         u = re.sub( r'^.*\shttp', 'http', u )
                         
                     
+                    while u.startswith( 'https://https://' ):
+                        
+                        u = u[8:]
+                        
+                    
                     return u
                     
                 

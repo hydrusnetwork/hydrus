@@ -19,14 +19,13 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUISearch
+from hydrus.client.gui import ClientGUIResultsSortCollect
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
@@ -37,6 +36,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.search import ClientGUIACDropdown
+from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.media import ClientMedia
 from hydrus.client.networking import ClientNetworkingSessions
 
@@ -2334,13 +2335,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._default_media_sort = ClientGUISearch.MediaSortControl( self )
+            self._default_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self )
             
-            self._fallback_media_sort = ClientGUISearch.MediaSortControl( self )
+            self._fallback_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self )
             
             self._save_page_sort_on_change = QW.QCheckBox( self )
             
-            self._default_media_collect = ClientGUISearch.MediaCollectControl( self, silent = True )
+            self._default_media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self, silent = True )
             
             namespace_sorting_box = ClientGUICommon.StaticBox( self, 'namespace sorting' )
             

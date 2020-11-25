@@ -1664,6 +1664,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._inclusive
         
     
+    def IsInvertible( self ):
+        
+        return self.GetInverseCopy() is not None
+        
+    
     def IsMutuallyExclusive( self, predicate ):
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM_EVERYTHING:
@@ -1671,7 +1676,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             return True
             
         
-        if predicate == self.GetInverseCopy():
+        if self.IsInvertible() and predicate == self.GetInverseCopy():
             
             return True
             

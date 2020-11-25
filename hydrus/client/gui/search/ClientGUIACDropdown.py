@@ -21,12 +21,13 @@ from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIResultsSortCollect
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.metadata import ClientTags
 
 from hydrus.external import LogicExpressionQueryParser
@@ -1494,7 +1495,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     searchChanged = QC.Signal( ClientSearch.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUISearch.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUISearch.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
         
         self._page_key = page_key
         
@@ -1834,7 +1835,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _ManageFavouriteSearches( self, favourite_search_row_to_save = None ):
         
-        from hydrus.client.gui import ClientGUISearchPanels
+        from hydrus.client.gui.search import ClientGUISearchPanels
         
         favourite_searches_rows = HG.client_controller.favourite_search_manager.GetFavouriteSearchRows()
         
@@ -2118,6 +2119,8 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
                 self._AppendTerm( predicate )
                 
             
+            self._SortByText()
+            
             self._DataHasChanged()
             
         
@@ -2141,6 +2144,29 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
         
         return False
+        
+    
+    def _AddEditMenu( self, menu: QW.QMenu ):
+        
+        ( editable_predicates, non_editable_predicates ) = ClientGUISearch.GetEditablePredicates( self._selected_terms )
+        
+        if len( editable_predicates ) > 0:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if len( editable_predicates ) == 1:
+                
+                desc = list( editable_predicates )[0].ToString()
+                
+            else:
+                
+                desc = '{} search terms'.format( HydrusData.ToHumanInt( len( editable_predicates ) ) )
+                
+            
+            label = 'edit {}'.format( desc )
+            
+            ClientGUIMenus.AppendMenuItem( menu, label, 'Edit these predicates and refresh the search. Not all predicates are editable.', self._EditPredicates, editable_predicates )
+            
         
     
     def _CanProvideCurrentPagePredicates( self ):
@@ -2187,6 +2213,8 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
             self._AppendTerm( predicate )
             
+        
+        self._selected_terms.update( predicates_to_add )
         
         self._SortByText()
         
@@ -2264,11 +2292,18 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _ProcessMenuPredicateEvent( self, command ):
         
-        ( predicates, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+        ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
         
         if command == 'add_predicates':
             
             self._EnterPredicates( predicates, permit_remove = False )
+            
+        elif command == 'add_or_predicate':
+            
+            if or_predicate is not None:
+                
+                self._EnterPredicates( ( or_predicate, ), permit_remove = False )
+                
             
         elif command == 'remove_predicates':
             
@@ -2300,6 +2335,8 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
             self._AppendTerm( predicate )
             
+        
+        self._SortByText()
         
         self._DataHasChanged()
         

@@ -1678,6 +1678,28 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
                 
+                #
+                
+                service_names_to_statuses_to_tags = {}
+                
+                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
+                
+                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                    
+                    if service_key not in service_keys_to_names:
+                        
+                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                        
+                    
+                    service_name = service_keys_to_names[ service_key ]
+                    
+                    service_names_to_statuses_to_tags[ service_name ] = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() }
+                    
+                
+                metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
+                
+                #
+                
                 metadata.append( metadata_row )
                 
             
