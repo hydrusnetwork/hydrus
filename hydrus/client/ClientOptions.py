@@ -452,6 +452,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'custom_default_predicates' ] = HydrusSerialisable.SerialisableList()
+        
+        self._dictionary[ 'predicate_types_to_recent_predicates' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        #
+        
         self._dictionary[ 'favourite_tag_filters' ] = HydrusSerialisable.SerialisableDictionary()
         
         #
@@ -775,6 +781,32 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def ClearCustomDefaultSystemPredicates( self, predicate_type = None, comparable_predicate = None ):
+        
+        with self._lock:
+            
+            custom_default_predicates = self._dictionary[ 'custom_default_predicates' ]
+            
+            if predicate_type is not None:
+                
+                new_custom_default_predicates = HydrusSerialisable.SerialisableList( [ pred for pred in custom_default_predicates if pred.GetType() != predicate_type ] )
+                
+                self._dictionary[ 'custom_default_predicates' ] = new_custom_default_predicates
+                
+                return
+                
+            
+            if comparable_predicate is not None:
+                
+                new_custom_default_predicates = HydrusSerialisable.SerialisableList( [ pred for pred in custom_default_predicates if not pred.IsUIEditable( comparable_predicate ) ] )
+                
+                self._dictionary[ 'custom_default_predicates' ] = new_custom_default_predicates
+                
+                return
+                
+            
+        
+    
     def FlipBoolean( self, name ):
         
         with self._lock:
@@ -811,6 +843,26 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             ( r, g, b ) = self._dictionary[ 'colours' ][ colourset ][ colour_type ]
             
             return QG.QColor( r, g, b )
+            
+        
+    
+    def GetCustomDefaultSystemPredicates( self, predicate_type = None, comparable_predicate = None ):
+        
+        with self._lock:
+            
+            custom_default_predicates = self._dictionary[ 'custom_default_predicates' ]
+            
+            if predicate_type is not None:
+                
+                return [ pred for pred in custom_default_predicates if pred.GetType() == predicate_type ]
+                
+            
+            if comparable_predicate is not None:
+                
+                return [ pred for pred in custom_default_predicates if pred.IsUIEditable( comparable_predicate ) ]
+                
+            
+            return []
             
         
     
@@ -1026,6 +1078,26 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetRecentPredicates( self, predicate_types ):
+        
+        with self._lock:
+            
+            result = []
+            
+            predicate_types_to_recent_predicates = self._dictionary[ 'predicate_types_to_recent_predicates' ]
+            
+            for predicate_type in predicate_types:
+                
+                if predicate_type in predicate_types_to_recent_predicates:
+                    
+                    result.extend( predicate_types_to_recent_predicates[ predicate_type ] )
+                    
+                
+            
+            return result
+            
+        
+    
     def GetSimpleDownloaderFormulae( self ):
         
         with self._lock:
@@ -1085,6 +1157,38 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def PushRecentPredicates( self, predicates ):
+        
+        with self._lock:
+            
+            predicate_types_to_recent_predicates = self._dictionary[ 'predicate_types_to_recent_predicates' ]
+            
+            for predicate in predicates:
+                
+                predicate_type = predicate.GetType()
+                
+                if predicate_type not in predicate_types_to_recent_predicates:
+                    
+                    predicate_types_to_recent_predicates[ predicate_type ] = HydrusSerialisable.SerialisableList()
+                    
+                
+                recent_predicates = predicate_types_to_recent_predicates[ predicate_type ]
+                
+                if predicate in recent_predicates:
+                    
+                    recent_predicates.remove( predicate )
+                    
+                
+                recent_predicates.insert( 0, predicate )
+                
+                while len( recent_predicates ) > 5:
+                    
+                    recent_predicates.pop( 5 )
+                    
+                
+            
+        
+    
     def SetBoolean( self, name, value ):
         
         with self._lock:
@@ -1117,6 +1221,44 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             self._dictionary[ 'colours' ][ colourset ][ colour_type ] = ( r, g, b )
+            
+        
+    
+    def SetCustomDefaultSystemPredicates( self, predicate_type = None, predicates = None, comparable_predicates = None ):
+        
+        with self._lock:
+            
+            custom_default_predicates = self._dictionary[ 'custom_default_predicates' ]
+            
+            if predicate_type is not None and predicates is not None:
+                
+                new_custom_default_predicates = HydrusSerialisable.SerialisableList( [ pred for pred in custom_default_predicates if pred.GetType() != predicate_type ] )
+                
+                new_custom_default_predicates.extend( predicates )
+                
+                self._dictionary[ 'custom_default_predicates' ] = new_custom_default_predicates
+                
+                return
+                
+            
+            if comparable_predicates is not None:
+                
+                new_custom_default_predicates = HydrusSerialisable.SerialisableList()
+                
+                for pred in custom_default_predicates:
+                    
+                    if True not in ( pred.IsUIEditable( comparable_predicate ) for comparable_predicate in comparable_predicates ):
+                        
+                        new_custom_default_predicates.append( pred )
+                        
+                    
+                
+                new_custom_default_predicates.extend( comparable_predicates )
+                
+                self._dictionary[ 'custom_default_predicates' ] = new_custom_default_predicates
+                
+                return
+                
             
         
     

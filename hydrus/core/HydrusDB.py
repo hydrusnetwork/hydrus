@@ -46,6 +46,38 @@ def CheckCanVacuum( db_path, stop_time = None ):
     
     HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, vacuum_estimate )
     
+def ReadFromCancellableCursor( cursor, largest_group_size, cancelled_hook = None ):
+    
+    if cancelled_hook is None:
+        
+        return cursor.fetchall()
+        
+    
+    NUM_TO_GET = 1
+    
+    results = []
+    
+    group_of_results = cursor.fetchmany( NUM_TO_GET )
+    
+    while len( group_of_results ) > 0:
+        
+        results.extend( group_of_results )
+        
+        if cancelled_hook():
+            
+            break
+            
+        
+        if NUM_TO_GET < 1024:
+            
+            NUM_TO_GET *= 2
+            
+        
+        group_of_results = cursor.fetchmany( NUM_TO_GET )
+        
+    
+    return results
+    
 def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
     
     table_name = 'tempbigread' + os.urandom( 32 ).hex()

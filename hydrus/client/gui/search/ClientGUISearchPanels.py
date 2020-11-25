@@ -12,8 +12,8 @@ from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIResultsSortCollect
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -31,12 +31,12 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._foldername = QW.QLineEdit( self )
         self._name = QW.QLineEdit( self )
         
-        self._media_sort = ClientGUISearch.MediaSortControl( self )
-        self._media_collect = ClientGUISearch.MediaCollectControl( self, silent = True )
+        self._media_sort = ClientGUIResultsSortCollect.MediaSortControl( self )
+        self._media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self, silent = True )
         
         page_key = HydrusData.GenerateKey()
         
-        from hydrus.client.gui import ClientGUIACDropdown
+        from hydrus.client.gui.search import ClientGUIACDropdown
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, synchronised = synchronised, hide_favourites_edit_actions = True )
         

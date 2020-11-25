@@ -3101,7 +3101,14 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             status_hook = lambda s: job_key.SetVariable( 'popup_text_1', s )
             
-            self._controller.Write( 'repopulate_tag_search_cache', status_hook = status_hook )
+            def do_it():
+                
+                self._controller.WriteSynchronous( 'repopulate_tag_search_cache', status_hook = status_hook )
+                
+                job_key.Finish()
+                
+            
+            self._controller.CallToThreadLongRunning( do_it )
             
         
     

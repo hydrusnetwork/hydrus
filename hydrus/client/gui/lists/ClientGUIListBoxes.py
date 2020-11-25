@@ -22,9 +22,9 @@ from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUISearch
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
@@ -953,6 +953,7 @@ class ListBox( QW.QScrollArea ):
         
         #
         
+        self.setMouseTracking( True )
         self.setFont( QW.QApplication.font() )
         
         self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
@@ -1014,6 +1015,11 @@ class ListBox( QW.QScrollArea ):
             
         
         return action_occurred
+        
+    
+    def _AddEditMenu( self, menu: QW.QMenu ):
+        
+        pass
         
     
     def _DeleteActivate( self ):
@@ -1126,11 +1132,11 @@ class ListBox( QW.QScrollArea ):
                 
                 predicates.append( term )
                 
-                possible_inverse = term.GetInverseCopy()
-                
-                if possible_inverse is not None:
+                if term.IsInvertible():
                     
-                    inverse_predicates.append( possible_inverse )
+                    inverse_predicate = term.GetInverseCopy()
+                    
+                    inverse_predicates.append( inverse_predicate )
                     
                 
             else:
@@ -1142,7 +1148,16 @@ class ListBox( QW.QScrollArea ):
                 
             
         
-        return ( predicates, inverse_predicates )
+        if len( predicates ) > 1 and ClientSearch.PREDICATE_TYPE_OR_CONTAINER not in ( p.GetType() for p in predicates ):
+            
+            or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = list( predicates ) )
+            
+        else:
+            
+            or_predicate = None
+            
+        
+        return ( predicates, or_predicate, inverse_predicates )
         
     
     def _GetSafeHitIndex( self, hit_index, direction = None ):
@@ -1235,7 +1250,7 @@ class ListBox( QW.QScrollArea ):
         self._Hit( shift, ctrl, hit_index )
         
 
-    def _Hit( self, shift, ctrl, hit_index ):
+    def _Hit( self, shift, ctrl, hit_index, only_add = False ):
         
         hit_index = self._GetSafeHitIndex( hit_index )
         
@@ -1244,16 +1259,24 @@ class ListBox( QW.QScrollArea ):
         
         deselect_all = False
         
-        if shift:
+        if only_add:
             
             if hit_index is not None:
+                
+                to_select.add( hit_index )
+                
+            
+        elif shift:
+            
+            # we are now saying if you shift-click on something already selected, we'll make no changes, but we'll move focus ghost
+            if hit_index is not None and not self._IsSelected( hit_index ):
                 
                 if self._last_hit_index is not None:
                     
                     lower = min( hit_index, self._last_hit_index )
                     upper = max( hit_index, self._last_hit_index )
                     
-                    to_select = list( range( lower, upper + 1) )
+                    to_select = list( range( lower, upper + 1 ) )
                     
                 else:
                     
@@ -1543,6 +1566,8 @@ class ListBox( QW.QScrollArea ):
             
             self._selected_terms.discard( term )
             
+            self._last_hit_index = None
+            
             del self._terms_to_texts[ term ]
             
         
@@ -1725,6 +1750,22 @@ class ListBox( QW.QScrollArea ):
         else:
             
             QW.QScrollArea.mouseDoubleClickEvent( self, event )
+            
+        
+    
+    def mouseMoveEvent( self, event ):
+        
+        is_dragging = event.buttons() & QC.Qt.LeftButton
+        
+        if is_dragging:
+            
+            hit_index = self._GetIndexUnderMouse( event )
+            
+            self._Hit( False, False, hit_index, only_add = True )
+            
+        else:
+            
+            event.ignore()
             
         
     
@@ -2058,61 +2099,28 @@ class ListBoxTags( ListBox ):
         return False
         
     
-    def _NewSearchPage( self ):
-
-        predicates = []
+    def _NewSearchPages( self, pages_of_predicates ):
         
-        for term in self._selected_terms:
+        activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        
+        for predicates in pages_of_predicates:
             
-            if isinstance( term, ClientSearch.Predicate ):
-                
-                predicates.append( term )
-                
-            else:
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
-                
+            predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
             
-        
-        predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
-        
-        if len( predicates ) > 0:
+            if len( predicates ) == 0:
+                
+                break
+                
             
             s = sorted( ( predicate.ToString() for predicate in predicates ) )
             
             page_name = ', '.join( s )
             
-            activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
-            
             file_service_key = self._GetCurrentFileServiceKey()
             
             HG.client_controller.pub( 'new_page_query', file_service_key, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
             
-        
-    
-    def _NewSearchPageForEach( self ):
-        
-        predicates = []
-        
-        for term in self._selected_terms:
-            
-            if isinstance( term, ClientSearch.Predicate ):
-                
-                predicates.append( term )
-                
-            else:
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
-                
-            
-        
-        predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
-        
-        for predicate in predicates:
-            
-            page_name = predicate.ToString()
-            
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = ( predicate, ), page_name = page_name )
+            activate_window = False
             
         
     
@@ -2243,7 +2251,19 @@ class ListBoxTags( ListBox ):
         
         if self.can_spawn_new_windows:
             
-            self._NewSearchPage()
+            ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+            
+            if len( predicates ) > 0:
+                
+                shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                
+                if shift_down and or_predicate is not None:
+                    
+                    predicates = ( or_predicate, )
+                    
+                
+                self._NewSearchPages( [ predicates ] )
+                
             
         
     
@@ -2591,25 +2611,34 @@ class ListBoxTags( ListBox ):
                     ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
                     
                 
+                ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+                
                 if self.can_spawn_new_windows:
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
-                    ClientGUIMenus.AppendMenuItem( menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPage )
+                    ClientGUIMenus.AppendMenuItem( menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPages, [ predicates ] )
                     
-                    if len( self._selected_terms ) > 1:
+                    if or_predicate is not None:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPageForEach )
+                        ClientGUIMenus.AppendMenuItem( menu, 'open a new OR search page for ' + selection_string, 'Open a new search page starting with the selected merged as an OR search predicate.', self._NewSearchPages, [ ( or_predicate, ) ] )
                         
                     
+                    if len( predicates ) > 1:
+                        
+                        for_each_predicates = [ ( predicate, ) for predicate in predicates ]
+                        
+                        ClientGUIMenus.AppendMenuItem( menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPages, for_each_predicates )
+                        
+                    
+                
+                self._AddEditMenu( menu )
                 
                 if self._CanProvideCurrentPagePredicates():
                     
                     current_predicates = self._GetCurrentPagePredicates()
                     
                     ClientGUIMenus.AppendSeparator( menu )
-                    
-                    ( predicates, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
                     
                     predicates = set( predicates )
                     inverse_predicates = set( inverse_predicates )
@@ -2629,14 +2658,19 @@ class ListBoxTags( ListBox ):
                     
                     if some_selected_in_current:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'discard {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
+                        ClientGUIMenus.AppendMenuItem( menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
                         
                     
                     some_selected_not_in_current = len( predicates.intersection( current_predicates ) ) < len( predicates )
                     
                     if some_selected_not_in_current:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'require {} for current search'.format( predicates_selection_string ), 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
+                        ClientGUIMenus.AppendMenuItem( menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
+                        
+                    
+                    if or_predicate is not None:
+                        
+                        ClientGUIMenus.AppendMenuItem( menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
                         
                     
                     some_selected_are_excluded_explicitly = HydrusData.SetsIntersect( inverse_predicates, current_predicates )
@@ -2866,13 +2900,6 @@ class ListBoxTagsPredicates( ListBoxTags ):
     def _HasPredicate( self, predicate ):
         
         return predicate in self._terms
-        
-    
-    def _Hit( self, shift, ctrl, hit_index ):
-        
-        hit_index = self._GetSafeHitIndex( hit_index )
-        
-        ListBoxTags._Hit( self, shift, ctrl, hit_index )
         
     
     def _Select( self, index ):

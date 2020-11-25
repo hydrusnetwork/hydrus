@@ -329,7 +329,7 @@ class ServicesUPnPManager( object ):
                     
                 except HydrusExceptions.RouterException:
                     
-                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + upnp_port + ' but it failed. Please try it manually to get a full log of what happened.' )
+                    HydrusData.Print( 'The UPnP Daemon tried to add {}:{}->external:{} but it failed. Please try it manually to get a full log of what happened.'.format( local_ip, internal_port, upnp_port ) )
                     
                     return
                     

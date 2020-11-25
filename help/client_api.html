@@ -1058,6 +1058,7 @@
 			"is_trashed" : false,
 			"known_urls" : [],
 			"service_names_to_statuses_to_tags" : {}
+			"service_names_to_statuses_to_display_tags" : {}
 		},
 		{
 			"file_id" : 4567,
@@ -1085,8 +1086,18 @@
 					"2" : [ "process this later" ]
 				},
 				"my tag repository" : {
-					"0" : [ "blonde hair", "blue eyes", "looking at viewer" ]
+					"0" : [ "blonde_hair", "blue_eyes", "looking_at_viewer" ]
 					"1" : [ "bodysuit" ]
+				}
+			},
+			"service_names_to_statuses_to_display_tags" : {
+				"my tags" : {
+					"0" : [ "favourites" ]
+					"2" : [ "process this later", "processing" ]
+				},
+				"my tag repository" : {
+					"0" : [ "blonde hair", "blue eyes", "looking at viewer" ]
+					"1" : [ "bodysuit", "clothing" ]
 				}
 			}
 		}
@@ -1113,7 +1124,7 @@
 						</ul>
 					</li>
 					<p>Size is in bytes. Duration is in milliseconds, and may be an int or a float.</p>
-					<p>The service_names_to_statuses_to_tags structure is similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
+					<p>The service_names_to_statuses_to_tags structures are similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
 					<ul>
 						<li>0 - current</li>
 						<li>1 - pending</li>
@@ -1121,6 +1132,7 @@
 						<li>3 - petitioned</li>
 					</ul>
 					<p>Note that since JSON Object keys must be strings, these status numbers are strings, not ints.</p>
+					<p>While service_names_to_statuses_to_tags represents the actual tags stored on the database for a file, the service_names_to_statuses_to_display_tags structure reflects how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, use service_names_to_statuses_to_tags. If you want to render to the user, use service_names_to_statuses_to_displayed_tags.</p>
 					<p>If you add detailed_url_information=true, a new entry, 'detailed_known_urls', will be added for each file, with a list of the same structure as /add_urls/get_url_info. This may be an expensive request if you are querying thousands of files at once.</p>
 					<p>For example:</p>
 						<ul>

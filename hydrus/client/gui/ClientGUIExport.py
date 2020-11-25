@@ -14,7 +14,6 @@ from hydrus.core import HydrusPaths
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
-from hydrus.client.gui import ClientGUIACDropdown
 from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -25,6 +24,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.metadata import ClientTags
+from hydrus.client.gui.search import ClientGUIACDropdown
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
