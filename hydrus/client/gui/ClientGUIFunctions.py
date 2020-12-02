@@ -65,6 +65,12 @@ def DialogIsOpen():
     
     return False
     
+def DrawText( painter, x, y, text ):
+    
+    ( boundingRect, text ) = GetTextSizeFromPainter( painter, text )
+    
+    painter.drawText( QC.QRectF( x, y, boundingRect.width(), boundingRect.height() ), text )
+
 def EscapeMnemonics( s: str ):
     
     return s.replace( "&", "&&" )
@@ -130,6 +136,33 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
 def GetMouseScreen():
     
     return QW.QApplication.screenAt( QG.QCursor.pos() )
+    
+def GetTextSizeFromPainter( painter: QG.QPainter, text: str ):
+    
+    try:
+        
+        text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
+        
+    except ValueError:
+        
+        from hydrus.client.metadata import ClientTags
+        
+        if not ClientTags.have_shown_invalid_tag_warning:
+            
+            from hydrus.core import HydrusData
+            
+            HydrusData.ShowText( 'Hey, I think hydrus stumbled across an invalid tag! Please run _database->check and repair->fix invalid tags_ immediately, or you may get errors!' )
+            HydrusData.ShowText( 'The bad text was: {}'.format( repr( text ) ) )
+            
+            ClientTags.have_shown_invalid_tag_warning = True
+            
+        
+        text = '*****INVALID, UNDISPLAYABLE TAG, RUN DATABASE REPAIR NOW*****'
+        
+        text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
+        
+    
+    return ( text_size, text )
     
 def GetTLWParents( widget ):
     

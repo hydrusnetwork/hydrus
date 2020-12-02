@@ -221,6 +221,9 @@ class TagDisplayMaintenanceManager( object ):
         self._wake_event = threading.Event()
         self._new_data_event = threading.Event()
         
+        self._last_last_new_data_event_time = 0
+        self._last_new_data_event_time = 0
+        
         self._lock = threading.Lock()
         
         self._controller.sub( self, 'Shutdown', 'shutdown' )
@@ -248,7 +251,7 @@ class TagDisplayMaintenanceManager( object ):
             
         else:
             
-            return 2.5
+            return 30
             
         
     
@@ -279,7 +282,7 @@ class TagDisplayMaintenanceManager( object ):
             
             if service_key in self._go_faster:
                 
-                ideally = 15
+                ideally = 30
                 
                 base = max( 0.5, self._last_loop_work_time )
                 
@@ -304,6 +307,12 @@ class TagDisplayMaintenanceManager( object ):
         if len( self._go_faster ) > 0:
             
             return True
+            
+        
+        # we are getting new display data pretty fast. if it is streaming in, let's take a break
+        if not HydrusData.TimeHasPassed( self._last_last_new_data_event_time + 10 ):
+            
+            return False
             
         
         if self._controller.CurrentlyIdle():
@@ -423,6 +432,11 @@ class TagDisplayMaintenanceManager( object ):
                 self._wake_event.clear()
                 
                 if self._new_data_event.is_set():
+                    
+                    time.sleep( 1 )
+                    
+                    self._last_last_new_data_event_time = self._last_new_data_event_time
+                    self._last_new_data_event_time = HydrusData.GetNow()
                     
                     self._service_keys_to_needs_work = {}
                     
@@ -734,8 +748,8 @@ class TagParentsStructure( object ):
     
     def __init__( self ):
         
-        self._tags_to_ancestors = collections.defaultdict( set )
-        self._tags_to_descendants = collections.defaultdict( set )
+        self._descendants_to_ancestors = collections.defaultdict( set )
+        self._ancestors_to_descendants = collections.defaultdict( set )
         
         # some sort of structure for 'bad cycles' so we can later raise these to the user to fix
         
@@ -751,9 +765,9 @@ class TagParentsStructure( object ):
             return
             
         
-        if parent in self._tags_to_ancestors:
+        if parent in self._descendants_to_ancestors:
             
-            if child in self._tags_to_ancestors[ parent ]:
+            if child in self._descendants_to_ancestors[ parent ]:
                 
                 # this is a loop!
                 
@@ -761,50 +775,50 @@ class TagParentsStructure( object ):
                 
             
         
-        if child in self._tags_to_ancestors and parent in self._tags_to_ancestors[ child ]:
+        if child in self._descendants_to_ancestors and parent in self._descendants_to_ancestors[ child ]:
             
             # already in
             
             return
             
         
-        # let's now join these two families together
+        # let's now gather all ancestors of parent and all descendants of child
         
         new_ancestors = { parent }
         
-        if parent in self._tags_to_ancestors:
+        if parent in self._descendants_to_ancestors:
             
-            new_ancestors.update( self._tags_to_ancestors[ parent ] )
+            new_ancestors.update( self._descendants_to_ancestors[ parent ] )
             
         
         new_descendants = { child }
         
-        if child in self._tags_to_descendants:
+        if child in self._ancestors_to_descendants:
             
-            new_descendants.update( self._tags_to_descendants[ child ] )
+            new_descendants.update( self._ancestors_to_descendants[ child ] )
             
         
         # every (grand)parent now gets all new (grand)kids
         for ancestor in new_ancestors:
             
-            self._tags_to_descendants[ ancestor ].update( new_descendants )
+            self._ancestors_to_descendants[ ancestor ].update( new_descendants )
             
         
         # every (grand)kid now gets all new (grand)parents
         for descendant in new_descendants:
             
-            self._tags_to_ancestors[ descendant ].update( new_ancestors )
+            self._descendants_to_ancestors[ descendant ].update( new_ancestors )
             
         
     
     def GetTagsToAncestors( self ):
         
-        return self._tags_to_ancestors
+        return self._descendants_to_ancestors
         
     
     def IterateDescendantAncestorPairs( self ):
         
-        for ( descandant, ancestors ) in self._tags_to_ancestors.items():
+        for ( descandant, ancestors ) in self._descendants_to_ancestors.items():
             
             for ancestor in ancestors:
                 

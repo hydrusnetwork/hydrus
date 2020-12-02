@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 420</h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed the bad position indexing when drag-selecting taglists that were scrolled down. this also caused some weird selection when scrolled and clicks included a little mouse movement. sorry for the trouble!</li>
+					<li>ctrl+drag-select now deselects!</li>
+					<li>fetching tag autocomplete results when you have thumbnails and 'searching immediately' on, which has been way too slow recently, now cancels much faster. in some large page situations, it was adding multi-second lag on the first character-press. it also runs faster overall</li>
+					<li>hydrus should now deal better with invalid tags that contain the null character (there it one we know about on the PTR, from a decode of botched Shift JIS, which could crash the client from too many errors during critical paint periods). when a tag like this turns up in a taglist, thumbnail, or canvas background, it now renders as an appropriate 'invalid tag' string, and a one-time 'woah, bad tag, run fix tags now' popup appears</li>
+					<li>regular tag cleaning now looks for and removes null characters, so all new sources of these bad tags should now be eliminated</li>
+					<li>_database->check and repair->fix invalid tags_ now fixes tags with the null character. it also fixes tags so broken that after cleaning they have no subtag left. it also now forces a full media tag reload when it is done for all media</li>
+					<li>the 'regen storage mappings', 'regen display mappings', and repopulate from cache' database routines now have an additional step where you can order them only to work on one tag service, so regenning or repopulating local tags, which usually takes a couple seconds, doesn't need to wait two hours for the PTR to go as well</li>
+					<li>added some menu help to the 'profile modes' debug menu, and gave 'reducing program lag' help page a pass</li>
+					<li>fixed virtual display regeneration on service delete</li>
+					<li>.</li>
+					<li>parents and siblings:</li>
+					<li>fixed situations where some grandparent and sibling relationships would not appear in the virtual system. it was a bug when certain links of a multi-part display 'chain' were updated at different times. when repopulating chain data, the sibling and parent update routines now correctly chase their complete chains both when wiping ideal data and repopulating from raw data, hitting all levels of the chain, ensuring to go back up and down chains when there are multiple grandsiblings/children/parents, and chasing parents where one or both members have better siblings. thank you to the several users who reported and helped figure out this problem, which was not simple to reproduce (issue #725)</li>
+					<li>your ideal display data will be regenerated on update, which should not take more than a couple of seconds. it will likely correct some siblings and add some grandparents to be filled in by the siblings/parents sync. my PTR test environment went up from about 189,000 display rows to 192,000</li>
+					<li>while sibling and parent lookup is more thorough (and hence more expensive), I also optimised many parts of lookup week. I believe tag display sync and tag processing will be much faster for tags with simple sibling and parent relationships, and slightly slower for tags with complex relationships and many instances to files on your drive. as always, let me know what sort of processing speeds and lag you get, and if you know how to make a db profile, please send them in when it gets bad</li>
+					<li>when a 'write' autocomplete results list includes parent expansion rows (as in _manage tags_), parents now show duplicated and properly for all the tags that have them, including siblings and other children/grandchildren (previously, a parent label could only exist once in a list, which meant parents were ending up hanging off the last valid tag for which they applied)</li>
+					<li>'write' autocompletes now show results that exactly match the text entry, and all their siblings, when they do not have count but do have sibling or parent data. so, if you type in 'samus aran', and it has a sibling to 'character:samus aran', but 'samus aran' doesn't actually have count, you now get it and all siblings anyway. this may need tuning, but it solves a persistent and annoying lookup and quick-sibling-access problem in _manage tags_</li>
+					<li>copying tags and their indented parents now removes the parent indent whitespace</li>
+					<li>tag sync display now takes way longer breaks (now 30 seconds, was 2.5) between 'normal' background work periods. this thing was hammering people far harder than needed and could clog up db write/commit time and nobble UI responsitivity when big bumps collided</li>
+					<li>the tag display maintenance manager now also tries to detect when many siblings or parents are streaming in (from a migration or a repository process with a heap of data), and pauses work while that continues</li>
+					<li>greatly sped up mass imports of sibling and parent data, either from tag migration or big dialog pastes. what was 40 rows/s should now be about 1,000 rows/s</li>
+					<li>fixed the database menu's 'regenerate tag parents lookup cache', which wasn't hooked up</li>
+					<li>.</li>
+					<li>boring changes:</li>
+					<li>gave tag parents and siblings update, regen, and chain fetch a full pass, correcting bad queries to fix the above, fixing raw pair chain level navigation and parent-sibling idealisation, and optimised these lookups as well</li>
+					<li>fixed some tag_id vs ideal_tag_id nomenclature (and related bugs) in tag parents cache</li>
+					<li>optimised 'all known tags' autocomplete count fetching a little. tag autocomplete and search should be a bit faster in this domain</li>
+					<li>reduced display sync pre-processing overhead by about 30% with a better random pair sampling routine</li>
+					<li>reduced the overhead of my now very commonly used single integer memory table select optimisation. this now recycles tables after use, which reduces overhead about 50% in small number scenarios. all features of the database will enjoy this speed improvement, particularly small repetitive tag lookup jobs (such as the new display sync and repository tag processing)</li>
+					<li>reduced overhead on some sibling chain lookup code</li>
+					<li>reduced overhead on the sibling lookup used by manage tag dialog taglist</li>
+					<li>reduced overhead on some parent chain lookup code</li>
+					<li>tiny optimisation on single sibling chain lookup</li>
+					<li>sped up the ancient OG single tag->tag-id fetching routine, seems to work about twice as fast now</li>
+					<li>more misc optimisations, mostly list/set/dict comprehension rewriting to reduce overhead, across virtual sibling and parent code</li>
+					<li>added a full combined siblings and parents unit tests for the main missing parent chain link problem solved this week</li>
+					<li>added a full combined siblings and parents unit test for large real world data added in multiple pieces</li>
+					<li>'a file identifier was missing!' critical errors now print a stack trace to the log for further debugging info</li>
+					<li>updated the 'help my db is broke.txt' document with a couple new comments</li>
+				</ul>
 				<li><h3>version 419</h3></li>
 				<ul>
 					<li>tag lists and editing predicates:</li>

@@ -703,9 +703,9 @@ class AnimationBar( QW.QWidget ):
         
         if len( s ) > 0:
             
-            text_width = painter.fontMetrics().size( QC.Qt.TextSingleLine, s ).width()
+            ( text_size, s ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, s )
             
-            QP.DrawText( painter, my_width - text_width - 3, 3, s )
+            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, 3, s )
             
         
     

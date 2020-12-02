@@ -472,6 +472,23 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 
             
         
+        if not is_explicit_wildcard:
+            
+            # this lets us get sibling data for tags that do not exist with count in the domain
+            
+            # we always do this, because results cache will not have current text input data
+            
+            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, add_namespaceless = False, zero_count_ok = True, job_key = job_key )
+            
+            for input_text_predicate in input_text_predicates:
+                
+                if ( input_text_predicate.HasIdealSibling() or input_text_predicate.HasParentPredicates() ) and input_text_predicate not in matches:
+                    
+                    matches.append( input_text_predicate )
+                    
+                
+            
+        
         matches = ClientSearch.SortPredicates( matches )
         
     

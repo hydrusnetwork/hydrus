@@ -4771,7 +4771,7 @@ class Thumbnail( Selectable ):
                     
                     painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
                     
-                    text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, upper_summary )
+                    ( text_size, upper_summary ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, upper_summary )
                     
                     box_x = thumbnail_border
                     box_y = thumbnail_border
@@ -4787,7 +4787,7 @@ class Thumbnail( Selectable ):
                     
                     painter.setPen( QG.QPen( text_colour_with_alpha ) )
                     
-                    QP.DrawText( painter, text_x, text_y, upper_summary )
+                    ClientGUIFunctions.DrawText( painter, text_x, text_y, upper_summary )
                     
                 
                 if len( lower_summary ) > 0:
@@ -4800,7 +4800,7 @@ class Thumbnail( Selectable ):
                     
                     painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
                     
-                    text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, lower_summary )
+                    ( text_size, lower_summary ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, lower_summary )
                     
                     text_width = text_size.width()
                     text_height = text_size.height()
@@ -4819,7 +4819,7 @@ class Thumbnail( Selectable ):
                     
                     painter.setPen( QG.QPen( text_colour_with_alpha ) )
                     
-                    QP.DrawText( painter, text_x, text_y, lower_summary )
+                    ClientGUIFunctions.DrawText( painter, text_x, text_y, lower_summary )
                     
                 
             
@@ -4917,7 +4917,7 @@ class Thumbnail( Selectable ):
             
             painter.setFont( QW.QApplication.font() )
             
-            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, num_files_str )
+            ( text_size, num_files_str ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, num_files_str )
             
             text_width = text_size.width()
             text_height = text_size.height()
@@ -4930,7 +4930,7 @@ class Thumbnail( Selectable ):
             
             painter.setPen( QG.QPen( CC.COLOUR_SELECTED_DARK ) )
             
-            QP.DrawText( painter, 18, height - text_height - 2, num_files_str )
+            ClientGUIFunctions.DrawText( painter, 18, height - text_height - 2, num_files_str )
             
         
         # top left icons

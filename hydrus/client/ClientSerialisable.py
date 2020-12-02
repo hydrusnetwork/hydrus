@@ -19,6 +19,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 
@@ -106,9 +107,9 @@ def CreateTopImage( width, title, payload_description, text ):
         
         for ( wrapped_text, y ) in wrapped_texts_with_ys:
             
-            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, wrapped_text )
+            ( text_size, wrapped_text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, wrapped_text )
             
-            QP.DrawText( painter, ( width - text_size.width() ) // 2, y, wrapped_text )
+            ClientGUIFunctions.DrawText( painter, ( width - text_size.width() ) // 2, y, wrapped_text )
             
         
     
@@ -313,7 +314,7 @@ def LoadFromPNG( path ):
     
 def TextExceedsWidth( painter, text, width ):
     
-    text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
+    ( text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
     
     return text_size.width() > width
     

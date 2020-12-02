@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import unittest
 
@@ -14,6 +15,512 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.metadata import ClientTags
 
 from hydrus.test import TestController
+
+IRL_PARENT_PAIRS = {
+    ( 'series:diablo', 'studio:blizzard entertainment' ),
+    ( 'series:hearthstone', 'studio:blizzard entertainment' ),
+    ( 'series:heroes of the storm', 'studio:blizzard entertainment' ),
+    ( 'series:overwatch', 'studio:blizzard entertainment' ),
+    ( 'series:starcraft', 'studio:blizzard entertainment' ),
+    ( 'series:warcraft', 'studio:blizzard entertainment' ),
+    ( 'character:li-ming the rebellious wizard', 'series:diablo' ),
+    ( 'series:diablo ii', 'series:diablo' ),
+    ( 'series:diablo iii', 'series:diablo' ),
+    ( 'character:akande "doomfist" ogundimu', 'series:overwatch' ),
+    ( 'character:aleksandra "zarya" zaryanova', 'series:overwatch' ),
+    ( 'character:amélie "widowmaker" lacroix', 'series:overwatch' ),
+    ( 'character:ana amari', 'series:overwatch' ),
+    ( 'character:brian (overwatch)', 'series:overwatch' ),
+    ( 'character:brigitte lindholm', 'series:overwatch' ),
+    ( 'character:dr. angela "mercy" ziegler', 'series:overwatch' ),
+    ( 'character:efi oladele', 'series:overwatch' ),
+    ( 'character:elizabeth caledonia "calamity" ashe', 'series:overwatch' ),
+    ( 'character:fareeha "pharah" amari', 'series:overwatch' ),
+    ( 'character:gabriel "reaper" reyes', 'series:overwatch' ),
+    ( 'character:genji shimada', 'series:overwatch' ),
+    ( 'character:hana "d.va" song', 'series:overwatch' ),
+    ( 'character:hanzo shimada', 'series:overwatch' ),
+    ( 'character:jack "soldier 76" morrison', 'series:overwatch' ),
+    ( 'character:jamison "junkrat" fawkes', 'series:overwatch' ),
+    ( 'character:jesse mccree', 'series:overwatch' ),
+    ( 'character:katya volskaya', 'series:overwatch' ),
+    ( 'character:katya volskaya\'s daughter', 'series:overwatch' ),
+    ( 'character:lena "tracer" oxton', 'series:overwatch' ),
+    ( 'character:lúcio correia dos santos', 'series:overwatch' ),
+    ( 'character:mako "roadhog" rutledge', 'series:overwatch' ),
+    ( 'character:mei (overwatch)', 'series:overwatch' ),
+    ( 'character:mei-ling zhou, "mei"', 'series:overwatch' ),
+    ( 'character:moira o’deorain', 'series:overwatch' ),
+    ( 'character:olivia "sombra" colomar', 'series:overwatch' ),
+    ( 'character:orisa', 'series:overwatch' ),
+    ( 'character:reinhardt wilhelm', 'series:overwatch' ),
+    ( 'character:satya "symmetra" vaswani', 'series:overwatch' ),
+    ( 'character:sombra (overwatch)', 'series:overwatch' ),
+    ( 'character:sst laboratories siege automaton e54, “bastion"', 'series:overwatch' ),
+    ( 'character:tekhartha zenyatta', 'series:overwatch' ),
+    ( 'character:timmy (overwatch)', 'series:overwatch' ),
+    ( 'character:torbjörn lindholm', 'series:overwatch' ),
+    ( 'character:“bastion", sst laboratories siege automaton e54', 'series:overwatch' ),
+    ( 'character:jim raynor', 'series:starcraft' ),
+    ( 'character:nova terra', 'series:starcraft' ),
+    ( 'character:queen of blades', 'series:starcraft' ),
+    ( 'character:sarah kerrigan', 'series:starcraft' ),
+    ( 'character:alexstrasza', 'series:warcraft' ),
+    ( 'character:alleria windrunner', 'series:warcraft' ),
+    ( 'character:eonar, the life binder', 'series:warcraft' ),
+    ( 'character:jaina proudmoore', 'series:warcraft' ),
+    ( 'character:lady liadrin', 'series:warcraft' ),
+    ( 'character:queen azshara', 'series:warcraft' ),
+    ( 'character:sylvanas windrunner', 'series:warcraft' ),
+    ( 'character:tyrande whisperwind', 'series:warcraft' ),
+    ( 'series:world of warcraft', 'series:warcraft' ),
+    ( 'species:night elf', 'series:warcraft' ),
+    ( 'species:tauren', 'series:warcraft' )
+}
+
+IRL_SIBLING_PAIRS = {
+    ( 'character:akande ogundimu', 'character:akande "doomfist" ogundimu' ),
+    ( 'character:doomfist', 'character:akande "doomfist" ogundimu' ),
+    ( 'character:doomfist (overwatch)', 'character:akande "doomfist" ogundimu' ),
+    ( 'doomfist', 'character:akande "doomfist" ogundimu' ),
+    ( 'doomfist (overwatch)', 'character:akande "doomfist" ogundimu' ),
+    ( 'doomfist (overwatch) (cosplay)', 'character:akande "doomfist" ogundimu' ),
+    ( 'doomfist_(overwatch)', 'character:akande "doomfist" ogundimu' ),
+    ( 'champion zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:aleksandra "zarya" zaryanova (overwatch)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:arctic zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:barbarian zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:barbarian zarya (overwatch)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:champion zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:champion zarya (overwatch)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:cybergoth zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:industrial zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:thunder guard zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:totally 80\'s zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:zarya (overwatch) (cosplay)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'cybergoth zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'industrial zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'totally 80\'s zarya', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya (cosplay)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya (heros of the storm)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya (overwatch)1girl', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya (overwatch) (cosplay)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya (overwatch) cosplay', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya (overwatch)female', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_(cosplay)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_(heros_of_the_storm)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_(overwatch)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_(overwatch)1girl', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_(overwatch)_(cosplay)', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_(overwatch)_cosplay', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zarya_overwatch', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'zaryanova', 'character:aleksandra "zarya" zaryanova' ),
+    ( 'character:alextrasza', 'character:alexstrasza' ),
+    ( 'character:alexstrasza', 'character:alextrasza the life-binder' ),
+    ( 'alleria windrunner', 'character:alleria windrunner' ),
+    ( 'amelia lacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'amelie lacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'amélie "windowmaker" lacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'amélie lacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'amélie_"windowmaker"_lacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'amélielacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'character:amélie "widowmaker" lacroix (née guillard)', 'character:amélie "widowmaker" lacroix' ),
+    ( 'character:amélie "widowmaker" lacroix (overwatch)', 'character:amélie "widowmaker" lacroix' ),
+    ( 'character:amélie lacroix', 'character:amélie "widowmaker" lacroix' ),
+    ( 'character:widowmaker(overwatch)', 'character:amélie "widowmaker" lacroix' ),
+    ( 'overwatch widowmaker', 'character:amélie "widowmaker" lacroix' ),
+    ( 'widowmaker (overwatch', 'character:amélie "widowmaker" lacroix' ),
+    ( 'widowmaker overwatch', 'character:amélie "widowmaker" lacroix' ),
+    ( 'widowmaker(overwatch)', 'character:amélie "widowmaker" lacroix' ),
+    ( 'widowmaker_(overwatch)', 'character:amélie "widowmaker" lacroix' ),
+    ( 'widowmaker_(overwatch_', 'character:amélie "widowmaker" lacroix' ),
+    ( 'ウィドウメイカー', 'character:amélie "widowmaker" lacroix' ),
+    ( 'ana (overwatch)', 'character:ana amari' ),
+    ( 'ana amari', 'character:ana amari' ),
+    ( 'ana_(overwatch)', 'character:ana amari' ),
+    ( 'ana_amari', 'character:ana amari' ),
+    ( 'character:ana (overwatch)', 'character:ana amari' ),
+    ( 'character:ana amari (cosplay)', 'character:ana amari' ),
+    ( 'character:ana amari (overwatch)', 'character:ana amari' ),
+    ( 'brian (overwatch)', 'character:brian (overwatch)' ),
+    ( 'brigitte (overwatch)', 'character:brigitte lindholm' ),
+    ( 'brigitte lindholm', 'character:brigitte lindholm' ),
+    ( 'brigitte lindholmn', 'character:brigitte lindholm' ),
+    ( 'brigitte_(overwatch)', 'character:brigitte lindholm' ),
+    ( 'brigitte_lindholm', 'character:brigitte lindholm' ),
+    ( 'brigitte_lindholmn', 'character:brigitte lindholm' ),
+    ( 'brigittelindholm', 'character:brigitte lindholm' ),
+    ( 'character:brigitte (overwatch)', 'character:brigitte lindholm' ),
+    ( 'character:brigitte lindholm (overwatch)', 'character:brigitte lindholm' ),
+    ( 'character:brigitte_(overwatch)', 'character:brigitte lindholm' ),
+    ( 'overwatch brigitte', 'character:brigitte lindholm' ),
+    ( 'angela_ziegler', 'character:dr. angela "mercy" ziegler' ),
+    ( 'character:angela "mercy" ziegler', 'character:dr. angela "mercy" ziegler' ),
+    ( 'character:mercy', 'character:dr. angela "mercy" ziegler' ),
+    ( 'character:mercy (mercy)', 'character:dr. angela "mercy" ziegler' ),
+    ( 'character:mercy (overwatch)', 'character:dr. angela "mercy" ziegler' ),
+    ( 'dr angela ziegler', 'character:dr. angela "mercy" ziegler' ),
+    ( 'mercy', 'character:dr. angela "mercy" ziegler' ),
+    ( 'mercy (mercy)', 'character:dr. angela "mercy" ziegler' ),
+    ( 'mercy_(mercy)', 'character:dr. angela "mercy" ziegler' ),
+    ( 'overwatch mercy', 'character:dr. angela "mercy" ziegler' ),
+    ( 'character:efi oladele (overwatch)', 'character:efi oladele' ),
+    ( 'character:efi_oladele', 'character:efi oladele' ),
+    ( 'efi oladele', 'character:efi oladele' ),
+    ( 'efi oladele (overwatch)', 'character:efi oladele' ),
+    ( 'efi_oladele', 'character:efi oladele' ),
+    ( 'efi_oladele_(overwatch)', 'character:efi oladele' ),
+    ( 'efi_oladelel', 'character:efi oladele' ),
+    ( 'ashe (overwatch)', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( 'ashe_(overwatch)', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( 'character:elizabeth ashe', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( 'character:elizabeth caledonia ashe', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( 'character:elizabeth caledonia “calamity” ashe', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( 'elizabeth caledonia ashe', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( '애쉬', 'character:elizabeth caledonia "calamity" ashe' ),
+    ( 'character:fareeha "pharah" amari (overwatch)', 'character:fareeha "pharah" amari' ),
+    ( 'character:pharah', 'character:fareeha "pharah" amari' ),
+    ( 'character:pharah (ow)', 'character:fareeha "pharah" amari' ),
+    ( 'character:pharah_(overwatch)', 'character:fareeha "pharah" amari' ),
+    ( 'overwatch pharah', 'character:fareeha "pharah" amari' ),
+    ( 'pharah', 'character:fareeha "pharah" amari' ),
+    ( 'pharah amari', 'character:fareeha "pharah" amari' ),
+    ( 'pharah overwatch', 'character:fareeha "pharah" amari' ),
+    ( 'pharah_(overwatch)', 'character:fareeha "pharah" amari' ),
+    ( 'pharah_amari', 'character:fareeha "pharah" amari' ),
+    ( 'character:gabriel "reaper" reyes (overwatch)', 'character:gabriel "reaper" reyes' ),
+    ( 'character:gabriel reyes', 'character:gabriel "reaper" reyes' ),
+    ( 'character:gabriel reyes, "reaper" (overwatch)', 'character:gabriel "reaper" reyes' ),
+    ( 'character:reaper (overwatch)', 'character:gabriel "reaper" reyes' ),
+    ( 'character:reaper (overwatch) (cosplay)', 'character:gabriel "reaper" reyes' ),
+    ( 'character:reaper_(overwatch)', 'character:gabriel "reaper" reyes' ),
+    ( 'gabriel reyes', 'character:gabriel "reaper" reyes' ),
+    ( 'reaper (cosplay)', 'character:gabriel "reaper" reyes' ),
+    ( 'reaper (overwatch', 'character:gabriel "reaper" reyes' ),
+    ( 'reaper (overwatch) (cosplay)', 'character:gabriel "reaper" reyes' ),
+    ( 'reaper overwatch', 'character:gabriel "reaper" reyes' ),
+    ( 'reaper_(overwatch)', 'character:gabriel "reaper" reyes' ),
+    ( 'reaper_(overwatch)_(cosplay)', 'character:gabriel "reaper" reyes' ),
+    ( 'vampire reaper (cosplay)', 'character:gabriel "reaper" reyes' ),
+    ( 'blackwatch genji', 'character:genji shimada' ),
+    ( 'character:blackwatch genji', 'character:genji shimada' ),
+    ( 'character:genji (overwatch)', 'character:genji shimada' ),
+    ( 'character:genji shimada (overwatch)', 'character:genji shimada' ),
+    ( 'character:invalid subtag " genji shimada"', 'character:genji shimada' ),
+    ( 'character:nomad genji', 'character:genji shimada' ),
+    ( 'character:shimada genji', 'character:genji shimada' ),
+    ( 'character:sparrow genji', 'character:genji shimada' ),
+    ( 'character:sparrow genji (overwatch)', 'character:genji shimada' ),
+    ( 'character:young genji', 'character:genji shimada' ),
+    ( 'character:young genji (overwatch)', 'character:genji shimada' ),
+    ( 'genji (overwatch', 'character:genji shimada' ),
+    ( 'genji (overwatch)', 'character:genji shimada' ),
+    ( 'genji (overwatch) (cosplay)', 'character:genji shimada' ),
+    ( 'genji shiimada', 'character:genji shimada' ),
+    ( 'genji shimada', 'character:genji shimada' ),
+    ( 'genji_(overwatch)', 'character:genji shimada' ),
+    ( 'genji_(overwatch)_(cosplay)', 'character:genji shimada' ),
+    ( 'genji_shimada', 'character:genji shimada' ),
+    ( 'genjii (overwatch)', 'character:genji shimada' ),
+    ( 'genjii_(cosplay)', 'character:genji shimada' ),
+    ( 'genjii_(overwatch)', 'character:genji shimada' ),
+    ( 'genjishimada', 'character:genji shimada' ),
+    ( 'hydrus invalid tag:"character: genji shimada (overwatch)"', 'character:genji shimada' ),
+    ( 'hydrus invalid tag:"character: genji shimada"', 'character:genji shimada' ),
+    ( 'sentai genji', 'character:genji shimada' ),
+    ( 'shimada genji', 'character:genji shimada' ),
+    ( 'character:d va', 'character:hana "d.va" song' ),
+    ( 'character:d.va (overwatch)', 'character:hana "d.va" song' ),
+    ( 'character:hana "d.va" song (overwatch)', 'character:hana "d.va" song' ),
+    ( 'd va', 'character:hana "d.va" song' ),
+    ( 'd\'va', 'character:hana "d.va" song' ),
+    ( 'd-va', 'character:hana "d.va" song' ),
+    ( 'd.va (character)', 'character:hana "d.va" song' ),
+    ( 'd.va (hana song)', 'character:hana "d.va" song' ),
+    ( 'd.va overwatch', 'character:hana "d.va" song' ),
+    ( 'd.va(overwatch)', 'character:hana "d.va" song' ),
+    ( 'd.va_(gremlin)', 'character:hana "d.va" song' ),
+    ( 'd.va_(overwatch)', 'character:hana "d.va" song' ),
+    ( 'd_va', 'character:hana "d.va" song' ),
+    ( 'casual hanzo', 'character:hanzo shimada' ),
+    ( 'character:demon hanzo (overwatch)', 'character:hanzo shimada' ),
+    ( 'character:hanzo shimada (overwatch)', 'character:hanzo shimada' ),
+    ( 'character:hanzo_(overwatch)', 'character:hanzo shimada' ),
+    ( 'character:invalid subtag " hanzo shimada"', 'character:hanzo shimada' ),
+    ( 'character:okami hanzo', 'character:hanzo shimada' ),
+    ( 'character:okami hanzo (overwatch)', 'character:hanzo shimada' ),
+    ( 'character:shimada hanzo', 'character:hanzo shimada' ),
+    ( 'character:young hanzo', 'character:hanzo shimada' ),
+    ( 'character:young master hanzo', 'character:hanzo shimada' ),
+    ( 'character:young master hanzo (overwatch)', 'character:hanzo shimada' ),
+    ( 'demon hanzo', 'character:hanzo shimada' ),
+    ( 'hanzo (overwatch', 'character:hanzo shimada' ),
+    ( 'hanzo (overwatch) (cosplay)', 'character:hanzo shimada' ),
+    ( 'hanzo overwatch', 'character:hanzo shimada' ),
+    ( 'hanzo_(overwatch)', 'character:hanzo shimada' ),
+    ( 'hanzo_(overwatch)_(cosplay)', 'character:hanzo shimada' ),
+    ( 'hanzo_shimada', 'character:hanzo shimada' ),
+    ( 'hanzooverwatch', 'character:hanzo shimada' ),
+    ( 'hydrus invalid tag:"character: hanzo shimada"', 'character:hanzo shimada' ),
+    ( 'lone wolf hanzo', 'character:hanzo shimada' ),
+    ( 'okami hanzo', 'character:hanzo shimada' ),
+    ( 'young master hanzo', 'character:hanzo shimada' ),
+    ( 'character:immortal soldier 76', 'character:jack "soldier 76" morrison' ),
+    ( 'character:jack "soldier 76"morrison', 'character:jack "soldier 76" morrison' ),
+    ( 'character:soldier:76 (overwatch)', 'character:jack "soldier 76" morrison' ),
+    ( 'character:soldier: 76 (overwatch) (cosplay)', 'character:jack "soldier 76" morrison' ),
+    ( 'character:strike commander morrison', 'character:jack "soldier 76" morrison' ),
+    ( 'character:strike commander morrison (overwatch)', 'character:jack "soldier 76" morrison' ),
+    ( 'character:strike-commander morrison', 'character:jack "soldier 76" morrison' ),
+    ( 'soldier_76', 'character:jack "soldier 76" morrison' ),
+    ( 'strike commander morrison', 'character:jack "soldier 76" morrison' ),
+    ( 'character:jaina proudemoore', 'character:jaina proudmoore' ),
+    ( 'character:jaina proudmoore (warcraft)', 'character:jaina proudmoore' ),
+    ( 'character:jaina proudmore', 'character:jaina proudmoore' ),
+    ( 'character:jaina_proudmoore', 'character:jaina proudmoore' ),
+    ( 'jaina proudmoore', 'character:jaina proudmoore' ),
+    ( 'jaina proudmore', 'character:jaina proudmoore' ),
+    ( 'jaina_proudmoore', 'character:jaina proudmoore' ),
+    ( 'jainaproudmoore', 'character:jaina proudmoore' ),
+    ( 'character:dr. junkenstein junkrat (overwatch)', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:firework junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:firework junkrat (overwatch)', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:fool junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:hayseed junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:hayseed junkrat (overwatch)', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:jamison "junkrat" fawkes (overwatch)', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:jamison fawkes', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:jester junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:jester junkrat (overwatch)', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'character:junkrat (overwatch) (cosplay)', 'character:jamison "junkrat" fawkes' ),
+    ( 'firework junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'hayseed junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'jamison fawkes', 'character:jamison "junkrat" fawkes' ),
+    ( 'jamison_fawkes', 'character:jamison "junkrat" fawkes' ),
+    ( 'jester junkrat', 'character:jamison "junkrat" fawkes' ),
+    ( 'junkrat (overwatch) (cosplay)', 'character:jamison "junkrat" fawkes' ),
+    ( 'junkrat_(overwatch)', 'character:jamison "junkrat" fawkes' ),
+    ( 'junkrat_(overwatch)_(cosplay)', 'character:jamison "junkrat" fawkes' ),
+    ( 'american mccree', 'character:jesse mccree' ),
+    ( 'blackwatch mccree', 'character:jesse mccree' ),
+    ( 'character:american mccree', 'character:jesse mccree' ),
+    ( 'character:blackwatch mccree', 'character:jesse mccree' ),
+    ( 'character:gambler mccree', 'character:jesse mccree' ),
+    ( 'character:gambler mccree (overwatch)', 'character:jesse mccree' ),
+    ( 'character:jesse mccree (overwatch)', 'character:jesse mccree' ),
+    ( 'character:lifeguard mccree', 'character:jesse mccree' ),
+    ( 'character:lifeguard mccree (overwatch)', 'character:jesse mccree' ),
+    ( 'character:mccree', 'character:jesse mccree' ),
+    ( 'character:mccree (overwatch) (cosplay)', 'character:jesse mccree' ),
+    ( 'character:mccree (overwatch) cosplay', 'character:jesse mccree' ),
+    ( 'character:mystery man mccree', 'character:jesse mccree' ),
+    ( 'character:riverboat mccree', 'character:jesse mccree' ),
+    ( 'character:van helsing mccree', 'character:jesse mccree' ),
+    ( 'character:van helsing mccree (overwatch)', 'character:jesse mccree' ),
+    ( 'jesse mccree (cosplay)', 'character:jesse mccree' ),
+    ( 'jesse_mccree', 'character:jesse mccree' ),
+    ( 'lifeguard mccree', 'character:jesse mccree' ),
+    ( 'magistrate mccree', 'character:jesse mccree' ),
+    ( 'mccree (overwatch', 'character:jesse mccree' ),
+    ( 'mccree (overwatch) (cosplay)', 'character:jesse mccree' ),
+    ( 'mccree (overwatch) cosplay', 'character:jesse mccree' ),
+    ( 'mccree(cosplay)', 'character:jesse mccree' ),
+    ( 'mccree_(overwatch)', 'character:jesse mccree' ),
+    ( 'mccree_(overwatch)_(cosplay)', 'character:jesse mccree' ),
+    ( 'van helsing mccree', 'character:jesse mccree' ),
+    ( 'jim raynor', 'character:jim raynor' ),
+    ( 'katya volskaya', 'character:katya volskaya' ),
+    ( 'katya volskaya\'s daughter', 'character:katya volskaya\'s daughter' ),
+    ( 'lady liadrin', 'character:lady liadrin' ),
+    ( 'character:lena "tracer" oxton (overwatch)', 'character:lena "tracer" oxton' ),
+    ( 'character:tracer (character)', 'character:lena "tracer" oxton' ),
+    ( 'character:tracer (cosplay)', 'character:lena "tracer" oxton' ),
+    ( 'character:tracer (overwatch) (cosplay)', 'character:lena "tracer" oxton' ),
+    ( 'character:tracer (ow)', 'character:lena "tracer" oxton' ),
+    ( 'character:tracer_(overwatch)', 'character:lena "tracer" oxton' ),
+    ( 'lea oxton', 'character:lena "tracer" oxton' ),
+    ( 'lena "tracer" oxton (overwatch)', 'character:lena "tracer" oxton' ),
+    ( 'lena_oxton', 'character:lena "tracer" oxton' ),
+    ( 'lenaoxton', 'character:lena "tracer" oxton' ),
+    ( 'tracer (character)', 'character:lena "tracer" oxton' ),
+    ( 'tracer (cosplay)', 'character:lena "tracer" oxton' ),
+    ( 'tracer (lena oxton)', 'character:lena "tracer" oxton' ),
+    ( 'tracer (overwatch', 'character:lena "tracer" oxton' ),
+    ( 'tracer (overwatch)doll joints', 'character:lena "tracer" oxton' ),
+    ( 'tracer overwatch', 'character:lena "tracer" oxton' ),
+    ( 'tracer\overwatch', 'character:lena "tracer" oxton' ),
+    ( 'tracer_(cosplay)', 'character:lena "tracer" oxton' ),
+    ( 'tracer_(overwatch)', 'character:lena "tracer" oxton' ),
+    ( 'tracer_(overwatch)_(cosplay)', 'character:lena "tracer" oxton' ),
+    ( 'tracer_overwatch', 'character:lena "tracer" oxton' ),
+    ( 'トレーサー', 'character:lena "tracer" oxton' ),
+    ( 'character:li-ming', 'character:li-ming the rebellious wizard' ),
+    ( 'character:li-ming (heroes of the storm)', 'character:li-ming the rebellious wizard' ),
+    ( 'li-ming', 'character:li-ming the rebellious wizard' ),
+    ( 'li-ming (heroes of the storm)', 'character:li-ming the rebellious wizard' ),
+    ( 'character:lucio', 'character:lúcio correia dos santos' ),
+    ( 'character:lucio (overwatch) (cosplay)', 'character:lúcio correia dos santos' ),
+    ( 'character:lucio correia dos santos', 'character:lúcio correia dos santos' ),
+    ( 'character:lúcio correia dos santos (overwatch)', 'character:lúcio correia dos santos' ),
+    ( 'character:lúcios', 'character:lúcio correia dos santos' ),
+    ( 'hippityhop lucio', 'character:lúcio correia dos santos' ),
+    ( 'jazzy lucio', 'character:lúcio correia dos santos' ),
+    ( 'lucio correia dos santos', 'character:lúcio correia dos santos' ),
+    ( 'lucio overwatch)', 'character:lúcio correia dos santos' ),
+    ( 'lucio_(overwatch)', 'character:lúcio correia dos santos' ),
+    ( 'lucio_correia_dos_santos', 'character:lúcio correia dos santos' ),
+    ( 'lúcio', 'character:lúcio correia dos santos' ),
+    ( 'ribbit lucio', 'character:lúcio correia dos santos' ),
+    ( 'character:bajie roadhog', 'character:mako "roadhog" rutledge' ),
+    ( 'character:junkenstein\'s monster roadhog', 'character:mako "roadhog" rutledge' ),
+    ( 'character:junkenstein\'s monster roadhog (overwatch)', 'character:mako "roadhog" rutledge' ),
+    ( 'character:mako "roadhog" rutledge (overwatch)', 'character:mako "roadhog" rutledge' ),
+    ( 'character:mako rutledge', 'character:mako "roadhog" rutledge' ),
+    ( 'character:roadhog (cosplay)', 'character:mako "roadhog" rutledge' ),
+    ( 'character:roadhog (overwatch) (cosplay)', 'character:mako "roadhog" rutledge' ),
+    ( 'junkenstein\'s monster roadhog', 'character:mako "roadhog" rutledge' ),
+    ( 'roadhog (cosplay)', 'character:mako "roadhog" rutledge' ),
+    ( 'roadhog (overwatch) (cosplay)', 'character:mako "roadhog" rutledge' ),
+    ( 'roadhog_(overwatch)', 'character:mako "roadhog" rutledge' ),
+    ( 'roadhog_(overwatch)_(cosplay)', 'character:mako "roadhog" rutledge' ),
+    ( 'sharkbait roadhog', 'character:mako "roadhog" rutledge' ),
+    ( 'mei (overwatch)', 'character:mei (overwatch)' ),
+    ( 'mei (overwatch) (cosplay)', 'character:mei (overwatch)' ),
+    ( 'mei overwatch', 'character:mei (overwatch)' ),
+    ( 'overwatch mei', 'character:mei (overwatch)' ),
+    ( 'character:mei (overwatch)', 'character:mei-ling zhou (overwatch)' ),
+    ( 'character:moira', 'character:moira o’deorain' ),
+    ( 'character:moira (overwatch)', 'character:moira o’deorain' ),
+    ( 'character:moira o\'deorain', 'character:moira o’deorain' ),
+    ( 'moira_(overwatch)', 'character:moira o’deorain' ),
+    ( 'character:nova (starcraft)', 'character:nova terra' ),
+    ( 'nova terra', 'character:nova terra' ),
+    ( 'nova terra‎', 'character:nova terra' ),
+    ( 'nova_terra', 'character:nova terra' ),
+    ( 'character:olivia colomar', 'character:olivia "sombra" colomar' ),
+    ( 'character:sombra', 'character:olivia "sombra" colomar' ),
+    ( 'character:sombra (overwatch) (cosplay)', 'character:olivia "sombra" colomar' ),
+    ( 'character:sombra_(overwatch)', 'character:olivia "sombra" colomar' ),
+    ( 'sombra', 'character:olivia "sombra" colomar' ),
+    ( 'sombra overwatch', 'character:olivia "sombra" colomar' ),
+    ( 'sombra_overwatch', 'character:olivia "sombra" colomar' ),
+    ( 'character:sombra (overwatch)', 'character:olivia colomar' ),
+    ( 'character:orisa (overwatch)', 'character:orisa' ),
+    ( 'orisa (overwatch)', 'character:orisa' ),
+    ( 'orisa_(overwatch)', 'character:orisa' ),
+    ( 'queen azshara', 'character:queen azshara' ),
+    ( 'character:balderich reinhardt', 'character:reinhardt wilhelm' ),
+    ( 'character:bundeswehr reinhardt', 'character:reinhardt wilhelm' ),
+    ( 'character:bundeswehr reinhardt (overwatch)', 'character:reinhardt wilhelm' ),
+    ( 'character:chaos (reinhardt)', 'character:reinhardt wilhelm' ),
+    ( 'character:reinhardt', 'character:reinhardt wilhelm' ),
+    ( 'character:reinhardt (overwatch) (cosplay)', 'character:reinhardt wilhelm' ),
+    ( 'reinhardt (overwatch) (cosplay)', 'character:reinhardt wilhelm' ),
+    ( 'reinhardt_(overwatch)', 'character:reinhardt wilhelm' ),
+    ( 'reinhardt_(overwatch)_(cosplay)', 'character:reinhardt wilhelm' ),
+    ( 'character:reinhardt wilhelm', 'character:reinhardt wilhelm (overwatch)' ),
+    ( 'kerrigan', 'character:sarah kerrigan' ),
+    ( 'sarah kerrigan', 'character:sarah kerrigan' ),
+    ( 'sarah_kerrigan', 'character:sarah kerrigan' ),
+    ( 'character:satya "symmetra" vaswani (overwatch)', 'character:satya "symmetra" vaswani' ),
+    ( 'character:symmetra (overwatch) (cosplay)', 'character:satya "symmetra" vaswani' ),
+    ( 'character:symmetra (ow)', 'character:satya "symmetra" vaswani' ),
+    ( 'satya vasmani', 'character:satya "symmetra" vaswani' ),
+    ( 'satya_vaswani', 'character:satya "symmetra" vaswani' ),
+    ( 'symmetra (cosplay)', 'character:satya "symmetra" vaswani' ),
+    ( 'symmetra_(cosplay)', 'character:satya "symmetra" vaswani' ),
+    ( 'symmetra_(overwatch)', 'character:satya "symmetra" vaswani' ),
+    ( 'symmetra_(overwatch)_(cosplay)', 'character:satya "symmetra" vaswani' ),
+    ( 'vaswani', 'character:satya "symmetra" vaswani' ),
+    ( 'overwatch sombra', 'character:sombra (overwatch)' ),
+    ( 'sombra (overwatch)', 'character:sombra (overwatch)' ),
+    ( 'sombra_(overwatch)', 'character:sombra (overwatch)' ),
+    ( 'character:sylvanas', 'character:sylvanas windrunner' ),
+    ( 'character:sylvanas windrunner (warcraft)', 'character:sylvanas windrunner' ),
+    ( 'character:sylvanas_windrunner', 'character:sylvanas windrunner' ),
+    ( 'sylvanas', 'character:sylvanas windrunner' ),
+    ( 'sylvanas windrunner', 'character:sylvanas windrunner' ),
+    ( 'sylvanas_windrunner', 'character:sylvanas windrunner' ),
+    ( 'sylvanaswindrunner', 'character:sylvanas windrunner' ),
+    ( 'character:sylvanas windrunner', 'character:sylvanas windrunner, the banshee quen' ),
+    ( 'character:tekhartha zenyatta (overwatch)', 'character:tekhartha zenyatta' ),
+    ( 'character:torbjörn', 'character:torbjörn lindholm' ),
+    ( 'character:torbjörn lindholm (overwatch)', 'character:torbjörn lindholm' ),
+    ( 'character:torbjörn_lindholm', 'character:torbjörn lindholm' ),
+    ( 'torbjorn (overwatch) (cosplay)', 'character:torbjörn lindholm' ),
+    ( 'torbjorn_(overwatch)', 'character:torbjörn lindholm' ),
+    ( 'torbjörn (overwatch)', 'character:torbjörn lindholm' ),
+    ( 'character:tyrande', 'character:tyrande whisperwind' ),
+    ( 'character:tyrande_whisperwind', 'character:tyrande whisperwind' ),
+    ( 'tyrande', 'character:tyrande whisperwind' ),
+    ( 'tyrande whisperwind', 'character:tyrande whisperwind' ),
+    ( 'tyrande windwhisper', 'character:tyrande whisperwind' ),
+    ( 'tyrande_whisperwind', 'character:tyrande whisperwind' ),
+    ( 'tyrandewhisperwind', 'character:tyrande whisperwind' ),
+    ( 'bastion_(overwatch)_(cosplay)', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'character:bastion (overwatch)', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'character:bastion (overwatch) (cosplay)', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'character:bastion(overwatch)', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'character:omnic crisis bastion', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'character:overgrown bastion', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'omnic crisis bastion', 'character:“bastion", sst laboratories siege automaton e54' ),
+    ( 'copyright:diablo', 'series:diablo' ),
+    ( 'diablo', 'series:diablo' ),
+    ( 'diablo 2', 'series:diablo ii' ),
+    ( 'series:diablo 2', 'series:diablo ii' ),
+    ( 'diablo3', 'series:diablo iii' ),
+    ( 'diablo 3', 'series:diablo iii' ),
+    ( 'series:diablo 3', 'series:diablo iii' ),
+    ( 'copyright:overwatch', 'series:overwatch' ),
+    ( 'game:overwatch', 'series:overwatch' ),
+    ( 'hydrus invalid tag:"series: overwatch"', 'series:overwatch' ),
+    ( 'over watch', 'series:overwatch' ),
+    ( 'over_watch', 'series:overwatch' ),
+    ( 'overlook', 'series:overwatch' ),
+    ( 'overwatch', 'series:overwatch' ),
+    ( 'parody:overwatch', 'series:overwatch' ),
+    ( 'series:invalid subtag " overwatch"', 'series:overwatch' ),
+    ( 'オーバーウォッチ', 'series:overwatch' ),
+    ( '守望先锋', 'series:overwatch' ),
+    ( '오버워치', 'series:overwatch' ),
+    ( 'copyright:starcraft', 'series:starcraft' ),
+    ( 'starcraft', 'series:starcraft' ),
+    ( 'copyright:warcraft', 'series:warcraft' ),
+    ( 'warcraft', 'series:warcraft' ),
+    ( 'ウォークラフト', 'series:warcraft' ),
+    ( 'copyright:world of warcraft', 'series:world of warcraft' ),
+    ( 'parody:world of warcraft', 'series:world of warcraft' ),
+    ( 'series:world_of_warcraft', 'series:world of warcraft' ),
+    ( 'series:wow', 'series:world of warcraft' ),
+    ( 'world of warcraft', 'series:world of warcraft' ),
+    ( 'world_of_warc', 'series:world of warcraft' ),
+    ( 'world_of_warcra', 'series:world of warcraft' ),
+    ( 'world_of_warcraf', 'series:world of warcraft' ),
+    ( 'world_of_warcraft', 'series:world of warcraft' ),
+    ( 'worldofwarcraft', 'series:world of warcraft' ),
+    ( 'character:night elf', 'species:night elf' ),
+    ( 'character:night_elf', 'species:night elf' ),
+    ( 'night elf', 'species:night elf' ),
+    ( 'nightelf', 'species:night elf' ),
+    ( 'species:nightelf', 'species:night elf' ),
+    ( 'black tauren', 'species:tauren' ),
+    ( 'character:tauren', 'species:tauren' ),
+    ( 'tauren', 'species:tauren' ),
+    ( 'tauren druid', 'species:tauren' ),
+    ( 'taurens', 'species:tauren' ),
+    ( 'blizzard (company)', 'studio:blizzard entertainment' ),
+    ( 'blizzard entertainment', 'studio:blizzard entertainment' ),
+    ( 'blizzard_(company)', 'studio:blizzard entertainment' ),
+    ( 'blizzard_entertainment', 'studio:blizzard entertainment' ),
+    ( 'circle:blizzard entertainment', 'studio:blizzard entertainment' ),
+    ( 'copyright:blizzard entertainment', 'studio:blizzard entertainment' ),
+    ( 'creator:blizzard entertainment', 'studio:blizzard entertainment' ),
+    ( 'idol:blizzard entertainment', 'studio:blizzard entertainment' ),
+    ( 'series:blizzard (company)', 'studio:blizzard entertainment' ),
+    ( 'series:blizzard entertainment', 'studio:blizzard entertainment' ),
+    ( 'studio:ブリザードエンターテインメント', 'studio:blizzard entertainment' )
+}
 
 class TestClientDBTags( unittest.TestCase ):
     
@@ -127,11 +634,177 @@ class TestClientDBTags( unittest.TestCase ):
             
         
     
-    def test_display_pairs_lookup( self ):
+    def test_display_pairs_lookup_web_parents( self ):
         
-        # now combine the siblings and parents, and fill out more methods mate
+        self._clear_db()
         
-        pass
+        # test empty
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
+        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), {} )
+        
+        # tricky situation, we have a parent that is not siblinged
+        
+        content_updates_1 = []
+        content_updates_2 = []
+        content_updates_3 = []
+        
+        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
+        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'bodysuit' ) ) )
+        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'samus aran' ) ) )
+        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
+        
+        # this last one should trigger a full on chain regen and rebuild the bodysuit pairs, despite not caring directly about them--does it?
+        content_updates_3.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'nintendo' ) ) )
+        
+        self._write( 'content_updates', { self._my_service_key : content_updates_1 } )
+        self._write( 'content_updates', { self._my_service_key : content_updates_2 } )
+        self._write( 'content_updates', { self._my_service_key : content_updates_3 } )
+        
+        self._sync_display()
+        
+        #
+        
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'bodysuit', ) )[ 'bodysuit' ], ( {
+            'bodysuit',
+            'clothing:bodysuit'
+            }, 'clothing:bodysuit', {
+                'samus bodysuit'
+            }, set() ) )
+        
+    
+    def test_display_pairs_lookup_tricky( self ):
+        
+        self._clear_db()
+        
+        # test empty
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
+        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), {} )
+        
+        # tricky situation, we have a parent that is not siblinged
+        
+        content_updates_1 = []
+        content_updates_2 = []
+        content_updates_3 = []
+        
+        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
+        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', 'studio:nintendo' ) ) )
+        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran armour', 'character:samus aran' ) ) )
+        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'series:metroid' ) ) )
+        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
+        
+        # this last one should trigger a full on chain regen including the difficult to find link--do we find that link on regenning?
+        content_updates_3.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'studio:nintendo', 'game studio' ) ) )
+        
+        self._write( 'content_updates', { self._my_service_key : content_updates_1 } )
+        self._write( 'content_updates', { self._my_service_key : content_updates_2 } )
+        self._write( 'content_updates', { self._my_service_key : content_updates_3 } )
+        
+        self._sync_display()
+        
+        #
+        
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'samus aran', ) )[ 'samus aran' ], ( {
+            'character:samus aran',
+            'samus aran'
+            }, 'character:samus aran', {
+                'samus aran armour'
+            }, {
+            'series:metroid',
+            'studio:nintendo',
+            'game studio'
+            } ) )
+        
+    
+    def test_display_pairs_lookup_bonkers( self ):
+        
+        self._clear_db()
+        
+        # test empty
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
+        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), {} )
+        
+        #
+        
+        content_updates_list = [ [] for i in range( 4 ) ]
+        
+        for pair in IRL_PARENT_PAIRS:
+            
+            content_updates_list[ random.randint( 1, 3 ) ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+            
+        
+        for pair in IRL_SIBLING_PAIRS:
+            
+            i = 2
+            
+            while i == 3:
+                
+                i = random.randint( 0, 4 )
+                
+            
+            content_updates_list[ i ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+            
+        
+        for content_updates in content_updates_list:
+            
+            service_keys_to_content_updates_1 = { self._my_service_key : content_updates }
+            
+            self._write( 'content_updates', service_keys_to_content_updates_1 )
+            
+        
+        self._sync_display()
+        
+        #
+        
+        result = self._read( 'tag_parents', self._my_service_key )
+        
+        self.assertEqual( set( result[ HC.CONTENT_STATUS_CURRENT ] ), IRL_PARENT_PAIRS )
+        
+        result = self._read( 'tag_siblings', self._my_service_key )
+        
+        self.assertEqual( set( result[ HC.CONTENT_STATUS_CURRENT ] ), IRL_SIBLING_PAIRS )
+        
+        #
+        
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'pharah', ) )[ 'pharah' ], ( {
+            'character:fareeha "pharah" amari',
+            'character:fareeha "pharah" amari (overwatch)',
+            'character:pharah',
+            'character:pharah (ow)',
+            'character:pharah_(overwatch)',
+            'overwatch pharah',
+            'pharah',
+            'pharah amari',
+            'pharah overwatch',
+            'pharah_(overwatch)',
+            'pharah_amari'
+            }, 'character:fareeha "pharah" amari', set(), {
+            'series:overwatch',
+            'studio:blizzard entertainment'
+            } ) )
+        
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'warcraft', ) )[ 'warcraft' ], ( {
+            'series:warcraft',
+            'copyright:warcraft',
+            'warcraft',
+            'ウォークラフト'
+            }, 'series:warcraft', {
+            'series:world of warcraft',
+            'character:tyrande whisperwind',
+            'character:alleria windrunner',
+            'character:eonar, the life binder',
+            'species:tauren',
+            'character:queen azshara',
+            'character:alextrasza the life-binder',
+            'character:lady liadrin',
+            'species:night elf',
+            'character:jaina proudmoore',
+            'character:sylvanas windrunner, the banshee quen'
+            }, {
+                'studio:blizzard entertainment'
+            } ) )
         
     
     def test_parents_pairs_lookup( self ):

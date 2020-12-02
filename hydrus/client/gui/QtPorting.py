@@ -1161,14 +1161,6 @@ def AdjustOpacity( image, opacity_factor ):
     
     return new_image
 
-
-def DrawText( painter, x, y, text ):
-    
-    boundingRect = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
-
-    painter.drawText( QC.QRectF( x, y, boundingRect.width(), boundingRect.height() ), text )
-
-
 def ToKeySequence( modifiers, key ):
     
     if isinstance( modifiers, QC.Qt.KeyboardModifiers ):

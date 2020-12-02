@@ -1251,6 +1251,31 @@ def RestartProcess():
     
     os.execv( exe, args )
     
+def SampleSetByGettingFirst( s: set, n ):
+    
+    # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
+    
+    n = min( len( s ), n )
+    
+    sample = set()
+    
+    if n == 0:
+        
+        return sample
+        
+    
+    for ( i, obj ) in enumerate( s ):
+        
+        sample.add( obj )
+        
+        if i >= n - 1:
+            
+            break
+            
+        
+    
+    return sample
+    
 def SetsIntersect( a, b ):
     
     # not a.isdisjoint( b )

@@ -13,6 +13,8 @@ TAG_DISPLAY_SINGLE_MEDIA = 2
 TAG_DISPLAY_SELECTION_LIST = 3
 TAG_DISPLAY_IDEAL = 4
 
+have_shown_invalid_tag_warning = False
+
 def ConvertTagSliceToString( tag_slice ):
     
     if tag_slice == '':

@@ -1,3 +1,4 @@
+import collections
 import distutils.version
 import os
 import queue
@@ -164,6 +165,8 @@ class HydrusDB( object ):
         self._controller = controller
         self._db_dir = db_dir
         self._db_name = db_name
+        
+        TemporaryIntegerTableNameCache()
         
         self._transaction_started = 0
         self._in_transaction = False
@@ -355,6 +358,8 @@ class HydrusDB( object ):
         
     
     def _CloseDBCursor( self ):
+        
+        TemporaryIntegerTableNameCache.instance().Clear()
         
         if self._db is not None:
             
@@ -1095,30 +1100,99 @@ class HydrusDB( object ):
         if synchronous: return job.GetResult()
         
     
+class TemporaryIntegerTableNameCache( object ):
+    
+    my_instance = None
+    
+    def __init__( self ):
+        
+        TemporaryIntegerTableNameCache.my_instance = self
+        
+        self._column_names_to_table_names = collections.defaultdict( collections.deque )
+        self._column_names_counter = collections.Counter()
+        
+    
+    @staticmethod
+    def instance() -> 'TemporaryIntegerTableNameCache':
+        
+        if TemporaryIntegerTableNameCache.my_instance is None:
+            
+            raise Exception( 'TemporaryIntegerTableNameCache is not yet initialised!' )
+            
+        else:
+            
+            return TemporaryIntegerTableNameCache.my_instance
+            
+        
+    
+    def Clear( self ):
+        
+        self._column_names_to_table_names = collections.defaultdict( collections.deque )
+        self._column_names_counter = collections.Counter()
+        
+    
+    def GetName( self, column_name ):
+        
+        table_names = self._column_names_to_table_names[ column_name ]
+        
+        initialised = True
+        
+        if len( table_names ) == 0:
+            
+            initialised = False
+            
+            i = self._column_names_counter[ column_name ]
+            
+            table_name = 'mem.temp_int_{}_{}'.format( column_name, i )
+            
+            table_names.append( table_name )
+            
+            self._column_names_counter[ column_name ] += 1
+            
+        
+        table_name = table_names.pop()
+        
+        return ( initialised, table_name )
+        
+    
+    def ReleaseName( self, column_name, table_name ):
+        
+        self._column_names_to_table_names[ column_name ].append( table_name )
+        
+    
 class TemporaryIntegerTable( object ):
     
     def __init__( self, cursor, integer_iterable, column_name ):
+        
+        if not isinstance( integer_iterable, set ):
+            
+            integer_iterable = set( integer_iterable )
+            
         
         self._cursor = cursor
         self._integer_iterable = integer_iterable
         self._column_name = column_name
         
-        self._table_name = 'mem.tempint' + os.urandom( 32 ).hex()
+        ( self._initialised, self._table_name ) = TemporaryIntegerTableNameCache.instance().GetName( self._column_name )
         
     
     def __enter__( self ):
         
-        self._cursor.execute( 'CREATE TABLE {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
+        if not self._initialised:
+            
+            self._cursor.execute( 'CREATE TABLE {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
+            
         
-        # just make sure we are unique here with a set
-        self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), { ( i, ) for i in self._integer_iterable } )
+        self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), ( ( i, ) for i in self._integer_iterable ) )
         
         return self._table_name
         
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         
-        self._cursor.execute( 'DROP TABLE {};'.format( self._table_name ) )
+        self._cursor.execute( 'DELETE FROM {};'.format( self._table_name ) )
+        
+        TemporaryIntegerTableNameCache.instance().ReleaseName( self._column_name, self._table_name )
         
         return False
         

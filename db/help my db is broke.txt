@@ -91,7 +91,7 @@ The four files are separate, so if one is broken but the other three are fine, y
 
 *** fix the problem ***
 
-There are three known repair operations. Clone works well for most simple problems, but the others have better success in different situations.
+There are three known repair operations. Try one and see if you can pass an integrity_check on the broken file. Clone works well for most simple problems, but the others have better success in different situations.
 
 ** clone **
 
@@ -102,6 +102,10 @@ This instructs the database to copy itself to a new file. When it comes across d
 .exit
 
 And wait a bit. It'll report its progress as it tries to copy your db. It will be slow. Remember to go '.exit' once it is done to close the shell neatly.
+
+If you get an error about a missing 'sqlite_stat1' table, don't worry about it, it is not important.
+
+Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. This means some data has been lost. If this is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data with some work once you are working again.
 
 If the clone operation is successful, rename client.db to client_old.db and client_new.db to client.db, swapping in the good where the bad was.
 
@@ -191,11 +195,11 @@ Check install_dir/help/contact.html for ways to get me.
 
 Since client.mappings.db is the one most hit by this, recovering lost tags is often the next job after cleanup. If your file is now half as big, you probably lost 50% of your tags.
 
-In client.caches.db, there is a cache of your tags for the files currently in the client. We can use this cache to repopulate your mappings tables with _database->check and repair->repopulate truncated mappings tables_. It won't get any tags for files you once deleted and later reimport, but as that is generally rare, it should fix you up pretty well, particularly for local tags (e.g. 'my tags').
+In client.caches.db, there is a cache of your tags for the files currently in the client. We can use this cache to repopulate your mappings tables with _database->check and repair->repopulate truncated mappings tables_. It won't always get everything, but if client.caches.db was undamaged, it should work for most of your files.
 
-If you sync with the PTR or a private repository, tell your client to reprocess them. Turn on _help->advanced mode_, then go to _services->review services_ and under 'reset processing', tell it to fill in definition and content gaps. It'll take time, but it'll fill in the holes again.
+If you sync with the PTR or a private repository, tell your client to reprocess them. Turn on _help->advanced mode_, then go to _services->review services_ and under 'reset processing', tell it to fill in definition and content gaps. It'll take time, but it will fill in the holes again.
 
-When your recovery is done, you probably want to run everything under _database->regenerate_. It'll resync various counts, so the client will be reporting what is actually there.
+When your recovery is done, your tag counts or siblings may be incorrect. If so you probably want to run one or more of the tasks under _database->regenerate_. Be careful though, as these operations can take a very very long time to finish.
 
 
 *** if caches was hit ***
@@ -203,9 +207,16 @@ When your recovery is done, you probably want to run everything under _database-
 If client.caches.db was hit, this is the best scenario, since everything in there is just a mirror of some other data, and can be reprocessed. Run everything under _database->regenerate_ in turn. That'll likely be enough for almost all cases, but if you still get screwy behaviour with the duplicate system or something, let me know and I'll see what I can do.
 
 
+*** the database broke again ***
+
+If you are absolutely certain you restored your database files to the point where they passed "PRAGMA integrity_check;", and then a bit of repository processing later, you get 'malformed' again out of the blue, you most likely have an ongoing problem. First off, pause all repository processing, or whatever you were doing that raised the error. Then do your CrystalDiskInfo job again, and absolutely make sure all your cables are plugged in solid and you have no power problems. You can try doing another clone/repair, but if your computer is quickly turning clean database files into corrupt ones, there is likely a hardware fault, whether that is a problem in the drive, cable, motherboard, power supply, drivers, cool air supply, or something esoteric like a cloud backup system or anti-virus forcing access into the database files while they are in use.
+
+If you are in this situation, I am happy to help you figure things out, but you know your system's hardware better than I do. As far as I know, I cannot create a 'malformed' error with my database access routines even if wanted to--it can only come from an external fault.
+
+
 *** lastly, if you did not have any backup before this ***
 
-I say this to everyone who goes through this: losing data sucks, I know. I lost a drive when I was younger and tens of thousands of cool files with it. It feels shit, but there is an excellent lesson to learn: almost all the pain would have been avoided if you had a backup. This pain will be the drive to correct the situation.
+I say this to everyone who goes through this: losing data sucks, I know. I lost a drive when I was younger and tens of thousands of cool files with it. It feels shit, but there is an excellent lesson to learn: almost all the pain would have been avoided if you had a backup. This pain will be your drive to correct the situation.
 
 If you do not have a backup routine, this is the time to sort it out. If you cannot afford a USB drive, find a friend or family member who can sell you a USB stick for a few bucks. At worst, simply make a copy on the same drive. At the very least, you just need the spare space for the client*.db files. If you have enough money for an ongoing computer budget, and enough IQ to figure out and stick to a schedule, just fold it into your calendar. Rotating in a new WD Passport every few years is not an outrageous expense, and you can protect every document, childhood photo, ancient-and-now-impossible-to-find 32-bit utility, and your hydrus db, and you can sling it in your backpack and no longer have to worry about losing it all in a fire. If everything goes black one day, you still get a heart attack, but the maximum damage is money and stress and a week of work lost, rather than losing everything you have ever done. A backup is an insurance policy.
 

@@ -1,444 +1,495 @@
-2016/09/18 13:47:09: Profiling write content_updates
-2016/09/18 13:47:09: Stats
-         278 function calls in 0.164 seconds
+2020/12/01 23:36:19: Profiling write process_repository_content
+
+
+
+Stats
+
+
+
+         222112 function calls in 0.507 seconds
 
    Ordered by: internal time
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-       25    0.163    0.007    0.163    0.007 {method 'execute' of 'sqlite3.Cursor' objects}
-        9    0.000    0.000    0.000    0.000 {method 'executemany' of 'sqlite3.Cursor' objects}
-        1    0.000    0.000    0.001    0.001 ClientDB.py:8072(_UpdateMappings)
-        1    0.000    0.000    0.002    0.002 ClientDB.py:5519(_ProcessContentUpdates)
-        1    0.000    0.000    0.164    0.164 HydrusDB.py:451(_ProcessJob)
-        4    0.000    0.000    0.000    0.000 ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-        7    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
-        3    0.000    0.000    0.000    0.000 _core.py:16750(CallAfter)
-        4    0.000    0.000    0.000    0.000 ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)
-        3    0.000    0.000    0.000    0.000 {wx._core_.PostEvent}
-        8    0.000    0.000    0.000    0.000 ClientDB.py:1014(GenerateSpecificMappingsCacheTableNames)
-        2    0.000    0.000    0.000    0.000 ClientDB.py:4621(_GetServiceIds)
-        1    0.000    0.000    0.000    0.000 HydrusTags.py:150(CleanTag)
-        7    0.000    0.000    0.000    0.000 HydrusData.py:945(SplayListForDB)
-        3    0.000    0.000    0.000    0.000 HydrusPubSub.py:137(pub)
-        3    0.000    0.000    0.000    0.000 {method 'sub' of '_sre.SRE_Pattern' objects}
-        2    0.000    0.000    0.000    0.000 collections.py:458(__init__)
-        1    0.000    0.000    0.000    0.000 threading.py:373(notify)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:2970(_GetHashIds)
-        3    0.000    0.000    0.000    0.000 _core.py:7583(__init__)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:1498(_CacheCombinedFilesMappingsUpdate)
-       16    0.000    0.000    0.000    0.000 HydrusData.py:945(<genexpr>)
-        4    0.000    0.000    0.000    0.000 re.py:230(_compile)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:4058(_GetNamespaceIdTagId)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:4607(_GetServiceId)
-        4    0.000    0.000    0.000    0.000 {method 'fetchone' of 'sqlite3.Cursor' objects}
-        3    0.000    0.000    0.000    0.000 re.py:148(sub)
-        3    0.000    0.000    0.000    0.000 HydrusController.py:142(pub)
-        3    0.000    0.000    0.000    0.000 {wx._core_.new_PyEvent}
-        3    0.000    0.000    0.000    0.000 ClientController.py:699(NotifyPubSubs)
-        1    0.000    0.000    0.000    0.000 threading.py:285(__enter__)
-        3    0.000    0.000    0.000    0.000 {wx._core_.GetApp}
-        1    0.000    0.000    0.000    0.000 threading.py:576(set)
-        1    0.000    0.000    0.002    0.002 ClientDB.py:8645(_Write)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:4510(_GetService)
-        3    0.000    0.000    0.000    0.000 _core.py:8421(GetApp)
-       25    0.000    0.000    0.000    0.000 {len}
-        2    0.000    0.000    0.000    0.000 HydrusDB.py:317(_GetRowCount)
-        1    0.000    0.000    0.000    0.000 HydrusData.py:1885(PutResult)
-       10    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
-        1    0.000    0.000    0.000    0.000 HydrusData.py:1028(ToUnicode)
-        1    0.000    0.000    0.000    0.000 threading.py:300(_is_owned)
-        1    0.000    0.000    0.000    0.000 threading.py:400(notifyAll)
-        3    0.000    0.000    0.000    0.000 {wx._core_.PyEvent__SetSelf}
-        2    0.000    0.000    0.000    0.000 {method 'replace' of 'unicode' objects}
-        3    0.000    0.000    0.000    0.000 {wx._core_.Event_SetEventType}
-        2    0.000    0.000    0.000    0.000 collections.py:528(update)
-        3    0.000    0.000    0.000    0.000 HydrusDB.py:528(pub_after_commit)
-        5    0.000    0.000    0.000    0.000 {method 'difference' of 'set' objects}
-        1    0.000    0.000    0.000    0.000 ClientDB.py:1000(GenerateMappingsTableNames)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8265(<setcomp>)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8124(<setcomp>)
-        1    0.000    0.000    0.000    0.000 {method 'match' of '_sre.SRE_Pattern' objects}
-        1    0.000    0.000    0.000    0.000 re.py:138(match)
-        1    0.000    0.000    0.164    0.164 <string>:1(<module>)
-        3    0.000    0.000    0.000    0.000 _core.py:7590(_SetSelf)
-        3    0.000    0.000    0.000    0.000 {wx._core_.PyEvent_swiginit}
-        2    0.000    0.000    0.000    0.000 ClientDB.py:1748(<genexpr>)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8686(pub_content_updates_after_commit)
-        1    0.000    0.000    0.000    0.000 {method 'update' of 'set' objects}
-        1    0.000    0.000    0.000    0.000 threading.py:288(__exit__)
-        3    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
-        1    0.000    0.000    0.000    0.000 HydrusTags.py:135(CheckTagNotEmpty)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:996(GenerateCombinedFilesMappingsCacheTableName)
-        1    0.000    0.000    0.000    0.000 {method 'lower' of 'unicode' objects}
-        1    0.000    0.000    0.000    0.000 HydrusData.py:1789(ToTuple)
-        3    0.000    0.000    0.000    0.000 _core.py:4972(SetEventType)
-        2    0.000    0.000    0.000    0.000 {method 'intersection' of 'set' objects}
-        1    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
-        3    0.000    0.000    0.000    0.000 _core.py:8403(PostEvent)
-        2    0.000    0.000    0.000    0.000 {isinstance}
-        2    0.000    0.000    0.000    0.000 {method 'union' of 'set' objects}
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8123(<setcomp>)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8105(<setcomp>)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8264(<setcomp>)
-        2    0.000    0.000    0.000    0.000 ClientDB.py:8121(<genexpr>)
-        3    0.000    0.000    0.000    0.000 {hasattr}
-        1    0.000    0.000    0.000    0.000 HydrusData.py:1883(IsSynchronous)
-        2    0.000    0.000    0.000    0.000 ClientDB.py:8206(<genexpr>)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8102(<setcomp>)
-        2    0.000    0.000    0.000    0.000 ClientDB.py:8256(<genexpr>)
-        2    0.000    0.000    0.000    0.000 ClientDB.py:8120(<genexpr>)
-        2    0.000    0.000    0.000    0.000 {built-in method from_iterable}
-        2    0.000    0.000    0.000    0.000 ClientDB.py:1504(<genexpr>)
-        1    0.000    0.000    0.000    0.000 HydrusData.py:1858(GetCallableTuple)
-        2    0.000    0.000    0.000    0.000 ClientData.py:1338(GetServiceType)
-        1    0.000    0.000    0.000    0.000 threading.py:64(_note)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8255(<genexpr>)
-        2    0.000    0.000    0.000    0.000 ClientDB.py:1506(<genexpr>)
-        1    0.000    0.000    0.000    0.000 HydrusData.py:1881(GetType)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8112(<setcomp>)
-        1    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
-        3    0.000    0.000    0.000    0.000 {callable}
-        1    0.000    0.000    0.000    0.000 {method '__enter__' of 'thread.lock' objects}
-        2    0.000    0.000    0.000    0.000 ClientDB.py:1502(<genexpr>)
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8109(<setcomp>)
-        1    0.000    0.000    0.000    0.000 {method 'acquire' of 'thread.lock' objects}
-        1    0.000    0.000    0.000    0.000 ClientDB.py:8208(<setcomp>)
-        2    0.000    0.000    0.000    0.000 collections.py:479(__missing__)
-        1    0.000    0.000    0.000    0.000 {method 'release' of 'thread.lock' objects}
-        1    0.000    0.000    0.000    0.000 {method '__exit__' of 'thread.lock' objects}
+     4389    0.180    0.000    0.192    0.000 {method 'executemany' of 'sqlite3.Cursor' objects}
+     7256    0.169    0.000    0.169    0.000 {method 'execute' of 'sqlite3.Cursor' objects}
+     1067    0.044    0.000    0.044    0.000 HydrusDB.py:804(<setcomp>)
+    19288    0.011    0.000    0.011    0.000 {method 'format' of 'str' objects}
+        5    0.006    0.001    0.419    0.084 ClientDB.py:19128(_UpdateMappings)
+     2534    0.006    0.000    0.009    0.000 HydrusDB.py:1165(__init__)
+    37320    0.005    0.000    0.005    0.000 HydrusDB.py:1186(<genexpr>)
+     1060    0.005    0.000    0.065    0.000 ClientDB.py:7126(_GetAutocompleteCounts)
+     2534    0.004    0.000    0.032    0.000 HydrusDB.py:1191(__exit__)
+      530    0.004    0.000    0.124    0.000 ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+      818    0.004    0.000    0.005    0.000 HydrusData.py:1319(SplitIteratorIntoChunks)
+     2534    0.004    0.000    0.083    0.000 HydrusDB.py:1179(__enter__)
+      528    0.003    0.000    0.241    0.000 ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+     1060    0.003    0.000    0.003    0.000 {method 'fetchall' of 'sqlite3.Cursor' objects}
+     1060    0.003    0.000    0.068    0.000 ClientDB.py:7253(_GetAutocompleteCurrentPendingPositiveCountsAndWeights)
+      230    0.003    0.000    0.003    0.000 HydrusDB.py:797(<listcomp>)
+      528    0.003    0.000    0.074    0.000 ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+      225    0.002    0.000    0.020    0.000 ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+      225    0.002    0.000    0.031    0.000 ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+    14348    0.002    0.000    0.002    0.000 ClientDB.py:19189(<genexpr>)
+     2534    0.002    0.000    0.003    0.000 HydrusDB.py:1134(GetName)
+    14348    0.002    0.000    0.002    0.000 ClientDB.py:19197(<genexpr>)
+    14348    0.002    0.000    0.002    0.000 ClientDB.py:19193(<genexpr>)
+        1    0.002    0.002    0.506    0.506 ClientDB.py:14428(_ProcessRepositoryContent)
+     1060    0.002    0.000    0.035    0.000 ClientDB.py:1214(_CacheCombinedFilesMappingsGetAutocompleteCounts)
+      225    0.001    0.000    0.019    0.000 ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+    22166    0.001    0.000    0.001    0.000 {built-in method builtins.len}
+      530    0.001    0.000    0.125    0.000 ClientDB.py:11727(_GetWithAndWithoutTagsForFilesFileCount)
+     5068    0.001    0.000    0.001    0.000 HydrusDB.py:1115(instance)
+     2534    0.001    0.000    0.002    0.000 HydrusDB.py:1158(ReleaseName)
+     1932    0.001    0.000    0.001    0.000 {method 'fetchone' of 'sqlite3.Cursor' objects}
+        5    0.001    0.000    0.026    0.005 ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+     1070    0.001    0.000    0.002    0.000 ClientDB.py:241(GenerateCombinedFilesMappingsACCacheTableName)
+      528    0.001    0.000    0.019    0.000 ClientDB.py:3468(_CacheTagParentsIsChained)
+        5    0.001    0.000    0.001    0.000 ClientDB.py:19153(<setcomp>)
+     1056    0.001    0.000    0.002    0.000 ClientDB.py:272(GenerateRepositoryMasterCacheTableNames)
+     8843    0.001    0.000    0.001    0.000 ClientDB.py:19169(<genexpr>)
+      530    0.001    0.000    0.002    0.000 ClientDB.py:11165(_GetFastestStorageMappingTableNames)
+      186    0.001    0.000    0.001    0.000 HydrusData.py:38(BuildKeyToSetDict)
+    14878    0.001    0.000    0.001    0.000 {method 'append' of 'list' objects}
+      528    0.001    0.000    0.004    0.000 ClientDB.py:1317(_CacheRepositoryNormaliseServiceTagId)
+      250    0.001    0.000    0.001    0.000 {method 'difference' of 'set' objects}
+      978    0.001    0.000    0.003    0.000 ClientDB.py:334(GenerateTagParentsLookupCacheTableName)
+      535    0.001    0.000    0.002    0.000 ClientDB.py:258(GenerateMappingsTableNames)
+     1067    0.001    0.000    0.044    0.000 HydrusDB.py:800(_STS)
+      225    0.001    0.000    0.009    0.000 ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+     1584    0.001    0.000    0.001    0.000 HydrusDB.py:481(_GetRowCount)
+     2538    0.001    0.000    0.001    0.000 {built-in method builtins.isinstance}
+      835    0.001    0.000    0.002    0.000 ClientDB.py:354(GenerateTagSiblingsLookupCacheTableName)
+      528    0.001    0.000    0.031    0.000 ClientDB.py:2693(_CacheTagDisplayIsChained)
+      385    0.001    0.000    0.011    0.000 ClientDB.py:3940(_CacheTagSiblingsIsChained)
+      230    0.001    0.000    0.008    0.000 ClientDB.py:10986(_GetServiceIds)
+      225    0.001    0.000    0.001    0.000 {built-in method builtins.sorted}
+      978    0.001    0.000    0.002    0.000 ClientDB.py:347(GenerateTagParentsLookupCacheTableNames)
+      530    0.001    0.000    0.001    0.000 ClientDB.py:194(DoingAFileJoinTagSearchIsFaster)
+      225    0.000    0.000    0.011    0.000 ClientDB.py:2473(_CacheTagDisplayGetImplies)
+     1150    0.000    0.000    0.000    0.000 HydrusData.py:1317(<genexpr>)
+      835    0.000    0.000    0.001    0.000 ClientDB.py:367(GenerateTagSiblingsLookupCacheTableNames)
+      230    0.000    0.000    0.001    0.000 {method 'join' of 'str' objects}
+      225    0.000    0.000    0.005    0.000 ClientDB.py:3293(_CacheTagParentsGetAncestors)
+      230    0.000    0.000    0.001    0.000 HydrusData.py:1315(SplayListForDB)
+      225    0.000    0.000    0.005    0.000 ClientDB.py:3733(_CacheTagSiblingsGetIdeal)
+     2534    0.000    0.000    0.000    0.000 {method 'append' of 'collections.deque' objects}
+     2534    0.000    0.000    0.000    0.000 {method 'pop' of 'collections.deque' objects}
+      720    0.000    0.000    0.000    0.000 {method 'update' of 'set' objects}
+     3194    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+      185    0.000    0.000    0.005    0.000 ClientDB.py:3365(_CacheTagParentsGetDescendants)
+        1    0.000    0.000    0.506    0.506 ClientDB.py:19646(_Write)
+     2500    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+      225    0.000    0.000    0.000    0.000 HydrusData.py:30(BuildKeyToListDict)
+        6    0.000    0.000    0.006    0.001 HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+     1215    0.000    0.000    0.000    0.000 ClientDB.py:11822(<genexpr>)
+      528    0.000    0.000    0.005    0.000 HydrusData.py:1300(SmoothOutMappingIterator)
+      230    0.000    0.000    0.003    0.000 HydrusDB.py:793(_STL)
+       79    0.000    0.000    0.002    0.000 ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)
+      907    0.000    0.000    0.000    0.000 ClientDB.py:2594(<genexpr>)
+       15    0.000    0.000    0.000    0.000 {method 'union' of 'set' objects}
+      505    0.000    0.000    0.000    0.000 {built-in method from_iterable}
+      533    0.000    0.000    0.000    0.000 ClientDB.py:2228(<genexpr>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19150(<setcomp>)
+      265    0.000    0.000    0.000    0.000 {method 'discard' of 'set' objects}
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+      225    0.000    0.000    0.000    0.000 {method 'values' of 'dict' objects}
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1983(_CacheSpecificMappingsAddMappings)
+       30    0.000    0.000    0.000    0.000 ClientDB.py:1493(_CacheSpecificDisplayMappingsAddMappings)
+       10    0.000    0.000    0.000    0.000 __init__.py:550(__init__)
+        1    0.000    0.000    0.507    0.507 {built-in method builtins.exec}
+      590    0.000    0.000    0.000    0.000 __init__.py:570(__missing__)
+       90    0.000    0.000    0.000    0.000 ClientDB.py:295(GenerateSpecificACCacheTableName)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:2274(_CacheSpecificMappingsRescindPendingMappings)
+       60    0.000    0.000    0.000    0.000 ClientDB.py:322(GenerateSpecificMappingsCacheTableNames)
+      225    0.000    0.000    0.000    0.000 ClientDB.py:12070(<genexpr>)
+        2    0.000    0.000    0.000    0.000 ClientController.py:1284(pub)
+      300    0.000    0.000    0.000    0.000 ClientDB.py:19168(<genexpr>)
+        1    0.000    0.000    0.507    0.507 HydrusDB.py:652(_ProcessJob)
+        5    0.000    0.000    0.001    0.000 ClientDB.py:1222(_CacheCombinedFilesMappingsUpdate)
+       90    0.000    0.000    0.000    0.000 ClientDB.py:419(IterateMappings)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19152(<listcomp>)
+        4    0.000    0.000    0.000    0.000 ClientThreading.py:74(_CheckCancelTests)
+        4    0.000    0.000    0.000    0.000 HydrusThreading.py:72(IsThreadShuttingDown)
+        2    0.000    0.000    0.000    0.000 HydrusPubSub.py:163(pub)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:2301(_CacheTagDisplayFilterChained)
+       30    0.000    0.000    0.000    0.000 ClientDB.py:287(GenerateSpecificFilesTableName)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:413(__init__)
+        4    0.000    0.000    0.000    0.000 HydrusThreading.py:42(GetThreadInfo)
+        3    0.000    0.000    0.000    0.000 threading.py:335(notify)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1816(GetCallableTuple)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1142(<listcomp>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19301(<genexpr>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19302(<genexpr>)
+        8    0.000    0.000    0.000    0.000 threading.py:1225(current_thread)
+       23    0.000    0.000    0.000    0.000 HydrusData.py:620(GetNowPrecise)
+        5    0.000    0.000    0.000    0.000 HydrusData.py:612(GetNow)
+       30    0.000    0.000    0.000    0.000 ClientDB.py:312(GenerateSpecificDisplayMappingsCacheTableNames)
+       10    0.000    0.000    0.000    0.000 __init__.py:619(update)
+        9    0.000    0.000    0.000    0.000 HydrusData.py:1447(TimeHasPassedPrecise)
+        2    0.000    0.000    0.000    0.000 {built-in method postEvent}
+        3    0.000    0.000    0.000    0.000 threading.py:513(set)
+        2    0.000    0.000    0.000    0.000 ClientController.py:64(__init__)
+       23    0.000    0.000    0.000    0.000 {built-in method time.perf_counter}
+        5    0.000    0.000    0.000    0.000 HydrusData.py:1434(TimeHasPassed)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:10972(_GetServiceId)
+        4    0.000    0.000    0.000    0.000 ClientThreading.py:259(IsCancelled)
+       10    0.000    0.000    0.000    0.000 {method 'intersection' of 'set' objects}
+        4    0.000    0.000    0.000    0.000 HydrusController.py:662(ShouldStopThisWork)
+        3    0.000    0.000    0.000    0.000 threading.py:358(notify_all)
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+        2    0.000    0.000    0.000    0.000 HydrusController.py:242(pub)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:3225(_CacheTagParentsFilterChained)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:5041(_DoAfterJobWork)
+        5    0.000    0.000    0.000    0.000 {built-in method time.time}
+        3    0.000    0.000    0.000    0.000 threading.py:243(__exit__)
+        3    0.000    0.000    0.000    0.000 threading.py:240(__enter__)
+        2    0.000    0.000    0.000    0.000 ClientDB.py:19738(publish_status_update)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1861(PutResult)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:3618(_CacheTagSiblingsFilterChained)
+       12    0.000    0.000    0.000    0.000 threading.py:507(is_set)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1145(<genexpr>)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:4124(_CleanAfterJobWork)
+        4    0.000    0.000    0.000    0.000 {built-in method instance}
+        3    0.000    0.000    0.000    0.000 threading.py:255(_is_owned)
+        1    0.000    0.000    0.000    0.000 {method 'release' of '_thread.lock' objects}
+        4    0.000    0.000    0.000    0.000 HydrusController.py:410(DoingFastExit)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1138(<listcomp>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1149(<genexpr>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1147(<genexpr>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1226(<genexpr>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19159(<listcomp>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19160(<setcomp>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19304(<listcomp>)
+        1    0.000    0.000    0.000    0.000 HydrusDB.py:774(_Save)
+        3    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.lock' objects}
+        3    0.000    0.000    0.000    0.000 {method '__enter__' of '_thread.lock' objects}
+        8    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1230(<genexpr>)
+        1    0.000    0.000    0.507    0.507 <string>:1(<module>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:19157(<setcomp>)
+        1    0.000    0.000    0.000    0.000 HydrusDB.py:350(_CleanAfterJobWork)
+        1    0.000    0.000    0.000    0.000 HydrusDB.py:439(_DoAfterJobWork)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1851(GetType)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1856(IsSynchronous)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1143(<setcomp>)
+        5    0.000    0.000    0.000    0.000 ClientDB.py:1228(<genexpr>)
+        1    0.000    0.000    0.000    0.000 {method 'remove' of 'collections.deque' objects}
+        3    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.lock' objects}
         1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
 
 
+Callers
 
-2016/09/18 13:47:09: Callers
+
+
    Ordered by: internal time
 
-Function                                                      was called by...
-                                                                  ncalls  tottime  cumtime
-{method 'execute' of 'sqlite3.Cursor' objects}                <-       4    0.000    0.000  ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)
-                                                                       2    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-                                                                       1    0.000    0.000  ClientDB.py:2970(_GetHashIds)
-                                                                       2    0.000    0.000  ClientDB.py:4058(_GetNamespaceIdTagId)
-                                                                       1    0.000    0.000  ClientDB.py:4607(_GetServiceId)
-                                                                       2    0.000    0.000  ClientDB.py:4621(_GetServiceIds)
-                                                                      11    0.001    0.001  ClientDB.py:8072(_UpdateMappings)
-                                                                       2    0.162    0.162  HydrusDB.py:451(_ProcessJob)
-{method 'executemany' of 'sqlite3.Cursor' objects}            <-       3    0.000    0.000  ClientDB.py:1498(_CacheCombinedFilesMappingsUpdate)
-                                                                       1    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-                                                                       5    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8072(_UpdateMappings)                             <-       1    0.000    0.001  ClientDB.py:5519(_ProcessContentUpdates)
-ClientDB.py:5519(_ProcessContentUpdates)                      <-       1    0.000    0.002  ClientDB.py:8645(_Write)
-HydrusDB.py:451(_ProcessJob)                                  <-       1    0.000    0.164  <string>:1(<module>)
-ClientDB.py:1738(_CacheSpecificMappingsPendMappings)          <-       4    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-{method 'join' of 'str' objects}                              <-       7    0.000    0.000  HydrusData.py:945(SplayListForDB)
-_core.py:16750(CallAfter)                                     <-       3    0.000    0.000  ClientController.py:699(NotifyPubSubs)
-ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)         <-       4    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-{wx._core_.PostEvent}                                         <-       3    0.000    0.000  _core.py:8403(PostEvent)
-ClientDB.py:1014(GenerateSpecificMappingsCacheTableNames)     <-       4    0.000    0.000  ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)
-                                                                       4    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-ClientDB.py:4621(_GetServiceIds)                              <-       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-HydrusTags.py:150(CleanTag)                                   <-       1    0.000    0.000  ClientDB.py:4058(_GetNamespaceIdTagId)
-HydrusData.py:945(SplayListForDB)                             <-       4    0.000    0.000  ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)
-                                                                       2    0.000    0.000  ClientDB.py:4621(_GetServiceIds)
-                                                                       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-HydrusPubSub.py:137(pub)                                      <-       3    0.000    0.000  HydrusController.py:142(pub)
-{method 'sub' of '_sre.SRE_Pattern' objects}                  <-       3    0.000    0.000  re.py:148(sub)
-collections.py:458(__init__)                                  <-       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-threading.py:373(notify)                                      <-       1    0.000    0.000  threading.py:400(notifyAll)
-ClientDB.py:2970(_GetHashIds)                                 <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-_core.py:7583(__init__)                                       <-       3    0.000    0.000  _core.py:16750(CallAfter)
-ClientDB.py:1498(_CacheCombinedFilesMappingsUpdate)           <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-HydrusData.py:945(<genexpr>)                                  <-      16    0.000    0.000  {method 'join' of 'str' objects}
-re.py:230(_compile)                                           <-       1    0.000    0.000  re.py:138(match)
-                                                                       3    0.000    0.000  re.py:148(sub)
-ClientDB.py:4058(_GetNamespaceIdTagId)                        <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-ClientDB.py:4607(_GetServiceId)                               <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-{method 'fetchone' of 'sqlite3.Cursor' objects}               <-       1    0.000    0.000  ClientDB.py:2970(_GetHashIds)
-                                                                       2    0.000    0.000  ClientDB.py:4058(_GetNamespaceIdTagId)
-                                                                       1    0.000    0.000  ClientDB.py:4607(_GetServiceId)
-re.py:148(sub)                                                <-       3    0.000    0.000  HydrusTags.py:150(CleanTag)
-HydrusController.py:142(pub)                                  <-       3    0.000    0.000  HydrusDB.py:451(_ProcessJob)
-{wx._core_.new_PyEvent}                                       <-       3    0.000    0.000  _core.py:7583(__init__)
-ClientController.py:699(NotifyPubSubs)                        <-       3    0.000    0.000  HydrusPubSub.py:137(pub)
-threading.py:285(__enter__)                                   <-       1    0.000    0.000  threading.py:576(set)
-{wx._core_.GetApp}                                            <-       3    0.000    0.000  _core.py:8421(GetApp)
-threading.py:576(set)                                         <-       1    0.000    0.000  HydrusData.py:1885(PutResult)
-ClientDB.py:8645(_Write)                                      <-       1    0.000    0.002  HydrusDB.py:451(_ProcessJob)
-ClientDB.py:4510(_GetService)                                 <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-_core.py:8421(GetApp)                                         <-       3    0.000    0.000  _core.py:16750(CallAfter)
-{len}                                                         <-       4    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-                                                                       1    0.000    0.000  ClientDB.py:2970(_GetHashIds)
-                                                                       6    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-                                                                       9    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-                                                                       2    0.000    0.000  collections.py:458(__init__)
-                                                                       2    0.000    0.000  collections.py:528(update)
-                                                                       1    0.000    0.000  threading.py:400(notifyAll)
-HydrusDB.py:317(_GetRowCount)                                 <-       1    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-                                                                       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-HydrusData.py:1885(PutResult)                                 <-       1    0.000    0.000  HydrusDB.py:451(_ProcessJob)
-{method 'append' of 'list' objects}                           <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-                                                                       3    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-                                                                       3    0.000    0.000  HydrusDB.py:528(pub_after_commit)
-                                                                       3    0.000    0.000  HydrusPubSub.py:137(pub)
-HydrusData.py:1028(ToUnicode)                                 <-       1    0.000    0.000  HydrusTags.py:150(CleanTag)
-threading.py:300(_is_owned)                                   <-       1    0.000    0.000  threading.py:373(notify)
-threading.py:400(notifyAll)                                   <-       1    0.000    0.000  threading.py:576(set)
-{wx._core_.PyEvent__SetSelf}                                  <-       3    0.000    0.000  _core.py:7590(_SetSelf)
-{method 'replace' of 'unicode' objects}                       <-       2    0.000    0.000  HydrusTags.py:150(CleanTag)
-{wx._core_.Event_SetEventType}                                <-       3    0.000    0.000  _core.py:4972(SetEventType)
-collections.py:528(update)                                    <-       2    0.000    0.000  collections.py:458(__init__)
-HydrusDB.py:528(pub_after_commit)                             <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-                                                                       2    0.000    0.000  ClientDB.py:8686(pub_content_updates_after_commit)
-{method 'difference' of 'set' objects}                        <-       5    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:1000(GenerateMappingsTableNames)                  <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8265(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8124(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-{method 'match' of '_sre.SRE_Pattern' objects}                <-       1    0.000    0.000  re.py:138(match)
-re.py:138(match)                                              <-       1    0.000    0.000  HydrusTags.py:150(CleanTag)
-<string>:1(<module>)                                          <-
-_core.py:7590(_SetSelf)                                       <-       3    0.000    0.000  _core.py:7583(__init__)
-{wx._core_.PyEvent_swiginit}                                  <-       3    0.000    0.000  _core.py:7583(__init__)
-ClientDB.py:1748(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-ClientDB.py:8686(pub_content_updates_after_commit)            <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-{method 'update' of 'set' objects}                            <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-threading.py:288(__exit__)                                    <-       1    0.000    0.000  threading.py:576(set)
-{method 'items' of 'dict' objects}                            <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-                                                                       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-HydrusTags.py:135(CheckTagNotEmpty)                           <-       1    0.000    0.000  ClientDB.py:4058(_GetNamespaceIdTagId)
-ClientDB.py:996(GenerateCombinedFilesMappingsCacheTableName)  <-       1    0.000    0.000  ClientDB.py:1498(_CacheCombinedFilesMappingsUpdate)
-{method 'lower' of 'unicode' objects}                         <-       1    0.000    0.000  HydrusTags.py:150(CleanTag)
-HydrusData.py:1789(ToTuple)                                   <-       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-_core.py:4972(SetEventType)                                   <-       3    0.000    0.000  _core.py:16750(CallAfter)
-{method 'intersection' of 'set' objects}                      <-       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-{method 'add' of 'set' objects}                               <-       1    0.000    0.000  ClientDB.py:2970(_GetHashIds)
-_core.py:8403(PostEvent)                                      <-       3    0.000    0.000  _core.py:16750(CallAfter)
-{isinstance}                                                  <-       2    0.000    0.000  HydrusData.py:1028(ToUnicode)
-{method 'union' of 'set' objects}                             <-       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8123(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8105(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8264(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8121(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-{hasattr}                                                     <-       3    0.000    0.000  _core.py:16750(CallAfter)
-HydrusData.py:1883(IsSynchronous)                             <-       1    0.000    0.000  HydrusDB.py:451(_ProcessJob)
-ClientDB.py:8206(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-ClientDB.py:8102(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:8256(<genexpr>)                                   <-       2    0.000    0.000  {method 'update' of 'set' objects}
-ClientDB.py:8120(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-{built-in method from_iterable}                               <-       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:1504(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-HydrusData.py:1858(GetCallableTuple)                          <-       1    0.000    0.000  HydrusDB.py:451(_ProcessJob)
-ClientData.py:1338(GetServiceType)                            <-       1    0.000    0.000  ClientDB.py:4510(_GetService)
-                                                                       1    0.000    0.000  ClientDB.py:5519(_ProcessContentUpdates)
-threading.py:64(_note)                                        <-       1    0.000    0.000  threading.py:373(notify)
-ClientDB.py:8255(<genexpr>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-ClientDB.py:1506(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-HydrusData.py:1881(GetType)                                   <-       1    0.000    0.000  HydrusDB.py:451(_ProcessJob)
-ClientDB.py:8112(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-{method 'remove' of 'list' objects}                           <-       1    0.000    0.000  threading.py:373(notify)
-{callable}                                                    <-       3    0.000    0.000  _core.py:16750(CallAfter)
-{method '__enter__' of 'thread.lock' objects}                 <-       1    0.000    0.000  threading.py:285(__enter__)
-ClientDB.py:1502(<genexpr>)                                   <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-ClientDB.py:8109(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-{method 'acquire' of 'thread.lock' objects}                   <-       1    0.000    0.000  threading.py:300(_is_owned)
-ClientDB.py:8208(<setcomp>)                                   <-       1    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-collections.py:479(__missing__)                               <-       2    0.000    0.000  ClientDB.py:8072(_UpdateMappings)
-{method 'release' of 'thread.lock' objects}                   <-       1    0.000    0.000  threading.py:373(notify)
-{method '__exit__' of 'thread.lock' objects}                  <-       1    0.000    0.000  threading.py:288(__exit__)
-{method 'disable' of '_lsprof.Profiler' objects}              <-
-
-
-
-2016/09/18 13:47:09: Callees
-   Ordered by: internal time
-
-Function                                                      called...
-                                                                  ncalls  tottime  cumtime
-{method 'execute' of 'sqlite3.Cursor' objects}                ->
-{method 'executemany' of 'sqlite3.Cursor' objects}            ->       2    0.000    0.000  ClientDB.py:1502(<genexpr>)
-                                                                       2    0.000    0.000  ClientDB.py:1504(<genexpr>)
-                                                                       2    0.000    0.000  ClientDB.py:1506(<genexpr>)
-                                                                       2    0.000    0.000  ClientDB.py:1748(<genexpr>)
-                                                                       2    0.000    0.000  ClientDB.py:8120(<genexpr>)
-                                                                       2    0.000    0.000  ClientDB.py:8121(<genexpr>)
-                                                                       2    0.000    0.000  ClientDB.py:8206(<genexpr>)
-ClientDB.py:8072(_UpdateMappings)                             ->       1    0.000    0.000  ClientDB.py:1000(GenerateMappingsTableNames)
-                                                                       1    0.000    0.000  ClientDB.py:1498(_CacheCombinedFilesMappingsUpdate)
-                                                                       4    0.000    0.000  ClientDB.py:1738(_CacheSpecificMappingsPendMappings)
-                                                                       2    0.000    0.000  ClientDB.py:4621(_GetServiceIds)
-                                                                       1    0.000    0.000  ClientDB.py:8102(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8105(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8109(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8112(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8123(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8124(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8208(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8255(<genexpr>)
-                                                                       1    0.000    0.000  ClientDB.py:8264(<setcomp>)
-                                                                       1    0.000    0.000  ClientDB.py:8265(<setcomp>)
-                                                                       1    0.000    0.000  HydrusDB.py:317(_GetRowCount)
-                                                                       1    0.000    0.000  HydrusData.py:945(SplayListForDB)
-                                                                       2    0.000    0.000  collections.py:458(__init__)
-                                                                       2    0.000    0.000  collections.py:479(__missing__)
-                                                                       2    0.000    0.000  {built-in method from_iterable}
-                                                                       9    0.000    0.000  {len}
-                                                                       3    0.000    0.000  {method 'append' of 'list' objects}
-                                                                       5    0.000    0.000  {method 'difference' of 'set' objects}
-                                                                      11    0.001    0.001  {method 'execute' of 'sqlite3.Cursor' objects}
-                                                                       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-                                                                       2    0.000    0.000  {method 'intersection' of 'set' objects}
-                                                                       2    0.000    0.000  {method 'items' of 'dict' objects}
-                                                                       2    0.000    0.000  {method 'union' of 'set' objects}
-                                                                       1    0.000    0.000  {method 'update' of 'set' objects}
-ClientDB.py:5519(_ProcessContentUpdates)                      ->       1    0.000    0.000  ClientDB.py:2970(_GetHashIds)
-                                                                       1    0.000    0.000  ClientDB.py:4058(_GetNamespaceIdTagId)
-                                                                       1    0.000    0.000  ClientDB.py:4510(_GetService)
-                                                                       1    0.000    0.000  ClientDB.py:4607(_GetServiceId)
-                                                                       1    0.000    0.001  ClientDB.py:8072(_UpdateMappings)
-                                                                       1    0.000    0.000  ClientDB.py:8686(pub_content_updates_after_commit)
-                                                                       1    0.000    0.000  ClientData.py:1338(GetServiceType)
-                                                                       1    0.000    0.000  HydrusDB.py:528(pub_after_commit)
-                                                                       1    0.000    0.000  HydrusData.py:1789(ToTuple)
-                                                                       6    0.000    0.000  {len}
-                                                                       1    0.000    0.000  {method 'append' of 'list' objects}
-                                                                       1    0.000    0.000  {method 'items' of 'dict' objects}
-HydrusDB.py:451(_ProcessJob)                                  ->       1    0.000    0.002  ClientDB.py:8645(_Write)
-                                                                       3    0.000    0.000  HydrusController.py:142(pub)
-                                                                       1    0.000    0.000  HydrusData.py:1858(GetCallableTuple)
-                                                                       1    0.000    0.000  HydrusData.py:1881(GetType)
-                                                                       1    0.000    0.000  HydrusData.py:1883(IsSynchronous)
-                                                                       1    0.000    0.000  HydrusData.py:1885(PutResult)
-                                                                       2    0.162    0.162  {method 'execute' of 'sqlite3.Cursor' objects}
-ClientDB.py:1738(_CacheSpecificMappingsPendMappings)          ->       4    0.000    0.000  ClientDB.py:1014(GenerateSpecificMappingsCacheTableNames)
-                                                                       4    0.000    0.000  ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)
-                                                                       1    0.000    0.000  HydrusDB.py:317(_GetRowCount)
-                                                                       4    0.000    0.000  {len}
-                                                                       2    0.000    0.000  {method 'execute' of 'sqlite3.Cursor' objects}
-                                                                       1    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-{method 'join' of 'str' objects}                              ->      16    0.000    0.000  HydrusData.py:945(<genexpr>)
-_core.py:16750(CallAfter)                                     ->       3    0.000    0.000  _core.py:4972(SetEventType)
-                                                                       3    0.000    0.000  _core.py:7583(__init__)
-                                                                       3    0.000    0.000  _core.py:8403(PostEvent)
-                                                                       3    0.000    0.000  _core.py:8421(GetApp)
-                                                                       3    0.000    0.000  {callable}
-                                                                       3    0.000    0.000  {hasattr}
-ClientDB.py:1695(_CacheSpecificMappingsFilterHashIds)         ->       4    0.000    0.000  ClientDB.py:1014(GenerateSpecificMappingsCacheTableNames)
-                                                                       4    0.000    0.000  HydrusData.py:945(SplayListForDB)
-                                                                       4    0.000    0.000  {method 'execute' of 'sqlite3.Cursor' objects}
-{wx._core_.PostEvent}                                         ->
-ClientDB.py:1014(GenerateSpecificMappingsCacheTableNames)     ->
-ClientDB.py:4621(_GetServiceIds)                              ->       2    0.000    0.000  HydrusData.py:945(SplayListForDB)
-                                                                       2    0.000    0.000  {method 'execute' of 'sqlite3.Cursor' objects}
-HydrusTags.py:150(CleanTag)                                   ->       1    0.000    0.000  HydrusData.py:1028(ToUnicode)
-                                                                       1    0.000    0.000  re.py:138(match)
-                                                                       3    0.000    0.000  re.py:148(sub)
-                                                                       1    0.000    0.000  {method 'lower' of 'unicode' objects}
-                                                                       2    0.000    0.000  {method 'replace' of 'unicode' objects}
-HydrusData.py:945(SplayListForDB)                             ->       7    0.000    0.000  {method 'join' of 'str' objects}
-HydrusPubSub.py:137(pub)                                      ->       3    0.000    0.000  ClientController.py:699(NotifyPubSubs)
-                                                                       3    0.000    0.000  {method 'append' of 'list' objects}
-{method 'sub' of '_sre.SRE_Pattern' objects}                  ->
-collections.py:458(__init__)                                  ->       2    0.000    0.000  collections.py:528(update)
-                                                                       2    0.000    0.000  {len}
-threading.py:373(notify)                                      ->       1    0.000    0.000  threading.py:64(_note)
-                                                                       1    0.000    0.000  threading.py:300(_is_owned)
-                                                                       1    0.000    0.000  {method 'release' of 'thread.lock' objects}
-                                                                       1    0.000    0.000  {method 'remove' of 'list' objects}
-ClientDB.py:2970(_GetHashIds)                                 ->       1    0.000    0.000  {len}
-                                                                       1    0.000    0.000  {method 'add' of 'set' objects}
-                                                                       1    0.000    0.000  {method 'execute' of 'sqlite3.Cursor' objects}
-                                                                       1    0.000    0.000  {method 'fetchone' of 'sqlite3.Cursor' objects}
-_core.py:7583(__init__)                                       ->       3    0.000    0.000  _core.py:7590(_SetSelf)
-                                                                       3    0.000    0.000  {wx._core_.PyEvent_swiginit}
-                                                                       3    0.000    0.000  {wx._core_.new_PyEvent}
-ClientDB.py:1498(_CacheCombinedFilesMappingsUpdate)           ->       1    0.000    0.000  ClientDB.py:996(GenerateCombinedFilesMappingsCacheTableName)
-                                                                       3    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
-HydrusData.py:945(<genexpr>)                                  ->
-re.py:230(_compile)                                           ->
-ClientDB.py:4058(_GetNamespaceIdTagId)                        ->       1    0.000    0.000  HydrusTags.py:135(CheckTagNotEmpty)
-                                                                       1    0.000    0.000  HydrusTags.py:150(CleanTag)
-                                                                       2    0.000    0.000  {method 'execute' of 'sqlite3.Cursor' objects}
-                                                                       2    0.000    0.000  {method 'fetchone' of 'sqlite3.Cursor' objects}
-ClientDB.py:4607(_GetServiceId)                               ->       1    0.000    0.000  {method 'execute' of 'sqlite3.Cursor' objects}
-                                                                       1    0.000    0.000  {method 'fetchone' of 'sqlite3.Cursor' objects}
-{method 'fetchone' of 'sqlite3.Cursor' objects}               ->
-re.py:148(sub)                                                ->       3    0.000    0.000  re.py:230(_compile)
-                                                                       3    0.000    0.000  {method 'sub' of '_sre.SRE_Pattern' objects}
-HydrusController.py:142(pub)                                  ->       3    0.000    0.000  HydrusPubSub.py:137(pub)
-{wx._core_.new_PyEvent}                                       ->
-ClientController.py:699(NotifyPubSubs)                        ->       3    0.000    0.000  _core.py:16750(CallAfter)
-threading.py:285(__enter__)                                   ->       1    0.000    0.000  {method '__enter__' of 'thread.lock' objects}
-{wx._core_.GetApp}                                            ->
-threading.py:576(set)                                         ->       1    0.000    0.000  threading.py:285(__enter__)
-                                                                       1    0.000    0.000  threading.py:288(__exit__)
-                                                                       1    0.000    0.000  threading.py:400(notifyAll)
-ClientDB.py:8645(_Write)                                      ->       1    0.000    0.002  ClientDB.py:5519(_ProcessContentUpdates)
-ClientDB.py:4510(_GetService)                                 ->       1    0.000    0.000  ClientData.py:1338(GetServiceType)
-_core.py:8421(GetApp)                                         ->       3    0.000    0.000  {wx._core_.GetApp}
-{len}                                                         ->
-HydrusDB.py:317(_GetRowCount)                                 ->
-HydrusData.py:1885(PutResult)                                 ->       1    0.000    0.000  threading.py:576(set)
-{method 'append' of 'list' objects}                           ->
-HydrusData.py:1028(ToUnicode)                                 ->       2    0.000    0.000  {isinstance}
-threading.py:300(_is_owned)                                   ->       1    0.000    0.000  {method 'acquire' of 'thread.lock' objects}
-threading.py:400(notifyAll)                                   ->       1    0.000    0.000  threading.py:373(notify)
-                                                                       1    0.000    0.000  {len}
-{wx._core_.PyEvent__SetSelf}                                  ->
-{method 'replace' of 'unicode' objects}                       ->
-{wx._core_.Event_SetEventType}                                ->
-collections.py:528(update)                                    ->       2    0.000    0.000  {len}
-HydrusDB.py:528(pub_after_commit)                             ->       3    0.000    0.000  {method 'append' of 'list' objects}
-{method 'difference' of 'set' objects}                        ->
-ClientDB.py:1000(GenerateMappingsTableNames)                  ->
-ClientDB.py:8265(<setcomp>)                                   ->
-ClientDB.py:8124(<setcomp>)                                   ->
-{method 'match' of '_sre.SRE_Pattern' objects}                ->
-re.py:138(match)                                              ->       1    0.000    0.000  re.py:230(_compile)
-                                                                       1    0.000    0.000  {method 'match' of '_sre.SRE_Pattern' objects}
-<string>:1(<module>)                                          ->       1    0.000    0.164  HydrusDB.py:451(_ProcessJob)
-_core.py:7590(_SetSelf)                                       ->       3    0.000    0.000  {wx._core_.PyEvent__SetSelf}
-{wx._core_.PyEvent_swiginit}                                  ->
-ClientDB.py:1748(<genexpr>)                                   ->
-ClientDB.py:8686(pub_content_updates_after_commit)            ->       2    0.000    0.000  HydrusDB.py:528(pub_after_commit)
-{method 'update' of 'set' objects}                            ->       2    0.000    0.000  ClientDB.py:8256(<genexpr>)
-threading.py:288(__exit__)                                    ->       1    0.000    0.000  {method '__exit__' of 'thread.lock' objects}
-{method 'items' of 'dict' objects}                            ->
-HydrusTags.py:135(CheckTagNotEmpty)                           ->
-ClientDB.py:996(GenerateCombinedFilesMappingsCacheTableName)  ->
-{method 'lower' of 'unicode' objects}                         ->
-HydrusData.py:1789(ToTuple)                                   ->
-_core.py:4972(SetEventType)                                   ->       3    0.000    0.000  {wx._core_.Event_SetEventType}
-{method 'intersection' of 'set' objects}                      ->
-{method 'add' of 'set' objects}                               ->
-_core.py:8403(PostEvent)                                      ->       3    0.000    0.000  {wx._core_.PostEvent}
-{isinstance}                                                  ->
-{method 'union' of 'set' objects}                             ->
-ClientDB.py:8123(<setcomp>)                                   ->
-ClientDB.py:8105(<setcomp>)                                   ->
-ClientDB.py:8264(<setcomp>)                                   ->
-ClientDB.py:8121(<genexpr>)                                   ->
-{hasattr}                                                     ->
-HydrusData.py:1883(IsSynchronous)                             ->
-ClientDB.py:8206(<genexpr>)                                   ->
-ClientDB.py:8102(<setcomp>)                                   ->
-ClientDB.py:8256(<genexpr>)                                   ->
-ClientDB.py:8120(<genexpr>)                                   ->
-{built-in method from_iterable}                               ->
-ClientDB.py:1504(<genexpr>)                                   ->
-HydrusData.py:1858(GetCallableTuple)                          ->
-ClientData.py:1338(GetServiceType)                            ->
-threading.py:64(_note)                                        ->
-ClientDB.py:8255(<genexpr>)                                   ->
-ClientDB.py:1506(<genexpr>)                                   ->
-HydrusData.py:1881(GetType)                                   ->
-ClientDB.py:8112(<setcomp>)                                   ->
-{method 'remove' of 'list' objects}                           ->
-{callable}                                                    ->
-{method '__enter__' of 'thread.lock' objects}                 ->
-ClientDB.py:1502(<genexpr>)                                   ->
-ClientDB.py:8109(<setcomp>)                                   ->
-{method 'acquire' of 'thread.lock' objects}                   ->
-ClientDB.py:8208(<setcomp>)                                   ->
-collections.py:479(__missing__)                               ->
-{method 'release' of 'thread.lock' objects}                   ->
-{method '__exit__' of 'thread.lock' objects}                  ->
-{method 'disable' of '_lsprof.Profiler' objects}              ->
+Function                                                                  was called by...
+                                                                              ncalls  tottime  cumtime
+{method 'executemany' of 'sqlite3.Cursor' objects}                        <-      15    0.000    0.000  ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+                                                                                  15    0.000    0.000  ClientDB.py:1222(_CacheCombinedFilesMappingsUpdate)
+                                                                                 231    0.002    0.002  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+                                                                                1594    0.105    0.111  ClientDB.py:19128(_UpdateMappings)
+                                                                                2534    0.073    0.078  HydrusDB.py:1179(__enter__)
+{method 'execute' of 'sqlite3.Cursor' objects}                            <-    1060    0.028    0.028  ClientDB.py:1214(_CacheCombinedFilesMappingsGetAutocompleteCounts)
+                                                                                 528    0.011    0.011  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                 528    0.002    0.002  ClientDB.py:1317(_CacheRepositoryNormaliseServiceTagId)
+                                                                                  30    0.009    0.009  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                 225    0.004    0.004  ClientDB.py:3293(_CacheTagParentsGetAncestors)
+                                                                                 185    0.003    0.003  ClientDB.py:3365(_CacheTagParentsGetDescendants)
+                                                                                  40    0.001    0.001  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 528    0.016    0.016  ClientDB.py:3468(_CacheTagParentsIsChained)
+                                                                                  79    0.001    0.001  ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)
+                                                                                 225    0.004    0.004  ClientDB.py:3733(_CacheTagSiblingsGetIdeal)
+                                                                                 146    0.004    0.004  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                 385    0.009    0.009  ClientDB.py:3940(_CacheTagSiblingsIsChained)
+                                                                                   1    0.000    0.000  ClientDB.py:10972(_GetServiceId)
+                                                                                 230    0.003    0.003  ClientDB.py:10986(_GetServiceIds)
+                                                                                 265    0.036    0.036  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+                                                                                 225    0.008    0.008  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+                                                                                  40    0.003    0.003  ClientDB.py:19128(_UpdateMappings)
+                                                                                   2    0.000    0.000  HydrusDB.py:774(_Save)
+                                                                                2534    0.024    0.024  HydrusDB.py:1191(__exit__)
+HydrusDB.py:804(<setcomp>)                                                <-    1067    0.044    0.044  HydrusDB.py:800(_STS)
+{method 'format' of 'str' objects}                                        <-    1070    0.001    0.001  ClientDB.py:241(GenerateCombinedFilesMappingsACCacheTableName)
+                                                                                2140    0.001    0.001  ClientDB.py:258(GenerateMappingsTableNames)
+                                                                                2112    0.001    0.001  ClientDB.py:272(GenerateRepositoryMasterCacheTableNames)
+                                                                                  60    0.000    0.000  ClientDB.py:287(GenerateSpecificFilesTableName)
+                                                                                 180    0.000    0.000  ClientDB.py:295(GenerateSpecificACCacheTableName)
+                                                                                  90    0.000    0.000  ClientDB.py:312(GenerateSpecificDisplayMappingsCacheTableNames)
+                                                                                 240    0.000    0.000  ClientDB.py:322(GenerateSpecificMappingsCacheTableNames)
+                                                                                1956    0.001    0.001  ClientDB.py:347(GenerateTagParentsLookupCacheTableNames)
+                                                                                1670    0.001    0.001  ClientDB.py:367(GenerateTagSiblingsLookupCacheTableNames)
+                                                                                1060    0.001    0.001  ClientDB.py:1214(_CacheCombinedFilesMappingsGetAutocompleteCounts)
+                                                                                 528    0.000    0.000  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                  30    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                 225    0.000    0.000  ClientDB.py:3293(_CacheTagParentsGetAncestors)
+                                                                                 185    0.000    0.000  ClientDB.py:3365(_CacheTagParentsGetDescendants)
+                                                                                  40    0.000    0.000  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 528    0.000    0.000  ClientDB.py:3468(_CacheTagParentsIsChained)
+                                                                                  79    0.000    0.000  ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)
+                                                                                 225    0.000    0.000  ClientDB.py:3733(_CacheTagSiblingsGetIdeal)
+                                                                                 146    0.000    0.000  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                 385    0.000    0.000  ClientDB.py:3940(_CacheTagSiblingsIsChained)
+                                                                                1026    0.001    0.001  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+                                                                                 225    0.000    0.000  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+                                                                                  20    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+                                                                                2534    0.002    0.002  HydrusDB.py:1179(__enter__)
+                                                                                2534    0.001    0.001  HydrusDB.py:1191(__exit__)
+ClientDB.py:19128(_UpdateMappings)                                        <-       5    0.006    0.419  ClientDB.py:14428(_ProcessRepositoryContent)
+HydrusDB.py:1165(__init__)                                                <-     225    0.001    0.001  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+                                                                                 528    0.002    0.002  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                   5    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                  40    0.000    0.000  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 146    0.000    0.001  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                1060    0.002    0.004  ClientDB.py:7126(_GetAutocompleteCounts)
+                                                                                 530    0.001    0.002  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+HydrusDB.py:1186(<genexpr>)                                               <-   37320    0.005    0.005  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:7126(_GetAutocompleteCounts)                                  <-    1060    0.005    0.065  ClientDB.py:7253(_GetAutocompleteCurrentPendingPositiveCountsAndWeights)
+HydrusDB.py:1191(__exit__)                                                <-     225    0.000    0.001  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+                                                                                 528    0.001    0.006  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                   5    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                  40    0.000    0.001  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 146    0.000    0.006  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                1060    0.002    0.012  ClientDB.py:7126(_GetAutocompleteCounts)
+                                                                                 530    0.001    0.006  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)     <-     530    0.004    0.124  ClientDB.py:11727(_GetWithAndWithoutTagsForFilesFileCount)
+HydrusData.py:1319(SplitIteratorIntoChunks)                               <-     818    0.004    0.005  HydrusData.py:1300(SmoothOutMappingIterator)
+HydrusDB.py:1179(__enter__)                                               <-     225    0.000    0.018  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+                                                                                 528    0.001    0.036  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                   5    0.000    0.015  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                  40    0.000    0.001  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 146    0.000    0.004  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                1060    0.001    0.008  ClientDB.py:7126(_GetAutocompleteCounts)
+                                                                                 530    0.001    0.001  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)   <-     528    0.003    0.241  ClientDB.py:19128(_UpdateMappings)
+{method 'fetchall' of 'sqlite3.Cursor' objects}                           <-    1060    0.003    0.003  ClientDB.py:1214(_CacheCombinedFilesMappingsGetAutocompleteCounts)
+ClientDB.py:7253(_GetAutocompleteCurrentPendingPositiveCountsAndWeights)  <-    1060    0.003    0.068  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+HydrusDB.py:797(<listcomp>)                                               <-     230    0.003    0.003  HydrusDB.py:793(_STL)
+ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)                 <-     528    0.003    0.074  ClientDB.py:14428(_ProcessRepositoryContent)
+ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)                  <-     225    0.002    0.020  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)                      <-     225    0.002    0.031  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+ClientDB.py:19189(<genexpr>)                                              <-   14348    0.002    0.002  {method 'executemany' of 'sqlite3.Cursor' objects}
+HydrusDB.py:1134(GetName)                                                 <-    2534    0.002    0.003  HydrusDB.py:1165(__init__)
+ClientDB.py:19197(<genexpr>)                                              <-   14348    0.002    0.002  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:19193(<genexpr>)                                              <-   14348    0.002    0.002  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:14428(_ProcessRepositoryContent)                              <-       1    0.002    0.506  ClientDB.py:19646(_Write)
+ClientDB.py:1214(_CacheCombinedFilesMappingsGetAutocompleteCounts)        <-    1060    0.002    0.035  ClientDB.py:7126(_GetAutocompleteCounts)
+ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)                      <-     225    0.001    0.019  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+{built-in method builtins.len}                                            <-      90    0.000    0.000  ClientDB.py:419(IterateMappings)
+                                                                                 490    0.000    0.000  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+                                                                                1056    0.000    0.000  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                  30    0.000    0.000  ClientDB.py:1493(_CacheSpecificDisplayMappingsAddMappings)
+                                                                                   5    0.000    0.000  ClientDB.py:1983(_CacheSpecificMappingsAddMappings)
+                                                                                   5    0.000    0.000  ClientDB.py:3225(_CacheTagParentsFilterChained)
+                                                                                 450    0.000    0.000  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                   5    0.000    0.000  ClientDB.py:3618(_CacheTagSiblingsFilterChained)
+                                                                                 450    0.000    0.000  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                   2    0.000    0.000  ClientDB.py:5041(_DoAfterJobWork)
+                                                                                1060    0.000    0.000  ClientDB.py:11727(_GetWithAndWithoutTagsForFilesFileCount)
+                                                                                 530    0.000    0.000  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+                                                                                 225    0.000    0.000  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+                                                                                 528    0.000    0.000  ClientDB.py:14428(_ProcessRepositoryContent)
+                                                                                  45    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+                                                                                2534    0.000    0.000  HydrusDB.py:1134(GetName)
+                                                                               14110    0.001    0.001  HydrusData.py:1319(SplitIteratorIntoChunks)
+                                                                                 528    0.000    0.000  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+                                                                                  10    0.000    0.000  __init__.py:550(__init__)
+                                                                                  10    0.000    0.000  __init__.py:619(update)
+                                                                                   3    0.000    0.000  threading.py:358(notify_all)
+ClientDB.py:11727(_GetWithAndWithoutTagsForFilesFileCount)                <-     530    0.001    0.125  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+HydrusDB.py:1115(instance)                                                <-    2534    0.001    0.001  HydrusDB.py:1165(__init__)
+                                                                                2534    0.001    0.001  HydrusDB.py:1191(__exit__)
+HydrusDB.py:1158(ReleaseName)                                             <-    2534    0.001    0.002  HydrusDB.py:1191(__exit__)
+{method 'fetchone' of 'sqlite3.Cursor' objects}                           <-     528    0.000    0.000  ClientDB.py:1317(_CacheRepositoryNormaliseServiceTagId)
+                                                                                 528    0.000    0.000  ClientDB.py:3468(_CacheTagParentsIsChained)
+                                                                                 225    0.000    0.000  ClientDB.py:3733(_CacheTagSiblingsGetIdeal)
+                                                                                 385    0.000    0.000  ClientDB.py:3940(_CacheTagSiblingsIsChained)
+                                                                                   1    0.000    0.000  ClientDB.py:10972(_GetServiceId)
+                                                                                 265    0.000    0.000  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)      <-       5    0.001    0.026  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:241(GenerateCombinedFilesMappingsACCacheTableName)            <-       5    0.000    0.000  ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+                                                                                1060    0.001    0.002  ClientDB.py:1214(_CacheCombinedFilesMappingsGetAutocompleteCounts)
+                                                                                   5    0.000    0.000  ClientDB.py:1222(_CacheCombinedFilesMappingsUpdate)
+ClientDB.py:3468(_CacheTagParentsIsChained)                               <-     528    0.001    0.019  ClientDB.py:2693(_CacheTagDisplayIsChained)
+ClientDB.py:19153(<setcomp>)                                              <-       5    0.001    0.001  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:272(GenerateRepositoryMasterCacheTableNames)                  <-     528    0.000    0.001  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                 528    0.001    0.001  ClientDB.py:1317(_CacheRepositoryNormaliseServiceTagId)
+ClientDB.py:19169(<genexpr>)                                              <-    8843    0.001    0.001  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:11165(_GetFastestStorageMappingTableNames)                    <-     530    0.001    0.002  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+HydrusData.py:38(BuildKeyToSetDict)                                       <-      40    0.001    0.001  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 146    0.000    0.000  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+{method 'append' of 'list' objects}                                       <-     528    0.000    0.000  ClientDB.py:14428(_ProcessRepositoryContent)
+                                                                               13820    0.001    0.001  HydrusData.py:1319(SplitIteratorIntoChunks)
+                                                                                 528    0.000    0.000  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+                                                                                   2    0.000    0.000  HydrusPubSub.py:163(pub)
+ClientDB.py:1317(_CacheRepositoryNormaliseServiceTagId)                   <-     528    0.001    0.004  ClientDB.py:14428(_ProcessRepositoryContent)
+{method 'difference' of 'set' objects}                                    <-       5    0.000    0.000  ClientDB.py:2301(_CacheTagDisplayFilterChained)
+                                                                                 225    0.000    0.000  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+                                                                                  20    0.001    0.001  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:334(GenerateTagParentsLookupCacheTableName)                   <-     225    0.000    0.001  ClientDB.py:3293(_CacheTagParentsGetAncestors)
+                                                                                 185    0.000    0.000  ClientDB.py:3365(_CacheTagParentsGetDescendants)
+                                                                                  40    0.000    0.000  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+                                                                                 528    0.000    0.002  ClientDB.py:3468(_CacheTagParentsIsChained)
+ClientDB.py:258(GenerateMappingsTableNames)                               <-     530    0.001    0.002  ClientDB.py:11165(_GetFastestStorageMappingTableNames)
+                                                                                   5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+HydrusDB.py:800(_STS)                                                     <-     528    0.000    0.015  ClientDB.py:1299(_CacheRepositoryNormaliseServiceHashIds)
+                                                                                  30    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                 225    0.000    0.000  ClientDB.py:3293(_CacheTagParentsGetAncestors)
+                                                                                 185    0.000    0.001  ClientDB.py:3365(_CacheTagParentsGetDescendants)
+                                                                                  79    0.000    0.000  ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)
+                                                                                  20    0.000    0.028  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)                    <-     225    0.001    0.009  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+HydrusDB.py:481(_GetRowCount)                                             <-    1584    0.001    0.001  ClientDB.py:19128(_UpdateMappings)
+{built-in method builtins.isinstance}                                     <-    2534    0.001    0.001  HydrusDB.py:1165(__init__)
+                                                                                   4    0.000    0.000  HydrusThreading.py:72(IsThreadShuttingDown)
+ClientDB.py:354(GenerateTagSiblingsLookupCacheTableName)                  <-      79    0.000    0.000  ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)
+                                                                                 225    0.000    0.001  ClientDB.py:3733(_CacheTagSiblingsGetIdeal)
+                                                                                 146    0.000    0.000  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                 385    0.000    0.001  ClientDB.py:3940(_CacheTagSiblingsIsChained)
+ClientDB.py:2693(_CacheTagDisplayIsChained)                               <-     528    0.001    0.031  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+ClientDB.py:3940(_CacheTagSiblingsIsChained)                              <-     385    0.001    0.011  ClientDB.py:2693(_CacheTagDisplayIsChained)
+ClientDB.py:10986(_GetServiceIds)                                         <-     225    0.001    0.008  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+                                                                                   5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+{built-in method builtins.sorted}                                         <-     225    0.001    0.001  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+ClientDB.py:347(GenerateTagParentsLookupCacheTableNames)                  <-     978    0.001    0.002  ClientDB.py:334(GenerateTagParentsLookupCacheTableName)
+ClientDB.py:194(DoingAFileJoinTagSearchIsFaster)                          <-     530    0.001    0.001  ClientDB.py:11753(_GetWithAndWithoutTagsForFilesFileCountFileService)
+ClientDB.py:2473(_CacheTagDisplayGetImplies)                              <-     225    0.000    0.011  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+HydrusData.py:1317(<genexpr>)                                             <-    1150    0.000    0.000  {method 'join' of 'str' objects}
+ClientDB.py:367(GenerateTagSiblingsLookupCacheTableNames)                 <-     835    0.000    0.001  ClientDB.py:354(GenerateTagSiblingsLookupCacheTableName)
+{method 'join' of 'str' objects}                                          <-     230    0.000    0.001  HydrusData.py:1315(SplayListForDB)
+ClientDB.py:3293(_CacheTagParentsGetAncestors)                            <-     225    0.000    0.005  ClientDB.py:2473(_CacheTagDisplayGetImplies)
+HydrusData.py:1315(SplayListForDB)                                        <-     230    0.000    0.001  ClientDB.py:10986(_GetServiceIds)
+ClientDB.py:3733(_CacheTagSiblingsGetIdeal)                               <-     225    0.000    0.005  ClientDB.py:2473(_CacheTagDisplayGetImplies)
+{method 'append' of 'collections.deque' objects}                          <-    2534    0.000    0.000  HydrusDB.py:1158(ReleaseName)
+{method 'pop' of 'collections.deque' objects}                             <-    2534    0.000    0.000  HydrusDB.py:1134(GetName)
+{method 'update' of 'set' objects}                                        <-     225    0.000    0.000  ClientDB.py:2473(_CacheTagDisplayGetImplies)
+                                                                                 490    0.000    0.000  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+                                                                                   5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+{method 'add' of 'set' objects}                                           <-      79    0.000    0.000  ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)
+                                                                                 771    0.000    0.000  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+                                                                                2036    0.000    0.000  ClientDB.py:7253(_GetAutocompleteCurrentPendingPositiveCountsAndWeights)
+                                                                                 308    0.000    0.000  HydrusData.py:38(BuildKeyToSetDict)
+ClientDB.py:3365(_CacheTagParentsGetDescendants)                          <-     185    0.000    0.005  ClientDB.py:3417(_CacheTagParentsGetTagsToDescendants)
+ClientDB.py:19646(_Write)                                                 <-       1    0.000    0.506  HydrusDB.py:652(_ProcessJob)
+{method 'items' of 'dict' objects}                                        <-     225    0.000    0.000  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+                                                                                 225    0.000    0.000  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+                                                                                1060    0.000    0.000  ClientDB.py:7253(_GetAutocompleteCurrentPendingPositiveCountsAndWeights)
+                                                                                 530    0.000    0.000  ClientDB.py:11727(_GetWithAndWithoutTagsForFilesFileCount)
+                                                                                 450    0.000    0.000  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+                                                                                  10    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+HydrusData.py:30(BuildKeyToListDict)                                      <-     225    0.000    0.000  ClientDB.py:12042(_GroupHashIdsByTagCachedFileServiceId)
+HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)           <-       6    0.000    0.006  ClientDB.py:14428(_ProcessRepositoryContent)
+ClientDB.py:11822(<genexpr>)                                              <-    1215    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+HydrusData.py:1300(SmoothOutMappingIterator)                              <-     528    0.000    0.005  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+HydrusDB.py:793(_STL)                                                     <-     230    0.000    0.003  ClientDB.py:10986(_GetServiceIds)
+ClientDB.py:3686(_CacheTagSiblingsGetChainMembersFromIdeal)               <-      79    0.000    0.002  ClientDB.py:3789(_CacheTagSiblingsGetIdealsToChains)
+ClientDB.py:2594(<genexpr>)                                               <-     907    0.000    0.000  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+{method 'union' of 'set' objects}                                         <-       5    0.000    0.000  ClientDB.py:2301(_CacheTagDisplayFilterChained)
+                                                                                  10    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+{built-in method from_iterable}                                           <-       5    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+                                                                                 490    0.000    0.000  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+                                                                                  10    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:2228(<genexpr>)                                               <-     533    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+ClientDB.py:19150(<setcomp>)                                              <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+{method 'discard' of 'set' objects}                                       <-     265    0.000    0.000  ClientDB.py:908(_CacheCombinedFilesDisplayMappingsAddMappingsIfChained)
+ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)     <-       5    0.000    0.000  ClientDB.py:1222(_CacheCombinedFilesMappingsUpdate)
+{method 'values' of 'dict' objects}                                       <-     225    0.000    0.000  ClientDB.py:2553(_CacheTagDisplayGetTagsToImpliedBy)
+ClientDB.py:1983(_CacheSpecificMappingsAddMappings)                       <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:1493(_CacheSpecificDisplayMappingsAddMappings)                <-      30    0.000    0.000  ClientDB.py:1983(_CacheSpecificMappingsAddMappings)
+__init__.py:550(__init__)                                                 <-      10    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+{built-in method builtins.exec}                                           <- 
+__init__.py:570(__missing__)                                              <-     590    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:295(GenerateSpecificACCacheTableName)                         <-      30    0.000    0.000  ClientDB.py:1493(_CacheSpecificDisplayMappingsAddMappings)
+                                                                                  30    0.000    0.000  ClientDB.py:1983(_CacheSpecificMappingsAddMappings)
+                                                                                  30    0.000    0.000  ClientDB.py:2274(_CacheSpecificMappingsRescindPendingMappings)
+ClientDB.py:2274(_CacheSpecificMappingsRescindPendingMappings)            <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:322(GenerateSpecificMappingsCacheTableNames)                  <-      30    0.000    0.000  ClientDB.py:1983(_CacheSpecificMappingsAddMappings)
+                                                                                  30    0.000    0.000  ClientDB.py:2274(_CacheSpecificMappingsRescindPendingMappings)
+ClientDB.py:12070(<genexpr>)                                              <-     225    0.000    0.000  {built-in method builtins.sorted}
+ClientController.py:1284(pub)                                             <-       2    0.000    0.000  ClientDB.py:19738(publish_status_update)
+ClientDB.py:19168(<genexpr>)                                              <-     300    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+HydrusDB.py:652(_ProcessJob)                                              <-       1    0.000    0.507  <string>:1(<module>)
+ClientDB.py:1222(_CacheCombinedFilesMappingsUpdate)                       <-       5    0.000    0.001  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:419(IterateMappings)                                          <-      30    0.000    0.000  ClientDB.py:1493(_CacheSpecificDisplayMappingsAddMappings)
+                                                                                  30    0.000    0.000  ClientDB.py:1983(_CacheSpecificMappingsAddMappings)
+                                                                                  30    0.000    0.000  ClientDB.py:2274(_CacheSpecificMappingsRescindPendingMappings)
+ClientDB.py:19152(<listcomp>)                                             <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientThreading.py:74(_CheckCancelTests)                                  <-       4    0.000    0.000  ClientThreading.py:259(IsCancelled)
+HydrusThreading.py:72(IsThreadShuttingDown)                               <-       4    0.000    0.000  ClientThreading.py:74(_CheckCancelTests)
+HydrusPubSub.py:163(pub)                                                  <-       2    0.000    0.000  HydrusController.py:242(pub)
+ClientDB.py:2301(_CacheTagDisplayFilterChained)                           <-       5    0.000    0.000  ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+ClientDB.py:287(GenerateSpecificFilesTableName)                           <-      30    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+ClientDB.py:413(__init__)                                                 <-       5    0.000    0.000  ClientDB.py:2224(_CacheSpecificMappingsGetFilteredMappingsGenerator)
+HydrusThreading.py:42(GetThreadInfo)                                      <-       4    0.000    0.000  HydrusThreading.py:72(IsThreadShuttingDown)
+threading.py:335(notify)                                                  <-       3    0.000    0.000  threading.py:358(notify_all)
+HydrusData.py:1816(GetCallableTuple)                                      <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+ClientDB.py:1142(<listcomp>)                                              <-       5    0.000    0.000  ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+ClientDB.py:19301(<genexpr>)                                              <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:19302(<genexpr>)                                              <-       5    0.000    0.000  {method 'update' of 'set' objects}
+threading.py:1225(current_thread)                                         <-       4    0.000    0.000  HydrusThreading.py:42(GetThreadInfo)
+                                                                                   4    0.000    0.000  HydrusThreading.py:72(IsThreadShuttingDown)
+HydrusData.py:620(GetNowPrecise)                                          <-       1    0.000    0.000  ClientDB.py:14428(_ProcessRepositoryContent)
+                                                                                  13    0.000    0.000  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+                                                                                   9    0.000    0.000  HydrusData.py:1447(TimeHasPassedPrecise)
+HydrusData.py:612(GetNow)                                                 <-       5    0.000    0.000  HydrusData.py:1434(TimeHasPassed)
+ClientDB.py:312(GenerateSpecificDisplayMappingsCacheTableNames)           <-      30    0.000    0.000  ClientDB.py:1493(_CacheSpecificDisplayMappingsAddMappings)
+__init__.py:619(update)                                                   <-      10    0.000    0.000  __init__.py:550(__init__)
+HydrusData.py:1447(TimeHasPassedPrecise)                                  <-       5    0.000    0.000  ClientDB.py:14428(_ProcessRepositoryContent)
+                                                                                   4    0.000    0.000  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+{built-in method postEvent}                                               <-       2    0.000    0.000  ClientController.py:1284(pub)
+threading.py:513(set)                                                     <-       1    0.000    0.000  HydrusData.py:1861(PutResult)
+                                                                                   2    0.000    0.000  HydrusPubSub.py:163(pub)
+ClientController.py:64(__init__)                                          <-       2    0.000    0.000  ClientController.py:1284(pub)
+{built-in method time.perf_counter}                                       <-      23    0.000    0.000  HydrusData.py:620(GetNowPrecise)
+HydrusData.py:1434(TimeHasPassed)                                         <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+                                                                                   4    0.000    0.000  HydrusThreading.py:42(GetThreadInfo)
+ClientDB.py:10972(_GetServiceId)                                          <-       1    0.000    0.000  ClientDB.py:14428(_ProcessRepositoryContent)
+ClientThreading.py:259(IsCancelled)                                       <-       4    0.000    0.000  ClientDB.py:14428(_ProcessRepositoryContent)
+{method 'intersection' of 'set' objects}                                  <-      10    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+HydrusController.py:662(ShouldStopThisWork)                               <-       4    0.000    0.000  ClientThreading.py:74(_CheckCancelTests)
+threading.py:358(notify_all)                                              <-       3    0.000    0.000  threading.py:513(set)
+{built-in method builtins.max}                                            <-       4    0.000    0.000  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+HydrusController.py:242(pub)                                              <-       2    0.000    0.000  ClientController.py:1284(pub)
+ClientDB.py:3225(_CacheTagParentsFilterChained)                           <-       5    0.000    0.000  ClientDB.py:2301(_CacheTagDisplayFilterChained)
+ClientDB.py:5041(_DoAfterJobWork)                                         <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+{built-in method time.time}                                               <-       5    0.000    0.000  HydrusData.py:612(GetNow)
+threading.py:243(__exit__)                                                <-       3    0.000    0.000  threading.py:513(set)
+threading.py:240(__enter__)                                               <-       3    0.000    0.000  threading.py:513(set)
+ClientDB.py:19738(publish_status_update)                                  <-       2    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+HydrusData.py:1861(PutResult)                                             <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+ClientDB.py:3618(_CacheTagSiblingsFilterChained)                          <-       5    0.000    0.000  ClientDB.py:2301(_CacheTagDisplayFilterChained)
+threading.py:507(is_set)                                                  <-       8    0.000    0.000  ClientThreading.py:74(_CheckCancelTests)
+                                                                                   4    0.000    0.000  ClientThreading.py:259(IsCancelled)
+ClientDB.py:1145(<genexpr>)                                               <-       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:4124(_CleanAfterJobWork)                                      <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+{built-in method instance}                                                <-       4    0.000    0.000  ClientController.py:1284(pub)
+threading.py:255(_is_owned)                                               <-       3    0.000    0.000  threading.py:335(notify)
+{method 'release' of '_thread.lock' objects}                              <-       1    0.000    0.000  threading.py:335(notify)
+HydrusController.py:410(DoingFastExit)                                    <-       4    0.000    0.000  HydrusThreading.py:72(IsThreadShuttingDown)
+ClientDB.py:1138(<listcomp>)                                              <-       5    0.000    0.000  ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+ClientDB.py:1149(<genexpr>)                                               <-       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:1147(<genexpr>)                                               <-       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:1226(<genexpr>)                                               <-       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+ClientDB.py:19159(<listcomp>)                                             <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:19160(<setcomp>)                                              <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+ClientDB.py:19304(<listcomp>)                                             <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+HydrusDB.py:774(_Save)                                                    <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+{method 'acquire' of '_thread.lock' objects}                              <-       3    0.000    0.000  threading.py:255(_is_owned)
+{method '__enter__' of '_thread.lock' objects}                            <-       3    0.000    0.000  threading.py:240(__enter__)
+{built-in method _thread.get_ident}                                       <-       8    0.000    0.000  threading.py:1225(current_thread)
+{built-in method builtins.min}                                            <-       4    0.000    0.000  HydrusData.py:1386(SplitMappingIteratorIntoAutothrottledChunks)
+ClientDB.py:1230(<genexpr>)                                               <-       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+<string>:1(<module>)                                                      <-       1    0.000    0.507  {built-in method builtins.exec}
+ClientDB.py:19157(<setcomp>)                                              <-       5    0.000    0.000  ClientDB.py:19128(_UpdateMappings)
+HydrusDB.py:350(_CleanAfterJobWork)                                       <-       1    0.000    0.000  ClientDB.py:4124(_CleanAfterJobWork)
+HydrusDB.py:439(_DoAfterJobWork)                                          <-       1    0.000    0.000  ClientDB.py:5041(_DoAfterJobWork)
+HydrusData.py:1851(GetType)                                               <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+HydrusData.py:1856(IsSynchronous)                                         <-       1    0.000    0.000  HydrusDB.py:652(_ProcessJob)
+ClientDB.py:1143(<setcomp>)                                               <-       5    0.000    0.000  ClientDB.py:1136(_CacheCombinedFilesDisplayMappingsUpdateIfUnchained)
+ClientDB.py:1228(<genexpr>)                                               <-       5    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+{method 'remove' of 'collections.deque' objects}                          <-       1    0.000    0.000  threading.py:335(notify)
+{method '__exit__' of '_thread.lock' objects}                             <-       3    0.000    0.000  threading.py:243(__exit__)
+{method 'disable' of '_lsprof.Profiler' objects}                          <- 

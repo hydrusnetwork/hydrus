@@ -1972,12 +1972,12 @@ class CanvasWithDetails( Canvas ):
             
             text = self._GetNoMediaText()
             
-            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
+            ( text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
             
             x = ( my_width - text_size.width() ) // 2
             y = ( my_height - text_size.height() ) // 2
             
-            QP.DrawText( painter, x, y, text )
+            ClientGUIFunctions.DrawText( painter, x, y, text )
             
         else:
             
@@ -2032,9 +2032,9 @@ class CanvasWithDetails( Canvas ):
                 
                 painter.setPen( QG.QPen( QG.QColor( r, g, b ) ) )
                 
-                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string )
+                ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
                 
-                QP.DrawText( painter, 5, current_y, display_string )
+                ClientGUIFunctions.DrawText( painter, 5, current_y, display_string )
                 
                 current_y += text_size.height()
                 
@@ -2125,9 +2125,9 @@ class CanvasWithDetails( Canvas ):
             
             for remote_string in remote_strings:
                 
-                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, remote_string )
+                ( text_size, remote_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, remote_string )
                 
-                QP.DrawText( painter, my_width - text_size.width() - 3, current_y, remote_string )
+                ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, current_y, remote_string )
                 
                 current_y += text_size.height()
                 
@@ -2140,9 +2140,9 @@ class CanvasWithDetails( Canvas ):
             
             for ( display_string, url ) in url_tuples:
                 
-                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string )
+                ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
                 
-                QP.DrawText( painter, my_width - text_size.width() - 3, current_y, display_string )
+                ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, current_y, display_string )
                 
                 current_y += text_size.height() + 2
                 
@@ -2155,18 +2155,18 @@ class CanvasWithDetails( Canvas ):
             
             if len( title_string ) > 0:
                 
-                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, title_string )
+                ( text_size, title_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, title_string )
                 
-                QP.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, title_string )
+                ClientGUIFunctions.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, title_string )
                 
                 current_y += text_size.height() + 3
                 
             
             info_string = self._GetInfoString()
             
-            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, info_string )
+            ( text_size, info_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, info_string )
             
-            QP.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, info_string )
+            ClientGUIFunctions.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, info_string )
             
             current_y += text_size.height() + 3
             
@@ -2178,9 +2178,9 @@ class CanvasWithDetails( Canvas ):
             
             if len( index_string ) > 0:
                 
-                text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, index_string )
+                ( text_size, index_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, index_string )
                 
-                QP.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, index_string )
+                ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, index_string )
                 
             
         
@@ -2706,14 +2706,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             text = 'Loading pairs\u2026'
             
-            text_size = painter.fontMetrics().size( QC.Qt.TextSingleLine, text )
+            ( text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
             
             my_size = self.size()
             
             x = ( my_size.width() - text_size.width() ) // 2
             y = ( my_size.height() - text_size.height() ) // 2
             
-            QP.DrawText( painter, x, y, text )
+            ClientGUIFunctions.DrawText( painter, x, y, text )
             
         else:
             

@@ -279,6 +279,8 @@ def SplitTag( tag ):
         return ( '', tag )
         
     
+NULL_CHARACTER = '\x00'
+
 def StripTextOfGumpf( t ):
     
     t = HydrusText.re_newlines.sub( '', t )
@@ -288,6 +290,11 @@ def StripTextOfGumpf( t ):
     t = t.strip()
     
     t = HydrusText.re_leading_space_or_garbage.sub( '', t )
+    
+    if NULL_CHARACTER in t:
+        
+        t = t.replace( NULL_CHARACTER, '' )
+        
     
     return t
     
