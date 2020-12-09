@@ -388,9 +388,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
         
-        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = None
-        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = None
-        
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
         
         self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
@@ -443,6 +440,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'safebooru tag search'
         self._dictionary[ 'strings' ][ 'has_audio_label' ] = '\U0001F50A'
         self._dictionary[ 'strings' ][ 'has_duration_label' ] = ' \u23F5 '
+        self._dictionary[ 'strings' ][ 'discord_dnd_filename_pattern' ] = '{hash}'
         
         self._dictionary[ 'string_list' ] = {}
         

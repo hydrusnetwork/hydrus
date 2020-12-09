@@ -6838,7 +6838,7 @@ class DB( HydrusDB.HydrusDB ):
         
         with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_tag_id_table_name:
             
-            counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( ClientTags.TAG_DISPLAY_STORAGE, service_id, list( tag_ids_to_tags.keys() ) )
+            counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( ClientTags.TAG_DISPLAY_STORAGE, service_id, temp_tag_id_table_name )
             
         
         existing_tag_ids = [ tag_id for ( tag_id, current_count, pending_count ) in counts if current_count > 0 ]
@@ -9964,54 +9964,11 @@ class DB( HydrusDB.HydrusDB ):
         
         # vacuum
         
-        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        due_names = self._GetMaintenanceVacuumNamesDue( stop_time = stop_time )
         
-        if maintenance_vacuum_period_days is not None:
+        if len( due_names ) > 0:
             
-            stale_time_delta = maintenance_vacuum_period_days * 86400
-            
-            existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
-            
-            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
-            
-            due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
-            
-            possible_due_names = set()
-            
-            if len( due_names ) > 0:
-                
-                self._CloseDBCursor()
-                
-                try:
-                    
-                    for name in due_names:
-                        
-                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
-                        
-                        try:
-                            
-                            HydrusDB.CheckCanVacuum( db_path, stop_time = stop_time )
-                            
-                        except Exception:
-                            
-                            continue
-                            
-                        
-                        possible_due_names.add( name )
-                        
-                    
-                    possible_due_names = sorted( possible_due_names )
-                    
-                    if len( possible_due_names ) > 0:
-                        
-                        jobs_to_do.append( 'vacuum ' + ', '.join( possible_due_names ) )
-                        
-                    
-                finally:
-                    
-                    self._InitDBCursor()
-                    
-                
+            jobs_to_do.append( 'vacuum ' + ', '.join( due_names ) )
             
         
         # analyze
@@ -10031,6 +9988,50 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return jobs_to_do
+        
+    
+    def _GetMaintenanceVacuumNamesDue( self, stop_time = None ):
+        
+        due_names = []
+        
+        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        
+        if maintenance_vacuum_period_days is not None:
+            
+            stale_time_delta = maintenance_vacuum_period_days * 86400
+            
+            existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
+            
+            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
+            
+            due_names = list( { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) } )
+            
+        
+        SIZE_LIMIT = 1024 * 1024 * 1024
+        
+        due_names = [ name for name in due_names if os.path.getsize( os.path.join( self._db_dir, self._db_filenames[ name ] ) ) < SIZE_LIMIT ]
+        
+        vacuumable_due_names = set()
+        
+        for name in due_names:
+            
+            db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+            
+            try:
+                
+                HydrusDB.CheckCanVacuumCursor( db_path, self._c, stop_time = stop_time )
+                
+            except Exception:
+                
+                continue
+                
+            
+            vacuumable_due_names.add( name )
+            
+        
+        due_names = sorted( vacuumable_due_names )
+        
+        return due_names
         
     
     def _GetMappingTables( self, tag_display_type, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
@@ -11722,7 +11723,14 @@ class DB( HydrusDB.HydrusDB ):
             hash_ids.update( results )
             
         
-        results = [ self._GetHashIdStatus( hash_id, prefix = 'url recognised' ) for hash_id in hash_ids ]
+        try:
+            
+            results = [ self._GetHashIdStatus( hash_id, prefix = 'url recognised' ) for hash_id in hash_ids ]
+            
+        except:
+            
+            return []
+            
         
         return results
         
@@ -12312,22 +12320,6 @@ class DB( HydrusDB.HydrusDB ):
         self._inbox_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM file_inbox;' ) )
         
     
-    def _InitDiskCache( self ):
-        
-        new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-        
-        disk_cache_init_period = new_options.GetNoneableInteger( 'disk_cache_init_period' )
-        
-        if disk_cache_init_period is not None:
-            
-            HG.client_controller.frame_splash_status.SetText( 'preparing disk cache' )
-            
-            stop_time = HydrusData.GetNow() + disk_cache_init_period
-            
-            self._LoadIntoDiskCache( stop_time = stop_time )
-            
-        
-    
     def _InitExternalDatabases( self ):
         
         self._db_filenames[ 'external_caches' ] = 'client.caches.db'
@@ -12410,94 +12402,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return True
             
-        
-    
-    def _LoadIntoDiskCache( self, stop_time = None, caller_limit = None, for_processing = False ):
-        
-        self._CloseDBCursor()
-        
-        try:
-            
-            approx_disk_cache_size = psutil.virtual_memory().available * 4 / 5
-            
-            disk_cache_limit = approx_disk_cache_size / 3
-            
-        except psutil.Error:
-            
-            disk_cache_limit = 512 * 1024 * 1024
-            
-        
-        so_far_read = 0
-        
-        try:
-            
-            next_stop_time_presentation = 0
-            next_gc_collect = 0
-            
-            filenames = self._db_filenames.values()
-            
-            if not for_processing:
-                
-                filenames = [ filename for filename in filenames if 'mappings' not in filename and 'master' not in filename ]
-                
-            
-            paths = [ os.path.join( self._db_dir, filename ) for filename in filenames ]
-            
-            paths.sort( key = os.path.getsize )
-            
-            for path in paths:
-                
-                with open( path, 'rb' ) as f:
-                    
-                    while len( f.read( HC.READ_BLOCK_SIZE ) ) > 0:
-                        
-                        if stop_time is not None:
-                            
-                            if HydrusData.TimeHasPassed( next_stop_time_presentation ):
-                                
-                                if HydrusData.TimeHasPassed( stop_time ):
-                                    
-                                    return False
-                                    
-                                
-                                HG.client_controller.frame_splash_status.SetSubtext( 'cached ' + ClientData.TimestampToPrettyTimeDelta( stop_time, just_now_string = 'ok', just_now_threshold = 1 ) )
-                                
-                                next_stop_time_presentation = HydrusData.GetNow() + 1
-                                
-                            
-                        
-                        so_far_read += HC.READ_BLOCK_SIZE
-                        
-                        if so_far_read > disk_cache_limit:
-                            
-                            return True
-                            
-                        
-                        if caller_limit is not None and so_far_read > caller_limit:
-                            
-                            return False
-                            
-                        
-                        if HydrusData.TimeHasPassed( next_gc_collect ):
-                            
-                            gc.collect()
-                            
-                            next_gc_collect = HydrusData.GetNow() + 1
-                            
-                            time.sleep( 0.00001 )
-                            
-                        
-                    
-                
-            
-        finally:
-            
-            gc.collect()
-            
-            self._InitDBCursor()
-            
-        
-        return True
         
     
     def _ManageDBError( self, job, e ):
@@ -13368,55 +13272,36 @@ class DB( HydrusDB.HydrusDB ):
         self._PHashesResetSearch( hash_ids )
         
     
-    def _PHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None ):
+    def _PHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None, work_time_float = None ):
         
-        time_started = HydrusData.GetNow()
-        pub_job_key = False
-        job_key_pubbed = False
+        time_started_float = HydrusData.GetNowFloat()
         
-        if job_key is None:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            pub_job_key = True
-            
+        num_done = 0
+        still_work_to_do = True
         
-        try:
+        ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
+        
+        group_of_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchmany( 100 ) )
+        
+        while len( group_of_hash_ids ) > 0:
             
-            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) )
-            
-            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
-            
-            job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
-            
-            for ( i, hash_id ) in enumerate( hash_ids ):
+            for ( i, hash_id ) in enumerate( group_of_hash_ids ):
                 
-                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
+                if work_time_float is not None and HydrusData.TimeHasPassedFloat( time_started_float + work_time_float ):
                     
-                    self._controller.pub( 'modal_message', job_key )
-                    
-                    job_key_pubbed = True
+                    return ( still_work_to_do, num_done )
                     
                 
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
-                
-                if should_quit or should_stop:
+                if job_key is not None:
                     
-                    return
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                     
-                
-                if i % 25 == 0:
+                    should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
                     
-                    text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files'
-                    
-                    job_key.SetVariable( 'popup_text_1', text )
-                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-                    
-                    HG.client_controller.frame_splash_status.SetSubtext( text )
+                    if should_quit or should_stop:
+                        
+                        return ( still_work_to_do, num_done )
+                        
                     
                 
                 media_id = self._DuplicatesGetMediaId( hash_id )
@@ -13427,25 +13312,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
                 
-                if i % 100 == 0:
-                    
-                    # since this is a long-running lad, this clears the temp tables, which it turns out aren't cleaned by a drop table lmaooooo!
-                    
-                    self._CloseDBCursor()
-                    
-                    self._InitDBCursor()
-                    
+                num_done += 1
                 
             
-        finally:
+            text = 'searching potential duplicates, done {}'.format( HydrusData.ToHumanInt( num_done ) )
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
+            HG.client_controller.frame_splash_status.SetSubtext( text )
             
-            job_key.Finish()
+            group_of_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchmany( 100 ) )
             
-            job_key.Delete( 5 )
-            
+        
+        still_work_to_do = False
+        
+        return ( still_work_to_do, num_done )
         
     
     def _PHashesSearch( self, hash_id, max_hamming_distance ):
@@ -13678,7 +13557,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if not pubbed_error:
                             
-                            HydrusData.ShowText( 'A file identifier was missing! This is a serious error that likely needs a repository reset to fix! Think about contacting hydrus dev!' )
+                            HydrusData.ShowText( 'A file identifier was missing! This is a serious error that means your client database has an orphan file id! Think about contacting hydrus dev!' )
                             
                             pubbed_error = True
                             
@@ -13781,6 +13660,8 @@ class DB( HydrusDB.HydrusDB ):
         notify_new_parents = False
         notify_new_siblings = False
         
+        valid_service_keys_to_content_updates = {}
+        
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             try:
@@ -13791,6 +13672,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 continue
                 
+            
+            valid_service_keys_to_content_updates[ service_key ] = content_updates
             
             service = self._GetService( service_id )
             
@@ -14425,7 +14308,7 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_after_job( 'notify_new_tag_display_application' )
                 
             
-            self.pub_content_updates_after_commit( service_keys_to_content_updates )
+            self.pub_content_updates_after_commit( valid_service_keys_to_content_updates )
             
         
     
@@ -14433,7 +14316,6 @@ class DB( HydrusDB.HydrusDB ):
         
         FILES_INITIAL_CHUNK_SIZE = 20
         MAPPINGS_INITIAL_CHUNK_SIZE = 50
-        NEW_TAG_PARENTS_INITIAL_CHUNK_SIZE = 1
         PAIR_ROWS_INITIAL_CHUNK_SIZE = 100
         
         service_id = self._GetServiceId( service_key )
@@ -14582,7 +14464,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 i = content_iterator_dict[ 'new_parents' ]
                 
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, NEW_TAG_PARENTS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
                     parent_ids = []
                     
@@ -14777,7 +14659,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for ( service_tag_id, tag ) in chunk:
                     
-                    tag_id = self._GetTagId( tag )
+                    try:
+                        
+                        tag_id = self._GetTagId( tag )
+                        
+                    except HydrusExceptions.TagSizeException:
+                        
+                        # in future what we'll do here is assign this id to the 'do not show' table, so we know it exists, but it is knowingly filtered out
+                        # _or something_. maybe a small 'invalid' table, so it isn't mixed up with potentially re-addable tags
+                        tag_id = self._GetTagId( 'invalid repository tag' )
+                        
                     
                     inserts.append( ( service_tag_id, tag_id ) )
                     
@@ -14845,7 +14736,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'in_inbox': result = self._InInbox( *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
         elif action == 'last_shutdown_work_time': result = self._GetLastShutdownWorkTime( *args, **kwargs )
-        elif action == 'load_into_disk_cache': result = self._LoadIntoDiskCache( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
@@ -15859,10 +15749,6 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
             
         finally:
-            
-            self._CloseDBCursor()
-            
-            self._InitDBCursor()
             
             job_key.Finish()
             
@@ -18638,20 +18524,6 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                new_options.SetNoneableInteger( 'disk_cache_maintenance_mb', None )
-                new_options.SetNoneableInteger( 'disk_cache_init_period', None )
-                
-                self._SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                pass # nbd
-                
-            
-            try:
-                
                 domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
                 
                 domain_manager.Initialise()
@@ -19587,10 +19459,6 @@ class DB( HydrusDB.HydrusDB ):
         self.pub_after_job( 'notify_new_services_gui' )
         self.pub_after_job( 'notify_new_pending' )
         
-        self._CloseDBCursor()
-        
-        self._InitDBCursor()
-        
     
     def _Vacuum( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None, force_vacuum = False ):
         
@@ -19624,6 +19492,33 @@ class DB( HydrusDB.HydrusDB ):
             due_names = [ name for name in due_names if os.path.getsize( os.path.join( self._db_dir, self._db_filenames[ name ] ) ) < SIZE_LIMIT ]
             
         
+        ok_due_names = []
+        
+        for name in due_names:
+            
+            db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+            
+            try:
+                
+                HydrusDB.CheckCanVacuumCursor( db_path, self._c )
+                
+            except Exception as e:
+                
+                if not self._have_printed_a_cannot_vacuum_message:
+                    
+                    HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
+                    
+                    self._have_printed_a_cannot_vacuum_message = True
+                    
+                
+                continue
+                
+            
+            ok_due_names.append( name )
+            
+        
+        due_names = ok_due_names
+        
         if len( due_names ) > 0:
             
             job_key_pubbed = False
@@ -19650,22 +19545,6 @@ class DB( HydrusDB.HydrusDB ):
                     try:
                         
                         db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
-                        
-                        try:
-                            
-                            HydrusDB.CheckCanVacuum( db_path )
-                            
-                        except Exception as e:
-                            
-                            if not self._have_printed_a_cannot_vacuum_message:
-                                
-                                HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
-                                
-                                self._have_printed_a_cannot_vacuum_message = True
-                                
-                            
-                            continue
-                            
                         
                         if not job_key_pubbed:
                             
@@ -19763,7 +19642,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
         elif action == 'last_shutdown_work_time': self._SetLastShutdownWorkTime( *args, **kwargs )
         elif action == 'local_booru_share': self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-        elif action == 'maintain_similar_files_search_for_potential_duplicates': self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
+        elif action == 'maintain_similar_files_search_for_potential_duplicates': result = self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self._PHashesMaintainTree( *args, **kwargs )
         elif action == 'migration_clear_job': self._MigrationClearJob( *args, **kwargs )
         elif action == 'migration_start_mappings_job': self._MigrationStartMappingsJob( *args, **kwargs )

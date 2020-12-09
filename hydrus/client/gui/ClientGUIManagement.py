@@ -17,6 +17,7 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientDuplicates
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
@@ -921,22 +922,6 @@ def CreateManagementPanel( parent, page, controller, management_controller ) -> 
     
     return management_panel
     
-def WaitOnDupeFilterJob( job_key ):
-    
-    while not job_key.IsDone():
-        
-        if HydrusThreading.IsThreadShuttingDown():
-            
-            return
-            
-        
-        time.sleep( 0.25 )
-        
-    
-    time.sleep( 0.5 )
-    
-    HG.client_controller.pub( 'refresh_dupe_page_numbers' )
-    
 class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     SHOW_COLLECT = False
@@ -945,21 +930,20 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        self._job = None
-        self._job_key = None
-        self._in_break = False
+        self._duplicates_manager = ClientDuplicates.DuplicatesManager.instance()
         
         self._similar_files_maintenance_status = None
+        self._duplicates_manager_is_fetching_maintenance_numbers = False
+        self._potential_file_search_currently_happening = False
+        self._maintenance_numbers_need_redrawing = True
+        
+        self._have_done_first_maintenance_numbers_show = False
         
         new_options = self._controller.new_options
         
-        self._maintenance_numbers_dirty = True
         self._dupe_count_numbers_dirty = True
         
-        self._currently_refreshing_maintenance_numbers = False
         self._currently_refreshing_dupe_count_numbers = False
-        
-        self._have_done_first_fetch = False
         
         #
         
@@ -971,7 +955,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         #
         
         self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel, ellipsize_end = True )
-        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.global_pixmaps().refresh, self.RefreshMaintenanceNumbers )
+        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.global_pixmaps().refresh, self._duplicates_manager.RefreshMaintenanceNumbers )
         
         menu_items = []
         
@@ -1008,11 +992,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._search_distance_button = ClientGUICommon.MenuButton( self._searching_panel, 'similarity', menu_items )
         
         self._search_distance_spinctrl = QP.MakeQSpinBox( self._searching_panel, min=0, max=64, width = 50 )
-        self._search_distance_spinctrl.valueChanged.connect( self.EventSearchDistanceChanged )
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )
         
-        self._search_button = ClientGUICommon.BetterBitmapButton( self._searching_panel, CC.global_pixmaps().play, self._SearchForDuplicates )
+        self._search_button = ClientGUICommon.BetterBitmapButton( self._searching_panel, CC.global_pixmaps().play, self._duplicates_manager.StartPotentialsSearch )
         
         #
         
@@ -1149,9 +1132,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self.widget().setLayout( vbox )
         
-        self._controller.sub( self, 'RefreshAllNumbers', 'refresh_dupe_page_numbers' )
+        self._controller.sub( self, 'NotifyNewMaintenanceNumbers', 'new_similar_files_maintenance_numbers' )
         
         self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
+        self._search_distance_spinctrl.valueChanged.connect( self.EventSearchDistanceChanged )
         
     
     def _EditMergeOptions( self, duplicate_type ):
@@ -1234,47 +1218,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _RefreshMaintenanceNumbers( self ):
-        
-        def qt_code( similar_files_maintenance_status ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._currently_refreshing_maintenance_numbers = False
-            
-            self._maintenance_numbers_dirty = False
-            
-            self._refresh_maintenance_status.setText( '' )
-            
-            self._refresh_maintenance_button.setEnabled( True )
-            
-            self._similar_files_maintenance_status = similar_files_maintenance_status
-            
-            self._UpdateMaintenanceStatus()
-            
-        
-        def thread_do_it():
-            
-            similar_files_maintenance_status = HG.client_controller.Read( 'similar_files_maintenance_status' )
-            
-            QP.CallAfter( qt_code, similar_files_maintenance_status )
-            
-        
-        if not self._currently_refreshing_maintenance_numbers:
-            
-            self._currently_refreshing_maintenance_numbers = True
-            
-            self._refresh_maintenance_status.setText( 'updating\u2026' )
-            
-            self._refresh_maintenance_button.setEnabled( False )
-            
-            HG.client_controller.CallToThread( thread_do_it )
-            
-        
-    
     def _ResetUnknown( self ):
         
         text = 'This will delete all the potential duplicate pairs and reset their files\' search status.'
@@ -1287,7 +1230,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._controller.Write( 'delete_potential_duplicate_pairs' )
             
-            self._maintenance_numbers_dirty = True
+            self._duplicates_manager.RefreshMaintenanceNumbers()
             
         
     
@@ -1305,21 +1248,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._dupe_count_numbers_dirty = True
             
-        
-    
-    def _SearchForDuplicates( self ):
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'initialising' )
-        
-        search_distance = self._search_distance_spinctrl.value()
-        
-        self._controller.Write( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key )
-        
-        self._controller.pub( 'modal_message', job_key )
-        
-        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
         
     
     def _SetCurrentMediaAs( self, duplicate_type ):
@@ -1369,9 +1297,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _UpdateMaintenanceStatus( self ):
         
-        work_can_be_done = False
+        self._refresh_maintenance_button.setEnabled( not ( self._duplicates_manager_is_fetching_maintenance_numbers or self._potential_file_search_currently_happening ) )
         
         if self._similar_files_maintenance_status is None:
+            
+            self._search_button.setEnabled( False )
             
             return
             
@@ -1387,11 +1317,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._search_distance_button.setEnabled( True )
         self._search_distance_spinctrl.setEnabled( True )
         
+        options_search_distance = self._controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+        
+        if self._search_distance_spinctrl.value() != options_search_distance:
+            
+            self._search_distance_spinctrl.setValue( options_search_distance )
+            
+        
         search_distance = self._search_distance_spinctrl.value()
-        
-        new_options = self._controller.new_options
-        
-        new_options.SetInteger( 'similar_files_duplicate_pairs_search_distance', search_distance )
         
         if search_distance in HC.hamming_string_lookup:
             
@@ -1406,13 +1339,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         num_searched = sum( ( count for ( value, count ) in searched_distances_to_count.items() if value is not None and value >= search_distance ) )
         
-        if num_searched == total_num_files:
-            
-            self._num_searched.SetValue( 'All potential duplicates found at this distance.', total_num_files, total_num_files )
-            
-            self._search_button.setEnabled( False )
-            
-        else:
+        not_all_files_searched = num_searched < total_num_files
+        
+        we_can_start_work = not_all_files_searched and not self._potential_file_search_currently_happening
+        
+        self._search_button.setEnabled( we_can_start_work )
+        
+        if not_all_files_searched:
             
             if num_searched == 0:
                 
@@ -1423,28 +1356,23 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 self._num_searched.SetValue( 'Searched ' + HydrusData.ConvertValueRangeToPrettyString( num_searched, total_num_files ) + ' files at this distance.', num_searched, total_num_files )
                 
             
-            self._search_button.setEnabled( True )
-            
-            work_can_be_done = True
-            
-        
-        if work_can_be_done:
-            
             page_name = 'preparation (needs work)'
             
-            if not self._have_done_first_fetch:
+            if not self._have_done_first_maintenance_numbers_show:
                 
                 self._main_notebook.SelectPage( self._main_left_panel )
                 
             
         else:
             
+            self._num_searched.SetValue( 'All potential duplicates found at this distance.', total_num_files, total_num_files )
+            
             page_name = 'preparation'
             
         
         self._main_notebook.setTabText( 0, page_name )
         
-        self._have_done_first_fetch = True
+        self._have_done_first_maintenance_numbers_show = True
         
     
     def _UpdateBothFilesMatchButton( self ):
@@ -1484,7 +1412,18 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def EventSearchDistanceChanged( self ):
         
+        search_distance = self._search_distance_spinctrl.value()
+        
+        self._controller.new_options.SetInteger( 'similar_files_duplicate_pairs_search_distance', search_distance )
+        
+        self._controller.pub( 'new_similar_files_maintenance_numbers' )
+        
         self._UpdateMaintenanceStatus()
+        
+    
+    def NotifyNewMaintenanceNumbers( self ):
+        
+        self._maintenance_numbers_need_redrawing = True
         
     
     def PageHidden( self ):
@@ -1501,21 +1440,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._tag_autocomplete.SetForceDropdownHide( False )
         
     
-    def RefreshAllNumbers( self ):
-        
-        self.RefreshDuplicateNumbers()
-        
-        self.RefreshMaintenanceNumbers()
-        
-    
     def RefreshDuplicateNumbers( self ):
         
         self._dupe_count_numbers_dirty = True
-        
-    
-    def RefreshMaintenanceNumbers( self ):
-        
-        self._maintenance_numbers_dirty = True
         
     
     def RefreshQuery( self ):
@@ -1525,9 +1452,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def REPEATINGPageUpdate( self ):
         
-        if self._maintenance_numbers_dirty:
+        if self._maintenance_numbers_need_redrawing:
             
-            self._RefreshMaintenanceNumbers()
+            ( self._similar_files_maintenance_status, self._duplicates_manager_is_fetching_maintenance_numbers, self._potential_file_search_currently_happening ) = self._duplicates_manager.GetMaintenanceNumbers()
+            
+            self._maintenance_numbers_need_redrawing = False
+            
+            self._UpdateMaintenanceStatus()
             
         
         if self._dupe_count_numbers_dirty:

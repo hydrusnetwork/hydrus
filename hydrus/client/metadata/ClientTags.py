@@ -248,6 +248,19 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         
         self._tag_slices_to_rules = {}
         
+        self._all_unnamespaced_whitelisted = False
+        self._all_namespaced_whitelisted = False
+        self._namespaces_whitelist = set()
+        self._tags_whitelist = set()
+        
+        self._all_unnamespaced_blacklisted = False
+        self._all_namespaced_blacklisted = False
+        self._namespaces_blacklist = set()
+        self._tags_blacklist = set()
+        
+        self._namespaced_interesting = False
+        self._tags_interesting = False
+        
     
     def __eq__( self, other ):
         
@@ -292,9 +305,13 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         
         self._tag_slices_to_rules = dict( serialisable_info )
         
+        self._UpdateRuleCache()
+        
     
     def _TagOK( self, tag, apply_unnamespaced_rules_to_namespaced_tags = False ):
         
+        # old method, has a bunch of overhead due to iteration
+        '''
         blacklist_encountered = False
         
         for tag_slice in self._IterateTagSlices( tag, apply_unnamespaced_rules_to_namespaced_tags = apply_unnamespaced_rules_to_namespaced_tags ):
@@ -321,6 +338,153 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         else:
             
             return True # no rules against or explicitly for, so permitted
+            
+        '''
+        
+        #
+        
+        # since this is called a whole bunch and overhead piles up, we are now splaying the logic out to hardcoded tests
+        
+        blacklist_encountered = False
+        
+        if self._tags_interesting:
+            
+            if tag in self._tags_whitelist:
+                
+                return True
+                
+            
+            if tag in self._tags_blacklist:
+                
+                blacklist_encountered = True
+                
+            
+        
+        if self._namespaced_interesting or apply_unnamespaced_rules_to_namespaced_tags:
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            
+            if apply_unnamespaced_rules_to_namespaced_tags and self._tags_interesting and subtag != tag:
+                
+                if subtag in self._tags_whitelist:
+                    
+                    return True
+                    
+                
+                if subtag in self._tags_blacklist:
+                    
+                    blacklist_encountered = True
+                    
+                
+            
+            if self._namespaced_interesting:
+                
+                if namespace == '':
+                    
+                    if self._all_unnamespaced_whitelisted:
+                        
+                        return True
+                        
+                    
+                    if self._all_unnamespaced_blacklisted:
+                        
+                        blacklist_encountered = True
+                        
+                    
+                else:
+                    
+                    if self._all_namespaced_whitelisted or namespace in self._namespaces_whitelist:
+                        
+                        return True
+                        
+                    
+                    if self._all_namespaced_blacklisted or namespace in self._namespaces_blacklist:
+                        
+                        blacklist_encountered = True
+                        
+                    
+                
+            
+        
+        if blacklist_encountered: # rule against and no exceptions
+            
+            return False
+            
+        else:
+            
+            return True # no rules against or explicitly for, so permitted
+            
+        
+    
+    def _UpdateRuleCache( self ):
+        
+        self._all_unnamespaced_whitelisted = False
+        self._all_namespaced_whitelisted = False
+        self._namespaces_whitelist = set()
+        self._tags_whitelist = set()
+        
+        self._all_unnamespaced_blacklisted = False
+        self._all_namespaced_blacklisted = False
+        self._namespaces_blacklist = set()
+        self._tags_blacklist = set()
+        
+        self._namespaced_interesting = False
+        self._tags_interesting = False
+        
+        for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
+            
+            if tag_slice == '':
+                
+                if rule == CC.FILTER_WHITELIST:
+                    
+                    self._all_unnamespaced_whitelisted = True
+                    
+                else:
+                    
+                    self._all_unnamespaced_blacklisted = True
+                    
+                
+                self._namespaced_interesting = True
+                
+            elif tag_slice == ':':
+                
+                if rule == CC.FILTER_WHITELIST:
+                    
+                    self._all_namespaced_whitelisted = True
+                    
+                else:
+                    
+                    self._all_namespaced_blacklisted = True
+                    
+                
+                self._namespaced_interesting = True
+                
+            elif tag_slice.count( ':' ) == 1 and tag_slice.endswith( ':' ):
+                
+                if rule == CC.FILTER_WHITELIST:
+                    
+                    self._namespaces_whitelist.add( tag_slice[:-1] )
+                    
+                else:
+                    
+                    self._namespaces_blacklist.add( tag_slice[:-1] )
+                    
+                
+                self._namespaced_interesting = True
+                
+            else:
+                
+                if rule == CC.FILTER_WHITELIST:
+                    
+                    self._tags_whitelist.add( tag_slice )
+                    
+                else:
+                    
+                    self._tags_blacklist.add( tag_slice )
+                    
+                
+                self._tags_interesting = True
+                
             
         
     
@@ -361,6 +525,8 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._tag_slices_to_rules[ tag_slice ] = rule
+            
+            self._UpdateRuleCache()
             
         
     

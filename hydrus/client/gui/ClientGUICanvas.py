@@ -3130,7 +3130,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def CleanBeforeDestroy( self ):
         
-        HG.client_controller.pub( 'refresh_dupe_page_numbers' )
+        ClientDuplicates.DuplicatesManager.instance().RefreshMaintenanceNumbers()
         
         ClientMedia.hashes_to_jpeg_quality = {} # clear the cache
         ClientMedia.hashes_to_pixel_hashes = {} # clear the cache

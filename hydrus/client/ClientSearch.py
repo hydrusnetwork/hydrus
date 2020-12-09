@@ -2870,13 +2870,15 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
             
         else:
             
-            # a cache for 'cha' is invalid for 'character:sam'
+            # a cache for 'cha' is probably invalid for 'character:samus aran'
             
             ( strict_search_text_namespace, strict_search_text_subtag ) = HydrusTags.SplitTag( strict_search_text )
             
             if strict_search_text_namespace == self._strict_search_text_namespace:
                 
-                return strict_search_text_subtag.startswith( self._strict_search_text_subtag )
+                # != '', because a cache for 'character:' probably can't match a search for 'character:samus aran'
+                
+                return self._strict_search_text_subtag != '' and strict_search_text_subtag.startswith( self._strict_search_text_subtag )
                 
             else:
                 

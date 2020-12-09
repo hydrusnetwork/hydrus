@@ -822,13 +822,13 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         services_manager = HG.client_controller.services_manager
         
-        self._service_keys_to_tag_options = { service_key : ( action, tag_filter ) for ( service_key, action, tag_filter ) in tag_service_options }
+        self._service_keys_to_tag_options = { service_key : ( action, tag_filter ) for ( service_key, action, tag_filter ) in tag_service_options if services_manager.ServiceExists( service_key ) }
         
         self._tag_service_actions.SetData( list( self._service_keys_to_tag_options.keys() ) )
         
         self._tag_service_actions.Sort()
         
-        self._service_keys_to_rating_options = { service_key : action for ( service_key, action ) in rating_service_options }
+        self._service_keys_to_rating_options = { service_key : action for ( service_key, action ) in rating_service_options if services_manager.ServiceExists( service_key ) }
         
         self._rating_service_actions.SetData( list( self._service_keys_to_rating_options.keys() ) )
         
@@ -1036,7 +1036,15 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         action = self._service_keys_to_rating_options[ service_key ]
         
-        service_name = HG.client_controller.services_manager.GetName( service_key )
+        try:
+            
+            service_name = HG.client_controller.services_manager.GetName( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            service_name = 'missing service!'
+            
+        
         pretty_action = HC.content_merge_string_lookup[ action ]
         
         display_tuple = ( service_name, pretty_action )
@@ -1049,7 +1057,15 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
         
-        service_name = HG.client_controller.services_manager.GetName( service_key )
+        try:
+            
+            service_name = HG.client_controller.services_manager.GetName( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            service_name = 'missing service!'
+            
+        
         pretty_action = HC.content_merge_string_lookup[ action ]
         pretty_tag_filter = tag_filter.ToPermittedString()
         

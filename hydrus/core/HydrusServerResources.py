@@ -529,6 +529,13 @@ class HydrusResource( Resource ):
             
         
     
+    def _profileJob( self, call, request ):
+        
+        HydrusData.Profile( 'client api {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals() )
+        
+        return request.result_lmao
+        
+    
     def _callbackDoGETJob( self, request ):
         
         def wrap_thread_result( response_context ):
@@ -538,7 +545,14 @@ class HydrusResource( Resource ):
             return request
             
         
-        d = deferToThread( self._threadDoGETJob, request )
+        if HG.server_profile_mode:
+            
+            d = deferToThread( self._profileJob, self._threadDoGETJob, request )
+            
+        else:
+            
+            d = deferToThread( self._threadDoGETJob, request )
+            
         
         d.addCallback( wrap_thread_result )
         
@@ -554,7 +568,14 @@ class HydrusResource( Resource ):
             return request
             
         
-        d = deferToThread( self._threadDoOPTIONSJob, request )
+        if HG.server_profile_mode:
+            
+            d = deferToThread( self._profileJob, self._threadDoOPTIONSJob, request )
+            
+        else:
+            
+            d = deferToThread( self._threadDoOPTIONSJob, request )
+            
         
         d.addCallback( wrap_thread_result )
         
@@ -570,7 +591,14 @@ class HydrusResource( Resource ):
             return request
             
         
-        d = deferToThread( self._threadDoPOSTJob, request )
+        if HG.server_profile_mode:
+            
+            d = deferToThread( self._profileJob, self._threadDoPOSTJob, request )
+            
+        else:
+            
+            d = deferToThread( self._threadDoPOSTJob, request )
+            
         
         d.addCallback( wrap_thread_result )
         

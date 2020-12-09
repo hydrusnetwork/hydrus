@@ -8,13 +8,56 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 421</h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>thanks to a user's contribution, added the export 'filename pattern' to the discord drag and drop mode, under _options->gui_. this lets you auto-rename files in this export mode. I like how this works, but the overall pattern-based filename creation system really needs updating. let me know how this works for you, and I'll finally start the job to update filename generation</li>
+					<li>fixed a bug when importing files with the 'only add tags that already exist' filter active, and added a unit test so this should not fail due to a typo again</li>
+					<li>fixed an issue where ctrl-selecting on taglists was weird, where any mouse movement during ctrl+click would deselect. drag select and deselect can now only start when the drag crosses two indices</li>
+					<li>prototyped a basic profile mode for the client api. it is insufficient (due to the asynchronous nature of twisted), but a start</li>
+					<li>when the client catches an invalid tag with the new error handling code, when it shows you that bad tag in a popup, it now clips that to 24 characters (some PTR invalid tags are just a few hundred null characters in a row, wew lad)</li>
+					<li>the client now recovers from a repository giving it a new invalid tag definition. all such tags are, for now, called 'invalid repository tag'. a plan to auto-hide these tags clientside and fully eliminate them serverside will come later</li>
+					<li>the clipboard url watcher settings should stick a bit more firmly. those users who had trouble, please let me know how you get on</li>
+					<li>fixed an issue editing duplicate action options when they contained tag or rating preferences for services that no longer exist</li>
+					<li>I think I fixed some issues getting autocomplete results when you type the whole namespace before moving on to the subtag. when you hit 'namespace:', it should invalidate the old cache and start a new search</li>
+					<li>when the database is given content updates for services that no longer exist, those content updates filtered out of UI update broadcast</li>
+					<li>fixed an issue where URL status check could fail when the url map contained orphan hash_ids. proper orphan clearance will come later</li>
+					<li>reduced overhead of tag filtering, which should improve display speed of taglist for very large pages</li>
+					<li>parents should now work through repository processing faster. periods of 2 rows/s at the end up of updates should be up to 100 times faster</li>
+					<li>.</li>
+					<li>duplicates search improvements:</li>
+					<li>potential duplicate search now works in the background! it will not interrupt you and is easily cancellable. duplicate search pages disable their search buttons while it is going</li>
+					<li>the search distance in duplicates pages is now synchronised across all pages--when one updates, they all do</li>
+					<li>all the updates to potential search maintenance numbers are now routed through one cached manager. updates here are repeated less often</li>
+					<li>misc cleanup for duplicates page</li>
+					<li>.</li>
+					<li>database modes:</li>
+					<li>a new 'program launch arguments' help page now talks about all the available command line switches, here: https://github.com/hydrusnetwork/hydrus/blob/master/help/launch_arguments.html</li>
+					<li>added the '--db_journal_mode' launch switch to set the SQLite journal mode. default is WAL, permitted values are also TRUNCATE, PERSIST, and MEMORY</li>
+					<li>ensured --db_synchronous_override was hooked up correctly</li>
+					<li>the old disk cache options under _speed and memory_ are removed, along with various deprecated disk cache load calls and code</li>
+					<li>fixed some shutdown maintenance check logic that was saying 'I think a vacuum is due' when it wasn't actually true</li>
+					<li>db_journal_mode, synchronous value, and no_db_temp_files is now shown in _help->about_</li>
+					<li>.</li>
+					<li>technical database nonsense:</li>
+					<li>PERSIST is new to hydrus, and _may_ in future versions of SQLite be boost performance for HDD drives with larger databases (e.g. those that sync to the PTR), although unfortunately in our case (which uses multiple ATTACH databases), it seems  current SQLite must ultimately treat this as DELETE, as here https://sqlite.org/atomiccommit.html#_clean_up_the_rollback_journals. damn</li>
+					<li>hydrus now tries to always trim WAL (and PERSIST, if it worked) journal files down to 1GB after commits (which happen every 30 seconds), so giganto WALs should clear up promptly after big work is done</li>
+					<li>hydrus no longer refreshes the database connection every thirty minutes, meaning WAL journal files will persist (and hopefully regularly clip back to 1GB when exceeded), which should improve some elements of long-running write performance, but may result in some surprise memory issues, we'll see</li>
+					<li>in lieu of the db connection not refreshing, the memory database now reattaches every ten minutes, which _should_ stop it leaking in certain situations</li>
+					<li>when in WAL journal mode, the hydrus db now cleans up any lingering checkpointing work every half hour</li>
+					<li>after testing and feedback from users, the database is now default SQLite synchronous 1 (down from 2) when in WAL. the db is still consistent, so sudden program stop (crash, power cut) should not result in software-caused corruption, but the database may lose more than just the last 30 seconds of work. this speeds up tag processing in an SSD test environment by approx 33%</li>
+					<li>the 'no_wal' (TRUNCATE) and 'db_memory_journaling' (MEMORY) launch switches remain valid but are now deprecated</li>
+					<li>improved launch switch code generally</li>
+					<li>boosted cache size for each of the four db files to ~200MB-this will likely become a launch argument in future, along with some other specific db values</li>
+					<li>the client and server no longer disconnect from the db to check whether it is possible to vacuum databases</li>
+				</ul>
 				<li><h3>version 420</h3></li>
 				<ul>
 					<li>misc:</li>
 					<li>fixed the bad position indexing when drag-selecting taglists that were scrolled down. this also caused some weird selection when scrolled and clicks included a little mouse movement. sorry for the trouble!</li>
 					<li>ctrl+drag-select now deselects!</li>
 					<li>fetching tag autocomplete results when you have thumbnails and 'searching immediately' on, which has been way too slow recently, now cancels much faster. in some large page situations, it was adding multi-second lag on the first character-press. it also runs faster overall</li>
-					<li>hydrus should now deal better with invalid tags that contain the null character (there it one we know about on the PTR, from a decode of botched Shift JIS, which could crash the client from too many errors during critical paint periods). when a tag like this turns up in a taglist, thumbnail, or canvas background, it now renders as an appropriate 'invalid tag' string, and a one-time 'woah, bad tag, run fix tags now' popup appears</li>
+					<li>hydrus should now deal better with invalid tags that contain the null character (there is one we know about on the PTR, from a decode of botched Shift JIS, which could crash the client from too many errors during critical paint periods). when a tag like this turns up in a taglist, thumbnail, or canvas background, it now renders as an appropriate 'invalid tag' string, and a one-time 'woah, bad tag, run fix tags now' popup appears</li>
 					<li>regular tag cleaning now looks for and removes null characters, so all new sources of these bad tags should now be eliminated</li>
 					<li>_database->check and repair->fix invalid tags_ now fixes tags with the null character. it also fixes tags so broken that after cleaning they have no subtag left. it also now forces a full media tag reload when it is done for all media</li>
 					<li>the 'regen storage mappings', 'regen display mappings', and repopulate from cache' database routines now have an additional step where you can order them only to work on one tag service, so regenning or repopulating local tags, which usually takes a couple seconds, doesn't need to wait two hours for the PTR to go as well</li>

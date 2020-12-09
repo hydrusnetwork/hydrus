@@ -1190,6 +1190,10 @@ class Controller( HydrusController.HydrusController ):
             
             self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = maintenance_mode, stop_time = search_stop_time )
             
+            from hydrus.client import ClientDuplicates
+            
+            ClientDuplicates.DuplicatesManager.instance().RefreshMaintenanceNumbers()
+            
         
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
             
@@ -1227,21 +1231,6 @@ class Controller( HydrusController.HydrusController ):
             self.pub( 'delete_old_closed_pages' )
             
             self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
-            
-        
-        disk_cache_maintenance_mb = self.new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
-        
-        if disk_cache_maintenance_mb is not None and not HG.view_shutdown:
-            
-            cache_period = 3600
-            disk_cache_stop_time = HydrusData.GetNow() + 2
-            
-            if HydrusData.TimeHasPassed( self._timestamps[ 'last_disk_cache_population' ] + cache_period ):
-                
-                self.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
-                
-                self._timestamps[ 'last_disk_cache_population' ] = HydrusData.GetNow()
-                
             
         
         def do_gui_refs( gui ):

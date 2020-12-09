@@ -1189,6 +1189,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._discord_dnd_fix.setToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
+            self._discord_dnd_filename_pattern = QW.QLineEdit( self._misc_panel )
+            self._discord_dnd_filename_pattern.setToolTip( 'When discord DnD is enabled, this will use this export phrase to rename your files. If no filename can be generated, hash will be used instead.' )
+            
             self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
             
@@ -1224,6 +1227,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._popup_message_force_min_width.setChecked( self._new_options.GetBoolean( 'popup_message_force_min_width' ) )
             
             self._discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
+            
+            self._discord_dnd_filename_pattern.setText( self._new_options.GetString( 'discord_dnd_filename_pattern' ) )
             
             self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
             
@@ -1271,6 +1276,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
+            rows.append( ( 'Discord drag-and-drop filename pattern: ', self._discord_dnd_filename_pattern ) )
+            rows.append( ( 'Export pattern shortcuts: ', ClientGUICommon.ExportPatternButton( self ) ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
             
@@ -1350,6 +1357,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'notify_client_api_cookies', self._notify_client_api_cookies.isChecked() )
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
+            self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.isChecked() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.isChecked() )
@@ -2474,19 +2482,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            disk_panel = ClientGUICommon.StaticBox( self, 'disk cache' )
-            
-            disk_cache_help_button = ClientGUICommon.BetterBitmapButton( disk_panel, CC.global_pixmaps().help, self._ShowDiskCacheHelp )
-            disk_cache_help_button.setToolTip( 'Show help regarding the disk cache.' )
-            
-            help_hbox = ClientGUICommon.WrapInText( disk_cache_help_button, disk_panel, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
-            
-            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, unit = 's', none_phrase = 'do not run', min = 1, max = 120 )
-            self._disk_cache_init_period.setToolTip( 'When the client boots, it can speed up operation (particularly loading your session pages) by reading the front of its database into memory. This sets the max number of seconds it can spend doing that.' )
-            
-            self._disk_cache_maintenance = ClientGUIControls.NoneableBytesControl( disk_panel, initial_value = 256 * 1024 * 1024, none_label = 'do not keep db cached' )
-            self._disk_cache_maintenance.setToolTip( 'The client can regularly ensure the front of its database is cached in your OS\'s disk cache. This represents how many megabytes it will ensure are cached in memory.' )
-            
             #
             
             media_panel = ClientGUICommon.StaticBox( self, 'thumbnail size and media cache' )
@@ -2533,21 +2528,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._disk_cache_init_period.SetValue( self._new_options.GetNoneableInteger( 'disk_cache_init_period' ) )
-            
-            disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
-            
-            if disk_cache_maintenance_mb is None:
-                
-                disk_cache_maintenance = disk_cache_maintenance_mb
-                
-            else:
-                
-                disk_cache_maintenance = disk_cache_maintenance_mb * 1024 * 1024
-                
-            
-            self._disk_cache_maintenance.SetValue( disk_cache_maintenance )
-            
             self._thumbnail_cache_size.setValue( int( HC.options['thumbnail_cache_size'] // 1048576 ) )
             
             self._fullscreen_cache_size.setValue( int( HC.options['fullscreen_cache_size'] // 1048576 ) )
@@ -2565,19 +2545,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'run disk cache on boot for this long: ', self._disk_cache_init_period ) )
-            rows.append( ( 'regularly ensure this much of the db is in OS\'s disk cache: ', self._disk_cache_maintenance ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( disk_panel, rows )
-            
             vbox = QP.VBoxLayout()
-            
-            disk_panel.Add( help_hbox, CC.FLAGS_ON_RIGHT )
-            disk_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            QP.AddToLayout( vbox, disk_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2673,21 +2641,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.EventVideoBufferUpdate( self._video_buffer_size_mb.value() )
             
         
-        def _ShowDiskCacheHelp( self ):
-            
-            message = 'NO NEED TO USE THESE IF YOU RUN ON AN SSD.'
-            message += os.linesep * 2
-            message += 'The hydrus database runs best on a drive with fast random access latency. Certain important operations can function up to 100 times faster when started raw from an SSD rather than an HDD.'
-            message += os.linesep * 2
-            message += 'If you are on an HDD, the client can populate a pre-boot and ongoing disk cache. By contiguously frontloading the database into memory, the most important functions do not need to wait on your disk for most of their work.'
-            message += os.linesep * 2
-            message += 'Try 2 to 10 seconds boot cache, and 256-512MB ongoing disk cache.'
-            message += os.linesep * 2
-            message += 'Unless you are testing, do not go crazy with this stuff. You can set 8192MB if you like, but there are diminishing (and potentially negative) returns.'
-            
-            QW.QMessageBox.information( self, 'Information', message )
-            
-        
         def EventFullscreensUpdate( self, value ):
             
             display_size = ClientGUIFunctions.GetDisplaySize( self )
@@ -2720,21 +2673,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
-            
-            self._new_options.SetNoneableInteger( 'disk_cache_init_period', self._disk_cache_init_period.GetValue() )
-            
-            disk_cache_maintenance = self._disk_cache_maintenance.GetValue()
-            
-            if disk_cache_maintenance is None:
-                
-                disk_cache_maintenance_mb = disk_cache_maintenance
-                
-            else:
-                
-                disk_cache_maintenance_mb = disk_cache_maintenance // ( 1024 * 1024 )
-                
-            
-            self._new_options.SetNoneableInteger( 'disk_cache_maintenance_mb', disk_cache_maintenance_mb )
             
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.value() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.value() * 1048576

@@ -8,16 +8,20 @@ view_shutdown = False
 model_shutdown = False
 
 no_daemons = False
-no_wal = False
+db_journal_mode = 'WAL'
 no_db_temp_files = False
-db_memory_journaling = False
-db_synchronous_override = None
+
+# if this is set to 1, transactions are not immediately synced to the journal so multiple can be undone following a power-loss
+# if set to 2, all transactions are synced, so once a new one starts you know the last one is on disk
+# corruption cannot occur either way, but since we have multiple ATTACH dbs with diff journals, let's not mess around when power-cut during heavy file import or w/e
+db_synchronous = 2
 
 import_folders_running = False
 export_folders_running = False
 
 db_ui_hang_relief_mode = False
 callto_report_mode = False
+server_profile_mode = False
 db_report_mode = False
 db_profile_mode = False
 file_report_mode = False

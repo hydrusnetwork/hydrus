@@ -672,6 +672,58 @@ class TestClientDB( unittest.TestCase ):
         for i in range( len( predicates ) ): self.assertEqual( result[i].GetCount(), predicates[i].GetCount() )
         
     
+    def test_filter_existing_tags( self ):
+        
+        TestClientDB._clear_db()
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        #
+        
+        services = list( self._read( 'services' ) )
+        
+        new_service_key = HydrusData.GenerateKey()
+        
+        services.append( ClientServices.GenerateService( new_service_key, HC.LOCAL_TAG, 'new service' ) )
+        
+        empty_service_key = HydrusData.GenerateKey()
+        
+        services.append( ClientServices.GenerateService( empty_service_key, HC.LOCAL_TAG, 'empty service' ) )
+        
+        self._write( 'update_services', services )
+        
+        #
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:samus aran', ( hash, ) ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', ( hash, ) ) ) )
+        
+        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = content_updates
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'clothing:bodysuit', ( hash, ) ) ) )
+        
+        service_keys_to_content_updates[ new_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        result = self._read( 'filter_existing_tags', CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
+        
+        self.assertEqual( result, { 'character:samus aran', 'series:metroid' } )
+        
+        result = self._read( 'filter_existing_tags', new_service_key, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
+        
+        self.assertEqual( result, { 'clothing:bodysuit' } )
+        
+        result = self._read( 'filter_existing_tags', empty_service_key, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
+        
+        self.assertEqual( result, set() )
+        
+    
     def test_gui_sessions( self ):
         
         def qt_code():

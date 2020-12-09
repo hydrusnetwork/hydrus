@@ -1,4 +1,6 @@
 import collections
+import threading
+import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -7,8 +9,186 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientTags
 
+class DuplicatesManager( object ):
+    
+    my_instance = None
+    
+    def __init__( self ):
+        
+        DuplicatesManager.my_instance = self
+        
+        self._similar_files_maintenance_status = None
+        self._currently_refreshing_maintenance_numbers = False
+        self._refresh_maintenance_numbers = True
+        
+        self._currently_doing_potentials_search = False
+        
+        self._lock = threading.Lock()
+        
+    
+    @staticmethod
+    def instance() -> 'DuplicatesManager':
+        
+        if DuplicatesManager.my_instance is None:
+            
+            DuplicatesManager()
+            
+        
+        return DuplicatesManager.my_instance
+        
+    
+    def GetMaintenanceNumbers( self ):
+        
+        with self._lock:
+            
+            if self._refresh_maintenance_numbers and not self._currently_refreshing_maintenance_numbers:
+                
+                self._refresh_maintenance_numbers = False
+                self._currently_refreshing_maintenance_numbers = True
+                
+                HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+                
+                HG.client_controller.CallToThread( self.THREADRefreshMaintenanceNumbers )
+                
+            
+            return ( self._similar_files_maintenance_status, self._currently_refreshing_maintenance_numbers, self._currently_doing_potentials_search )
+            
+        
+    
+    def RefreshMaintenanceNumbers( self ):
+        
+        with self._lock:
+            
+            self._refresh_maintenance_numbers = True
+            
+            HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+            
+        
+    
+    def StartPotentialsSearch( self ):
+        
+        with self._lock:
+            
+            if self._currently_doing_potentials_search or self._similar_files_maintenance_status is None:
+                
+                return
+                
+            
+            self._currently_doing_potentials_search = True
+            
+            HG.client_controller.CallToThreadLongRunning( self.THREADSearchPotentials )
+            
+        
+    
+    def THREADRefreshMaintenanceNumbers( self ):
+        
+        try:
+            
+            similar_files_maintenance_status = HG.client_controller.Read( 'similar_files_maintenance_status' )
+            
+            with self._lock:
+                
+                self._similar_files_maintenance_status = similar_files_maintenance_status
+                
+                if self._refresh_maintenance_numbers:
+                    
+                    self._refresh_maintenance_numbers = False
+                    
+                    HG.client_controller.CallToThread( self.THREADRefreshMaintenanceNumbers )
+                    
+                else:
+                    
+                    self._currently_refreshing_maintenance_numbers = False
+                    self._refresh_maintenance_numbers = False
+                    
+                
+                HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+                
+            
+        except:
+            
+            self._currently_refreshing_maintenance_numbers = False
+            HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+            
+            raise
+            
+        
+    
+    def THREADSearchPotentials( self ):
+        
+        try:
+            
+            search_distance = HG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            
+            with self._lock:
+                
+                if self._similar_files_maintenance_status is None:
+                    
+                    return
+                    
+                
+                searched_distances_to_count = self._similar_files_maintenance_status
+                
+                total_num_files = sum( searched_distances_to_count.values() )
+                
+                num_searched = sum( ( count for ( value, count ) in searched_distances_to_count.items() if value is not None and value >= search_distance ) )
+                
+                all_files_searched = num_searched >= total_num_files
+                
+                if all_files_searched:
+                    
+                    return # no work to do
+                    
+                
+            
+            num_searched_estimate = num_searched
+            
+            HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetVariable( 'popup_title', 'searching for potential duplicates' )
+            
+            HG.client_controller.pub( 'message', job_key )
+            
+            still_work_to_do = True
+            
+            while still_work_to_do:
+                
+                search_distance = HG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+                
+                ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key, work_time_float = 0.5 )
+                
+                num_searched_estimate += num_done
+                
+                text = 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
+                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
+                
+                if job_key.IsCancelled() or HG.model_shutdown:
+                    
+                    break
+                    
+                
+                time.sleep( 0.5 )
+                
+            
+            job_key.Delete()
+            
+        finally:
+            
+            with self._lock:
+                
+                self._currently_doing_potentials_search = False
+                
+            
+            self.RefreshMaintenanceNumbers()
+            
+        
+    
 class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS

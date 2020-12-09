@@ -1203,10 +1203,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._CloseDBCursor()
-        
-        self._InitDBCursor()
-        
         return service_keys_to_access_keys
         
     
@@ -3291,52 +3287,66 @@ class DB( HydrusDB.HydrusDB ):
             
             db_names = [ name for name in db_names if name in self._db_filenames ]
             
-            self._CloseDBCursor()
+            ok_db_names = []
             
-            try:
+            for name in db_names:
                 
-                names_done = []
+                db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
                 
-                for name in db_names:
+                try:
                     
-                    try:
-                        
-                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                    HydrusDB.CheckCanVacuumCursor( db_path, self._c )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
+                    
+                    continue
+                    
+                
+                ok_db_names.append( name )
+                
+            
+            db_names = ok_db_names
+            
+            if len( db_names ) > 0:
+                
+                self._CloseDBCursor()
+                
+                try:
+                    
+                    names_done = []
+                    
+                    for name in db_names:
                         
                         try:
                             
-                            HydrusDB.CheckCanVacuum( db_path )
+                            db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                            
+                            started = HydrusData.GetNowPrecise()
+                            
+                            HydrusDB.VacuumDB( db_path )
+                            
+                            time_took = HydrusData.GetNowPrecise() - started
+                            
+                            HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                            
+                            names_done.append( name )
                             
                         except Exception as e:
                             
-                            HydrusData.Print( 'Cannot vacuum "{}": {}'.format( db_path, e ) )
+                            HydrusData.Print( 'vacuum failed:' )
                             
-                            continue
+                            HydrusData.ShowException( e )
                             
-                        
-                        started = HydrusData.GetNowPrecise()
-                        
-                        HydrusDB.VacuumDB( db_path )
-                        
-                        time_took = HydrusData.GetNowPrecise() - started
-                        
-                        HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
-                        
-                        names_done.append( name )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.Print( 'vacuum failed:' )
-                        
-                        HydrusData.ShowException( e )
-                        
-                        return
+                            return
+                            
                         
                     
-                
-            finally:
-                
-                self._InitDBCursor()
+                finally:
+                    
+                    self._InitDBCursor()
+                    
                 
             
         finally:

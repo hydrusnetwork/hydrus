@@ -4,9 +4,11 @@ from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 
+from hydrus.client import ClientExporting
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 
@@ -48,6 +50,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     client_files_manager = HG.client_controller.client_files_manager
     
     original_paths = []
+    media_and_original_paths = []
     
     total_size = 0
     
@@ -61,6 +64,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         original_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
         
         original_paths.append( original_path )
+        media_and_original_paths.append( ( m, original_path ) )
         
     
     #
@@ -77,11 +81,33 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
     elif discord_dnd_fix_possible and os.path.exists( temp_dir ):
         
+        fallback_filename_terms = ClientExporting.ParseExportPhrase( '{hash}' )
+        
+        try:
+            
+            filename_pattern = new_options.GetString( 'discord_dnd_filename_pattern' )
+            filename_terms = ClientExporting.ParseExportPhrase( filename_pattern )
+            
+            if len( filename_terms ) == 0:
+                
+                raise Exception()
+                
+            
+        except:
+            
+            filename_terms = fallback_filename_terms
+            
+        
         dnd_paths = []
         
-        for original_path in original_paths:
+        for ( m, original_path ) in media_and_original_paths:
             
-            filename = os.path.basename( original_path )
+            filename = ClientExporting.GenerateExportFilename( temp_dir, m, filename_terms )
+            
+            if filename == HC.mime_ext_lookup[ m.GetMime() ]:
+                
+                filename = ClientExporting.GenerateExportFilename( temp_dir, m, fallback_filename_terms )
+                
             
             dnd_path = os.path.join( temp_dir, filename )
             

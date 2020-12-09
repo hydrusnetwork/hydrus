@@ -522,6 +522,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
         library_versions.append( ( 'temp dir', HydrusPaths.GetCurrentTempDir() ) )
+        library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
+        library_versions.append( ( 'db synchronous value', str( HG.db_synchronous ) ) )
+        library_versions.append( ( 'db using memory for temp?', str( HG.no_db_temp_files ) ) )
         
         import locale
         
@@ -1435,6 +1438,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     def _FlipClipboardWatcher( self, option_name ):
         
         self._controller.new_options.FlipBoolean( option_name )
+        
+        self._controller.WriteSynchronous( 'serialisable', self._controller.new_options )
         
         self._last_clipboard_watched_text = ''
         
@@ -4169,6 +4174,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.pubsub_profile_mode = not HG.pubsub_profile_mode
             
+        elif name == 'server_profile_mode':
+            
+            HG.server_profile_mode = not HG.server_profile_mode
+            
         elif name == 'shortcut_report_mode':
             
             HG.shortcut_report_mode = not HG.shortcut_report_mode
@@ -5284,6 +5293,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
             
             ClientGUIMenus.AppendMenuItem( profile_modes, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'client api profile mode', 'Run detailed \'profiles\' on every client api query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.server_profile_mode, self._SwitchBoolean, 'server_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
@@ -5346,7 +5356,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( memory_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
             ClientGUIMenus.AppendMenuItem( memory_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
-            ClientGUIMenus.AppendMenuItem( memory_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
             
             ClientGUIMenus.AppendMenu( debug, memory_actions, 'memory actions' )
             

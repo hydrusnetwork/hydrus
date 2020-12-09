@@ -4,6 +4,8 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusText
+
 from hydrus.client.gui import QtPorting as QP
 
 def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
@@ -152,7 +154,11 @@ def GetTextSizeFromPainter( painter: QG.QPainter, text: str ):
             from hydrus.core import HydrusData
             
             HydrusData.ShowText( 'Hey, I think hydrus stumbled across an invalid tag! Please run _database->check and repair->fix invalid tags_ immediately, or you may get errors!' )
-            HydrusData.ShowText( 'The bad text was: {}'.format( repr( text ) ) )
+            
+            bad_text = repr( text )
+            bad_text = HydrusText.ElideText( bad_text, 24 )
+            
+            HydrusData.ShowText( 'The bad text was: {}'.format( bad_text ) )
             
             ClientTags.have_shown_invalid_tag_warning = True
             

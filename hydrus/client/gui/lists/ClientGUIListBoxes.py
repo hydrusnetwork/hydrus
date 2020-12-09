@@ -932,6 +932,9 @@ class ListBox( QW.QScrollArea ):
         self._selected_terms = set()
         self._terms_to_texts = {}
         
+        self._last_drag_start_index = None
+        self._drag_started = False
+        
         self._last_hit_index = None
         
         self._last_view_start = None
@@ -953,7 +956,6 @@ class ListBox( QW.QScrollArea ):
         
         #
         
-        self.setMouseTracking( True )
         self.setFont( QW.QApplication.font() )
         
         self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
@@ -1786,14 +1788,36 @@ class ListBox( QW.QScrollArea ):
             
             hit_index = self._GetIndexUnderMouse( event )
             
-            ctrl = event.modifiers() & QC.Qt.ControlModifier
-            
-            self._Hit( True, ctrl, hit_index )
+            if self._last_drag_start_index is None:
+                
+                self._last_drag_start_index = hit_index
+                
+            elif hit_index != self._last_drag_start_index:
+                
+                ctrl = event.modifiers() & QC.Qt.ControlModifier
+                
+                if not self._drag_started:
+                    
+                    self._Hit( True, ctrl, self._last_drag_start_index )
+                    
+                    self._drag_started = True
+                    
+                
+                self._Hit( True, ctrl, hit_index )
+                
             
         else:
             
             event.ignore()
             
+        
+    
+    def mouseReleaseEvent( self, event ):
+        
+        self._last_drag_start_index = None
+        self._drag_started = False
+        
+        event.ignore()
         
     
     def EventMouseSelect( self, event ):
