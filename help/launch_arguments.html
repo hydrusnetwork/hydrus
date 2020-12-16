@@ -52,6 +52,10 @@
 					<p>When SQLite performs very large queries, it may spool temporary table results to disk. These go in your temp directory. If your temp dir is slow but you have a <i>ton</i> of memory, set this to never spool to disk, as <a href="https://sqlite.org/pragma.html#pragma_temp_store">here</a>.</p>
 				</li>
 				<li>
+					<b>--boot_debug</b>
+					<p>Prints additional debug information to the log during the bootup phase of the application.</p>
+				</li>
+				<li>
 					<b>--no_daemons</b>
 					<p>Launch the program without some background workers. This is an old debug command and does not do much any more.</p>
 				</li>

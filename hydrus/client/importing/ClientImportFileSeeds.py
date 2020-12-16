@@ -1163,6 +1163,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     parsing_text = network_job.GetContentText()
                     
+                    actual_fetched_url = network_job.GetActualFetchedURL()
+                    
+                    if actual_fetched_url != url_to_check:
+                        
+                        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                        
+                        if url_type == HC.URL_TYPE_POST and can_parse:
+                            
+                            post_url = actual_fetched_url
+                            
+                            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                            
+                        
+                    
                     parsing_context = {}
                     
                     parsing_context[ 'post_url' ] = post_url

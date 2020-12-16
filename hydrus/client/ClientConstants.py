@@ -433,20 +433,16 @@ class GlobalPixmaps( object ):
         
         self._Initialise()
         
-        GlobalPixmaps.my_instance = self
-        
     
     @staticmethod
     def instance() -> 'GlobalPixmaps':
         
         if GlobalPixmaps.my_instance is None:
             
-            raise Exception( 'GlobalPixmaps is not yet initialised!' )
+            GlobalPixmaps.my_instance = GlobalPixmaps()
             
-        else:
-            
-            return GlobalPixmaps.my_instance
-            
+        
+        return GlobalPixmaps.my_instance
         
     
     def _Initialise( self ):

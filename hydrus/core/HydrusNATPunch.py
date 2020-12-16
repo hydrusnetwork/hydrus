@@ -10,36 +10,76 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 
-# new stuff starts here
+# the _win32, _linux, _osx stuff here is legacy, from when I used to bundle these exes. this cause anti-virus false positive wew
 
-if HC.PLATFORM_LINUX:
+if HC.PLATFORM_WINDOWS:
     
-    upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_linux' )
+    possible_bin_filenames = [ 'upnpc-static.exe', 'upnpc-static.exe', 'miniupnpc.exe', 'upnpc_win32.exe' ]
     
-elif HC.PLATFORM_MACOS:
+else:
     
-    upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_osx' )
+    possible_bin_filenames = [ 'upnpc-static', 'upnpc-shared', 'miniupnpc' ]
     
-elif HC.PLATFORM_WINDOWS:
+    if HC.PLATFORM_LINUX:
+        
+        possible_bin_filenames.append( 'upnpc_linux' )
+        
+    elif HC.PLATFORM_MACOS:
+        
+        possible_bin_filenames.append( 'upnpc_osx' )
+        
     
-    upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_win32.exe' )
-    
+UPNPC_PATH = 'miniupnpc' # no exe, we'll assume installed to system
 
+UPNPC_IS_MISSING = False
+UPNPC_MANAGER_ERROR_PRINTED = False
+
+for filename in possible_bin_filenames:
+    
+    possible_path = os.path.join( HC.BIN_DIR, filename )
+    
+    if os.path.exists( possible_path ):
+        
+        UPNPC_PATH = possible_path
+        
+    
 EXTERNAL_IP = {}
 EXTERNAL_IP[ 'ip' ] = None
 EXTERNAL_IP[ 'time' ] = 0
 
+def RaiseMissingUPnPcError( operation ):
+    
+    message = 'Unfortunately, the operation "{}" requires miniupnpc, which does not seem to be available for your system. You can install it yourself easily, please check install_dir/bin/upnpc_readme.txt for more information!'.format( operation )
+    
+    global UPNPC_IS_MISSING
+    
+    if not UPNPC_IS_MISSING:
+        
+        HydrusData.ShowText( message )
+        
+        UPNPC_IS_MISSING = True
+        
+    
+    raise FileNotFoundError( message )
+    
 def GetExternalIP():
     
     if HydrusData.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
         
-        cmd = [ upnpc_path, '-l' ]
+        cmd = [ UPNPC_PATH, '-l' ]
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
         
         HydrusData.CheckProgramIsNotShuttingDown()
         
-        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        try:
+            
+            p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+            
+        except FileNotFoundError:
+            
+            RaiseMissingUPnPcError( 'fetch external IP' )
+            
         
         HydrusData.WaitForProcessToFinish( p, 30 )
         
@@ -47,7 +87,7 @@ def GetExternalIP():
         
         if stderr is not None and len( stderr ) > 0:
             
-            raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + str( stderr ) )
+            raise Exception( 'Problem while trying to fetch External IP (if it says No IGD UPnP Device, you are either on a VPN or your router does not seem to support UPnP):' + os.linesep * 2 + str( stderr ) )
             
         else:
             
@@ -83,13 +123,20 @@ def GetLocalIP():
     
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     
-    cmd = [ upnpc_path, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
+    cmd = [ UPNPC_PATH, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
-    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+    try:
+        
+        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        
+    except FileNotFoundError:
+        
+        RaiseMissingUPnPcError( 'add UPnP port forward' )
+        
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -135,13 +182,20 @@ def AddUPnPMappingCheckResponse( internal_client, internal_port, external_port, 
     
 def GetUPnPMappings():
     
-    cmd = [ upnpc_path, '-l' ]
+    cmd = [ UPNPC_PATH, '-l' ]
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
-    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+    try:
+        
+        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        
+    except FileNotFoundError:
+        
+        RaiseMissingUPnPcError( 'get current UPnP port forward mappings' )
+        
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -149,7 +203,7 @@ def GetUPnPMappings():
     
     if stderr is not None and len( stderr ) > 0:
         
-        raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + stderr )
+        raise Exception( 'Problem while trying to fetch UPnP mappings (if it says No IGD UPnP Device, you are either on a VPN or your router does not seem to support UPnP):' + os.linesep * 2 + stderr )
         
     else:
         
@@ -237,13 +291,20 @@ def GetUPnPMappingsParseResponse( stdout ):
     
 def RemoveUPnPMapping( external_port, protocol ):
     
-    cmd = [ upnpc_path, '-d', str( external_port ), protocol ]
+    cmd = [ UPNPC_PATH, '-d', str( external_port ), protocol ]
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
-    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+    try:
+        
+        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        
+    except FileNotFoundError:
+        
+        RaiseMissingUPnPcError( 'remove UPnP port forward' )
+        
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -254,7 +315,6 @@ def RemoveUPnPMapping( external_port, protocol ):
         raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + stderr )
         
     
-
 class ServicesUPnPManager( object ):
     
     def __init__( self, services ):
@@ -266,9 +326,9 @@ class ServicesUPnPManager( object ):
     
     def _RefreshUPnP( self, force_wipe = False ):
         
+        running_service_with_upnp = True in ( service.GetPort() is not None and service.GetUPnPPort() is not None for service in self._services )
+        
         if not force_wipe:
-            
-            running_service_with_upnp = True in ( service.GetPort() is not None and service.GetUPnPPort() is not None for service in self._services )
             
             if not running_service_with_upnp:
                 
@@ -276,18 +336,46 @@ class ServicesUPnPManager( object ):
                 
             
         
+        if running_service_with_upnp and UPNPC_IS_MISSING:
+            
+            return # welp
+            
+        
         try:
             
             local_ip = GetLocalIP()
             
+        except:
+            
+            return # can't get local IP, we are wewlad atm, probably some complicated multiple network situation we'll have to deal with later
+            
+        
+        try:
+            
             current_mappings = GetUPnPMappings()
             
-            our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_port, protocol, enabled ) in current_mappings }
+        except FileNotFoundError:
+            
+            if not force_wipe:
+                
+                global UPNPC_MANAGER_ERROR_PRINTED
+                
+                if not UPNPC_MANAGER_ERROR_PRINTED:
+                    
+                    HydrusData.ShowText( 'Hydrus was set up to manage your services\' port forwards with UPnP, but the miniupnpc executable is not available. Please check install_dir/bin/upnpc_readme.txt for more details.' )
+                    
+                    UPNPC_MANAGER_ERROR_PRINTED = True
+                    
+                
+            
+            return # in this case, most likely miniupnpc could not be found, so skip for now
             
         except:
             
             return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
             
+        
+        our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_port, protocol, enabled ) in current_mappings }
         
         for service in self._services:
             
@@ -343,7 +431,7 @@ class ServicesUPnPManager( object ):
             
             self._services = services
             
-            self._RefreshUPnP( force_wipe = True )
+            self._RefreshUPnP()
             
         
     

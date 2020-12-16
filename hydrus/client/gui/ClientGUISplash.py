@@ -189,6 +189,11 @@ class FrameSplashStatus( object ):
     
     def SetSubtext( self, text ):
         
+        if HG.boot_debug and self._updater is not None and len( text ) > 0:
+            
+            HydrusData.Print( text )
+            
+        
         with self._lock:
             
             self._status_subtext = text

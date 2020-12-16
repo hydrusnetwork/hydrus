@@ -2126,6 +2126,11 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( new_gugs ) > 0:
             
+            for gug in new_gugs:
+                
+                gug.RegenerateGUGKey()
+                
+            
             domain_manager.AddGUGs( new_gugs )
             
         

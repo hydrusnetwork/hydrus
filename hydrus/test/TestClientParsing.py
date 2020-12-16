@@ -9,6 +9,121 @@ class TestStringConverter( unittest.TestCase ):
     
     def test_basics( self ):
         
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), '123456789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_END, 1 ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), '012345678' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, 7 ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), '0123456' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_CLIP_TEXT_FROM_END, 7 ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), '3456789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_PREPEND_TEXT, 'abc' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), 'abc0123456789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_APPEND_TEXT, 'xyz' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), '0123456789xyz' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_ENCODE, 'url percent encoding' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '01234 56789' ), '01234%2056789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_DECODE, 'url percent encoding' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '01234%2056789' ), '01234 56789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_ENCODE, 'unicode escape characters' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '01234\u039456789' ), '01234\\u039456789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_DECODE, 'unicode escape characters' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '01234\\u039456789' ), '01234\u039456789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_ENCODE, 'html entities' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '01234&56789' ), '01234&amp;56789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_DECODE, 'html entities' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '01234&amp;56789' ), '01234&56789' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_ENCODE, 'hex' ) ] )
+        
+        self.assertEqual( string_converter.Convert( b'\xe5\xafW\xa6\x87\xf0\x89\x89O^\xce\xdeP\x04\x94X' ), 'e5af57a687f089894f5ecede50049458' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_ENCODE, 'base64' ) ] )
+        
+        self.assertEqual( string_converter.Convert( b'\xe5\xafW\xa6\x87\xf0\x89\x89O^\xce\xdeP\x04\x94X' ), '5a9XpofwiYlPXs7eUASUWA==' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_REVERSE, None ) ] )
+        
+        self.assertEqual( string_converter.Convert( '0123456789' ), '9876543210' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_REGEX_SUB, ( '\\d', 'd' ) ) ] )
+        
+        self.assertEqual( string_converter.Convert( 'abc123' ), 'abcddd' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_DATE_DECODE, ( '%Y-%m-%d %H:%M:%S', HC.TIMEZONE_GMT, 0 ) ) ] )
+        
+        self.assertEqual( string_converter.Convert( '1970-01-02 00:00:00' ), '86400' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_DATE_ENCODE, ( '%Y-%m-%d %H:%M:%S', 0 ) ) ] )
+        
+        self.assertEqual( string_converter.Convert( '86400' ), '1970-01-02 00:00:00' )
+        
+        #
+        
+        string_converter = ClientParsing.StringConverter( conversions = [ ( ClientParsing.STRING_CONVERSION_INTEGER_ADDITION, 5 ) ] )
+        
+        self.assertEqual( string_converter.Convert( '4' ), '9' )
+        
+    
+    def test_compound( self ):
+        
         conversions = []
         
         conversions.append( ( ClientParsing.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) )
@@ -88,30 +203,6 @@ class TestStringConverter( unittest.TestCase ):
         string_converter = ClientParsing.StringConverter( conversions = conversions )
         
         self.assertEqual( string_converter.Convert( '0123456789' ), 'z xddddddcba' )
-        
-        #
-        
-        conversions = [ ( ClientParsing.STRING_CONVERSION_DATE_DECODE, ( '%Y-%m-%d %H:%M:%S', HC.TIMEZONE_GMT, 0 ) ) ]
-        
-        string_converter = ClientParsing.StringConverter( conversions = conversions )
-        
-        self.assertEqual( string_converter.Convert( '1970-01-02 00:00:00' ), '86400' )
-        
-        #
-        
-        conversions = [ ( ClientParsing.STRING_CONVERSION_DATE_ENCODE, ( '%Y-%m-%d %H:%M:%S', 0 ) ) ]
-        
-        string_converter = ClientParsing.StringConverter( conversions = conversions )
-        
-        self.assertEqual( string_converter.Convert( '86400' ), '1970-01-02 00:00:00' )
-        
-        #
-        
-        conversions = [ ( ClientParsing.STRING_CONVERSION_INTEGER_ADDITION, 5 ) ]
-        
-        string_converter = ClientParsing.StringConverter( conversions = conversions )
-        
-        self.assertEqual( string_converter.Convert( '4' ), '9' )
         
     
 class TestStringMatch( unittest.TestCase ):
@@ -234,35 +325,3 @@ class TestStringProcessor( unittest.TestCase ):
         self.assertEqual( processor.ProcessStrings( [ '1,a,2,3', 'test', '123' ] ), expected_result )
         
     
-    def test_hex_fail( self ):
-        
-        processor = ClientParsing.StringProcessor()
-        
-        conversions = [ ( ClientParsing.STRING_CONVERSION_DECODE, 'hex' ) ]
-        
-        string_converter = ClientParsing.StringConverter( conversions = conversions )
-        
-        #
-        
-        processing_steps = []
-        
-        processing_steps.append( string_converter )
-        
-        processing_steps.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC ) )
-        
-        processor.SetProcessingSteps( processing_steps )
-        
-        self.assertEqual( processor.ProcessStrings( [ '0123456789abcdef' ] ), [] )
-        
-        #
-        
-        processing_steps = []
-        
-        processing_steps.append( string_converter )
-        
-        processing_steps.append( ClientParsing.StringSplitter( separator = ',' ) )
-        
-        processor.SetProcessingSteps( processing_steps )
-        
-        self.assertEqual( processor.ProcessStrings( [ '0123456789abcdef' ] ), [] )
-        

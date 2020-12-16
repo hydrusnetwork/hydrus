@@ -665,7 +665,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'bodysuit', ) )[ 'bodysuit' ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'bodysuit', ) )[ 'bodysuit' ][ self._my_service_key ], ( {
             'bodysuit',
             'clothing:bodysuit'
             }, 'clothing:bodysuit', {
@@ -705,7 +705,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'samus aran', ) )[ 'samus aran' ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'samus aran', ) )[ 'samus aran' ][ self._my_service_key ], ( {
             'character:samus aran',
             'samus aran'
             }, 'character:samus aran', {
@@ -768,7 +768,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'pharah', ) )[ 'pharah' ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'pharah', ) )[ 'pharah' ][ self._my_service_key ], ( {
             'character:fareeha "pharah" amari',
             'character:fareeha "pharah" amari (overwatch)',
             'character:pharah',
@@ -785,7 +785,7 @@ class TestClientDBTags( unittest.TestCase ):
             'studio:blizzard entertainment'
             } ) )
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, ( 'warcraft', ) )[ 'warcraft' ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'warcraft', ) )[ 'warcraft' ][ self._my_service_key ], ( {
             'series:warcraft',
             'copyright:warcraft',
             'warcraft',
@@ -899,7 +899,7 @@ class TestClientDBTags( unittest.TestCase ):
             'blonde'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -929,7 +929,7 @@ class TestClientDBTags( unittest.TestCase ):
             )
         ):
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._my_service_key ]
             
             self.assertEqual( sibling_chain_members, { tag } )
             
@@ -956,7 +956,7 @@ class TestClientDBTags( unittest.TestCase ):
             'artist'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._public_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1036,7 +1036,7 @@ class TestClientDBTags( unittest.TestCase ):
             )
         ):
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, { tag } )
             
@@ -1075,7 +1075,7 @@ class TestClientDBTags( unittest.TestCase ):
             'lara croft'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1085,7 +1085,7 @@ class TestClientDBTags( unittest.TestCase ):
             ),
         ):
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._my_service_key ]
             
             self.assertEqual( sibling_chain_members, { tag } )
             
@@ -1100,7 +1100,7 @@ class TestClientDBTags( unittest.TestCase ):
             'myself'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._public_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1120,7 +1120,7 @@ class TestClientDBTags( unittest.TestCase ):
             )
         ):
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, { tag } )
             
@@ -1164,7 +1164,7 @@ class TestClientDBTags( unittest.TestCase ):
             'lara croft'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1199,7 +1199,7 @@ class TestClientDBTags( unittest.TestCase ):
             )
         ):
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._my_service_key ]
             
             self.assertEqual( sibling_chain_members, { tag } )
             
@@ -1229,7 +1229,7 @@ class TestClientDBTags( unittest.TestCase ):
             'myself'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._public_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1324,7 +1324,7 @@ class TestClientDBTags( unittest.TestCase ):
             )
         ):
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, { tag } )
             
@@ -1437,7 +1437,7 @@ class TestClientDBTags( unittest.TestCase ):
             'character:samus aran'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._my_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for tag in {
             'sameus aran',
@@ -1446,7 +1446,7 @@ class TestClientDBTags( unittest.TestCase ):
             'character:samus aran'
         }:
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._my_service_key ]
             
             self.assertEqual( sibling_chain_members, {
                 'sameus aran',
@@ -1475,7 +1475,7 @@ class TestClientDBTags( unittest.TestCase ):
             'creator:splashbrush'
         }
         
-        selected_tag_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', self._public_service_key, all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
         
         for tag in {
             'bodysut',
@@ -1484,7 +1484,7 @@ class TestClientDBTags( unittest.TestCase ):
             'clothing:bodysuit',
         }:
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, {
                 'bodysut',
@@ -1505,7 +1505,7 @@ class TestClientDBTags( unittest.TestCase ):
             'series:metroid',
         }:
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, {
                 'metrod',
@@ -1526,7 +1526,7 @@ class TestClientDBTags( unittest.TestCase ):
             'creator:splashbrush'
         }:
             
-            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_siblings_and_parents[ tag ]
+            ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, {
                 'splashbush',

@@ -2006,9 +2006,16 @@ class ListBoxTags( ListBox ):
             
             if isinstance( term, ClientSearch.Predicate ):
                 
-                if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+                if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_WILDCARD ):
                     
                     tag = term.GetValue()
+                    
+                elif term.GetType() == ClientSearch.PREDICATE_TYPE_NAMESPACE:
+                    
+                    namespace = term.GetValue()
+                    
+                    # this is useful for workflow
+                    tag = '{}:*'.format( namespace )
                     
                 elif term.GetType() == ClientSearch.PREDICATE_TYPE_PARENT:
                     
@@ -2083,18 +2090,9 @@ class ListBoxTags( ListBox ):
         
         for term in self._selected_terms:
             
-            if isinstance( term, ClientSearch.Predicate ):
-                
-                if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
-                    
-                    tag = term.GetValue()
-                    
-                    selected_actual_tags.add( tag )
-                    
-                
-            else:
-                
-                tag = term
+            tag = self._GetTagFromTerm( term )
+            
+            if tag is not None:
                 
                 selected_actual_tags.add( tag )
                 
@@ -2355,7 +2353,7 @@ class ListBoxTags( ListBox ):
             fallback_service_key = self._GetFallbackServiceKey()
             
             can_launch_sibling_and_parent_dialogs = len( selected_actual_tags ) > 0 and self.can_spawn_new_windows
-            can_show_siblings_and_parents = len( selected_actual_tags ) == 1 and fallback_service_key != CC.COMBINED_TAG_SERVICE_KEY
+            can_show_siblings_and_parents = len( selected_actual_tags ) == 1
             
             if can_show_siblings_and_parents or can_launch_sibling_and_parent_dialogs:
                 
@@ -2392,88 +2390,159 @@ class ListBoxTags( ListBox ):
                     
                     def sp_work_callable():
                         
-                        selected_tag_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', fallback_service_key, ( selected_tag, ) )
+                        selected_tag_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', ( selected_tag, ) )
                         
-                        siblings_and_parents = selected_tag_to_siblings_and_parents[ selected_tag ]
+                        service_keys_to_siblings_and_parents = selected_tag_to_service_keys_to_siblings_and_parents[ selected_tag ]
                         
-                        return siblings_and_parents
+                        return service_keys_to_siblings_and_parents
                         
                     
-                    def sp_publish_callable( siblings_and_parents ):
+                    def sp_publish_callable( service_keys_to_siblings_and_parents ):
                         
-                        ( sibling_chain_members, ideal_tag, descendants, ancestors ) = siblings_and_parents
+                        service_keys_in_order = HG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
                         
-                        if len( sibling_chain_members ) <= 1:
+                        num_siblings = 0
+                        num_parents = 0
+                        num_children = 0
+                        
+                        for ( sibling_chain_members, ideal_tag, descendants, ancestors ) in service_keys_to_siblings_and_parents.values():
+                            
+                            num_siblings += len( sibling_chain_members ) - 1
+                            num_parents += len( ancestors )
+                            num_children += len( descendants )
+                            
+                        
+                        if num_siblings == 0:
                             
                             siblings_menu.setTitle( 'no siblings' )
                             
                         else:
                             
-                            siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( len( sibling_chain_members ) - 1 ) ) )
+                            siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( num_siblings ) ) )
                             
-                            if ideal_tag == selected_tag:
+                            for service_key in service_keys_in_order:
                                 
-                                ideal_label = 'this is the ideal tag'
-                                
-                            else:
-                                
-                                ideal_label = 'ideal: {}'.format( ideal_tag )
-                                
-                            
-                            ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal_tag )
-                            
-                            ClientGUIMenus.AppendSeparator( siblings_menu )
-                            
-                            sibling_chain_members_list = list( sibling_chain_members )
-                            
-                            ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, sibling_chain_members_list )
-                            
-                            for sibling in sibling_chain_members_list:
-                                
-                                if sibling == ideal_tag:
+                                if service_key not in service_keys_to_siblings_and_parents:
                                     
                                     continue
                                     
                                 
-                                ClientGUIMenus.AppendMenuLabel( siblings_menu, sibling )
+                                ( sibling_chain_members, ideal_tag, descendants, ancestors ) = service_keys_to_siblings_and_parents[ service_key ]
+                                
+                                if len( sibling_chain_members ) <= 1:
+                                    
+                                    continue
+                                    
+                                
+                                try:
+                                    
+                                    service_name = HG.client_controller.services_manager.GetName( service_key )
+                                    
+                                except HydrusExceptions.DataMissing:
+                                    
+                                    service_name = 'missing service'
+                                    
+                                
+                                ClientGUIMenus.AppendSeparator( siblings_menu )
+                                
+                                ClientGUIMenus.AppendMenuLabel( siblings_menu, '{} ({} siblings)'.format( service_name, HydrusData.ToHumanInt( len( sibling_chain_members ) - 1 ) ) )
+                                
+                                ClientGUIMenus.AppendSeparator( siblings_menu )
+                                
+                                if ideal_tag == selected_tag:
+                                    
+                                    ideal_label = 'this is the ideal tag'
+                                    
+                                else:
+                                    
+                                    ideal_label = 'ideal: {}'.format( ideal_tag )
+                                    
+                                
+                                ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal_tag )
+                                
+                                ClientGUIMenus.AppendSeparator( siblings_menu )
+                                
+                                sibling_chain_members_list = list( sibling_chain_members )
+                                
+                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, sibling_chain_members_list )
+                                
+                                for sibling in sibling_chain_members_list:
+                                    
+                                    if sibling == ideal_tag:
+                                        
+                                        continue
+                                        
+                                    
+                                    ClientGUIMenus.AppendMenuLabel( siblings_menu, sibling )
+                                    
                                 
                             
                         
-                        if len( descendants ) + len( ancestors ) == 0:
+                        if num_parents + num_children == 0:
                             
                             parents_menu.setTitle( 'no parents' )
                             
                         else:
                             
-                            parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( len( ancestors ) ), HydrusData.ToHumanInt( len( descendants ) ) ) )
+                            parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( num_parents ), HydrusData.ToHumanInt( num_children ) ) )
                             
-                            if len( ancestors ) > 0:
+                            for service_key in service_keys_in_order:
                                 
-                                ancestors_list = list( ancestors )
-                                
-                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, ancestors_list )
-                                
-                                for ancestor in ancestors_list:
+                                if service_key not in service_keys_to_siblings_and_parents:
                                     
-                                    ancestor_label = 'parent: {}'.format( ancestor )
-                                    
-                                    ClientGUIMenus.AppendMenuItem( parents_menu, ancestor_label, ancestor_label, HG.client_controller.pub, 'clipboard', 'text', ancestor )
+                                    continue
                                     
                                 
-                            
-                            if len( descendants ) > 0:
+                                ( sibling_chain_members, ideal_tag, descendants, ancestors ) = service_keys_to_siblings_and_parents[ service_key ]
+                                
+                                if len( ancestors ) + len( descendants ) == 0:
+                                    
+                                    continue
+                                    
+                                
+                                try:
+                                    
+                                    service_name = HG.client_controller.services_manager.GetName( service_key )
+                                    
+                                except HydrusExceptions.DataMissing:
+                                    
+                                    service_name = 'missing service'
+                                    
                                 
                                 ClientGUIMenus.AppendSeparator( parents_menu )
                                 
-                                descendants_list = list( descendants )
+                                ClientGUIMenus.AppendMenuLabel( parents_menu, '{} ({} parents, {} children)'.format( service_name, HydrusData.ToHumanInt( len( ancestors ) ), HydrusData.ToHumanInt( len( descendants ) ) ) )
                                 
-                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, descendants_list )
+                                ClientGUIMenus.AppendSeparator( parents_menu )
                                 
-                                for descendant in descendants_list:
+                                if len( ancestors ) > 0:
                                     
-                                    descendant_label = 'child: {}'.format( descendant )
+                                    ancestors_list = list( ancestors )
                                     
-                                    ClientGUIMenus.AppendMenuItem( parents_menu, descendant_label, descendant_label, HG.client_controller.pub, 'clipboard', 'text', descendant )
+                                    ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, ancestors_list )
+                                    
+                                    for ancestor in ancestors_list:
+                                        
+                                        ancestor_label = 'parent: {}'.format( ancestor )
+                                        
+                                        ClientGUIMenus.AppendMenuItem( parents_menu, ancestor_label, ancestor_label, HG.client_controller.pub, 'clipboard', 'text', ancestor )
+                                        
+                                    
+                                
+                                if len( descendants ) > 0:
+                                    
+                                    ClientGUIMenus.AppendSeparator( parents_menu )
+                                    
+                                    descendants_list = list( descendants )
+                                    
+                                    ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, descendants_list )
+                                    
+                                    for descendant in descendants_list:
+                                        
+                                        descendant_label = 'child: {}'.format( descendant )
+                                        
+                                        ClientGUIMenus.AppendMenuItem( parents_menu, descendant_label, descendant_label, HG.client_controller.pub, 'clipboard', 'text', descendant )
+                                        
                                     
                                 
                             
@@ -2520,74 +2589,6 @@ class ListBoxTags( ListBox ):
                     sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
-                    
-                
-                siblings = []
-                
-                if len( selected_actual_tags ) == 1:
-                    
-                    siblings_copy_menu = QW.QMenu( copy_menu )
-                    
-                    siblings_copy_menu_action = ClientGUIMenus.AppendMenu( copy_menu, siblings_copy_menu, 'loading siblings\u2026' )
-                    
-                    ( selected_tag, ) = selected_actual_tags
-                    
-                    def s_work_callable():
-                        
-                        selected_tag_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, ( selected_tag, ) )
-                        
-                        siblings = selected_tag_to_siblings[ selected_tag ]
-                        
-                        return siblings
-                        
-                    
-                    def s_publish_callable( siblings ):
-                        
-                        ( selected_namespace, selected_subtag ) = HydrusTags.SplitTag( selected_tag )
-                        
-                        sibling_tags_seen = set()
-                        
-                        sibling_tags_seen.add( selected_tag )
-                        sibling_tags_seen.add( selected_subtag )
-                        
-                        siblings.difference_update( sibling_tags_seen )
-                        
-                        if len( siblings ) > 0:
-                            
-                            siblings = HydrusTags.SortNumericTags( siblings )
-                            
-                            for sibling in siblings:
-                                
-                                if sibling not in sibling_tags_seen:
-                                    
-                                    ClientGUIMenus.AppendMenuItem( siblings_copy_menu, sibling, 'Copy the selected tag sibling to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling )
-                                    
-                                    sibling_tags_seen.add( sibling )
-                                    
-                                
-                                ( sibling_namespace, sibling_subtag ) = HydrusTags.SplitTag( sibling )
-                                
-                                if sibling_subtag not in sibling_tags_seen:
-                                    
-                                    ClientGUIMenus.AppendMenuItem( siblings_copy_menu, sibling_subtag, 'Copy the selected sibling subtag to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', sibling_subtag )
-                                    
-                                    sibling_tags_seen.add( sibling_subtag )
-                                    
-                                
-                            
-                            siblings_copy_menu.setTitle( 'siblings' )
-                            
-                        else:
-                            
-                            copy_menu.removeAction( siblings_copy_menu_action )
-                            
-                            ClientGUIMenus.DestroyMenu( siblings_copy_menu )
-                            
-                        
-                    
-                    async_job = ClientGUIAsync.AsyncQtJob( siblings_copy_menu, s_work_callable, s_publish_callable )
-                    
-                    async_job.start()
                     
                 
                 if self._HasCounts():

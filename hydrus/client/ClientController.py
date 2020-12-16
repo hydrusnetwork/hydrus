@@ -979,23 +979,14 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.frame_splash_status.SetSubtext( 'tag parents' )
-        
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
-        
-        def qt_code():
-            
-            self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
-            self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
-            
-            self.bitmap_manager = ClientManagers.BitmapManager( self )
-            
-            CC.GlobalPixmaps()
-            
         
         self.frame_splash_status.SetSubtext( 'image caches' )
         
-        self.CallBlockingToQt(self._splash, qt_code)
+        # careful: outside of qt since they don't need qt for init, seems ok _for now_
+        self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
+        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        self.bitmap_manager = ClientManagers.BitmapManager( self )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
         

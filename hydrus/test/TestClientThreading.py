@@ -5,13 +5,16 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientThreading
 
+READ_JOB_DURATION = 0.1
+WRITE_JOB_DURATION = 0.2
+
 def do_read_job( rwlock, result_list, name ):
     
     with rwlock.read:
         
         result_list.append( 'begin read {}'.format( name ) )
         
-        time.sleep( 0.25 )
+        time.sleep( READ_JOB_DURATION )
         
         result_list.append( 'end read {}'.format( name ) )
         
@@ -23,7 +26,7 @@ def do_write_job( rwlock, result_list, name ):
         
         result_list.append( 'begin write {}'.format( name ) )
         
-        time.sleep( 0.5 )
+        time.sleep( WRITE_JOB_DURATION )
         
         result_list.append( 'end write {}'.format( name ) )
         
@@ -65,14 +68,9 @@ class TestFileRWLock( unittest.TestCase ):
         result_list = []
         
         HG.test_controller.CallLater( 0.0, do_read_job, rwlock, result_list, '1' )
-        HG.test_controller.CallLater( 0.1, do_read_job, rwlock, result_list, '2' )
+        HG.test_controller.CallLater( 0.05, do_read_job, rwlock, result_list, '2' )
         
-        time.sleep( 0.2 )
-        
-        with rwlock.write:
-            
-            pass
-            
+        time.sleep( READ_JOB_DURATION * 2 + 0.2 )
         
         results = set( result_list )
         
@@ -92,12 +90,7 @@ class TestFileRWLock( unittest.TestCase ):
             HG.test_controller.CallLater( 0.0, do_read_job, rwlock, result_list, str( i ) )
             
         
-        time.sleep( 0.2 )
-        
-        with rwlock.write:
-            
-            pass
-            
+        time.sleep( READ_JOB_DURATION * 10 + 0.2 )
         
         expected_results = set()
         
@@ -118,14 +111,9 @@ class TestFileRWLock( unittest.TestCase ):
         result_list = []
         
         HG.test_controller.CallLater( 0.0, do_write_job, rwlock, result_list, '1' )
-        HG.test_controller.CallLater( 0.1, do_write_job, rwlock, result_list, '2' )
+        HG.test_controller.CallLater( 0.05, do_write_job, rwlock, result_list, '2' )
         
-        time.sleep( 0.2 )
-        
-        with rwlock.read:
-            
-            pass
-            
+        time.sleep( WRITE_JOB_DURATION * 2 + 0.2 )
         
         expected_result = []
         
@@ -143,12 +131,7 @@ class TestFileRWLock( unittest.TestCase ):
             HG.test_controller.CallLater( 0.0, do_write_job, rwlock, result_list, str( i ) )
             
         
-        time.sleep( 0.2 )
-        
-        with rwlock.read:
-            
-            pass
-            
+        time.sleep( WRITE_JOB_DURATION * 10 + 0.2 )
         
         expected_results = set()
         
@@ -177,29 +160,19 @@ class TestFileRWLock( unittest.TestCase ):
         
         for i in range( 10 ):
             
-            HG.test_controller.CallLater( 0.0 * i, do_read_job, rwlock, result_list, str( i ) )
+            HG.test_controller.CallLater( 0.02 * i, do_read_job, rwlock, result_list, str( i ) )
             
             all_expected_results.update( [ 'begin read {}'.format( i ), 'end read {}'.format( i ) ] )
             
         
         for i in range( 5 ):
             
-            HG.test_controller.CallLater( 0.0 * i, do_write_job, rwlock, result_list, str( i ) )
+            HG.test_controller.CallLater( 0.05 * i, do_write_job, rwlock, result_list, str( i ) )
             
             all_expected_results.update( [ 'begin write {}'.format( i ), 'end write {}'.format( i ) ] )
             
         
-        time.sleep( 0.2 )
-        
-        with rwlock.read:
-            
-            pass
-            
-        
-        with rwlock.write:
-            
-            pass
-            
+        time.sleep( READ_JOB_DURATION * 10 + WRITE_JOB_DURATION * 5 + 0.2 )
         
         self.assertEqual( set( result_list ), all_expected_results )
         

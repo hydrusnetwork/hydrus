@@ -204,7 +204,7 @@ def ReadFetch(
             
             if small_exact_match_search:
                 
-                if not results_cache.CanServeTagResults( strict_search_text, True ):
+                if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                     
                     predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
                     
@@ -221,7 +221,7 @@ def ReadFetch(
                     
                 else:
                     
-                    cache_valid = results_cache.CanServeTagResults( autocomplete_search_text, False )
+                    cache_valid = results_cache.CanServeTagResults( parsed_autocomplete_text, False )
                     
                 
                 if cache_valid:
@@ -429,7 +429,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
         
         if small_exact_match_search:
             
-            if not results_cache.CanServeTagResults( strict_search_text, True ):
+            if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                 
                 predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, add_namespaceless = False, job_key = job_key )
                 
@@ -446,7 +446,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 
             else:
                 
-                cache_valid = results_cache.CanServeTagResults( strict_search_text, False )
+                cache_valid = results_cache.CanServeTagResults( parsed_autocomplete_text, False )
                 
             
             if cache_valid:

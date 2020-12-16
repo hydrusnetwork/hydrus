@@ -1133,6 +1133,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self.widget().setLayout( vbox )
         
         self._controller.sub( self, 'NotifyNewMaintenanceNumbers', 'new_similar_files_maintenance_numbers' )
+        self._controller.sub( self, 'NotifyNewPotentialsSearchNumbers', 'new_similar_files_potentials_search_numbers' )
         
         self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
         self._search_distance_spinctrl.valueChanged.connect( self.EventSearchDistanceChanged )
@@ -1424,6 +1425,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     def NotifyNewMaintenanceNumbers( self ):
         
         self._maintenance_numbers_need_redrawing = True
+        
+    
+    def NotifyNewPotentialsSearchNumbers( self ):
+        
+        self._dupe_count_numbers_dirty = True
         
     
     def PageHidden( self ):

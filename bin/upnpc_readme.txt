@@ -1,0 +1,5 @@
+UPnPc is a program that can talk to your internet router to perform UPnP operations. Hydrus uses it to fetch and manage UPnP NAT port forwards when you open _network->data->manage upnp_ and keeps ports forwarded when you set up a server service or the Client API to stay open. It also fetches your external IP for some related 'figure out the external URL for this service' operations. Unless you do some UPnC stuff, hydrus does not touch it.
+
+I used to bundle UPnPc here for all builds, but it threw anti-virus false positives every few months, so it is no longer included. If you are on Linux, you may already have it installed to your system.
+
+If you need it, you can fetch it at http://miniupnp.tuxfamily.org/ (if you are on Linux, you can probably also get it with your package manager). Place 'upnpc-static' executable in this directory, or install to your system PATH as 'miniupnpc', and hydrus will be able to do UPnP things.

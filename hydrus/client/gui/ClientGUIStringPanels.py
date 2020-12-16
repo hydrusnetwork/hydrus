@@ -399,15 +399,21 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_text = QW.QLineEdit( self._control_panel )
             self._data_number = QP.MakeQSpinBox( self._control_panel, min=0, max=65535 )
             self._data_encoding = ClientGUICommon.BetterChoice( self._control_panel )
+            self._data_decoding = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_regex_repl = QW.QLineEdit( self._control_panel )
             self._data_date_link = ClientGUICommon.BetterHyperLink( self._control_panel, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone_decode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_encode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_offset = QP.MakeQSpinBox( self._control_panel, min=-86400, max=86400 )
             
-            for e in ( 'hex', 'base64', 'url percent encoding' ):
+            for e in ( 'hex', 'base64', 'url percent encoding', 'unicode escape characters', 'html entities' ):
                 
                 self._data_encoding.addItem( e, e )
+                
+            
+            for e in ( 'url percent encoding', 'unicode escape characters', 'html entities' ):
+                
+                self._data_decoding.addItem( e, e )
                 
             
             self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_GMT )
@@ -451,9 +457,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            if conversion_type in ( ClientParsing.STRING_CONVERSION_DECODE, ClientParsing.STRING_CONVERSION_ENCODE ):
+            if conversion_type == ClientParsing.STRING_CONVERSION_ENCODE:
                 
                 self._data_encoding.SetValue( data )
+                
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DECODE:
+                
+                self._data_decoding.SetValue( data )
                 
             elif conversion_type == ClientParsing.STRING_CONVERSION_REGEX_SUB:
                 
@@ -497,7 +507,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._data_text_label = ClientGUICommon.BetterStaticText( self, 'string data: ' )
             self._data_number_label = ClientGUICommon.BetterStaticText( self, 'number data: ' )
-            self._data_encoding_label = ClientGUICommon.BetterStaticText( self, 'encoding data: ' )
+            self._data_encoding_label = ClientGUICommon.BetterStaticText( self, 'encoding type: ' )
+            self._data_decoding_label = ClientGUICommon.BetterStaticText( self, 'decoding type: ' )
             self._data_regex_repl_label = ClientGUICommon.BetterStaticText( self, 'regex replacement: ' )
             self._data_date_link_label = ClientGUICommon.BetterStaticText( self, 'date info: ' )
             self._data_timezone_decode_label = ClientGUICommon.BetterStaticText( self, 'date decode timezone: ' )
@@ -508,6 +519,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( self._data_text_label, self._data_text ) )
             rows.append( ( self._data_number_label, self._data_number ) )
             rows.append( ( self._data_encoding_label, self._data_encoding ) )
+            rows.append( ( self._data_decoding_label, self._data_decoding ) )
             rows.append( ( self._data_regex_repl_label, self._data_regex_repl ) )
             rows.append( ( self._data_date_link_label, self._data_date_link ) )
             rows.append( ( self._data_timezone_decode_label, self._data_timezone_decode ) )
@@ -549,6 +561,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_text.textEdited.connect( self._UpdateExampleText )
             self._data_number.valueChanged.connect( self._UpdateExampleText )
             self._data_encoding.currentIndexChanged.connect( self._UpdateExampleText )
+            self._data_decoding.currentIndexChanged.connect( self._UpdateExampleText )
             self._data_regex_repl.textEdited.connect( self._UpdateExampleText )
             self._data_timezone_decode.currentIndexChanged.connect( self._UpdateExampleText )
             self._data_timezone_offset.valueChanged.connect( self._UpdateExampleText )
@@ -565,6 +578,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_text_label.setVisible( False )
             self._data_number_label.setVisible( False )
             self._data_encoding_label.setVisible( False )
+            self._data_decoding_label.setVisible( False )
             self._data_regex_repl_label.setVisible( False )
             self._data_date_link_label.setVisible( False )
             self._data_timezone_decode_label.setVisible( False )
@@ -574,6 +588,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_text.setVisible( False )
             self._data_number.setVisible( False )
             self._data_encoding.setVisible( False )
+            self._data_decoding.setVisible( False )
             self._data_regex_repl.setVisible( False )
             self._data_date_link.setVisible( False )
             self._data_timezone_decode.setVisible( False )
@@ -582,10 +597,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             conversion_type = self._conversion_type.GetValue()
             
-            if conversion_type in ( ClientParsing.STRING_CONVERSION_ENCODE, ClientParsing.STRING_CONVERSION_DECODE ):
+            if conversion_type == ClientParsing.STRING_CONVERSION_ENCODE:
                 
                 self._data_encoding_label.setVisible( True )
                 self._data_encoding.setVisible( True )
+                
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DECODE:
+                
+                self._data_decoding_label.setVisible( True )
+                self._data_decoding.setVisible( True )
                 
             elif conversion_type in ( ClientParsing.STRING_CONVERSION_PREPEND_TEXT, ClientParsing.STRING_CONVERSION_APPEND_TEXT, ClientParsing.STRING_CONVERSION_DATE_DECODE, ClientParsing.STRING_CONVERSION_DATE_ENCODE, ClientParsing.STRING_CONVERSION_REGEX_SUB ):
                 
@@ -708,9 +728,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             conversion_type = self._conversion_type.GetValue()
             
-            if conversion_type in ( ClientParsing.STRING_CONVERSION_ENCODE, ClientParsing.STRING_CONVERSION_DECODE ):
+            if conversion_type == ClientParsing.STRING_CONVERSION_ENCODE:
                 
                 data = self._data_encoding.GetValue()
+                
+            elif conversion_type == ClientParsing.STRING_CONVERSION_DECODE:
+                
+                data = self._data_decoding.GetValue()
                 
             elif conversion_type in ( ClientParsing.STRING_CONVERSION_PREPEND_TEXT, ClientParsing.STRING_CONVERSION_APPEND_TEXT ):
                 

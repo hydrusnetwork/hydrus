@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 422</h3></li>
+				<ul>
+					<li>advanced tags:</li>
+					<li>fixed the search code for various 'total' autocomplete searches like '*' and 'namespace:*', which were broken around v419's optimised regular tag lookups. these search types also have a round of their own search optimisations and improved cancel latency. I am sorry for the trouble here</li>
+					<li>expanded the database autocomplete fetch unit tests to handle these total lookups so I do not accidentally kill them due to typo/ignorance again</li>
+					<li>updated the autocomplete result cache object to consult a search's advanced search options (as under _tags->manage tag display and search_) to test whether a search cache for 'char' or 'character:' is able to serve results for a later 'character:samus' input</li>
+					<li>optimised file and tag search code for cases where someone might somehow sneak an unoptimised raw '*:subtag' or 'namespace:*' search text in</li>
+					<li>updated and expanded the autocomplete result cache unit tests to handle the new tested options and the various 'total' tests, so they aren't disabled by accident again</li>
+					<li>cancelling a autocomplete query with a gigantic number of results should now cancel much quicker when you have a lot of siblings</li>
+					<li>the single-tag right-click menu now shows siblings and parents info for every service, and will work on taglists in the 'all known tags' domain. clicking on any item will copy it to clipboard. this might result in megatall submenus, but we'll see. tall seems easier to use than nested per-service for now</li>
+					<li>the more primitive 'siblings' submenu on the taglist 'copy' right-click menu is now removed</li>
+					<li>right-click should no longer raise an error on esoteric taglists (such as tag filters and namespace colours). you might get some funky copy strings, which is sort of fun too</li>
+					<li>the copy string for the special namespace predicate ('namespace:*anything*') is now 'namespace:*', making it easier to copy/paste this across pages</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the thumbnail right-click 'copy/open known urls by url class' commands now exclude those urls that match a more specific url class (e.g. /post/123456 vs /post/123456/image.jpg)</li>
+					<li>miniupnpc is no longer bundled in the official builds. this executable is only used by a few advanced users and was a regular cause of anti-virus false positives, so I have decided new users will have to install it manually going forward.</li>
+					<li>the client now looks for miniupnpc in more places, including the system path. when missing, its error popups have better explanation, pointing users to a new readme in the bin directory</li>
+					<li>UPnP errors now have more explanation for 'No IGD UPnP Device' errortext</li>
+					<li>the database's boot-repair function now ensures indices are created for: non-sha256 hashes, sibling and parent lookups, storage tag cache, and display tag cache. some users may be missing indices here for unknown update logic or hard drive damage reasons, and this should speed them right back up. the boot-repair function now broadcasts 'checking database for faults' to the splash, which you will see if it needs some time to work</li>
+					<li>the duplicates page once again correctly updates the potential pairs count in the 'filter' tab when potential search finishes or filtering finishes</li>
+					<li>added the --boot_debug launch switch, which for now prints additional splash screen texts to the log</li>
+					<li>the global pixmaps object is no longer initialised in client model boot, but now on first request</li>
+					<li>fixed type of --db_synchronous_override launch parameter, which was throwing type errors</li>
+					<li>updated the client file readwrite lock logic and brushed up its unit tests</li>
+					<li>improved the error when the client database is asked for the id of an invalid tag that collapses to zero characters</li>
+					<li>the qss stylesheet directory is now mapped to the static dir in a way that will follow static directory redirects</li>
+					<li>.</li>
+					<li>downloaders and parsing (advanced):</li>
+					<li>started on better network redirection tech. if a post or gallery URL is 3XX redirected, hydrus now recognises this, and if the redirected url is the same type and parseable, the new url and parser are swapped in. if a gallery url is redirected to a non-gallery url, it will create a new file import object for that URL and say so in its gallery log note. this tentatively solves the 'booru redirects one-file gallery pages to post url' problem, but the whole thing is held together by prayer. I now have a plan to rejigger my pipelines to deal with this situation better, ultimately I will likely expose and log all redirects so we can always see better what is going on behind the scenes</li>
+					<li>added 'unicode escape characters' and 'html entities' string converter encode/decode types. the former does '\u0394'-to-'Δ', and the latter does '&amp;'-to-'&'</li>
+					<li>improved my string converter unit tests and added the above to them</li>
+					<li>in the parsing system, decoding from 'hex' or 'base64' is no longer needed for a 'file hash' content type. these string conversions are now no-ops and can be deleted. they converted to a non-string type, an artifact of the old way python 2 used to handle unicode, and were a sore thumb for a long time in the python 3 parsing system. 'file hash' content types now have a 'hex'/'base64' dropdown, and do decoding to raw bytes at a layer above string parsing. on update, existing file hash content parsers will default to hex and attempt to figure out if they were a base64 (however if the hex fails, base64 will be attempted as well anyway, so it is not critically important here if this update detection is imperfect). the 'hex' and 'base64' _encode_ types remain as they are still used in file lookup script hash initialisation, but they will likely be replaced similarly in future. hex or base64 conversion will return in a purely string-based form as technically needed in future</li>
+					<li>updated the make-a-downloader help and some screenshots regarding the new hash decoding</li>
+					<li>when the json parsing formula is told to get the 'json' of a parsed node, this no longer encodes unicode with escape characters (\u0394 etc...)</li>
+					<li>duplicating or importing nested gallery url generators now refreshes all internal reference ids, which should reduce the liklihood of accidentally linking with related but differently named existing GUGs</li>
+					<li>importing GUGs or NGUGs through Lain easy import does the same, ensuring the new objects 'seem' fresh to a client and should not incorrectly link up with renamed versions of related NGUGs or GUGs</li>
+					<li>added unit tests for hex and base64 string converter encoding</li>
+				</ul>
 				<li><h3>version 421</h3></li>
 				<ul>
 					<li>misc:</li>
@@ -32,7 +71,7 @@
 					<li>misc cleanup for duplicates page</li>
 					<li>.</li>
 					<li>database modes:</li>
-					<li>a new 'program launch arguments' help page now talks about all the available command line switches, here: https://github.com/hydrusnetwork/hydrus/blob/master/help/launch_arguments.html</li>
+					<li>a new 'program launch arguments' help page now talks about all the available command line switches, here: https://hydrusnetwork.github.io/hydrus/help/launch_arguments.html</li>
 					<li>added the '--db_journal_mode' launch switch to set the SQLite journal mode. default is WAL, permitted values are also TRUNCATE, PERSIST, and MEMORY</li>
 					<li>ensured --db_synchronous_override was hooked up correctly</li>
 					<li>the old disk cache options under _speed and memory_ are removed, along with various deprecated disk cache load calls and code</li>

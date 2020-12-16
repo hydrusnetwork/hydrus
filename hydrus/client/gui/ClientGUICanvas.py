@@ -2951,6 +2951,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     if len( self._processed_pairs ) == 0:
                         
+                        HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+                        
                         QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
                         
                         self.window().deleteLater()
@@ -3027,6 +3029,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     if len( self._processed_pairs ) == 0:
                         
+                        HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+                        
                         QW.QMessageBox.critical( self, 'Error', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
                         
                         self.window().deleteLater()
@@ -3053,6 +3057,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 QW.QMessageBox.warning( self, 'Warning', 'At least one of the potential files in this pair was not in this client. Likely it was very recently deleted through a different process. Your decisions until now will be saved, and then the duplicate filter will close.' )
                 
                 self._CommitProcessed( blocking = True )
+                
+                HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                 
                 self._TryToCloseWindow()
                 
@@ -3130,7 +3136,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def CleanBeforeDestroy( self ):
         
-        ClientDuplicates.DuplicatesManager.instance().RefreshMaintenanceNumbers()
+        HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
         
         ClientMedia.hashes_to_jpeg_quality = {} # clear the cache
         ClientMedia.hashes_to_pixel_hashes = {} # clear the cache

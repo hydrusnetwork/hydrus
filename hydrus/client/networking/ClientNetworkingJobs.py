@@ -160,6 +160,7 @@ class NetworkJob( object ):
         
         self._body = body
         self._referral_url = referral_url
+        self._actual_fetched_url = self._url
         self._temp_path = temp_path
         
         self._files = None
@@ -837,6 +838,14 @@ class NetworkJob( object ):
             
         
     
+    def GetActualFetchedURL( self ):
+        
+        with self._lock:
+            
+            return self._actual_fetched_url
+            
+        
+    
     def GetContentBytes( self ):
         
         with self._lock:
@@ -1159,6 +1168,12 @@ class NetworkJob( object ):
                 try:
                     
                     response = self._SendRequestAndGetResponse()
+                    
+                    # I think tbh I would rather tell requests not to do 3XX, which is possible with allow_redirects = False on request, and then just raise various 3XX exceptions with url info, so I can requeue easier and keep a record
+                    # figuring out correct new url seems a laugh, requests has slight helpers, but lots of exceptions
+                    # SessionRedirectMixin here https://requests.readthedocs.io/en/latest/_modules/requests/sessions/
+                    # but this will do as a patch for now
+                    self._actual_fetched_url = response.url
                     
                     with self._lock:
                         

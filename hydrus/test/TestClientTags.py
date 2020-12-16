@@ -855,24 +855,79 @@ class TestTagObjects( unittest.TestCase ):
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, True, False, True ] )
         
     
-    def test_predicate_results_cache( self ):
+    def test_predicate_results_cache_init( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
         
         predicate_results_cache = ClientSearch.PredicateResultsCacheInit()
         
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
         
-        #
+    
+    def test_predicate_results_cache_system( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
         
         predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) ]
         
@@ -880,20 +935,48 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
         
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
         
-        #
+    
+    def test_predicate_results_cache_subtag_normal( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
         
         samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
         samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
@@ -907,20 +990,20 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
         
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus br', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus br', False ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_br, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_br, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
         
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus' ) ), { samus, samus_aran, character_samus_aran } )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus*' ) ), { samus, samus_aran, character_samus_aran } )
@@ -928,7 +1011,39 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus ar*' ) ), { samus_aran, character_samus_aran } )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus aran*' ) ), { samus_aran, character_samus_aran } )
         
-        #
+    
+    def test_predicate_results_cache_subtag_exact( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
         
         predicates = [ samus ]
         
@@ -936,22 +1051,54 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
         
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
         
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus' ) ), { samus } )
         
-        #
+    
+    def test_predicate_results_cache_full_normal( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
         
         predicates = [ character_samus_aran ]
         
@@ -959,28 +1106,462 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
         
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( '', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'samus ar', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus', False ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus ar', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus ar', False ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus br', True ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'character:samus br', False ), True )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'metroid', False ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', True ), False )
-        self.assertEqual( predicate_results_cache.CanServeTagResults( 'series:samus', False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
         
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus' ) ), { character_samus_aran } )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus*' ) ), { character_samus_aran } )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        
+    
+    def test_predicate_results_cache_namespace_explicit_fetch_all( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
+        
+        predicates = [ character_samus_aran ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, 'character:*', False )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        #
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = True
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        
+    
+    def test_predicate_results_cache_namespace_bare_fetch_all( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
+        
+        predicates = [ character_samus_aran ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, 'character:', False )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        #
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = True
+        namespace_fetch_all_allowed = True
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        
+    
+    def test_predicate_results_cache_namespaces_into_full_tags( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
+        
+        predicates = [ character_samus_aran ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, 'char', False )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        #
+        
+        search_namespaces_into_full_tags = True
+        namespace_bare_fetch_all_allowed = True
+        namespace_fetch_all_allowed = True
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        
+    
+    def test_predicate_results_cache_fetch_all_madness( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        search_namespaces_into_full_tags = False
+        namespace_bare_fetch_all_allowed = False
+        namespace_fetch_all_allowed = False
+        fetch_all_allowed = False
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        samus = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus' )
+        samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'samus aran' )
+        character_samus_aran = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' )
+        
+        predicates = [ samus, samus_aran, character_samus_aran ]
+        
+        predicate_results_cache = ClientSearch.PredicateResultsCacheTag( predicates, '*', False )
+        
+        self.assertEqual( predicate_results_cache.GetPredicates(), predicates )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), False )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), False )
+        
+        #
+        
+        search_namespaces_into_full_tags = True
+        namespace_bare_fetch_all_allowed = True
+        namespace_fetch_all_allowed = True
+        fetch_all_allowed = True
+        
+        tag_autocomplete_options.SetTuple(
+            tag_autocomplete_options.GetWriteAutocompleteTagDomain(),
+            tag_autocomplete_options.OverridesWriteAutocompleteFileDomain(),
+            tag_autocomplete_options.GetWriteAutocompleteFileDomain(),
+            search_namespaces_into_full_tags,
+            namespace_bare_fetch_all_allowed,
+            namespace_fetch_all_allowed,
+            fetch_all_allowed
+        )
+        
+        pat_empty = ClientSearch.ParsedAutocompleteText( '', tag_autocomplete_options, True )
+        pat_samus = ClientSearch.ParsedAutocompleteText( 'samus', tag_autocomplete_options, True )
+        pat_samus_ar = ClientSearch.ParsedAutocompleteText( 'samus ar', tag_autocomplete_options, True )
+        pat_samus_br = ClientSearch.ParsedAutocompleteText( 'samus br', tag_autocomplete_options, True )
+        pat_character_samus = ClientSearch.ParsedAutocompleteText( 'character:samus', tag_autocomplete_options, True )
+        pat_character_samus_ar = ClientSearch.ParsedAutocompleteText( 'character:samus ar', tag_autocomplete_options, True )
+        pat_character_samus_br = ClientSearch.ParsedAutocompleteText( 'character:samus br', tag_autocomplete_options, True )
+        pat_metroid = ClientSearch.ParsedAutocompleteText( 'metroid', tag_autocomplete_options, True )
+        pat_series_samus = ClientSearch.ParsedAutocompleteText( 'series:samus', tag_autocomplete_options, True )
+        
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_empty, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_ar, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_character_samus_br, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_metroid, False ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, True ), True )
+        self.assertEqual( predicate_results_cache.CanServeTagResults( pat_series_samus, False ), True )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus' ) ), { samus, samus_aran, character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus*' ) ), { samus, samus_aran, character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samas br*' ) ), set() )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus ar*' ) ), { samus_aran, character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus aran*' ) ), { samus_aran, character_samus_aran } )
         
     
     def test_predicate_strings_and_namespaces( self ):

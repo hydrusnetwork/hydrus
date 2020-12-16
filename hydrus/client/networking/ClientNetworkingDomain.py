@@ -2803,6 +2803,8 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._gallery_url_generator_key = HydrusData.GenerateKey()
         
+        self._gug_keys_and_names = [ ( HydrusData.GenerateKey(), name ) for ( gug_key, name ) in self._gug_keys_and_names ]
+        
     
     def RepairGUGs( self, available_gugs ):
         

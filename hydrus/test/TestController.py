@@ -733,7 +733,11 @@ class Controller( object ):
             TestHydrusSerialisable,
             TestHydrusSessions
         ]
-            
+        
+        module_lookup[ 'tags_fast' ] = [
+            TestClientTags
+        ]
+        
         module_lookup[ 'tags' ] = [
             TestClientTags,
             TestClientDBTags

@@ -6,7 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
-STYLESHEET_DIR = os.path.join( HC.BASE_DIR, 'static', 'qss' )
+STYLESHEET_DIR = os.path.join( HC.STATIC_DIR, 'qss' )
 
 DEFAULT_HYDRUS_STYLESHEET = ''
 ORIGINAL_STYLE_NAME = None

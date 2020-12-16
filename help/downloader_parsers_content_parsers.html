@@ -41,10 +41,10 @@
 				</li>
 				<li>
 					<h3>file hash</h3>
-					<p>This says 'this is the hash for the file otherwise referenced in this parser'. So, if you have another content parser finding a File or Post URL, this lets the client know early that that destination happens to have a particular MD5, for instance. The client will look for that hash in its own database, and if it finds a match, it can predetermine if it already has the file (or has previously deleted it) without ever having to download it. Furthermore, if it does find the file for this URL but has never seen the URL before, it will still associate it with that file's 'known urls' as if it <i>had</i> downloaded it!</p>
+					<p>This says 'this is the hash for the file otherwise referenced in this parser'. So, if you have another content parser finding a File or Post URL, this lets the client know early that that destination happens to have a particular MD5, for instance. The client will look for that hash in its own database, and if it finds a match, it can predetermine if it already has the file (or has previously deleted it) without ever having to download it. When this happens, it will still add tags and associate the file with the URL for it's 'known urls' just as if it <i>had</i> downloaded it!</p>
 					<p>If you understand this concept, it is great to include. It saves time and bandwidth for everyone. Many site APIs include a hash for this exact reason--they want you to be able to skip a needless download just as much as you do.</p>
 					<p><img src="edit_content_parser_panel_hash.png" /></p>
-					<p>The usual suite of hash types are supported: MD5, SHA1, SHA256, and SHA512. <b>This expects the hash as raw bytes</b>, so if your source provides it as hex or base64 (as above), make sure to decode it! In the area for test results, it will present the hash in hex for your convenience.</p>
+					<p>The usual suite of hash types are supported: MD5, SHA1, SHA256, and SHA512. An old version of this required some weird string decoding, but this is no longer true. Select 'hex' or 'base64' from the encoding type dropdown, and then just parse the 'e5af57a687f089894f5ecede50049458' or '5a9XpofwiYlPXs7eUASUWA==' text, and hydrus should handle the rest. It will present the parsed hash in hex.</p>
 				</li>
 				<li>
 					<h3>timestamp</h3>

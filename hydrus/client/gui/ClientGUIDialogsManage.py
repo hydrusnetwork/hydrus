@@ -534,6 +534,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 QP.CallAfter( QW.QMessageBox.critical, self, 'Error', 'Could not load mappings:'+os.linesep*2+str(e) )
                 
+                self._status_st.setText( str( e ) )
+                
                 return
                 
             

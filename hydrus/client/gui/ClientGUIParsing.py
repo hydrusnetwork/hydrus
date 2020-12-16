@@ -1802,7 +1802,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for permitted_content_type in permitted_content_types:
             
-            self._content_type.addItem( types_to_str[ permitted_content_type], permitted_content_type )
+            self._content_type.addItem( types_to_str[ permitted_content_type ], permitted_content_type )
             
         
         self._content_type.currentIndexChanged.connect( self.EventContentTypeChange )
@@ -1830,6 +1830,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         for hash_type in ( 'md5', 'sha1', 'sha256', 'sha512' ):
             
             self._hash_type.addItem( hash_type, hash_type )
+            
+        
+        self._hash_encoding = ClientGUICommon.BetterChoice( self._hash_panel )
+        
+        for hash_encoding in ( 'hex', 'base64' ):
+            
+            self._hash_encoding.addItem( hash_encoding, hash_encoding )
             
         
         self._timestamp_panel = QW.QWidget( self._content_panel )
@@ -1890,9 +1897,10 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif content_type == HC.CONTENT_TYPE_HASH:
             
-            hash_type = additional_info
+            ( hash_type, hash_encoding ) = additional_info
             
             self._hash_type.SetValue( hash_type )
+            self._hash_encoding.SetValue( hash_encoding )
             
         elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
             
@@ -1949,6 +1957,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'hash type: ', self._hash_type ) )
+        rows.append( ( 'hash encoding: ', self._hash_encoding ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._hash_panel, rows )
         
@@ -2141,8 +2150,9 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         elif content_type == HC.CONTENT_TYPE_HASH:
             
             hash_type = self._hash_type.GetValue()
+            hash_encoding = self._hash_encoding.GetValue()
             
-            additional_info = hash_type
+            additional_info = ( hash_type, hash_encoding )
             
         elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
             

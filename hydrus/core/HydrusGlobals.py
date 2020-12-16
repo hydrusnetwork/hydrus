@@ -11,6 +11,8 @@ no_daemons = False
 db_journal_mode = 'WAL'
 no_db_temp_files = False
 
+boot_debug = False
+
 # if this is set to 1, transactions are not immediately synced to the journal so multiple can be undone following a power-loss
 # if set to 2, all transactions are synced, so once a new one starts you know the last one is on disk
 # corruption cannot occur either way, but since we have multiple ATTACH dbs with diff journals, let's not mess around when power-cut during heavy file import or w/e

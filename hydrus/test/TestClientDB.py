@@ -177,6 +177,57 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
+        #
+        
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = '*' )
+        
+        preds = set()
+        
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'maker:ford', min_current_count = 1 ) )
+        
+        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        
+        self.assertEqual( set( result ), preds )
+        
+        #
+        
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'series:*' )
+        
+        preds = set()
+        
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        
+        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        
+        self.assertEqual( set( result ), preds )
+        
+        #
+        
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*r*' )
+        
+        preds = set()
+        
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        
+        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        
+        self.assertEqual( set( result ), preds )
+        
+        #
+        
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'ser*', search_namespaces_into_full_tags = True )
+        
+        preds = set()
+        
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        
+        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        
+        self.assertEqual( set( result ), preds )
+        
     
     def test_export_folders( self ):
         

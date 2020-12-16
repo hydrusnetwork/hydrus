@@ -320,7 +320,9 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
+            gallery_url = self.url
+            
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
             
             if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
@@ -332,11 +334,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Did not have a parser for this URL!' )
                 
             
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
+            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
             
             status_hook( 'downloading gallery page' )
             
-            if self._referral_url not in ( self.url, url_to_check ):
+            if self._referral_url not in ( gallery_url, url_to_check ):
                 
                 referral_url = self._referral_url
                 
@@ -360,17 +362,55 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             parsing_text = network_job.GetContentText()
             
-            parsing_context = {}
+            actual_fetched_url = network_job.GetActualFetchedURL()
             
-            parsing_context[ 'gallery_url' ] = self.url
-            parsing_context[ 'url' ] = url_to_check
-            parsing_context[ 'post_index' ] = '0'
+            do_parse = True
             
-            all_parse_results = parser.Parse( parsing_context, parsing_text )
-            
-            if len( all_parse_results ) == 0:
+            if actual_fetched_url != url_to_check:
                 
-                raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
+                ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                
+                if url_type == HC.URL_TYPE_GALLERY:
+                    
+                    if can_parse:
+                        
+                        gallery_url = actual_fetched_url
+                        
+                        ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+                        
+                    
+                else:
+                    
+                    do_parse = False
+                    
+                    from hydrus.client.importing import ClientImportFileSeeds
+                    
+                    file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, actual_fetched_url )
+                    
+                    file_seed.SetReferralURL( gallery_url )
+                    
+                    file_seeds = [ file_seed ]
+                    
+                    all_parse_results = []
+                    
+                
+            
+            if do_parse:
+                
+                parsing_context = {}
+                
+                parsing_context[ 'gallery_url' ] = gallery_url
+                parsing_context[ 'url' ] = url_to_check
+                parsing_context[ 'post_index' ] = '0'
+                
+                all_parse_results = parser.Parse( parsing_context, parsing_text )
+                
+                if len( all_parse_results ) == 0:
+                    
+                    raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
+                    
+                
+                file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, gallery_url, file_import_options )
                 
             
             title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
@@ -379,8 +419,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 title_hook( title )
                 
-            
-            file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.url, file_import_options )
             
             for file_seed in file_seeds:
                 
@@ -394,7 +432,14 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             status = CC.STATUS_SUCCESSFUL_AND_NEW
             
-            note = HydrusData.ToHumanInt( num_urls_added ) + ' new urls found'
+            if do_parse:
+                
+                note = HydrusData.ToHumanInt( num_urls_added ) + ' new urls found'
+                
+            else:
+                
+                note = 'was redirected to a non-gallery url, which has been queued as a file import'
+                
             
             if num_urls_already_in_file_seed_cache > 0:
                 

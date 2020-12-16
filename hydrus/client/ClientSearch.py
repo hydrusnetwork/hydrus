@@ -2811,7 +2811,7 @@ class PredicateResultsCache( object ):
         self._predicates = list( predicates )
         
     
-    def CanServeTagResults( self, strict_search_text: str, exact_match: bool ):
+    def CanServeTagResults( self, parsed_autocomplete_text: ParsedAutocompleteText, exact_match: bool ):
         
         return False
         
@@ -2855,7 +2855,9 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
         self._exact_match = exact_match
         
     
-    def CanServeTagResults( self, strict_search_text: str, exact_match: bool ):
+    def CanServeTagResults( self, parsed_autocomplete_text: ParsedAutocompleteText, exact_match: bool ):
+        
+        strict_search_text = parsed_autocomplete_text.GetSearchText( False )
         
         if self._exact_match:
             
@@ -2870,20 +2872,57 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
             
         else:
             
-            # a cache for 'cha' is probably invalid for 'character:samus aran'
+            tag_autocomplete_options = parsed_autocomplete_text.GetTagAutocompleteOptions()
             
             ( strict_search_text_namespace, strict_search_text_subtag ) = HydrusTags.SplitTag( strict_search_text )
             
-            if strict_search_text_namespace == self._strict_search_text_namespace:
+            #
+            
+            if SearchTextIsFetchAll( self._strict_search_text ):
                 
-                # != '', because a cache for 'character:' probably can't match a search for 'character:samus aran'
+                # if '*' searches are ok, we should have all results
+                return tag_autocomplete_options.FetchAllAllowed()
                 
-                return self._strict_search_text_subtag != '' and strict_search_text_subtag.startswith( self._strict_search_text_subtag )
+            
+            #
+            
+            subtag_to_namespace_search = self._strict_search_text_namespace == '' and self._strict_search_text_subtag != '' and strict_search_text_namespace != ''
+            
+            if subtag_to_namespace_search:
                 
-            else:
+                # if a user searches 'char*' and then later 'character:samus*', we may have the results
+                # namespace changed, so if we do not satisfy this slim case, we can't provide any results
+                we_searched_namespace_as_subtag = strict_search_text_namespace.startswith( self._strict_search_text_subtag )
+                
+                return we_searched_namespace_as_subtag and tag_autocomplete_options.SearchNamespacesIntoFullTags()
+                
+            
+            #
+            
+            if self._strict_search_text_namespace != strict_search_text_namespace:
                 
                 return False
                 
+            
+            #
+            
+            # if user searched 'character:' or 'character:*', we may have the results
+            # if we do, we have all possible results
+            if SearchTextIsNamespaceBareFetchAll( self._strict_search_text ):
+                
+                return tag_autocomplete_options.NamespaceBareFetchAllAllowed()
+                
+            
+            if SearchTextIsNamespaceFetchAll( self._strict_search_text ):
+                
+                return tag_autocomplete_options.NamespaceFetchAllAllowed()
+                
+            
+            #
+            
+            # 'sam' will match 'samus', character:sam will match character:samus
+            
+            return strict_search_text_subtag.startswith( self._strict_search_text_subtag )
             
         
     

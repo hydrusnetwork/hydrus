@@ -68,6 +68,11 @@ class DuplicatesManager( object ):
             
         
     
+    def NotifyNewPotentialsSearchNumbers( self ):
+        
+        HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+        
+    
     def StartPotentialsSearch( self ):
         
         with self._lock:
@@ -186,6 +191,7 @@ class DuplicatesManager( object ):
                 
             
             self.RefreshMaintenanceNumbers()
+            self.NotifyNewPotentialsSearchNumbers()
             
         
     

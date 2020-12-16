@@ -2,6 +2,7 @@ import base64
 import bs4
 import calendar
 import collections
+import html
 import json
 import os
 import re
@@ -80,7 +81,20 @@ def ConvertParseResultToPrettyString( result ):
         
     elif content_type == HC.CONTENT_TYPE_HASH:
         
-        return additional_info + ' hash: ' + parsed_text.hex()
+        ( hash_type, hash_encoding ) = additional_info
+        
+        try:
+            
+            hash = GetHashFromParsedText( hash_encoding, parsed_text )
+            
+            parsed_text = hash.hex()
+            
+        except Exception as e:
+            
+            parsed_text = 'Could not decode a hash from {}: {}'.format( parsed_text, str( e ) )
+            
+        
+        return '{} hash: {}'.format( hash_type, parsed_text )
         
     elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
         
@@ -166,18 +180,9 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
             
         elif content_type == HC.CONTENT_TYPE_HASH:
             
-            if len( additional_infos ) == 1:
-                
-                ( hash_type, ) = additional_infos
-                
-                pretty_strings.append( 'hash: ' + hash_type )
-                
-            else:
-                
-                hash_types = sorted( additional_infos )
-                
-                pretty_strings.append( 'hashes: ' + ', '.join( hash_types ) )
-                
+            s = 'hash: {}'.format( ', '.join( ( '{} in {}'.format( hash_type, hash_encoding ) for ( hash_type, hash_encoding ) in additional_infos ) ) )
+            
+            pretty_strings.append( s )
             
         elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
             
@@ -244,15 +249,67 @@ def GetChildrenContent( job_key, children, parsing_text, referral_url ):
     
     return content
     
+def GetHashFromParsedText( hash_encoding, parsed_text ) -> bytes:
+    
+    encodings_to_attempt = []
+    
+    if hash_encoding == 'hex':
+        
+        encodings_to_attempt = [ 'hex', 'base64' ]
+        
+    elif hash_encoding == 'base64':
+        
+        encodings_to_attempt = [ 'base64' ]
+        
+    
+    main_error_text = None
+    
+    for encoding_to_attempt in encodings_to_attempt:
+        
+        try:
+            
+            if encoding_to_attempt == 'hex':
+                
+                return bytes.fromhex( parsed_text )
+                
+            elif encoding_to_attempt == 'base64':
+                
+                return base64.b64decode( parsed_text )
+                
+            
+        except Exception as e:
+            
+            if main_error_text is None:
+                
+                main_error_text = str( e )
+                
+            
+            continue
+            
+        
+    
+    raise Exception( 'Could not decode hash: {}'.format( main_error_text ) )
+    
 def GetHashesFromParseResults( results ):
     
     hash_results = []
     
-    for ( ( name, content_type, additional_info ), parsed_bytes ) in results:
+    for ( ( name, content_type, additional_info ), parsed_text ) in results:
         
         if content_type == HC.CONTENT_TYPE_HASH:
             
-            hash_results.append( ( additional_info, parsed_bytes ) )
+            ( hash_type, hash_encoding ) = additional_info
+            
+            try:
+                
+                hash = GetHashFromParsedText( hash_encoding, parsed_text )
+                
+            except:
+                
+                continue
+                
+            
+            hash_results.append( ( hash_type, hash ) )
             
         
     
@@ -1609,7 +1666,7 @@ class ParseFormulaJSON( ParseFormula ):
                 
             elif self._content_to_fetch == JSON_CONTENT_JSON:
                 
-                raw_text = json.dumps( root )
+                raw_text = json.dumps( root, ensure_ascii = False )
                 
                 raw_texts.append( raw_text )
                 
@@ -1820,7 +1877,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
     SERIALISABLE_NAME = 'Content Parser'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self, name = None, content_type = None, formula = None, sort_type = CONTENT_PARSER_SORT_TYPE_NONE, sort_asc = False, additional_info = None ):
         
@@ -1968,6 +2025,29 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( name, content_type, serialisable_formula, sort_type, sort_asc, additional_info ) = old_serialisable_info
+            
+            if content_type == HC.CONTENT_TYPE_HASH:
+                
+                hash_encoding = 'hex'
+                
+                if '"base64"' in json.dumps( serialisable_formula ): # lmao, top code
+                    
+                    hash_encoding = 'base64'
+                    
+                
+                hash_type = additional_info
+                
+                additional_info = ( hash_type, hash_encoding )
+                
+            
+            new_serialisable_info = ( name, content_type, serialisable_formula, sort_type, sort_asc, additional_info )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def GetName( self ):
         
@@ -1993,18 +2073,6 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
             raise e
             
-        
-        # let's just make sure the user did their decoding-from-hex right
-        if self._content_type == HC.CONTENT_TYPE_HASH:
-            
-            we_want = bytes
-            
-        else:
-            
-            we_want = str
-            
-        
-        parsed_texts = [ parsed_text for parsed_text in parsed_texts if isinstance( parsed_text, we_want ) ]
         
         if self._sort_type == CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC:
             
@@ -3133,23 +3201,37 @@ class StringConverter( StringProcessingStep ):
                         
                         s = urllib.parse.quote( s, safe = '' )
                         
+                    elif encode_type == 'unicode escape characters':
+                        
+                        s = s.encode( 'unicode-escape' ).decode( 'utf-8' )
+                        
+                    elif encode_type == 'html entities':
+                        
+                        s = html.escape( s )
+                        
                     else:
                         
                         # due to py3, this is now a bit of a pain
-                        # _for now_, let's convert to bytes and then spit out a str
+                        # _for now_, let's convert to bytes if not already and then spit out a str
                         
                         if isinstance( s, str ):
                             
-                            s = bytes( s, 'utf-8' )
+                            s_bytes = bytes( s, 'utf-8' )
+                            
+                        else:
+                            
+                            s_bytes = s
                             
                         
                         if encode_type == 'hex':
                             
-                            s = s.hex()
+                            s = s_bytes.hex()
                             
                         elif encode_type == 'base64':
                             
-                            s = str( base64.b64encode( s ), 'utf-8' )
+                            s_bytes = base64.b64encode( s_bytes )
+                            
+                            s = str( s_bytes, 'utf-8' )
                             
                         
                     
@@ -3161,21 +3243,16 @@ class StringConverter( StringProcessingStep ):
                         
                         s = urllib.parse.unquote( s )
                         
-                    else:
+                    elif encode_type == 'unicode escape characters':
                         
-                        # due to py3, this is now a bit of a pain
-                        # as this is mostly used for hash stuff, _for now_, let's spit out a **bytes**
-                        # the higher up object will have responsibility for coercing to str if needed
+                        s = s.encode( 'utf-8' ).decode( 'unicode-escape' )
                         
-                        if encode_type == 'hex':
-                            
-                            s = bytes.fromhex( s )
-                            
-                        elif encode_type == 'base64':
-                            
-                            s = base64.b64decode( s )
-                            
+                    elif encode_type == 'html entities':
                         
+                        s = html.unescape( s )
+                        
+                    
+                    # the old 'hex' and 'base64' are now deprecated, no-ops
                     
                 elif conversion_type == STRING_CONVERSION_REVERSE:
                     
@@ -3338,6 +3415,11 @@ class StringConverter( StringProcessingStep ):
             return 'encode to ' + data
             
         elif conversion_type == STRING_CONVERSION_DECODE:
+            
+            if data in ( 'hex', 'base64' ):
+                
+                return 'deprecated {} decode, now a no-op, can be deleted'.format( data )
+                
             
             return 'decode from ' + data
             

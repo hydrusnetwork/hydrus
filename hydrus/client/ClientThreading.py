@@ -422,7 +422,7 @@ class FileRWLock( object ):
                     
                     # if there are no writers, we can start reading
                     
-                    if self.parent.num_waiting_writers == 0:
+                    if not self.parent.there_is_an_active_writer and self.parent.num_waiting_writers == 0:
                         
                         self.parent.num_readers += 1
                         
@@ -444,10 +444,10 @@ class FileRWLock( object ):
                 
                 self.parent.num_readers -= 1
                 
-                do_notify = self.parent.num_readers == 0
+                do_write_notify = self.parent.num_readers == 0 and self.parent.num_waiting_writers > 0
                 
             
-            if do_notify:
+            if do_write_notify:
                 
                 self.parent.write_available_event.set()
                 
@@ -476,7 +476,9 @@ class FileRWLock( object ):
                     
                     # if nothing reading or writing atm, sieze the opportunity
                     
-                    if self.parent.num_readers == 0 and not self.parent.there_is_an_active_writer:
+                    if not self.parent.there_is_an_active_writer and self.parent.num_readers == 0:
+                        
+                        self.parent.num_waiting_writers -= 1
                         
                         self.parent.there_is_an_active_writer = True
                         
@@ -497,8 +499,6 @@ class FileRWLock( object ):
             with self.parent.lock:
                 
                 self.parent.there_is_an_active_writer = False
-                
-                self.parent.num_waiting_writers -= 1
                 
                 do_read_notify = self.parent.num_waiting_writers == 0 # reading is now available
                 do_write_notify = self.parent.num_waiting_writers > 0 # another writer is waiting
@@ -529,6 +529,30 @@ class FileRWLock( object ):
         self.num_readers = 0
         self.num_waiting_writers = 0
         self.there_is_an_active_writer = False
+        
+    
+    def IsLocked( self ):
+        
+        with self.lock:
+            
+            return self.num_waiting_writers > 0 or self.there_is_an_active_writer or self.num_readers > 0
+            
+        
+    
+    def ReadersAreWorking( self ):
+        
+        with self.lock:
+            
+            return self.num_readers > 0
+            
+        
+    
+    def WritersAreWaitingOrWorking( self ):
+        
+        with self.lock:
+            
+            return self.num_waiting_writers > 0 or self.there_is_an_active_writer
+            
         
     
 class QtAwareJob( HydrusThreading.SingleJob ):

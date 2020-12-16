@@ -111,7 +111,8 @@ def CopyMediaURLClassURLs( medias, url_class ):
         
         for url in media_urls:
             
-            if url_class.Matches( url ):
+            # can't do 'url_class.matches', as it will match too many
+            if HG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
                 
                 urls.add( url )
                 
@@ -324,7 +325,8 @@ def OpenMediaURLClassURLs( medias, url_class ):
         
         for url in media_urls:
             
-            if url_class.Matches( url ):
+            # can't do 'url_class.matches', as it will match too many
+            if HG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
                 
                 urls.add( url )
                 
