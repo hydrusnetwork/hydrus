@@ -940,7 +940,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if match_type == ClientParsing.STRING_MATCH_FIXED:
             
-            self._example_string_matches.setText( '' )
+            self._example_string_matches.clear()
             
         else:
             

@@ -3980,10 +3980,10 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if self._current_petition is None:
             
-            self._action_text.setText( '' )
+            self._action_text.clear()
             self._action_text.setProperty( 'hydrus_text', 'default' )
             
-            self._reason_text.setPlainText( '' )
+            self._reason_text.clear()
             self._reason_text.setProperty( 'hydrus_text', 'default' )
             
             self._contents.clear()

@@ -198,7 +198,7 @@ def ReadFetch(
             
             is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard()
             
-            small_exact_match_search = ShouldDoExactSearch( strict_search_text ) and not is_explicit_wildcard
+            small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
             
             matches = []
             
@@ -385,30 +385,37 @@ def PutAtTopOfMatches( matches: list, predicate: ClientSearch.Predicate, insert_
             
         
     
-def ShouldDoExactSearch( entry_text ):
+def ShouldDoExactSearch( parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ):
     
-    if entry_text is None:
+    if parsed_autocomplete_text.IsExplicitWildcard():
         
         return False
         
     
-    autocomplete_exact_match_threshold = HG.client_controller.new_options.GetNoneableInteger( 'autocomplete_exact_match_threshold' )
+    strict_search_text = parsed_autocomplete_text.GetSearchText( False )
     
-    if autocomplete_exact_match_threshold is None:
+    exact_match_character_threshold = parsed_autocomplete_text.GetTagAutocompleteOptions().GetExactMatchCharacterThreshold()
+    
+    if exact_match_character_threshold is None:
         
         return False
         
     
-    if ':' in entry_text:
+    if ':' in strict_search_text:
         
-        ( namespace, test_text ) = HydrusTags.SplitTag( entry_text )
+        ( namespace, test_text ) = HydrusTags.SplitTag( strict_search_text )
         
     else:
         
-        test_text = entry_text
+        test_text = strict_search_text
         
     
-    return 0 < len( test_text ) <= autocomplete_exact_match_threshold
+    if len( test_text ) == 0:
+        
+        return False
+        
+    
+    return len( test_text ) <= exact_match_character_threshold
     
 def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, tag_search_context: ClientSearch.TagSearchContext, file_service_key: bytes, expand_parents: bool, results_cache: ClientSearch.PredicateResultsCache ):
     
@@ -425,7 +432,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
         strict_search_text = parsed_autocomplete_text.GetSearchText( False )
         autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
         
-        small_exact_match_search = ShouldDoExactSearch( strict_search_text ) and not is_explicit_wildcard
+        small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
         
         if small_exact_match_search:
             
@@ -823,7 +830,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._text_ctrl.blockSignals( True )
         
-        self._text_ctrl.setText( '' )
+        self._text_ctrl.clear()
         
         self._SetResultsToList( [], self._GetParsedAutocompleteText() )
         
@@ -1229,7 +1236,9 @@ class AutoCompleteDropdown( QW.QWidget ):
             
         else:
             
-            if HG.client_controller.new_options.GetBoolean( 'autocomplete_results_fetch_automatically' ):
+            parsed_autocomplete_text = self._GetParsedAutocompleteText()
+            
+            if parsed_autocomplete_text.GetTagAutocompleteOptions().FetchResultsAutomatically():
                 
                 self._ScheduleResultsRefresh( 0.0 )
                 

@@ -95,6 +95,10 @@ def LooksLikeJSON( file_data ):
         return False
         
     
+
+UNICODE_REPLACEMENT_CHARACTER = u'\ufffd'
+NULL_CHARACTER = '\x00'
+
 def NonFailingUnicodeDecode( data, encoding ):
     
     try:
@@ -103,12 +107,9 @@ def NonFailingUnicodeDecode( data, encoding ):
         
     except UnicodeDecodeError:
         
-        unicode_replacement_character = u'\ufffd'
-        null_character = '\x00'
-        
         text = str( data, encoding, errors = 'replace' )
         
-        error_count = text.count( unicode_replacement_character )
+        error_count = text.count( UNICODE_REPLACEMENT_CHARACTER )
         
         if CHARDET_OK:
             
@@ -120,19 +121,28 @@ def NonFailingUnicodeDecode( data, encoding ):
                 
                 chardet_text = str( data, chardet_encoding, errors = 'replace' )
                 
-                chardet_error_count = chardet_text.count( unicode_replacement_character )
+                chardet_error_count = chardet_text.count( UNICODE_REPLACEMENT_CHARACTER )
                 
                 if chardet_error_count < error_count:
                     
-                    if null_character in chardet_text:
+                    if NULL_CHARACTER in chardet_text:
                         
-                        chardet_text = chardet_text.replace( null_character, '' )
+                        chardet_text = chardet_text.replace( NULL_CHARACTER, '' )
                         
                     
                     return ( chardet_text, chardet_encoding )
                     
                 
             
+        
+    
+    if NULL_CHARACTER in text:
+        
+        # I guess this is valid in unicode for some reason
+        # funnily enough, it is not replaced by 'replace'
+        # nor does it raise an error in normal str creation
+        
+        text = text.replace( NULL_CHARACTER, '' )
         
     
     return ( text, encoding )

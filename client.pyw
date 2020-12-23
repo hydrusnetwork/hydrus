@@ -31,6 +31,7 @@ try:
     argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
     argparser.add_argument( '--temp_dir', help = 'override the program\'s temporary directory' )
     argparser.add_argument( '--db_journal_mode', default = 'WAL', choices = [ 'WAL', 'TRUNCATE', 'PERSIST', 'MEMORY' ], help = 'change db journal mode (default=WAL)' )
+    argparser.add_argument( '--db_cache_size', type = int, help = 'override SQLite cache_size per db file, in MB (default=200)' )
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
@@ -86,6 +87,15 @@ try:
     if result.db_memory_journaling:
         
         HG.db_journal_mode = 'MEMORY'
+        
+    
+    if result.db_cache_size is not None:
+        
+        HG.db_cache_size = result.db_cache_size
+        
+    else:
+        
+        HG.db_cache_size = 200
         
     
     if result.db_synchronous_override is not None:

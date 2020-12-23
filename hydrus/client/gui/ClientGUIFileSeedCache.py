@@ -747,8 +747,8 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         
         if self._file_seed_cache is None:
             
-            self._import_summary_st.setText( '' )
-            self._progress_st.setText( '' )
+            self._import_summary_st.clear()
+            self._progress_st.clear()
             self._progress_gauge.SetRange( 1 )
             self._progress_gauge.SetValue( 0 )
             
@@ -767,7 +767,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
             
             if num_to_do == 0:
                 
-                self._progress_st.setText( '' )
+                self._progress_st.clear()
                 
             else:
                 

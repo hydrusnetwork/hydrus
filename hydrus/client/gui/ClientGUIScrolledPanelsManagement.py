@@ -2513,15 +2513,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            ac_panel = ClientGUICommon.StaticBox( self, 'tag autocomplete' )
-            
-            self._autocomplete_results_fetch_automatically = QW.QCheckBox( ac_panel )
-            
-            self._autocomplete_exact_match_threshold = ClientGUICommon.NoneableSpinCtrl( ac_panel, none_phrase = 'always do full search', min = 1, max = 1024 )
-            self._autocomplete_exact_match_threshold.setToolTip( 'If the search input has this many characters or fewer, it will fetch exact results rather than full autocomplete results.' )
-            
-            #
-            
             misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
             
             self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, '', min = 1, max = 100000 )
@@ -2536,10 +2527,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_cache_timeout.SetValue( self._new_options.GetInteger( 'image_cache_timeout' ) )
             
             self._video_buffer_size_mb.setValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
-            
-            self._autocomplete_results_fetch_automatically.setChecked( self._new_options.GetBoolean( 'autocomplete_results_fetch_automatically' ) )
-            
-            self._autocomplete_exact_match_threshold.SetValue( self._new_options.GetNoneableInteger( 'autocomplete_exact_match_threshold' ) )
             
             self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
@@ -2598,23 +2585,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             buffer_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             QP.AddToLayout( vbox, buffer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            text = 'If you disable automatic autocomplete results fetching, use Ctrl+Space to fetch results manually.'
-            
-            ac_panel.Add( QW.QLabel( text, ac_panel ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            rows = []
-            
-            rows.append( ( 'Automatically fetch autocomplete results: ', self._autocomplete_results_fetch_automatically ) )
-            rows.append( ( 'Fetch exact match results if input has <= this many characters: ', self._autocomplete_exact_match_threshold ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( ac_panel, rows )
-            
-            ac_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            QP.AddToLayout( vbox, ac_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2683,9 +2653,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.value() )
             
             self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
-            
-            self._new_options.SetBoolean( 'autocomplete_results_fetch_automatically', self._autocomplete_results_fetch_automatically.isChecked() )
-            self._new_options.SetNoneableInteger( 'autocomplete_exact_match_threshold', self._autocomplete_exact_match_threshold.GetValue() )
             
         
     
@@ -3120,7 +3087,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._namespace_colours.SetNamespaceColour( namespace, QG.QColor( random.randint(0,255), random.randint(0,255), random.randint(0,255) ) )
                 
-                self._new_namespace_colour.setText( '' )
+                self._new_namespace_colour.clear()
                 
             
         
@@ -3770,7 +3737,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._EnterURL( url )
                 
-                self._url_input.setText( '' )
+                self._url_input.clear()
                 
             except Exception as e:
                 

@@ -18,7 +18,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS
     SERIALISABLE_NAME = 'Tag Autocomplete Options'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, service_key: typing.Optional[ bytes ] = None ):
         
@@ -48,6 +48,8 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         self._namespace_bare_fetch_all_allowed = False
         self._namespace_fetch_all_allowed = False
         self._fetch_all_allowed = False
+        self._fetch_results_automatically = True
+        self._exact_match_character_threshold = 2
         
     
     def _GetSerialisableInfo( self ):
@@ -65,7 +67,9 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             self._search_namespaces_into_full_tags,
             self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
-            self._fetch_all_allowed
+            self._fetch_all_allowed,
+            self._fetch_results_automatically,
+            self._exact_match_character_threshold
         ]
         
         return serialisable_info
@@ -81,7 +85,9 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             self._search_namespaces_into_full_tags,
             self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
-            self._fetch_all_allowed
+            self._fetch_all_allowed,
+            self._fetch_results_automatically,
+            self._exact_match_character_threshold
         ] = serialisable_info
         
         self._service_key = bytes.fromhex( serialisable_service_key )
@@ -120,9 +126,52 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_file_domain,
+                serialisable_write_autocomplete_file_domain,
+                search_namespaces_into_full_tags,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed
+            ] = old_serialisable_info
+            
+            fetch_results_automatically = True
+            exact_match_character_threshold = 2
+            
+            new_serialisable_info = [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_file_domain,
+                serialisable_write_autocomplete_file_domain,
+                search_namespaces_into_full_tags,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed,
+                fetch_results_automatically,
+                exact_match_character_threshold
+            ]
+            
+            return ( 3, new_serialisable_info )
+            
+        
+    
     def FetchAllAllowed( self ):
         
         return self._fetch_all_allowed
+        
+    
+    def FetchResultsAutomatically( self ):
+        
+        return self._fetch_results_automatically
+        
+    
+    def GetExactMatchCharacterThreshold( self ):
+        
+        return self._exact_match_character_threshold
         
     
     def GetServiceKey( self ):
@@ -180,6 +229,16 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     def SearchNamespacesIntoFullTags( self ):
         
         return self._search_namespaces_into_full_tags
+        
+    
+    def SetExactMatchCharacterThreshold( self, exact_match_character_threshold: typing.Optional[ int ] ):
+        
+        self._exact_match_character_threshold = exact_match_character_threshold
+        
+    
+    def SetFetchResultsAutomatically( self, fetch_results_automatically: bool ):
+        
+        self._fetch_results_automatically = fetch_results_automatically
         
     
     def SetTuple( self,

@@ -2879,7 +2879,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            self._delete_after_success_st.setText( '' )
+            self._delete_after_success_st.clear()
             
         
     

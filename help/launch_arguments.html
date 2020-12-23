@@ -44,6 +44,10 @@
 					</ul>
 				</li>
 				<li>
+					<b>--db_cache_size DB_CACHE_SIZE</b>
+					<p>Change the cache SQLite will use for each db file. By default this is 200MB, which for the four main client db files could mean 800MB peak use if you run a very heavy client and perform a long period of PTR sync. This does not matter so much (nor should it be fully used) if you have a smaller client.</p>
+				</li>
+				<li>
 					<b>--db_synchronous_override {0,1,2,3}</b>
 					<p>Change the rules governing how SQLite writes committed changes to your disk. Full docs <a href="https://sqlite.org/pragma.html#pragma_synchronous">here</a>. The hydrus default is 1 with WAL, 2 otherwise.</p>
 				</li>

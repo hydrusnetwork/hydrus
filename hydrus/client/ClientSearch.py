@@ -2505,7 +2505,9 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
             
             beginning = r'\A'
             
-            s = s.replace( r':', r'(:|.*\s)', 1 )
+            ( namespace, subtag ) = s.split( ':', 1 )
+            
+            s = r'{}:(.*\s)?{}'.format( namespace, subtag )
             
         elif s.startswith( '.*' ):
             

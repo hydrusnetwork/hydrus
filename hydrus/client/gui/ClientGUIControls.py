@@ -523,8 +523,8 @@ class NetworkJobControl( QW.QFrame ):
         
         if self._network_job is None or self._network_job.NoEngineYet():
             
-            self._left_text.setText( '' )
-            self._right_text.setText( '' )
+            self._left_text.clear()
+            self._right_text.clear()
             self._gauge.SetRange( 1 )
             self._gauge.SetValue( 0 )
             
@@ -731,7 +731,7 @@ class TextAndPasteCtrl( QW.QWidget ):
         
         self._add_callable( ( text, ) )
         
-        self._text_input.setText( '' )
+        self._text_input.clear()
         
     
     def GetValue( self ):

@@ -411,7 +411,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
                 self._regexes.addItem( regex )
                 
-                self._regex_box.setText( '' )
+                self._regex_box.clear()
                 
                 self._refresh_callable()
                 
@@ -1597,7 +1597,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._example_path_input.setText( 'enter example path here' )
+        self._example_path_input.setPlaceholderText( 'enter example path here' )
         self._example_output.setEnabled( False )
         
         #
@@ -1639,6 +1639,17 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def ScheduleRefreshTags( self ):
+        
+        path = self._example_path_input.text()
+        
+        if path.startswith( 'file:///' ):
+            
+            path = path.replace( 'file:///', '', 1 )
+            
+            self._example_path_input.setText( path )
+            
+            return
+            
         
         if self._schedule_refresh_tags_job is not None:
             
@@ -1760,11 +1771,11 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             self._file_import_options.setEnabled( False )
             self._tag_import_options.setEnabled( False )
             
-            self._query_text.setText( '' )
+            self._query_text.clear()
             
-            self._file_status.setText( '' )
+            self._file_status.clear()
             
-            self._gallery_status.setText( '' )
+            self._gallery_status.clear()
             
             self._file_seed_cache_control.SetFileSeedCache( None )
             
@@ -2339,15 +2350,15 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             self._file_import_options.setEnabled( False )
             self._tag_import_options.setEnabled( False )
             
-            self._watcher_subject.setText( '' )
+            self._watcher_subject.clear()
             
-            self._watcher_url.setText( '' )
+            self._watcher_url.clear()
             
-            self._file_status.setText( '' )
+            self._file_status.clear()
             
-            self._file_velocity_status.setText( '' )
+            self._file_velocity_status.clear()
             
-            self._watcher_status.setText( '' )
+            self._watcher_status.clear()
             
             self._file_seed_cache_control.SetFileSeedCache( None )
             
@@ -2371,7 +2382,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                 
             else:
                 
-                self._watcher_url.setText( '' )
+                self._watcher_url.clear()
                 
             
             checker_options = self._watcher.GetCheckerOptions()

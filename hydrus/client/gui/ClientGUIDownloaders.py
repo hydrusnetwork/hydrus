@@ -365,7 +365,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if example_url is None:
             
-            self._matched_url_class.setText( '' )
+            self._matched_url_class.clear()
             
         else:
             
@@ -1706,8 +1706,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             self._example_url_classes.setText( 'Example does not match - '+reason )
             self._example_url_classes.setObjectName( 'HydrusInvalid' )
             
-            self._normalised_url.setText( '' )
-            self._api_url.setText( '' )
+            self._normalised_url.clear()
+            self._api_url.clear()
             
         
         self._example_url_classes.style().polish( self._example_url_classes )

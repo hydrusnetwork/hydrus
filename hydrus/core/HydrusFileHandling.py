@@ -327,11 +327,6 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         HydrusData.PrintException( e, do_wait = False )
         
     
-    if HydrusText.LooksLikeHTML( bit_to_check ):
-        
-        return HC.TEXT_HTML
-        
-    
     if ok_to_look_for_hydrus_updates:
         
         with open( path, 'rb' ) as f:
@@ -356,6 +351,11 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             
             pass
             
+        
+    
+    if HydrusText.LooksLikeHTML( bit_to_check ):
+        
+        return HC.TEXT_HTML
         
     
     return HC.APPLICATION_UNKNOWN

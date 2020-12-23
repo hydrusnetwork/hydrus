@@ -1,4 +1,5 @@
 import itertools
+import json
 import os
 import sys
 import threading
@@ -12,7 +13,9 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 
@@ -956,7 +959,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._current_formula is None:
             
-            self._formula_description.setPlainText( '' )
+            self._formula_description.clear()
             
             self._edit_formula.setEnabled( False )
             self._change_formula_type.setEnabled( False )
@@ -3183,7 +3186,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def wait_and_do_it( network_job ):
             
-            def qt_tidy_up( example_data ):
+            def qt_tidy_up( example_data, example_bytes ):
                 
                 if not self or not QP.isValid( self ):
                     
@@ -3197,16 +3200,20 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._test_panel.SetExampleParsingContext( example_parsing_context )
                 
-                self._test_panel.SetExampleData( example_data )
+                self._test_panel.SetExampleData( example_data, example_bytes = example_bytes )
                 
                 self._test_network_job_control.ClearNetworkJob()
                 
+            
+            example_bytes = None
             
             try:
                 
                 network_job.WaitUntilDone()
                 
                 example_data = network_job.GetContentText()
+                
+                example_bytes = network_job.GetContentBytes()
                 
             except HydrusExceptions.CancelledException:
                 
@@ -3219,7 +3226,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 HydrusData.ShowException( e )
                 
             
-            QP.CallAfter( qt_tidy_up, example_data )
+            QP.CallAfter( qt_tidy_up, example_data, example_bytes )
             
         
         url = self._test_url.text()
@@ -4100,7 +4107,7 @@ class ScriptManagementControl( QW.QWidget ):
     
     def _Reset( self ):
         
-        self._status.setText( '' )
+        self._status.clear()
         self._gauge.SetRange( 1 )
         self._gauge.SetValue( 0 )
         
@@ -4328,7 +4335,7 @@ class TestPanel( QW.QWidget ):
     
     def _FetchFromURL( self ):
         
-        def qt_code( example_data ):
+        def qt_code( example_data, example_bytes ):
             
             if not self or not QP.isValid( self ):
                 
@@ -4342,7 +4349,7 @@ class TestPanel( QW.QWidget ):
             
             self._example_parsing_context.SetValue( example_parsing_context )
             
-            self._SetExampleData( example_data )
+            self._SetExampleData( example_data, example_bytes = example_bytes )
             
         
         def do_it( url ):
@@ -4353,11 +4360,15 @@ class TestPanel( QW.QWidget ):
             
             HG.client_controller.network_engine.AddJob( network_job )
             
+            example_bytes = None
+            
             try:
                 
                 network_job.WaitUntilDone()
                 
                 example_data = network_job.GetContentText()
+                
+                example_bytes = network_job.GetContentBytes()
                 
             except HydrusExceptions.CancelledException:
                 
@@ -4370,7 +4381,7 @@ class TestPanel( QW.QWidget ):
                 HydrusData.ShowException( e )
                 
             
-            QP.CallAfter( qt_code, example_data )
+            QP.CallAfter( qt_code, example_data, example_bytes )
             
         
         message = 'Enter URL to fetch data for.'
@@ -4392,6 +4403,15 @@ class TestPanel( QW.QWidget ):
             
             raw_text = HG.client_controller.GetClipboardText()
             
+            try:
+                
+                raw_bytes = raw_text.decode( 'utf-8' )
+                
+            except:
+                
+                raw_bytes = None
+                
+            
         except HydrusExceptions.DataMissing as e:
             
             QW.QMessageBox.critical( self, 'Error', str(e) )
@@ -4399,49 +4419,131 @@ class TestPanel( QW.QWidget ):
             return
             
         
-        self._SetExampleData( raw_text )
+        self._SetExampleData( raw_text, example_bytes = raw_bytes )
         
     
-    def _SetExampleData( self, example_data ):
+    def _SetExampleData( self, example_data, example_bytes = None ):
         
         self._example_data_raw = example_data
         
+        test_parse_ok = True
+        looked_like_json = False
+        
+        MAX_CHARS_IN_PREVIEW = 1024 * 64
+        
         if len( example_data ) > 0:
             
-            parse_phrase = 'uncertain data type'
+            good_type_found = True
             
-            # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
-            if HydrusText.LooksLikeHTML( example_data ):
-                
-                parse_phrase = 'looks like HTML'
-                
-            
-            # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
             if HydrusText.LooksLikeJSON( example_data ):
+                
+                # prioritise this, so if the JSON contains some HTML, it'll overwrite here. decent compromise
+                
+                looked_like_json = True
                 
                 parse_phrase = 'looks like JSON'
                 
-            
-            description = HydrusData.ToHumanBytes( len( example_data ) ) + ' total, ' + parse_phrase
-            
-            if len( example_data ) > 1024:
+            elif HydrusText.LooksLikeHTML( example_data ):
                 
-                preview = 'PREVIEW:' + os.linesep + str( example_data[:1024] )
+                # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
+                
+                parse_phrase = 'looks like HTML'
                 
             else:
                 
-                preview = example_data
+                good_type_found = False
+                
+                if example_bytes is not None:
+                    
+                    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                    
+                    try:
+                        
+                        with open( temp_path, 'wb' ) as f:
+                            
+                            f.write( example_bytes )
+                            
+                        
+                        mime = HydrusFileHandling.GetMime( temp_path )
+                        
+                    except:
+                        
+                        mime = HC.APPLICATION_UNKNOWN
+                        
+                    finally:
+                        
+                        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                        
+                    
+                else:
+                    
+                    mime = HC.APPLICATION_UNKNOWN
+                    
                 
             
-            self._test_parse.setEnabled( True )
+            if good_type_found:
+                
+                description = HydrusData.ToHumanBytes( len( example_data ) ) + ' total, ' + parse_phrase
+                
+                example_data_to_show = example_data
+                
+                if looked_like_json:
+                    
+                    try:
+                        
+                        j = HG.client_controller.parsing_cache.GetJSON( example_data )
+                        
+                        example_data_to_show = json.dumps( j, indent = 4 )
+                        
+                    except:
+                        
+                        pass
+                        
+                    
+                
+                if len( example_data_to_show ) > MAX_CHARS_IN_PREVIEW:
+                    
+                    preview = 'PREVIEW:' + os.linesep + str( example_data_to_show[:MAX_CHARS_IN_PREVIEW] )
+                    
+                else:
+                    
+                    preview = example_data_to_show
+                    
+                
+            else:
+                
+                if mime in HC.ALLOWED_MIMES:
+                    
+                    description = 'that looked like a {}!'.format( HC.mime_string_lookup[ mime ] )
+                    
+                    preview = 'no preview'
+                    
+                    test_parse_ok = False
+                    
+                else:
+                    
+                    description = 'that did not look like HTML or JSON, but will try to show it anyway'
+                    
+                    if len( example_data ) > MAX_CHARS_IN_PREVIEW:
+                        
+                        preview = 'PREVIEW:' + os.linesep + repr( example_data[:MAX_CHARS_IN_PREVIEW] )
+                        
+                    else:
+                        
+                        preview = repr( example_data )
+                        
+                    
+                
             
         else:
             
             description = 'no example data set yet'
             preview = ''
             
-            self._test_parse.setEnabled( False )
+            test_parse_ok = False
             
+        
+        self._test_parse.setEnabled( test_parse_ok )
         
         self._example_data_raw_description.setText( description )
         self._example_data_raw_preview.setPlainText( preview )
@@ -4464,9 +4566,9 @@ class TestPanel( QW.QWidget ):
         return self.GetTestData()
         
     
-    def SetExampleData( self, example_data ):
+    def SetExampleData( self, example_data, example_bytes = None ):
         
-        self._SetExampleData( example_data )
+        self._SetExampleData( example_data, example_bytes = example_bytes )
         
     
     def SetExampleParsingContext( self, example_parsing_context ):
@@ -4590,9 +4692,9 @@ class TestPanelPageParser( TestPanel ):
         self._SetExampleData( self._example_data_raw )
         
     
-    def _SetExampleData( self, example_data ):
+    def _SetExampleData( self, example_data, example_bytes = None ):
         
-        TestPanel._SetExampleData( self, example_data )
+        TestPanel._SetExampleData( self, example_data, example_bytes = example_bytes )
         
         pre_parsing_converter = self._pre_parsing_converter_callable()
         
@@ -4717,9 +4819,9 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         HG.client_controller.pub( 'clipboard', 'text', joiner.join( self._example_data_post_separation ) )
         
     
-    def _SetExampleData( self, example_data ):
+    def _SetExampleData( self, example_data, example_bytes = None ):
         
-        TestPanelPageParser._SetExampleData( self, example_data )
+        TestPanelPageParser._SetExampleData( self, example_data, example_bytes = example_bytes )
         
         formula = self._formula_callable()
         

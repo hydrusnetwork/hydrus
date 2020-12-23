@@ -547,7 +547,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             self._mappings_list.SetData( mappings )
             
-            self._status_st.setText( '' )
+            self._status_st.clear()
             
             if self._external_ip is not None:
                 

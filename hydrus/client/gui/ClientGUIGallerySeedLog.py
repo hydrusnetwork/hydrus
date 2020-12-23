@@ -623,7 +623,7 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         
         if self._gallery_seed_log is None:
             
-            self._log_summary_st.setText( '' )
+            self._log_summary_st.clear()
             
             if self._gallery_seed_log_button.isEnabled():
                 

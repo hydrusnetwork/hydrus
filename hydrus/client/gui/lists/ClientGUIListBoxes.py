@@ -2401,15 +2401,116 @@ class ListBoxTags( ListBox ):
                         
                         service_keys_in_order = HG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
                         
-                        num_siblings = 0
-                        num_parents = 0
-                        num_children = 0
+                        all_siblings = set()
                         
-                        for ( sibling_chain_members, ideal_tag, descendants, ancestors ) in service_keys_to_siblings_and_parents.values():
+                        siblings_to_service_keys = collections.defaultdict( set )
+                        parents_to_service_keys = collections.defaultdict( set )
+                        children_to_service_keys = collections.defaultdict( set )
+                        
+                        ideals_to_service_keys = collections.defaultdict( set )
+                        
+                        for ( service_key, ( sibling_chain_members, ideal_tag, descendants, ancestors ) ) in service_keys_to_siblings_and_parents.items():
                             
-                            num_siblings += len( sibling_chain_members ) - 1
-                            num_parents += len( ancestors )
-                            num_children += len( descendants )
+                            all_siblings.update( sibling_chain_members )
+                            
+                            for sibling in sibling_chain_members:
+                                
+                                if sibling == ideal_tag:
+                                    
+                                    ideals_to_service_keys[ ideal_tag ].add( service_key )
+                                    
+                                    continue
+                                    
+                                
+                                if sibling == selected_tag: # don't care about the selected tag unless it is ideal
+                                    
+                                    continue
+                                    
+                                
+                                siblings_to_service_keys[ sibling ].add( service_key )
+                                
+                            
+                            for ancestor in ancestors:
+                                
+                                parents_to_service_keys[ ancestor ].add( service_key )
+                                
+                            
+                            for descendant in descendants:
+                                
+                                children_to_service_keys[ descendant ].add( service_key )
+                                
+                            
+                        
+                        all_siblings.discard( selected_tag )
+                        
+                        num_siblings = len( all_siblings )
+                        num_parents = len( parents_to_service_keys )
+                        num_children = len( children_to_service_keys )
+                        
+                        service_keys_to_service_names = { service_key : HG.client_controller.services_manager.GetName( service_key ) for service_key in service_keys_in_order }
+                        
+                        ALL_SERVICES_LABEL = 'all services'
+                        
+                        def convert_service_keys_to_name_string( s_ks ):
+                            
+                            if len( s_ks ) == len( service_keys_in_order ):
+                                
+                                return ALL_SERVICES_LABEL
+                                
+                            
+                            return ', '.join( ( service_keys_to_service_names[ service_key ] for service_key in service_keys_in_order if service_key in s_ks ) )
+                            
+                        
+                        def group_and_sort_siblings_to_service_keys( t_to_s_ks ):
+                            
+                            # convert "tag -> everywhere I am" to "sorted groups of locations -> what we have in common, also sorted"
+                            
+                            service_key_groups_to_tags = collections.defaultdict( list )
+                            
+                            for ( t, s_ks ) in t_to_s_ks.items():
+                                
+                                service_key_groups_to_tags[ tuple( s_ks ) ].append( t )
+                                
+                            
+                            for t_list in service_key_groups_to_tags.values():
+                                
+                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, t_list )
+                                
+                            
+                            service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
+                            
+                            service_key_group_names_and_tags = [ ( convert_service_keys_to_name_string( s_k_g ), service_key_groups_to_tags[ s_k_g ] ) for s_k_g in service_key_groups ]
+                            
+                            return service_key_group_names_and_tags
+                            
+                        
+                        def group_and_sort_parents_to_service_keys( p_to_s_ks, c_to_s_ks ):
+                            
+                            # convert two lots of "tag -> everywhere I am" to "sorted groups of locations -> what we have in common, also sorted"
+                            
+                            service_key_groups_to_tags = collections.defaultdict( lambda: ( [], [] ) )
+                            
+                            for ( p, s_ks ) in p_to_s_ks.items():
+                                
+                                service_key_groups_to_tags[ tuple( s_ks ) ][0].append( p )
+                                
+                            
+                            for ( c, s_ks ) in c_to_s_ks.items():
+                                
+                                service_key_groups_to_tags[ tuple( s_ks ) ][1].append( c )
+                                
+                            
+                            for ( t_list_1, t_list_2 ) in service_key_groups_to_tags.values():
+                                
+                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, t_list_1 )
+                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, t_list_2 )
+                                
+                            
+                            service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
+                            
+                            service_key_group_names_and_tags = [ ( convert_service_keys_to_name_string( s_k_g ), service_key_groups_to_tags[ s_k_g ] ) for s_k_g in service_key_groups ]
+                            
+                            return service_key_group_names_and_tags
                             
                         
                         if num_siblings == 0:
@@ -2420,63 +2521,41 @@ class ListBoxTags( ListBox ):
                             
                             siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( num_siblings ) ) )
                             
-                            for service_key in service_keys_in_order:
+                            #
+                            
+                            ideals = sorted( ideals_to_service_keys.keys(), key = HydrusTags.ConvertTagToSortable )
+                            
+                            for ideal in ideals:
                                 
-                                if service_key not in service_keys_to_siblings_and_parents:
+                                if ideal == selected_tag:
                                     
                                     continue
                                     
                                 
-                                ( sibling_chain_members, ideal_tag, descendants, ancestors ) = service_keys_to_siblings_and_parents[ service_key ]
-                                
-                                if len( sibling_chain_members ) <= 1:
-                                    
-                                    continue
-                                    
-                                
-                                try:
-                                    
-                                    service_name = HG.client_controller.services_manager.GetName( service_key )
-                                    
-                                except HydrusExceptions.DataMissing:
-                                    
-                                    service_name = 'missing service'
-                                    
-                                
-                                ClientGUIMenus.AppendSeparator( siblings_menu )
-                                
-                                ClientGUIMenus.AppendMenuLabel( siblings_menu, '{} ({} siblings)'.format( service_name, HydrusData.ToHumanInt( len( sibling_chain_members ) - 1 ) ) )
-                                
-                                ClientGUIMenus.AppendSeparator( siblings_menu )
-                                
-                                if ideal_tag == selected_tag:
-                                    
-                                    ideal_label = 'this is the ideal tag'
-                                    
-                                else:
-                                    
-                                    ideal_label = 'ideal: {}'.format( ideal_tag )
-                                    
+                                ideal_label = 'ideal is {} on: {}'.format( ideal, convert_service_keys_to_name_string( ideals_to_service_keys[ ideal ] ) )
                                 
                                 ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal_tag )
                                 
+                            
+                            #
+                            
+                            for ( s_k_name, tags ) in group_and_sort_siblings_to_service_keys( siblings_to_service_keys ):
+                                
                                 ClientGUIMenus.AppendSeparator( siblings_menu )
                                 
-                                sibling_chain_members_list = list( sibling_chain_members )
-                                
-                                ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, sibling_chain_members_list )
-                                
-                                for sibling in sibling_chain_members_list:
+                                if s_k_name != ALL_SERVICES_LABEL:
                                     
-                                    if sibling == ideal_tag:
-                                        
-                                        continue
-                                        
+                                    ClientGUIMenus.AppendMenuLabel( siblings_menu, '--{}--'.format( s_k_name ) )
                                     
-                                    ClientGUIMenus.AppendMenuLabel( siblings_menu, sibling )
+                                
+                                for tag in tags:
+                                    
+                                    ClientGUIMenus.AppendMenuLabel( siblings_menu, tag )
                                     
                                 
                             
+                        
+                        #
                         
                         if num_parents + num_children == 0:
                             
@@ -2486,63 +2565,27 @@ class ListBoxTags( ListBox ):
                             
                             parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( num_parents ), HydrusData.ToHumanInt( num_children ) ) )
                             
-                            for service_key in service_keys_in_order:
-                                
-                                if service_key not in service_keys_to_siblings_and_parents:
-                                    
-                                    continue
-                                    
-                                
-                                ( sibling_chain_members, ideal_tag, descendants, ancestors ) = service_keys_to_siblings_and_parents[ service_key ]
-                                
-                                if len( ancestors ) + len( descendants ) == 0:
-                                    
-                                    continue
-                                    
-                                
-                                try:
-                                    
-                                    service_name = HG.client_controller.services_manager.GetName( service_key )
-                                    
-                                except HydrusExceptions.DataMissing:
-                                    
-                                    service_name = 'missing service'
-                                    
+                            for ( s_k_name, ( parents, children ) ) in group_and_sort_parents_to_service_keys( parents_to_service_keys, children_to_service_keys ):
                                 
                                 ClientGUIMenus.AppendSeparator( parents_menu )
                                 
-                                ClientGUIMenus.AppendMenuLabel( parents_menu, '{} ({} parents, {} children)'.format( service_name, HydrusData.ToHumanInt( len( ancestors ) ), HydrusData.ToHumanInt( len( descendants ) ) ) )
-                                
-                                ClientGUIMenus.AppendSeparator( parents_menu )
-                                
-                                if len( ancestors ) > 0:
+                                if s_k_name != ALL_SERVICES_LABEL:
                                     
-                                    ancestors_list = list( ancestors )
-                                    
-                                    ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, ancestors_list )
-                                    
-                                    for ancestor in ancestors_list:
-                                        
-                                        ancestor_label = 'parent: {}'.format( ancestor )
-                                        
-                                        ClientGUIMenus.AppendMenuItem( parents_menu, ancestor_label, ancestor_label, HG.client_controller.pub, 'clipboard', 'text', ancestor )
-                                        
+                                    ClientGUIMenus.AppendMenuLabel( parents_menu, '--{}--'.format( s_k_name ) )
                                     
                                 
-                                if len( descendants ) > 0:
+                                for parent in parents:
                                     
-                                    ClientGUIMenus.AppendSeparator( parents_menu )
+                                    parent_label = 'parent: {}'.format( parent )
                                     
-                                    descendants_list = list( descendants )
+                                    ClientGUIMenus.AppendMenuItem( parents_menu, parent_label, parent_label, HG.client_controller.pub, 'clipboard', 'text', parent )
                                     
-                                    ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, descendants_list )
+                                
+                                for child in children:
                                     
-                                    for descendant in descendants_list:
-                                        
-                                        descendant_label = 'child: {}'.format( descendant )
-                                        
-                                        ClientGUIMenus.AppendMenuItem( parents_menu, descendant_label, descendant_label, HG.client_controller.pub, 'clipboard', 'text', descendant )
-                                        
+                                    child_label = 'child: {}'.format( child )
+                                    
+                                    ClientGUIMenus.AppendMenuItem( parents_menu, child_label, child_label, HG.client_controller.pub, 'clipboard', 'text', child )
                                     
                                 
                             

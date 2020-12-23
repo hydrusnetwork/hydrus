@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 423</h3></li>
+				<ul>
+					<li>tag autocomplete searches:</li>
+					<li>the 'fetch results as you type' and 'do-not-autocomplete character threshold' options are moved from _options->speed and memory_ to _tags->manage tag display and search_. they are now service specific!</li>
+					<li>getting the raw '*' autocomplete is now hugely faster when both file and tag domains are specific (i.e. not 'all known xxx')</li>
+					<li>getting the raw '*' autocomplete is now hugely faster in 'all known tags' domain. this is likely still bonkers on any decent sized client that syncs with the PTR, but if you have a small client that once synced with the PTR, this is now snappy</li>
+					<li>the cancelability of 'namespace:*' and 'match namespaces from normal search' searches should be improved</li>
+					<li>'namespace:*' queries are now much faster in some situations, particularly when searching in a specific tag domain (typically this happens in manage tags dialog) or a small-file client, but is still pretty slow for clients with many files, and I think some scenarios are still bananas. I am not happy here and have started a plan to improve my service domain caches to deal with several ongoing problems with slow namespace and subtag lookup in different situations</li>
+					<li>fixed an issue with advanced autocomplete result matching where a previously cached 'character:sam' result could match 'char:sam' search text</li>
+					<li>some misc code cleanup and UI label improvements in autocomplete</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the siblings & parents tag menu, which proved a little tall after all, is now compressed to group siblings, parents, and children by the shared services that hold them. it takes less space, and odd exceptions should be easy to spot</li>
+					<li>this menu also no longer has the 'this is the ideal tag' line</li>
+					<li>added 'sort pages by name a-z/z-a' to page right-click menu and tucked the sorts into a submenu</li>
+					<li>the parsing test panel now shows up to 64KB of what you pulled (previously 1KB)</li>
+					<li>the parsing test panel now shows json in prettier indented form</li>
+					<li>when the parsing test panel is told to fetch a URL that is neither HTML or JSON, this is now caught more safely and tested against permitted file types. if it was really a jpeg, it will now say 'looks like a jpeg' and disable parse testing. if the data type could not be figured out, it tries to throw the mess into view and permits parse testing, in case this is some weird javascript or something that you'll want to pre-parse convert</li>
+					<li>the dreaded null-character is now eliminated in all cases when text is decoded from a site, even if the site has invalid unicode or no encoding can be found (e.g. if it is truly a jpeg or something and we just end up wanting to throw a preview of that mess into UI)</li>
+					<li>the 'enter example path here' input on import folders' filename tagging options edit panel now uses placeholder text and auto-removes 'file:///' URL prefixes (e.g. if your paste happens to add them)</li>
+					<li>the 'fix invalid tags' routine now updates the tag row in the local tags cache, so users who found some broken tags were not updating should now be sorted</li>
+					<li>added --db_cache_size launch parameter, and added some text to the launch_parameters help about it. by default, hydrus permits 200MB per file, which means a megaclient under persistent heavy load might want 800MB. users with megamemory but slow drives might want to play with this, let me know what you find</li>
+					<li>updated to cloudscraper 1.2.50</li>
+				</ul>
 				<li><h3>version 422</h3></li>
 				<ul>
 					<li>advanced tags:</li>

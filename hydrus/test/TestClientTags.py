@@ -1128,6 +1128,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus ar*' ) ), { character_samus_aran } )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus br*' ) ), set() )
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'character:samus aran*' ) ), { character_samus_aran } )
+        self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'characte:samus aran*' ) ), set() )
         
     
     def test_predicate_results_cache_namespace_explicit_fetch_all( self ):
@@ -1807,3 +1808,28 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetTextsAndNamespaces(), or_texts_and_namespaces )
         
     
+    def test_tag_import_options_simple( self ):
+        
+        tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        self.assertTrue( tag_autocomplete_options.FetchResultsAutomatically() )
+        self.assertEqual( tag_autocomplete_options.GetExactMatchCharacterThreshold(), 2 )
+        
+        #
+        
+        tag_autocomplete_options.SetFetchResultsAutomatically( False )
+        
+        self.assertFalse( tag_autocomplete_options.FetchResultsAutomatically() )
+        
+        tag_autocomplete_options.SetFetchResultsAutomatically( True )
+        
+        self.assertTrue( tag_autocomplete_options.FetchResultsAutomatically() )
+        
+        tag_autocomplete_options.SetExactMatchCharacterThreshold( None )
+        
+        self.assertEqual( tag_autocomplete_options.GetExactMatchCharacterThreshold(), None )
+        
+        tag_autocomplete_options.SetExactMatchCharacterThreshold( 2 )
+        
+        self.assertEqual( tag_autocomplete_options.GetExactMatchCharacterThreshold(), 2 )
+        

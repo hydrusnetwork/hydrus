@@ -92,6 +92,12 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_all_allowed = QW.QCheckBox( self )
         self._fetch_all_allowed.setToolTip( 'If on, a search for "*" will return all tags. On large tag services, these searches are extremely slow.' )
         
+        self._fetch_results_automatically = QW.QCheckBox( self )
+        self._fetch_results_automatically.setToolTip( 'If on, results will load as you type. If off, you will have to hit Ctrl+Space to load results.' )
+        
+        self._exact_match_character_threshold = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'always autocomplete (only appropriate for small tag services)', min = 1, max = 256, unit = 'characters' )
+        self._exact_match_character_threshold.setToolTip( 'When the search text has <= this many characters, autocomplete will not occur and you will only get results that exactly match the input. Increasing this value makes autocomplete snappier but reduces the number of results.' )
+        
         #
         
         self._write_autocomplete_tag_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteTagDomain() )
@@ -101,10 +107,15 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._namespace_bare_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceBareFetchAllAllowed() )
         self._namespace_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceFetchAllAllowed() )
         self._fetch_all_allowed.setChecked( tag_autocomplete_options.FetchAllAllowed() )
+        self._fetch_results_automatically.setChecked( tag_autocomplete_options.FetchResultsAutomatically() )
+        self._exact_match_character_threshold.SetValue( tag_autocomplete_options.GetExactMatchCharacterThreshold() )
         
         #
         
         rows = []
+        
+        rows.append( ( 'Fetch results as you type: ', self._fetch_results_automatically ) )
+        rows.append( ( 'Do-not-autocomplete character threshold: ', self._exact_match_character_threshold ) )
         
         if tag_autocomplete_options.GetServiceKey() == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -114,9 +125,9 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            rows.append( ( 'Set manage tags default autocomplete file domain: ', self._override_write_autocomplete_file_domain ) )
-            rows.append( ( 'Manage tags default autocomplete file domain: ', self._write_autocomplete_file_domain ) )
-            rows.append( ( 'Manage tags default autocomplete tag domain: ', self._write_autocomplete_tag_domain ) )
+            rows.append( ( 'Override default autocomplete file domain in _manage tags_: ', self._override_write_autocomplete_file_domain ) )
+            rows.append( ( 'Default autocomplete file domain in _manage tags_: ', self._write_autocomplete_file_domain ) )
+            rows.append( ( 'Default autocomplete tag domain in _manage tags_: ', self._write_autocomplete_tag_domain ) )
             
         
         rows.append( ( 'Search namespaces with normal input: ', self._search_namespaces_into_full_tags ) )
@@ -202,6 +213,9 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             namespace_fetch_all_allowed,
             fetch_all_allowed
         )
+        
+        tag_autocomplete_options.SetFetchResultsAutomatically( self._fetch_results_automatically.isChecked() )
+        tag_autocomplete_options.SetExactMatchCharacterThreshold( self._exact_match_character_threshold.GetValue() )
         
         return tag_autocomplete_options
         
@@ -516,10 +530,20 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
-                message = 'These filters apply to all tag services, or to where the tag domain is "all known tags".'
+                message = 'These options apply to all tag services, or to where the tag domain is "all known tags".'
+                message += os.linesep * 2
+                message += 'This tag domain is the union of all other services, so it can be more computationally expensive. You most often see it on new search pages.'
                 
-                QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            else:
                 
+                message = 'This is just one tag service. You most often search a specific tag service in the manage tags dialog.'
+                
+            
+            st = ClientGUICommon.BetterStaticText( self, message )
+            
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             QP.AddToLayout( vbox, self._display_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._tao_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1327,7 +1351,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if whitelist_possible:
             
-            self._simple_whitelist_error_st.setText( '' )
+            self._simple_whitelist_error_st.clear()
             
             self._simple_whitelist.setEnabled( True )
             self._simple_whitelist_global_checkboxes.setEnabled( True )
@@ -1396,7 +1420,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if blacklist_possible:
             
-            self._simple_blacklist_error_st.setText( '' )
+            self._simple_blacklist_error_st.clear()
             
             self._simple_blacklist.setEnabled( True )
             self._simple_blacklist_global_checkboxes.setEnabled( True )
@@ -1513,7 +1537,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._test_result_st.setObjectName( '' )
             
-            self._test_result_st.setText( '' )
+            self._test_result_st.clear()
             self._test_result_st.style().polish( self._test_result_st )
             
             if self._only_show_blacklist:
@@ -4342,7 +4366,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( new_tags ) == 0:
                 
-                self._new_sibling.setText( '' )
+                self._new_sibling.clear()
                 
                 self._current_new = None
                 

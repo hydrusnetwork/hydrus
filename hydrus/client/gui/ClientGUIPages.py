@@ -1619,6 +1619,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 can_end = tab_index < end_index - 1
                 
                 if can_home:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, 'move to left end', 'Move this page all the way to the left.', self._ShiftPage, tab_index, new_index=0 )
                     
                 
@@ -1633,14 +1634,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                 
                 if can_end:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, 'move to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index=end_index )
                     
                 
-                
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'sort pages by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
-                ClientGUIMenus.AppendMenuItem( menu, 'sort pages by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
+                submenu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by name a-z', 'Sort these pages according to how many files they appear to have.', self._SortPagesByName, 'asc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by name z-a', 'Sort these pages according to how many files they appear to have.', self._SortPagesByName, 'desc' )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'sort pages' )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1703,8 +1710,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def _SortPagesByFileCount( self, order ):
         
-        ordered_pages = list( self.GetPages() )
-        
         def key( page ):
             
             ( total_num_files, ( total_num_value, total_num_range ) ) = page.GetNumFileSummary()
@@ -1712,12 +1717,28 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return ( total_num_files, total_num_range, total_num_value )
             
         
-        ordered_pages.sort( key = key )
+        ordered_pages = sorted( self.GetPages(), key = key, reverse = order == 'desc' )
         
-        if order == 'desc':
+        self._SortPagesSetPages( ordered_pages )
+        
+    
+    def _SortPagesByName( self, order ):
+        
+        def file_count_secondary( page ):
             
-            ordered_pages.reverse()
+            ( total_num_files, ( total_num_value, total_num_range ) ) = page.GetNumFileSummary()
             
+            return ( total_num_files, total_num_range, total_num_value )
+            
+        
+        ordered_pages = sorted( self.GetPages(), key = file_count_secondary, reverse = True )
+        
+        ordered_pages = sorted( ordered_pages, key = lambda page: page.GetName(), reverse = order == 'desc' )
+        
+        self._SortPagesSetPages( ordered_pages )
+        
+    
+    def _SortPagesSetPages( self, ordered_pages ):
         
         selected_page = self.currentWidget()
         
@@ -1738,12 +1759,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for page in ordered_pages:
             
-            is_selected = page == selected_page
-            
             name = pages_to_names[ page ]
             
             self.addTab( page, name )
-            if is_selected: self.setCurrentIndex( self.count() - 1 )
+            
+            if page == selected_page:
+                
+                self.setCurrentIndex( self.count() - 1 )
+                
             
         
     

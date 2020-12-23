@@ -523,6 +523,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
         library_versions.append( ( 'temp dir', HydrusPaths.GetCurrentTempDir() ) )
         library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
+        library_versions.append( ( 'db cache size per file', '{}MB'.format( HG.db_cache_size ) ) )
         library_versions.append( ( 'db synchronous value', str( HG.db_synchronous ) ) )
         library_versions.append( ( 'db using memory for temp?', str( HG.no_db_temp_files ) ) )
         

@@ -209,8 +209,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'watch_clipboard_for_watcher_urls' ] = False
         self._dictionary[ 'booleans' ][ 'watch_clipboard_for_other_recognised_urls' ] = False
         
-        self._dictionary[ 'booleans' ][ 'autocomplete_results_fetch_automatically' ] = True
-        
         self._dictionary[ 'booleans' ][ 'autocomplete_float_main_gui' ] = True
         self._dictionary[ 'booleans' ][ 'autocomplete_float_frames' ] = False
         
@@ -400,8 +398,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_media_max_time' ] = 600
         self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_min_time' ] = 5
         self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_max_time' ] = 60
-        
-        self._dictionary[ 'noneable_integers' ][ 'autocomplete_exact_match_threshold' ] = 2
         
         self._dictionary[ 'noneable_integers' ][ 'subscription_file_error_cancel_threshold' ] = 5
         
