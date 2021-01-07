@@ -16425,7 +16425,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
                 
-                result = self._c.execute( 'SELECT 1 FROM {} WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
+                result = self._c.execute( 'SELECT 1 FROM {} WHERE tag_id = ?;'.format( tags_table_name ), ( tag_id, ) ).fetchone()
                 
                 if result is not None:
                     
