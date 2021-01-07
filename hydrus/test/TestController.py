@@ -168,6 +168,7 @@ class Controller( object ):
     
     def __init__( self, win, only_run ):
         
+        self.app = win
         self.win = win
         self.only_run = only_run
         

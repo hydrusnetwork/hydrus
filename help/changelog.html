@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 424</h3></li>
+				<ul>
+					<li>new tag caches:</li>
+					<li>as 2020 ended, I attempted but failed to tune fast search for all kinds of clients, big and small and simple and complex. unable to guarantee decent speeds with just code, I have redesigned the tag text search cache. rather than checking the gigantic master table for all namespace and subtag lookups, the client can now zoom in on a small fast cache limited to the current search context, so doing a clever lookup on 'my tags' will no longer be hampered by having PTR beside it, and doing a solid lookup on the PTR or 'all known tags' will no longer be accidentally hampered by an optimisation for another situation</li>
+					<li>the 424 update will take some time to generate the new caches for your existing data. if you don't sync with the PTR, it should be a few seconds. if you do sync, it will be about ten minutes on an SSD (seems about 30,000 definitions a second), and somewhat longer on an HDD. it will count up the tags as it goes, and on the PTR there will be a bit of deletion work, then one or two counts up to perhaps a million, and then one big count up to about 16 million.</li>
+					<li>in my initial tests, this cache adds about 1-2% additional processing time to mass tag changes, but a wide variety of tag lookups and file searches are now significantly faster, have much nicer worst-case lag spikes, and should cancel quicker. these are best in any specific tag domain, although 'all known tags' should still be much better. a future expansion of the tag cache is planned to finally address clean and accurate 'all known tags' searches</li>
+					<li>summary; all these should be faster and cancel faster:</li>
+					<li>autocomplete searches for 'subtag*' (most normal searches) are optimised</li>
+					<li>autocomplete searches for 'namespace:*' are optimised, including when the namespace itself is a wildcard</li>
+					<li>autocomplete searches for wildcards with an asterisk in the middle of the subtag are optimised</li>
+					<li>autocomplete searches for wildcards with an asterisk at the beginning of the subtag are optimised (but this is still generally the slowest query)</li>
+					<li>autocomplete searches for namespace and subtag wildcard combinations are optimised, with either or both as a wildcard of any type</li>
+					<li>autocomplete searches for '*' are optimised</li>
+					<li>tag file searches without a namespace (i.e. in file search, with any namespace) are optimised</li>
+					<li>namespace file searches are optimised, including when the namespace is a wildcard</li>
+					<li>wildcard file searches are optimised, for all the classes of wildcard above</li>
+					<li>'tag as number' file searches are optimised</li>
+					<li>'has ><= x namespace tags' file searches are optimised for speed, including when the namespace is a wildcard, but still have bad cancelability on large domains. I'll work on this more</li>
+					<li>.</li>
+					<li>other tag cache info:</li>
+					<li>the 'tag text search cache' regeneration routine under the _database->regenerate_ menu is replaced with a service specific routine for the new cache</li>
+					<li>on boot, if the client sees any of the new cache tables are missing, it notifies you and regenerates the affected subsection of the cache</li>
+					<li>an old method of performing complex wildcard searches was using surplus data and has been eliminated. these searches are now also computationally cheaper beyond the other domain-based optimisations this week</li>
+					<li>I have identified the next bottleneck in the tag search pipeline and have a plan to speed all the above up even further, which can all be done in code</li>
+					<li>thanks to user feedback, I have also identified other wasteful overhead in tag processing. I'll keep working!</li>
+					<li>while the planned 'all known tags' cache will be useful since most file searches are in this domain, it will be a bit of work, so I will first let this new lookup cache breathe for a bit. 'all known tags' will not be nearly as big as the 'all known files/combined file' caches that have hit us with so much CPU recently. I expect it to increase the client.caches.db size by about 5%</li>
+					<li>unified all increments or decrements to autocomplete count caches, no matter the service domain, to one location</li>
+					<li>unified how autocomplete counts are fetched across different service domains</li>
+					<li>optimised specific and combined autocomplete count cache update overhead for new, existing, and deleted tags</li>
+					<li>optimised display autocomplete count cache updates for tags with multiple siblings or parents</li>
+					<li>optimised the 'local tags cache', which does fast tag text fetching for local files, when new tags or files are added/removed from the 'all local files' domain. this now occurs in the same unified autocomplete count update process. it now also caches pending tags that have no current count</li>
+					<li>merged 'exact match' autocomplete tag searching code into generalised wildcard search</li>
+					<li>misc autocomplete and other tag code cleanup and harmonisation</li>
+					<li>ditched some old mass UNION queries that were not cancelling well</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>when you paste queries into a sub, the summary 'these were/were not added' dialog now always appears, and if you paste empty whitespace, it now says so</li>
+					<li>the manage siblings/parents dialogs now specify which services apply which siblings, whether they are fully synced, the current display tag sync maintenance settings, and ultimately whether you can expect changes to apply quickly after dialog ok</li>
+					<li>when a text entry dialog comes with suggestion buttons, it now focuses the text box by default. sorry for the trouble here! (issue #765)</li>
+					<li>updated a couple petition reason suggestions in manage tags and parents</li>
+					<li>added a shortcut to 'main window' to refresh _manage tags'_ related tags suggestions with 'thorough' duration. in future, these dialog-specific actions will be moved out of 'main window', these have just been a 'temporary' patch</li>
+					<li>updated the 'running from source' and 'install' help with some new numbers and info about mpv, and updated the 'server' help with a document helpfully provided by a user explaining that the server does not do what many new users think</li>
+					<li>sped up 'has tags' file searches in certain situations, mostly when there are few if any other search predicates</li>
+					<li>the default e621 parser now pulls meta tags, thank you to a user for providing this</li>
+					<li>the default nitter timeline url classes are updated, thank you to a user for providing this</li>
+					<li>the new little hook that takes 'file:///' off of paths pasted into the filename tagging path text now also normalises the path, so if you are on Windows, the URI's slashes will be Windows-corrected to backlashes. it also now removes wrapping quotes</li>
+					<li>the hydrus logger again correctly restores stdout and stderr after it is closed on program exit (this was disabled for some reason, but fingers crossed it seems fine now!)</li>
+					<li>an issue where automatically started duplicate potentials file search could not cancel when shutdown 'stop work' button was clicked or where idle maintenance mode turned off should be fixed</li>
+					<li>the shutdown maintenance work for the first client shutdown now has a little text saying it is just some quick initialisation work</li>
+					<li>for hopefully the last and completely final time, I think I fixed the invalid tag repair function for certain sorts of tags applied to currently local files</li>
+					<li>improved the way a job thread was pulling new jobs (issue #750)</li>
+					<li></li>
+				</ul>
 				<li><h3>version 423</h3></li>
 				<ul>
 					<li>tag autocomplete searches:</li>

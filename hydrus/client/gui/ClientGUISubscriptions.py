@@ -795,7 +795,16 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard!' )
+            
+            return
+            
+        
+        if len( pasted_query_texts ) == 0:
+            
+            QW.QMessageBox.warning( self, 'Empty Paste?', 'The clipboard did not seem to have anything in it!' )
+            
+            return
             
         
         current_query_texts_lower = { query_text.lower() for query_text in self._GetCurrentQueryTexts() }
@@ -820,11 +829,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         already_existing_query_texts = sorted( already_existing_query_texts )
         new_query_texts = sorted( new_query_texts )
         
+        message = ''
+        
         if len( already_existing_query_texts ) > 0:
             
             if len( already_existing_query_texts ) > 50:
                 
-                message = '{} queries were already in the subscription, so they need not be added.'.format( HydrusData.ToHumanInt( len( already_existing_query_texts ) ) )
+                message += '{} queries were already in the subscription.'.format( HydrusData.ToHumanInt( len( already_existing_query_texts ) ) )
                 
             else:
                 
@@ -837,38 +848,45 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     aeqt_separator = os.linesep
                     
                 
-                message = 'The queries:'
+                message += 'The queries:'
                 message += os.linesep * 2
                 message += aeqt_separator.join( already_existing_query_texts )
                 message += os.linesep * 2
-                message += 'Were already in the subscription, so they need not be added.'
+                message += 'Were already in the subscription.'
                 
             
-            if len( new_query_texts ) > 0:
+        
+        if len( new_query_texts ) > 0:
+            
+            if len( already_existing_query_texts ) > 0:
                 
-                if len( new_query_texts ) > 50:
+                message += os.linesep * 2
+                
+            
+            if len( new_query_texts ) > 50:
+                
+                message += '{} queries were added.'.format( HydrusData.ToHumanInt( len( new_query_texts ) ) )
+                
+            else:
+                
+                if len( new_query_texts ) > 5:
                     
-                    message = '{} queries were new and will be added.'.format( HydrusData.ToHumanInt( len( new_query_texts ) ) )
+                    nqt_separator = ', '
                     
                 else:
                     
-                    if len( new_query_texts ) > 5:
-                        
-                        nqt_separator = ', '
-                        
-                    else:
-                        
-                        nqt_separator = os.linesep
-                        
-                    
-                    message += os.linesep * 2
-                    message += 'The queries:'
-                    message += os.linesep * 2
-                    message += nqt_separator.join( new_query_texts )
-                    message += os.linesep * 2
-                    message += 'Were new and will be added.'
+                    nqt_separator = os.linesep
                     
                 
+                message += 'The queries:'
+                message += os.linesep * 2
+                message += nqt_separator.join( new_query_texts )
+                message += os.linesep * 2
+                message += 'Were added.'
+                
+            
+        
+        if len( message ) > 0:
             
             QW.QMessageBox.information( self, 'Information', message )
             

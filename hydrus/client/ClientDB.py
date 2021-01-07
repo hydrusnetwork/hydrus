@@ -255,35 +255,37 @@ def GenerateCombinedFilesMappingsACCacheTableName( tag_display_type, tag_service
     
     return combined_ac_cache_table_name
     
-def GenerateCombinedFilesTagsTableName( tag_display_type, tag_service_id ):
+def GenerateCombinedFilesIntegerSubtagsTableName( tag_service_id ):
     
-    if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
-        
-        name = 'combined_files_tags_cache'
-        
-    elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
-        
-        name = 'combined_files_display_tags_cache'
-        
+    name = 'combined_files_integer_subtags_cache'
     
-    cache_tags_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
+    integer_subtags_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
     
-    return cache_tags_table_name
+    return integer_subtags_table_name
     
-def GenerateCombinedTagsTagsTableName( tag_display_type, file_service_id ):
+def GenerateCombinedFilesSubtagsFTS4TableName( tag_service_id ):
     
-    if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
-        
-        name = 'combined_tags_tags_cache'
-        
-    elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
-        
-        name = 'combined_tags_display_tags_cache'
-        
+    name = 'combined_files_subtags_fts4_cache'
     
-    cache_tags_table_name = 'external_caches.{}_{}'.format( name, file_service_id )
+    subtags_fts4_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
     
-    return cache_tags_table_name
+    return subtags_fts4_table_name
+    
+def GenerateCombinedFilesTagsTableName( tag_service_id ):
+    
+    name = 'combined_files_tags_cache'
+    
+    tags_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
+    
+    return tags_table_name
+    
+def GenerateCombinedTagsTagsTableName( file_service_id ):
+    
+    name = 'combined_tags_tags_cache'
+    
+    tags_table_name = 'external_caches.{}_{}'.format( name, file_service_id )
+    
+    return tags_table_name
     
 def GenerateMappingsTableNames( service_id ):
     
@@ -361,22 +363,35 @@ def GenerateSpecificFilesTableName( file_service_id, tag_service_id ):
     
     return cache_files_table_name
     
-def GenerateSpecificTagsTableName( tag_display_type, file_service_id, tag_service_id ):
+def GenerateSpecificIntegerSubtagsTableName( file_service_id, tag_service_id ):
     
-    if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
-        
-        name = 'specific_tags_cache'
-        
-    elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
-        
-        name = 'specific_display_tags_cache'
-        
+    name = 'specific_integer_subtags_cache'
     
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    cache_files_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    integer_subtags_table_name = 'external_caches.{}_{}'.format( name, suffix )
     
-    return cache_files_table_name
+    return integer_subtags_table_name
+    
+def GenerateSpecificSubtagsFTS4TableName( file_service_id, tag_service_id ):
+    
+    name = 'specific_subtags_fts4_cache'
+    
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
+    
+    subtags_fts4_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    
+    return subtags_fts4_table_name
+    
+def GenerateSpecificTagsTableName( file_service_id, tag_service_id ):
+    
+    name = 'specific_tags_cache'
+    
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
+    
+    tags_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    
+    return tags_table_name
     
 def GenerateTagParentsLookupCacheTableName( display_type: int, service_id: int ):
     
@@ -646,6 +661,11 @@ class DB( HydrusDB.HydrusDB ):
             self._combined_tag_service_id = service_id
             
         
+        if service_type == HC.COMBINED_FILE:
+            
+            self._combined_file_service_id = service_id
+            
+        
         if service_type in HC.REPOSITORIES:
             
             repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
@@ -676,13 +696,32 @@ class DB( HydrusDB.HydrusDB ):
             self._CacheTagSiblingsGenerate( service_id )
             self._CacheTagParentsGenerate( service_id )
             
+            self._CacheTagsGenerate( self._combined_file_service_id, service_id )
+            
             self._CacheCombinedFilesMappingsGenerate( service_id )
+            
+            file_service_ids = self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for file_service_id in file_service_ids:
+                
+                self._CacheTagsGenerate( file_service_id, service_id )
+                
             
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
             
             for file_service_id in file_service_ids:
                 
                 self._CacheSpecificMappingsGenerate( file_service_id, service_id )
+                
+            
+        
+        if service_type in HC.TAG_CACHE_SPECIFIC_FILE_SERVICES:
+            
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                self._CacheTagsGenerate( service_id, tag_service_id )
                 
             
         
@@ -944,11 +983,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if current_delta > 0 or pending_delta > 0:
             
-            combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+            ac_cache_changes = ( ( tag_id, current_delta, pending_delta ), )
             
-            self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );'.format( combined_display_ac_cache_table_name ), ( tag_id, 0, 0 ) )
-            
-            self._c.execute( 'UPDATE {} SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;'.format( combined_display_ac_cache_table_name ), ( current_delta, pending_delta, tag_id ) )
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -959,7 +996,8 @@ class DB( HydrusDB.HydrusDB ):
             return
             
         
-        ac_cache_changes = []
+        ac_current_counts = collections.Counter()
+        ac_pending_counts = collections.Counter()
         
         with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
@@ -984,20 +1022,30 @@ class DB( HydrusDB.HydrusDB ):
                 
                 num_addable = len( hash_ids ) - num_non_addable
                 
-                if num_addable > 0 or num_pending_to_be_rescinded > 0:
+                if num_addable > 0:
                     
-                    ac_cache_changes.append( ( display_tag_id, num_addable, - num_pending_to_be_rescinded ) )
+                    ac_current_counts[ display_tag_id ] += num_addable
+                    
+                
+                if num_pending_to_be_rescinded > 0:
+                    
+                    ac_pending_counts[ display_tag_id ] += num_pending_to_be_rescinded
                     
                 
             
         
-        if len( ac_cache_changes ) > 0:
+        if len( ac_current_counts ) > 0:
             
-            combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+            ac_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_current_counts.items() ]
             
-            self._c.executemany( 'INSERT OR IGNORE INTO {} ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );'.format( combined_display_ac_cache_table_name ), ( ( display_tag_id, 0, 0 ) for ( display_tag_id, current_delta, pending_delta ) in ac_cache_changes ) )
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
-            self._c.executemany( 'UPDATE {} SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;'.format( combined_display_ac_cache_table_name ), ( ( current_delta, pending_delta, display_tag_id ) for ( display_tag_id, current_delta, pending_delta ) in ac_cache_changes ) )
+        
+        if len( ac_pending_counts ) > 0:
+            
+            ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_pending_counts.items() ]
+            
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1014,14 +1062,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if current_delta > 0 or pending_delta > 0:
             
-            current_delta = - current_delta
-            pending_delta = - pending_delta
+            ac_cache_changes = ( ( tag_id, current_delta, pending_delta ), )
             
-            combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
-            
-            self._c.execute( 'UPDATE {} SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;'.format( combined_display_ac_cache_table_name ), ( current_delta, pending_delta, tag_id ) )
-            
-            self._c.execute( 'DELETE FROM {} WHERE tag_id = ? AND current_count = 0 AND pending_count = 0;'.format( combined_display_ac_cache_table_name ), ( tag_id, ) )
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1032,7 +1075,7 @@ class DB( HydrusDB.HydrusDB ):
             return
             
         
-        ac_cache_changes = []
+        ac_counts = collections.Counter()
         
         with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
@@ -1053,18 +1096,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_deletable > 0:
                     
-                    ac_cache_changes.append( ( display_tag_id, - num_deletable ) )
+                    ac_counts[ display_tag_id ] += num_deletable
                     
                 
             
         
-        if len( ac_cache_changes ) > 0:
+        if len( ac_counts ) > 0:
             
-            combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+            ac_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_counts.items() ]
             
-            self._c.executemany( 'UPDATE {} SET current_count = current_count + ? WHERE tag_id = ?;'.format( combined_display_ac_cache_table_name ), ( ( current_delta, display_tag_id ) for ( display_tag_id, current_delta ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'DELETE FROM {} WHERE tag_id = ? AND current_count = ? AND pending_count = ?;'.format( combined_display_ac_cache_table_name ), ( ( display_tag_id, 0, 0 ) for ( display_tag_id, current_delta ) in ac_cache_changes ) )
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1077,6 +1118,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheCombinedFilesDisplayMappingsGenerate( self, tag_service_id, status_hook = None ):
         
+        combined_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, tag_service_id )
         combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
         
         self._c.execute( 'CREATE TABLE ' + combined_display_ac_cache_table_name + ' ( tag_id INTEGER PRIMARY KEY, current_count INTEGER, pending_count INTEGER );' )
@@ -1087,8 +1129,6 @@ class DB( HydrusDB.HydrusDB ):
             
             status_hook( 'copying storage counts' )
             
-        
-        combined_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, tag_service_id )
         
         self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, current_count, pending_count ) SELECT tag_id, current_count, pending_count FROM {};'.format( combined_display_ac_cache_table_name, combined_ac_cache_table_name ) )
         
@@ -1102,7 +1142,7 @@ class DB( HydrusDB.HydrusDB ):
             return
             
         
-        ac_cache_changes = []
+        ac_counts = collections.Counter()
         
         with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
@@ -1122,18 +1162,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_pendable > 0:
                     
-                    ac_cache_changes.append( ( display_tag_id, num_pendable ) )
+                    ac_counts[ display_tag_id ] += num_pendable
                     
                 
             
         
-        if len( ac_cache_changes ) > 0:
+        if len( ac_counts ) > 0:
             
-            combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+            ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
             
-            self._c.executemany( 'UPDATE {} SET pending_count = pending_count + ? WHERE tag_id = ?;'.format( combined_display_ac_cache_table_name ), ( ( pending_delta, display_tag_id ) for ( display_tag_id, pending_delta ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'DELETE FROM {} WHERE tag_id = ? AND current_count = ? AND pending_count = ?;'.format( combined_display_ac_cache_table_name ), ( ( display_tag_id, 0, 0 ) for ( display_tag_id, pending_delta ) in ac_cache_changes ) )
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1144,7 +1182,7 @@ class DB( HydrusDB.HydrusDB ):
             return
             
         
-        ac_cache_changes = []
+        ac_counts = collections.Counter()
         
         with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
@@ -1165,35 +1203,26 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_rescindable > 0:
                     
-                    ac_cache_changes.append( ( display_tag_id, - num_rescindable ) )
+                    ac_counts[ display_tag_id ] += num_rescindable
                     
                 
             
         
-        if len( ac_cache_changes ) > 0:
+        if len( ac_counts ) > 0:
             
-            combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+            ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
             
-            self._c.executemany( 'UPDATE {} SET pending_count = pending_count + ? WHERE tag_id = ?;'.format( combined_display_ac_cache_table_name ), ( ( pending_delta, display_tag_id ) for ( display_tag_id, pending_delta ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'DELETE FROM {} WHERE tag_id = ? AND current_count = ? AND pending_count = ?;'.format( combined_display_ac_cache_table_name ), ( ( display_tag_id, 0, 0 ) for ( display_tag_id, pending_delta ) in ac_cache_changes ) )
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, ac_cache_changes )
             
         
     
-    def _CacheCombinedFilesDisplayMappingsUpdateIfUnchained( self, tag_service_id, count_ids ):
+    def _CacheCombinedFilesDisplayMappingsUpdateIfUnchained( self, tag_service_id, ac_cache_changes ):
         
-        chain_tag_ids = self._CacheTagDisplayFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, [ tag_id for ( tag_id, current_delta, pending_delta ) in count_ids ] )
+        chain_tag_ids = self._CacheTagDisplayFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, [ tag_id for ( tag_id, current_delta, pending_delta ) in ac_cache_changes ] )
         
-        combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        valid_ac_cache_changes = [ ( tag_id, current_delta, pending_delta ) for ( tag_id, current_delta, pending_delta ) in ac_cache_changes if tag_id not in chain_tag_ids ]
         
-        valid_count_ids = [ ( tag_id, current_delta, pending_delta ) for ( tag_id, current_delta, pending_delta ) in count_ids if tag_id not in chain_tag_ids ]
-        valid_tag_ids = { tag_id for ( tag_id, current_delta, pending_delta ) in valid_count_ids }
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + combined_display_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( ( tag_id, 0, 0 ) for tag_id in valid_tag_ids ) )
-        
-        self._c.executemany( 'UPDATE ' + combined_display_ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;', ( ( current_delta, pending_delta, tag_id ) for ( tag_id, current_delta, pending_delta ) in valid_count_ids ) )
-        
-        self._c.executemany( 'DELETE FROM ' + combined_display_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( tag_id, 0, 0 ) for tag_id in valid_tag_ids ) )
+        self._CacheMappingsUpdateACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self._combined_file_service_id, tag_service_id, valid_ac_cache_changes )
         
     
     def _CacheCombinedFilesMappingsDrop( self, tag_service_id ):
@@ -1258,25 +1287,11 @@ class DB( HydrusDB.HydrusDB ):
         self._CacheCombinedFilesDisplayMappingsGenerate( tag_service_id )
         
     
-    def _CacheCombinedFilesMappingsGetAutocompleteCounts( self, tag_display_type, tag_service_id, temp_tag_id_table_name ):
+    def _CacheCombinedFilesMappingsUpdate( self, tag_service_id, ac_cache_changes ):
         
-        combined_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( tag_display_type, tag_service_id )
+        self._CacheMappingsUpdateACCounts( ClientTags.TAG_DISPLAY_STORAGE, self._combined_file_service_id, tag_service_id, ac_cache_changes )
         
-        # temp tags to counts
-        return self._c.execute( 'SELECT tag_id, current_count, pending_count FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_tag_id_table_name, combined_ac_cache_table_name ) ).fetchall()
-        
-    
-    def _CacheCombinedFilesMappingsUpdate( self, tag_service_id, count_ids ):
-        
-        combined_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, tag_service_id )
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + combined_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( ( tag_id, 0, 0 ) for ( tag_id, current_delta, pending_delta ) in count_ids ) )
-        
-        self._c.executemany( 'UPDATE ' + combined_ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;', ( ( current_delta, pending_delta, tag_id ) for ( tag_id, current_delta, pending_delta ) in count_ids ) )
-        
-        self._c.executemany( 'DELETE FROM ' + combined_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( tag_id, 0, 0 ) for ( tag_id, current_delta, pending_delta ) in count_ids ) )
-        
-        self._CacheCombinedFilesDisplayMappingsUpdateIfUnchained( tag_service_id, count_ids )
+        self._CacheCombinedFilesDisplayMappingsUpdateIfUnchained( tag_service_id, ac_cache_changes )
         
     
     def _CacheLocalTagIdsGenerate( self ):
@@ -1284,6 +1299,8 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DROP TABLE IF EXISTS local_tags_cache;' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
+        
+        # update this and all add/remove calls to be in 'all known tags' cache when that exists
         
         tag_ids = set()
         
@@ -1325,6 +1342,167 @@ class DB( HydrusDB.HydrusDB ):
         bad_tag_ids = set( tag_ids ).difference( useful_tag_ids )
         
         self._c.executemany( 'DELETE FROM local_tags_cache WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in bad_tag_ids ) )
+        
+    
+    def _CacheMappingsAddACCounts( self, tag_display_type, file_service_id, tag_service_id, ac_cache_changes ):
+        
+        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( tag_display_type, file_service_id, tag_service_id )
+        
+        new_tag_ids = set()
+        new_local_tag_ids = set()
+        
+        for ( tag_id, current_delta, pending_delta ) in ac_cache_changes:
+            
+            self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );'.format( ac_cache_table_name ), ( tag_id, current_delta, pending_delta ) )
+            
+            if self._GetRowCount() > 0:
+                
+                new_tag_ids.add( tag_id )
+                
+                if file_service_id == self._combined_local_file_service_id: # and tag_service_id = all known tags
+                    
+                    new_local_tag_ids.add( tag_id )
+                    
+                
+            
+        
+        if len( new_tag_ids ) < len( ac_cache_changes ):
+            
+            self._c.executemany( 'UPDATE {} SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;'.format( ac_cache_table_name ), ( ( num_current, num_pending, tag_id ) for ( tag_id, num_current, num_pending ) in ac_cache_changes if tag_id not in new_tag_ids ) )
+            
+        
+        if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE and len( new_tag_ids ) > 0:
+            
+            if not self._CacheTagsFileServiceIsCoveredByAllLocalFiles( file_service_id ):
+                
+                self._CacheTagsAddTags( file_service_id, tag_service_id, new_tag_ids )
+                
+            
+        
+        if len( new_local_tag_ids ) > 0:
+            
+            self._CacheLocalTagIdsPotentialAdd( new_local_tag_ids )
+            
+        
+    
+    def _CacheMappingsGetACCacheTableName( self, tag_display_type, file_service_id, tag_service_id ):
+        
+        if file_service_id == self._combined_file_service_id:
+            
+            ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( tag_display_type, tag_service_id )
+            
+        else:
+            
+            ac_cache_table_name = GenerateSpecificACCacheTableName( tag_display_type, file_service_id, tag_service_id )
+            
+        
+        return ac_cache_table_name
+        
+    
+    def _CacheMappingsGetAutocompleteCounts( self, tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ):
+        
+        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( tag_display_type, file_service_id, tag_service_id )
+        
+        # temp tags to counts
+        return self._c.execute( 'SELECT tag_id, current_count, pending_count FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_tag_id_table_name, ac_cache_table_name ) ).fetchall()
+        
+    
+    def _CacheMappingsReduceACCounts( self, tag_display_type, file_service_id, tag_service_id, ac_cache_changes ):
+        
+        # this takes positive counts, despite ultimately being a reduce guy
+        
+        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( tag_display_type, file_service_id, tag_service_id )
+        
+        deleted_tag_ids = set()
+        deleted_local_tag_ids = set()
+        
+        for ( tag_id, current_delta, pending_delta ) in ac_cache_changes:
+            
+            self._c.execute( 'DELETE FROM {} WHERE tag_id = ? AND current_count = ? AND pending_count = ?;'.format( ac_cache_table_name ), ( tag_id, current_delta, pending_delta ) )
+            
+            if self._GetRowCount() > 0:
+                
+                deleted_tag_ids.add( tag_id )
+                
+                if file_service_id == self._combined_local_file_service_id: # and tag_service_id = all known tags
+                    
+                    deleted_local_tag_ids.add( tag_id )
+                    
+                
+            
+        
+        if len( deleted_tag_ids ) < len( ac_cache_changes ):
+            
+            self._c.executemany( 'UPDATE {} SET current_count = current_count - ?, pending_count = pending_count - ? WHERE tag_id = ?;'.format( ac_cache_table_name ), ( ( current_delta, pending_delta, tag_id ) for ( tag_id, current_delta, pending_delta ) in ac_cache_changes if tag_id not in deleted_tag_ids ) )
+            
+        
+        if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE and len( deleted_tag_ids ) > 0:
+            
+            if not self._CacheTagsFileServiceIsCoveredByAllLocalFiles( file_service_id ):
+                
+                self._CacheTagsDeleteTags( file_service_id, tag_service_id, deleted_tag_ids )
+                
+            
+        
+        if len( deleted_local_tag_ids ) > 0:
+            
+            self._CacheLocalTagIdsPotentialDelete( deleted_local_tag_ids )
+            
+        
+    
+    def _CacheMappingsUpdateACCounts( self, tag_display_type, file_service_id, tag_service_id, ac_cache_changes ):
+        
+        # unlike 'reduce' above, this can take positive as well as negative, so we'll split here for simplicity
+        
+        add_ac_cache_changes = []
+        reduce_ac_cache_changes = []
+        
+        for ( tag_id, current_delta, pending_delta ) in ac_cache_changes:
+            
+            current_add_delta = 0
+            pending_add_delta = 0
+            
+            current_reduce_delta = 0
+            pending_reduce_delta = 0
+            
+            if current_delta > 0:
+                
+                current_add_delta = current_delta
+                
+            else:
+                
+                current_reduce_delta = abs( current_delta )
+                
+            
+            if pending_delta > 0:
+                
+                pending_add_delta = pending_delta
+                
+            else:
+                
+                pending_reduce_delta = abs( pending_delta )
+                
+            
+            if current_add_delta > 0 or pending_add_delta > 0:
+                
+                add_ac_cache_changes.append( ( tag_id, current_add_delta, pending_add_delta ) )
+                
+            
+            if current_reduce_delta > 0 or pending_reduce_delta > 0:
+                
+                reduce_ac_cache_changes.append( ( tag_id, current_reduce_delta, pending_reduce_delta ) )
+                
+            
+        
+        if len( add_ac_cache_changes ) > 0:
+            
+            self._CacheMappingsAddACCounts( tag_display_type, file_service_id, tag_service_id, ac_cache_changes )
+            
+        
+        if len( reduce_ac_cache_changes ) > 0:
+            
+            self._CacheMappingsReduceACCounts( tag_display_type, file_service_id, tag_service_id, ac_cache_changes )
+            
         
     
     def _CacheRepositoryNormaliseServiceHashId( self, service_id, service_hash_id ):
@@ -1439,9 +1617,9 @@ class DB( HydrusDB.HydrusDB ):
             
             display_current_hash_ids = set( itertools.chain.from_iterable( ( storage_current_mapping_ids_dict[ implied_by_tag_id ] for implied_by_tag_id in implied_by_tag_ids ) ) )
             
-            num_current = len( display_current_hash_ids )
+            current_delta = len( display_current_hash_ids )
             
-            if num_current > 0:
+            if current_delta > 0:
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_display_current_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, display_tag_id ) for hash_id in display_current_hash_ids ) )
                 
@@ -1450,28 +1628,24 @@ class DB( HydrusDB.HydrusDB ):
             
             display_pending_hash_ids = set( itertools.chain.from_iterable( ( storage_pending_mapping_ids_dict[ implied_by_tag_id ] for implied_by_tag_id in implied_by_tag_ids ) ) )
             
-            num_pending = len( display_pending_hash_ids )
+            pending_delta = len( display_pending_hash_ids )
             
-            if num_pending > 0:
+            if pending_delta > 0:
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_display_pending_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, display_tag_id ) for hash_id in display_pending_hash_ids ) )
                 
             
             #
             
-            if num_current > 0 or num_pending > 0:
+            if current_delta > 0 or pending_delta > 0:
                 
-                ac_cache_changes.append( ( display_tag_id, num_current, num_pending ) )
+                ac_cache_changes.append( ( display_tag_id, current_delta, pending_delta ) )
                 
             
         
         if len( ac_cache_changes ) > 0:
             
-            specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO ' + specific_display_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( ( display_tag_id, 0, 0 ) for ( display_tag_id, num_current, num_pending ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'UPDATE ' + specific_display_ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;', ( ( num_current, num_pending, display_tag_id ) for ( display_tag_id, num_current, num_pending ) in ac_cache_changes ) )
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1529,17 +1703,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if current_delta > 0 or pending_delta > 0:
             
-            specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
+            ac_cache_changes = ( ( tag_id, current_delta, pending_delta ), )
             
-            self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );'.format( specific_display_ac_cache_table_name ), ( tag_id, 0, 0 ) )
-            
-            self._c.execute( 'UPDATE {} SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;'.format( specific_display_ac_cache_table_name ), ( current_delta, pending_delta, tag_id ) )
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
     def _CacheSpecificDisplayMappingsAddMappings( self, file_service_id, tag_service_id, filtered_mappings_generator: FilteredMappingsGenerator ):
-        
-        specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
         
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
@@ -1554,6 +1724,8 @@ class DB( HydrusDB.HydrusDB ):
         
         storage_tag_ids_to_display_tag_ids = self._CacheTagDisplayGetTagsToImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_ids )
         
+        ac_counts = collections.Counter()
+        
         for ( storage_tag_id, hash_ids ) in mappings_ids:
             
             display_tag_ids = storage_tag_ids_to_display_tag_ids[ storage_tag_id ]
@@ -1566,11 +1738,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_added > 0:
                     
-                    self._c.execute( 'INSERT OR IGNORE INTO ' + specific_display_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( display_tag_id, 0, 0 ) )
-                    
-                    self._c.execute( 'UPDATE ' + specific_display_ac_cache_table_name + ' SET current_count = current_count + ? WHERE tag_id = ?;', ( num_added, display_tag_id ) )
+                    ac_counts[ display_tag_id ] += num_added
                     
                 
+            
+        
+        if len( ac_counts ) > 0:
+            
+            ac_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_counts.items() ]
+            
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1629,11 +1806,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( ac_cache_changes ) > 0:
             
-            specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
-            
-            self._c.executemany( 'UPDATE ' + specific_display_ac_cache_table_name + ' SET current_count = current_count - ?, pending_count = pending_count - ? WHERE tag_id = ?;', ( ( num_current, num_pending, tag_id ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'DELETE FROM ' + specific_display_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( tag_id, 0, 0 ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1735,7 +1908,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.execute( query )
                     
-                    statuses_to_count_delta[ status ] = - self._GetRowCount()
+                    statuses_to_count_delta[ status ] = self._GetRowCount()
                     
                 
             
@@ -1743,25 +1916,23 @@ class DB( HydrusDB.HydrusDB ):
         current_delta = statuses_to_count_delta[ HC.CONTENT_STATUS_CURRENT ]
         pending_delta = statuses_to_count_delta[ HC.CONTENT_STATUS_PENDING ]
         
-        if current_delta < 0 or pending_delta < 0:
+        if current_delta > 0 or pending_delta > 0:
             
-            specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
+            ac_cache_changes = ( ( tag_id, current_delta, pending_delta ), )
             
-            self._c.execute( 'UPDATE {} SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;'.format( specific_display_ac_cache_table_name ), ( current_delta, pending_delta, tag_id ) )
-            
-            self._c.execute( 'DELETE FROM {} WHERE tag_id = ? AND current_count = 0 AND pending_count = 0;'.format( specific_display_ac_cache_table_name ), ( tag_id, ) )
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
     def _CacheSpecificDisplayMappingsDeleteMappings( self, file_service_id, tag_service_id, storage_tag_id, hash_ids ):
-        
-        specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
         
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
         implies_tag_ids = self._CacheTagDisplayGetImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
         
         implies_tag_ids_to_implied_by_tag_ids = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, implies_tag_ids, tags_are_ideal = True )
+        
+        ac_counts = collections.Counter()
         
         for ( display_tag_id, implied_by_tag_ids ) in implies_tag_ids_to_implied_by_tag_ids.items():
             
@@ -1797,10 +1968,15 @@ class DB( HydrusDB.HydrusDB ):
             
             if num_deleted > 0:
                 
-                self._c.execute( 'UPDATE {} SET current_count = current_count - ? WHERE tag_id = ?;'.format( specific_display_ac_cache_table_name ), ( num_deleted, display_tag_id ) )
+                ac_counts[ display_tag_id ] += num_deleted
                 
-                self._c.execute( 'DELETE FROM {} WHERE tag_id = ? AND current_count = ? AND pending_count = ?;'.format( specific_display_ac_cache_table_name ), ( display_tag_id, 0, 0 ) )
-                
+            
+        
+        if len( ac_counts ) > 0:
+            
+            ac_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_counts.items() ]
+            
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1843,8 +2019,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificDisplayMappingsPendMappings( self, file_service_id, tag_service_id, filtered_mappings_generator: FilteredMappingsGenerator ):
         
-        specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
-        
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
         mappings_ids = list( filtered_mappings_generator.IterateMappings( file_service_id ) )
@@ -1853,6 +2027,8 @@ class DB( HydrusDB.HydrusDB ):
             
             return
             
+        
+        ac_counts = collections.Counter()
         
         storage_tag_ids = { tag_id for ( tag_id, hash_ids ) in mappings_ids }
         
@@ -1870,23 +2046,28 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_added > 0:
                     
-                    self._c.execute( 'INSERT OR IGNORE INTO ' + specific_display_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( display_tag_id, 0, 0 ) )
-                    
-                    self._c.execute( 'UPDATE ' + specific_display_ac_cache_table_name + ' SET pending_count = pending_count + ? WHERE tag_id = ?;', ( num_added, display_tag_id ) )
+                    ac_counts[ display_tag_id ] += num_added
                     
                 
             
         
+        if len( ac_counts ) > 0:
+            
+            ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
+            
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
+            
+        
     
     def _CacheSpecificDisplayMappingsRescindPendingMappings( self, file_service_id, tag_service_id, storage_tag_id, hash_ids ):
-        
-        specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
         
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
         implies_tag_ids = self._CacheTagDisplayGetImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
         
         implies_tag_ids_to_implied_by_tag_ids = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, implies_tag_ids, tags_are_ideal = True )
+        
+        ac_counts = collections.Counter()
         
         for ( display_tag_id, implied_by_tag_ids ) in implies_tag_ids_to_implied_by_tag_ids.items():
             
@@ -1922,10 +2103,15 @@ class DB( HydrusDB.HydrusDB ):
             
             if num_rescinded > 0:
                 
-                self._c.execute( 'UPDATE {} SET pending_count = pending_count - ? WHERE tag_id = ?;'.format( specific_display_ac_cache_table_name ), ( num_rescinded, display_tag_id ) )
+                ac_counts[ display_tag_id ] += num_rescinded
                 
-                self._c.execute( 'DELETE FROM {} WHERE tag_id = ? AND current_count = ? AND pending_count = ?;'.format( specific_display_ac_cache_table_name ), ( display_tag_id, 0, 0 ) )
-                
+            
+        
+        if len( ac_counts ) > 0:
+            
+            ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
+            
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -1967,13 +2153,13 @@ class DB( HydrusDB.HydrusDB ):
             
             current_hash_ids = current_mapping_ids_dict[ tag_id ]
             
-            num_current = len( current_hash_ids )
+            current_delta = len( current_hash_ids )
             
-            if num_current > 0:
+            if current_delta > 0:
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_current_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in current_hash_ids ) )
                 
-                num_current = self._GetRowCount()
+                current_delta = self._GetRowCount()
                 
             
             #
@@ -1993,37 +2179,26 @@ class DB( HydrusDB.HydrusDB ):
             
             pending_hash_ids = pending_mapping_ids_dict[ tag_id ]
             
-            num_pending = len( pending_hash_ids )
+            pending_delta = len( pending_hash_ids )
             
-            if num_pending > 0:
+            if pending_delta > 0:
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_pending_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in pending_hash_ids ) )
                 
-                num_pending = self._GetRowCount()
+                pending_delta = self._GetRowCount()
                 
             
             #
             
-            if num_current > 0 or num_pending > 0:
+            if current_delta > 0 or pending_delta > 0:
                 
-                ac_cache_changes.append( ( tag_id, num_current, num_pending ) )
+                ac_cache_changes.append( ( tag_id, current_delta, pending_delta ) )
                 
             
         
         if len( ac_cache_changes ) > 0:
             
-            specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO ' + specific_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( ( tag_id, 0, 0 ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'UPDATE ' + specific_ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;', ( ( num_current, num_pending, tag_id ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
-            
-            if file_service_id == self._combined_local_file_service_id:
-                
-                potential_new_tag_ids = [ tag_id for ( tag_id, num_current, num_pending ) in ac_cache_changes if num_current > 0 ]
-                
-                self._CacheLocalTagIdsPotentialAdd( potential_new_tag_ids )
-                
+            self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -2031,11 +2206,9 @@ class DB( HydrusDB.HydrusDB ):
         
         for file_service_id in file_service_ids:
             
-            potential_new_tag_ids = []
-            
-            specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-            
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            ac_counts = collections.Counter()
             
             for ( tag_id, hash_ids ) in filtered_mappings_generator.IterateMappings( file_service_id ):
                 
@@ -2045,14 +2218,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_added > 0:
                     
-                    self._c.execute( 'INSERT OR IGNORE INTO ' + specific_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( tag_id, 0, 0 ) )
-                    
-                    if self._GetRowCount() > 0:
-                        
-                        potential_new_tag_ids.append( tag_id )
-                        
-                    
-                    self._c.execute( 'UPDATE ' + specific_ac_cache_table_name + ' SET current_count = current_count + ? WHERE tag_id = ?;', ( num_added, tag_id ) )
+                    ac_counts[ tag_id ] += num_added
                     
                 
                 #
@@ -2060,9 +2226,11 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.executemany( 'DELETE FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, tag_id ) for hash_id in hash_ids ) )
                 
             
-            if file_service_id == self._combined_local_file_service_id and len( potential_new_tag_ids ) > 0:
+            if len( ac_counts ) > 0:
                 
-                self._CacheLocalTagIdsPotentialAdd( potential_new_tag_ids )
+                ac_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_counts.items() ]
+                
+                self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
                 
             
             self._CacheSpecificDisplayMappingsAddMappings( file_service_id, tag_service_id, filtered_mappings_generator )
@@ -2162,18 +2330,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( ac_cache_changes ) > 0:
             
-            specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-            
-            self._c.executemany( 'UPDATE ' + specific_ac_cache_table_name + ' SET current_count = current_count - ?, pending_count = pending_count - ? WHERE tag_id = ?;', ( ( num_current, num_pending, tag_id ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
-            
-            self._c.executemany( 'DELETE FROM ' + specific_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( tag_id, 0, 0 ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
-            
-            if file_service_id == self._combined_local_file_service_id:
-                
-                potential_deleted_tag_ids = [ tag_id for ( tag_id, num_current, num_pending ) in ac_cache_changes if num_current > 0 ]
-                
-                self._CacheLocalTagIdsPotentialDelete( potential_deleted_tag_ids )
-                
+            self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
             
         
     
@@ -2181,11 +2338,9 @@ class DB( HydrusDB.HydrusDB ):
         
         for file_service_id in file_service_ids:
             
-            deleted_tag_ids = []
-            
-            specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-            
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            ac_counts = collections.Counter()
             
             for ( tag_id, hash_ids ) in filtered_mappings_generator.IterateMappings( file_service_id ):
                 
@@ -2198,14 +2353,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_deleted > 0:
                     
-                    self._c.execute( 'UPDATE ' + specific_ac_cache_table_name + ' SET current_count = current_count - ? WHERE tag_id = ?;', ( num_deleted, tag_id ) )
-                    
-                    self._c.execute( 'DELETE FROM ' + specific_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( tag_id, 0, 0 ) )
-                    
-                    if self._GetRowCount() > 0:
-                        
-                        deleted_tag_ids.append( tag_id )
-                        
+                    ac_counts[ tag_id ] += num_deleted
                     
                 
                 #
@@ -2213,9 +2361,11 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_deleted_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in hash_ids ) )
                 
             
-            if file_service_id == self._combined_local_file_service_id and len( deleted_tag_ids ) > 0:
+            if len( ac_counts ) > 0:
                 
-                self._CacheLocalTagIdsPotentialDelete( deleted_tag_ids )
+                ac_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_counts.items() ]
+                
+                self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
                 
             
         
@@ -2260,14 +2410,6 @@ class DB( HydrusDB.HydrusDB ):
         self._CacheSpecificDisplayMappingsGenerate( file_service_id, tag_service_id )
         
     
-    def _CacheSpecificMappingsGetAutocompleteCounts( self, tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ):
-        
-        specific_ac_cache_table_name = GenerateSpecificACCacheTableName( tag_display_type, file_service_id, tag_service_id )
-        
-        # temp tags to counts
-        return self._c.execute( 'SELECT tag_id, current_count, pending_count FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_tag_id_table_name, specific_ac_cache_table_name ) ).fetchall()
-        
-    
     def _CacheSpecificMappingsGetFilteredMappingsGenerator( self, file_service_ids, tag_service_id, mappings_ids ):
         
         # we have a fast 'does this file exist on this specific domain' cache, so let's filter mappings by that
@@ -2296,9 +2438,9 @@ class DB( HydrusDB.HydrusDB ):
         
         for file_service_id in file_service_ids:
             
-            specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-            
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            ac_counts = collections.Counter()
             
             for ( tag_id, hash_ids ) in filtered_mappings_generator.IterateMappings( file_service_id ):
                 
@@ -2308,10 +2450,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_added > 0:
                     
-                    self._c.execute( 'INSERT OR IGNORE INTO ' + specific_ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( tag_id, 0, 0 ) )
+                    ac_counts[ tag_id ] += num_added
                     
-                    self._c.execute( 'UPDATE ' + specific_ac_cache_table_name + ' SET pending_count = pending_count + ? WHERE tag_id = ?;', ( num_added, tag_id ) )
-                    
+                
+            
+            if len( ac_counts ) > 0:
+                
+                ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
+                
+                self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
                 
             
             self._CacheSpecificDisplayMappingsPendMappings( file_service_id, tag_service_id, filtered_mappings_generator )
@@ -2322,9 +2469,9 @@ class DB( HydrusDB.HydrusDB ):
         
         for file_service_id in file_service_ids:
             
-            specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-            
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            ac_counts = collections.Counter()
             
             for ( tag_id, hash_ids ) in filtered_mappings_generator.IterateMappings( file_service_id ):
                 
@@ -2337,10 +2484,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_deleted > 0:
                     
-                    self._c.execute( 'UPDATE ' + specific_ac_cache_table_name + ' SET pending_count = pending_count - ? WHERE tag_id = ?;', ( num_deleted, tag_id ) )
+                    ac_counts[ tag_id ] += num_deleted
                     
-                    self._c.execute( 'DELETE FROM ' + specific_ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( tag_id, 0, 0 ) )
-                    
+                
+            
+            if len( ac_counts ) > 0:
+                
+                ac_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
+                
+                self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
                 
             
         
@@ -3231,6 +3383,8 @@ class DB( HydrusDB.HydrusDB ):
             
             self._regen_tags_managers_tag_ids.update( all_tag_ids_altered )
             
+            self._CacheTagsSyncTags( tag_service_id, all_tag_ids_altered )
+            
             self.pub_after_job( 'notify_new_tag_display_sync_status', service_key )
             
         
@@ -3632,86 +3786,255 @@ class DB( HydrusDB.HydrusDB ):
         self._CacheTagParentsRegenChains( interested_tag_service_ids, tag_ids_that_changed )
         
     
-    def _CacheTagsAddTags( self, tag_display_type, file_service_id, tag_service_id, tag_ids ):
+    def _CacheTagsAddTags( self, file_service_id, tag_service_id, tag_ids ):
         
-        # ideally we call this lad only with what was added, so we aren't wasting time
-        # this is hard-synced with the ac_cache for this domain
+        if len( tag_ids ) == 0:
+            
+            return
+            
         
-        # cache_tags_table_name = self._CacheTagsGetTable( tag_display_type, file_service_id, tag_service_id )
+        tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
         
-        # self._c.executemany( 'INSERT OR IGNORE INTO {} SELECT tag_id, namespace_id, subtag_id FROM tags WHERE tag_id = ?;'.format( the_table ), ( ( tag_id, ) for tag_id in tag_ids ) )
-        
-        pass
+        with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
+            
+            # temp tags to tag definitions
+            self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, namespace_id, subtag_id ) SELECT tag_id, namespace_id, subtag_id FROM {} CROSS JOIN tags USING ( tag_id );'.format( tags_table_name, temp_tag_ids_table_name ) )
+            
+            # temp tags to fast tag definitions to subtags
+            subtag_ids_and_subtags = self._c.execute( 'SELECT subtag_id, subtag FROM {} CROSS JOIN {} USING ( tag_id ) CROSS JOIN subtags USING ( subtag_id );'.format( temp_tag_ids_table_name, tags_table_name ) ).fetchall()
+            
+            subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id )
+            integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id )
+            
+            for ( subtag_id, subtag ) in subtag_ids_and_subtags:
+                
+                subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
+                
+                #
+                
+                self._c.execute( 'INSERT OR IGNORE INTO {} ( docid, subtag ) VALUES ( ?, ? );'.format( subtags_fts4_table_name ), ( subtag_id, subtag_searchable ) )
+                
+                if subtag.isdecimal():
+                    
+                    try:
+                        
+                        integer_subtag = int( subtag )
+                        
+                        if CanCacheInteger( integer_subtag ):
+                            
+                            self._c.execute( 'INSERT OR IGNORE INTO {} ( subtag_id, integer_subtag ) VALUES ( ?, ? );'.format( integer_subtags_table_name ), ( subtag_id, integer_subtag ) )
+                            
+                        
+                    except ValueError:
+                        
+                        pass
+                        
+                    
+                
+            
         
     
-    def _CacheTagsDeleteTags( self, tag_display_type, file_service_id, tag_service_id, tag_ids ):
+    def _CacheTagsDeleteTags( self, file_service_id, tag_service_id, tag_ids ):
         
-        # we can only call this lad with what was deleted
-        # this is hard-synced with the ac_cache for this domain
+        if len( tag_ids ) == 0:
+            
+            return
+            
         
-        # cache_tags_table_name = self._CacheTagsGetTable( tag_display_type, file_service_id, tag_service_id )
+        tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+        subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id )
+        integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id )
         
-        # self._c.executemany( 'DELETE FROM {} WHERE tag_id = ?;'.format( the_table ), ( ( tag_id, ) for tag_id in tag_ids ) )
-        
-        pass
-        
-    
-    def _CacheTagsDrop( self, tag_display_type, file_service_id, tag_service_id ):
-        
-        cache_tags_table_name = self._CacheTagsGetTable( tag_display_type, file_service_id, tag_service_id )
-        
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( cache_tags_table_name ) )
-        
-    
-    def _CacheTagsGenerate( self, tag_display_type, file_service_id, tag_service_id ):
-        
-        cache_tags_table_name = self._CacheTagsGetTable( tag_display_type, file_service_id, tag_service_id )
-        
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );'.format( cache_tags_table_name ) )
-        self._CreateIndex( cache_tags_table_name, [ 'namespace_id', 'subtag_id' ], unique = True )
-        self._CreateIndex( cache_tags_table_name, [ 'subtag_id' ] )
-        
-        # I could potentially store subtags_fts4 here, for each domain, instead of in master, too, if it isn't that huge IRL, but I think it is huge
-        # with that could come subtags searchable
+        with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
+            
+            # temp tag ids to tag definitions
+            subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_tag_ids_table_name, tags_table_name ) ) )
+            
+            #
+            
+            self._c.executemany( 'DELETE FROM {} WHERE tag_id = ?;'.format( tags_table_name ), ( ( tag_id, ) for tag_id in tag_ids ) )
+            
+            #
+            
+            self._c.executemany( 'DELETE FROM {} WHERE docid = ?;'.format( subtags_fts4_table_name ), ( ( subtag_id, ) for subtag_id in subtag_ids ) )
+            self._c.executemany( 'DELETE FROM {} WHERE subtag_id = ?;'.format( integer_subtags_table_name ), ( ( subtag_id, ) for subtag_id in subtag_ids ) )
+            
         
     
-    def _CacheTagsGetTable( self, tag_display_type, file_service_id, tag_service_id ):
+    def _CacheTagsDrop( self, file_service_id, tag_service_id ):
         
-        # OK, rethink this a bit:
-        # if instead of tag_display_type we just merge storage and display with getchainmembers and 'sync to ac cache' instead of delete, then we use half the storage
-        # we are no longer hard-synced to ac cache
+        tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
         
-        # one new thought: if I have all this and no longer query tags for namespace_id or subtag_id, I can drop those indices mate
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( tags_table_name ) )
         
-        # also lmao this assumes availability of combined tags cache, so may ultimately want to go for that first
+        subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id )
+        
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( subtags_fts4_table_name ) )
+        
+        integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id )
+        
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( integer_subtags_table_name ) )
+        
+    
+    def _CacheTagsFileServiceIsCoveredByAllLocalFiles( self, file_service_id ):
+        
+        file_service_type = self._GetService( file_service_id ).GetServiceType()
+        
+        return file_service_type in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN )
+        
+    
+    def _CacheTagsGenerate( self, file_service_id, tag_service_id ):
+        
+        tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+        subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id )
+        integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );'.format( tags_table_name ) )
+        self._CreateIndex( tags_table_name, [ 'namespace_id', 'subtag_id' ], unique = True )
+        self._CreateIndex( tags_table_name, [ 'subtag_id' ] )
+        
+        self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS {} USING fts4( subtag );'.format( subtags_fts4_table_name ) )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );'.format( integer_subtags_table_name ) )
+        self._CreateIndex( integer_subtags_table_name, [ 'integer_subtag' ] )
+        
+    
+    def _CacheTagsGetIntegerSubtagsTableName( self, file_service_id, tag_service_id ):
         
         if file_service_id == self._combined_file_service_id:
             
-            cache_tags_table_name = GenerateCombinedFilesTagsTableName( tag_display_type, tag_service_id )
-            
-        elif tag_service_id == self._combined_tag_service_id:
-            
-            cache_tags_table_name = GenerateCombinedTagsTagsTableName( tag_display_type, file_service_id )
+            integer_subtags_table_name = GenerateCombinedFilesIntegerSubtagsTableName( tag_service_id )
             
         else:
             
-            cache_tags_table_name = GenerateSpecificTagsTableName( tag_display_type, file_service_id, tag_service_id )
+            if self._CacheTagsFileServiceIsCoveredByAllLocalFiles( file_service_id ):
+                
+                file_service_id = self._combined_local_file_service_id
+                
+            
+            integer_subtags_table_name = GenerateSpecificIntegerSubtagsTableName( file_service_id, tag_service_id )
             
         
-        return cache_tags_table_name
+        return integer_subtags_table_name
         
     
-    def _CacheTagsPopulate( self, tag_display_type, file_service_id, tag_service_id ):
+    def _CacheTagsGetSubtagsFTS4TableName( self, file_service_id, tag_service_id ):
         
-        # if I decide to sync to display, this would be a union of storage and display ac caches
+        if file_service_id == self._combined_file_service_id:
+            
+            subtags_fts4_table_name = GenerateCombinedFilesSubtagsFTS4TableName( tag_service_id )
+            
+        else:
+            
+            if self._CacheTagsFileServiceIsCoveredByAllLocalFiles( file_service_id ):
+                
+                file_service_id = self._combined_local_file_service_id
+                
+            
+            subtags_fts4_table_name = GenerateSpecificSubtagsFTS4TableName( file_service_id, tag_service_id )
+            
         
-        # ac_cache_table_name = getthatlad
+        return subtags_fts4_table_name
         
-        #cache_tags_table_name = self._CacheTagsGetTable( tag_display_type, file_service_id, tag_service_id )
+    
+    def _CacheTagsGetTagsTableName( self, file_service_id, tag_service_id ):
         
-        #self._c.execute( 'INSERT OR IGNORE INTO {} SELECT tag_id, namespace_id, subtag_id FROM {} CROSS JOIN tags USING ( tag_id );'.format( cache_tags_table_name, ac_cache_table_name ) )
+        if file_service_id == self._combined_file_service_id:
+            
+            tags_table_name = GenerateCombinedFilesTagsTableName( tag_service_id )
+            
+        else:
+            
+            if self._CacheTagsFileServiceIsCoveredByAllLocalFiles( file_service_id ):
+                
+                file_service_id = self._combined_local_file_service_id
+                
+            
+            tags_table_name = GenerateSpecificTagsTableName( file_service_id, tag_service_id )
+            
         
-        pass
+        return tags_table_name
+        
+    
+    def _CacheTagsPopulate( self, file_service_id, tag_service_id, status_hook = None ):
+        
+        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
+        siblings_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        parents_table_name = GenerateTagParentsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        
+        queries = [
+            'SELECT tag_id FROM {}'.format( ac_cache_table_name ),
+            'SELECT DISTINCT bad_tag_id FROM {}'.format( siblings_table_name ),
+            'SELECT ideal_tag_id FROM {}'.format( siblings_table_name ),
+            'SELECT DISTINCT child_tag_id FROM {}'.format( parents_table_name ),
+            'SELECT DISTINCT ancestor_tag_id FROM {}'.format( parents_table_name )
+        ]
+        
+        query = ' UNION '.join( queries ) + ';'
+        
+        queries = [ query ]
+        
+        BLOCK_SIZE = 10000
+        
+        for ( i, group_of_tag_ids ) in enumerate( HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, query, BLOCK_SIZE ) ):
+            
+            self._CacheTagsAddTags( file_service_id, tag_service_id, group_of_tag_ids )
+            
+            message = HydrusData.ToHumanInt( i * BLOCK_SIZE )
+            
+            self._controller.frame_splash_status.SetSubtext( message )
+            
+            if status_hook is not None:
+                
+                status_hook( message )
+                
+            
+        
+        self._AnalyzeTable( self._CacheTagsGetTagsTableName( file_service_id, tag_service_id ) )
+        self._AnalyzeTable( self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id ) )
+        self._AnalyzeTable( self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id ) )
+        
+    
+    def _CacheTagsSyncTags( self, tag_service_id, tag_ids ):
+        
+        if len( tag_ids ) == 0:
+            
+            return
+            
+        
+        file_service_ids = list( self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES ) )
+        
+        file_service_ids.append( self._combined_file_service_id )
+        
+        chained_tag_ids = self._CacheTagDisplayFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids )
+        unchained_tag_ids = { tag_id for tag_id in tag_ids if tag_id not in chained_tag_ids }
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
+            
+            with HydrusDB.TemporaryIntegerTable( self._c, unchained_tag_ids, 'tag_id' ) as temp_unchained_tag_ids_table_name:
+                
+                for file_service_id in file_service_ids:
+                    
+                    tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+                    
+                    already_exist = self._STS( self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_tag_ids_table_name, tags_table_name ) ) )
+                    
+                    ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
+                    
+                    exist_in_ac_cache_tag_ids = self._STS( self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_unchained_tag_ids_table_name, ac_cache_table_name ) ) )
+                    
+                    should_have = chained_tag_ids.union( exist_in_ac_cache_tag_ids )
+                    
+                    should_not_have = unchained_tag_ids.difference( exist_in_ac_cache_tag_ids )
+                    
+                    should_add = should_have.difference( already_exist )
+                    should_delete = already_exist.intersection( should_not_have )
+                    
+                    self._CacheTagsAddTags( file_service_id, tag_service_id, should_add )
+                    self._CacheTagsDeleteTags( file_service_id, tag_service_id, should_delete )
+                    
+                
+            
         
     
     def _CacheTagSiblingsDrop( self, tag_service_id ):
@@ -4679,14 +5002,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
         
-        self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.subtags_fts4 USING fts4( subtag );' )
-        
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.subtags_searchable_map ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );' )
-        self._CreateIndex( 'external_caches.subtags_searchable_map', [ 'searchable_subtag_id' ] )
-        
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
-        self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
-        
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
         
     
@@ -4994,7 +5309,16 @@ class DB( HydrusDB.HydrusDB ):
             self._CacheTagSiblingsDrop( service_id )
             self._CacheTagParentsDrop( service_id )
             
+            self._CacheTagsDrop( self._combined_file_service_id, service_id )
+            
             self._CacheCombinedFilesMappingsDrop( service_id )
+            
+            file_service_ids = self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for file_service_id in file_service_ids:
+                
+                self._CacheTagsDrop( file_service_id, service_id )
+                
             
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
             
@@ -5018,6 +5342,16 @@ class DB( HydrusDB.HydrusDB ):
             if len( interested_service_ids ) > 0:
                 
                 self._RegenerateTagSiblingsCache( only_these_service_ids = interested_service_ids )
+                
+            
+        
+        if service_type in HC.TAG_CACHE_SPECIFIC_FILE_SERVICES:
+            
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                self._CacheTagsDrop( service_id, tag_service_id )
                 
             
         
@@ -6969,7 +7303,7 @@ class DB( HydrusDB.HydrusDB ):
         
         with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_tag_id_table_name:
             
-            counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( ClientTags.TAG_DISPLAY_STORAGE, service_id, temp_tag_id_table_name )
+            counts = self._CacheMappingsGetAutocompleteCounts( ClientTags.TAG_DISPLAY_STORAGE, self._combined_file_service_id, service_id, temp_tag_id_table_name )
             
         
         existing_tag_ids = [ tag_id for ( tag_id, current_count, pending_count ) in counts if current_count > 0 ]
@@ -7241,32 +7575,25 @@ class DB( HydrusDB.HydrusDB ):
         
         with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_tag_id_table_name:
             
-            if file_service_id == self._combined_file_service_id:
+            if tag_service_id == self._combined_tag_service_id:
                 
-                cache_results = self._CacheCombinedFilesMappingsGetAutocompleteCounts( tag_display_type, tag_service_id, temp_tag_id_table_name )
+                search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
                 
             else:
                 
-                if tag_service_id == self._combined_tag_service_id:
+                search_tag_service_ids = [ tag_service_id ]
+                
+            
+            cache_results = []
+            
+            for search_tag_service_id in search_tag_service_ids:
+                
+                if job_key is not None and job_key.IsCancelled():
                     
-                    search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-                    
-                else:
-                    
-                    search_tag_service_ids = [ tag_service_id ]
+                    return {}
                     
                 
-                cache_results = []
-                
-                for search_tag_service_id in search_tag_service_ids:
-                    
-                    if job_key is not None and job_key.IsCancelled():
-                        
-                        return {}
-                        
-                    
-                    cache_results.extend( self._CacheSpecificMappingsGetAutocompleteCounts( tag_display_type, file_service_id, search_tag_service_id, temp_tag_id_table_name ) )
-                    
+                cache_results.extend( self._CacheMappingsGetAutocompleteCounts( tag_display_type, file_service_id, search_tag_service_id, temp_tag_id_table_name ) )
                 
             
         
@@ -7419,79 +7746,48 @@ class DB( HydrusDB.HydrusDB ):
         
         if exact_match:
             
-            table_join = 'subtags_searchable_map NATURAL JOIN tags'
+            if '*' in namespace or '*' in half_complete_searchable_subtag:
+                
+                return []
+                
             
-            searchable_subtag = half_complete_searchable_subtag
+        
+        if namespace == '':
             
-            if not self._SubtagExists( searchable_subtag ):
+            namespace_ids = []
+            
+        elif '*' in namespace:
+            
+            namespace_ids = self._GetNamespaceIdsFromWildcard( namespace )
+            
+        else:
+            
+            if not self._NamespaceExists( namespace ):
                 
                 return set()
                 
             
-            searchable_subtag_id = self._GetSubtagId( searchable_subtag )
+            namespace_ids = ( self._GetNamespaceId( namespace ), )
+            
+        
+        if half_complete_searchable_subtag == '*':
             
             if namespace == '':
                 
-                tag_ids = self._STS( self._c.execute( 'SELECT tag_id FROM subtags_searchable_map NATURAL JOIN tags WHERE searchable_subtag_id = ?;', ( searchable_subtag_id, ) ) )
-                
-            else:
-                
-                if not self._NamespaceExists( namespace ):
+                if tag_service_id == self._combined_tag_service_id:
                     
-                    return set()
+                    search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
                     
-                
-                namespace_id = self._GetNamespaceId( namespace )
-                
-                # force the smaller of the two to go first
-                tag_ids = self._STS( self._c.execute( 'SELECT tag_id FROM subtags_searchable_map CROSS JOIN tags USING ( subtag_id ) WHERE searchable_subtag_id = ? AND namespace_id = ?;', ( searchable_subtag_id, namespace_id ) ) )
-                
-            
-        else:
-            
-            if namespace == '':
-                
-                namespace_ids = []
-                
-            elif '*' in namespace:
-                
-                namespace_ids = self._GetNamespaceIdsFromWildcard( namespace )
-                
-            else:
-                
-                if not self._NamespaceExists( namespace ):
+                else:
                     
-                    return set()
+                    search_tag_service_ids = ( tag_service_id, )
                     
                 
-                namespace_ids = ( self._GetNamespaceId( namespace ), )
+                tag_ids = set()
                 
-            
-            if half_complete_searchable_subtag == '*':
-                
-                if namespace == '':
+                for search_tag_service_id in search_tag_service_ids:
                     
-                    if tag_service_id == self._combined_tag_service_id:
-                        
-                        search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
-                        
-                        query = ' UNION '.join( 'SELECT tag_id FROM {}'.format( GenerateSpecificACCacheTableName( tag_display_type, file_service_id, search_tag_service_id ) ) for search_tag_service_id in search_tag_service_ids )
-                        
-                        cursor = self._c.execute( '{};'.format( query ) )
-                        
-                    else:
-                        
-                        if file_service_id == self._combined_file_service_id:
-                            
-                            ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( tag_display_type, tag_service_id )
-                            
-                        else:
-                            
-                            ac_cache_table_name = GenerateSpecificACCacheTableName( tag_display_type, file_service_id, tag_service_id )
-                            
-                        
-                        cursor = self._c.execute( 'SELECT tag_id FROM {};'.format( ac_cache_table_name ) )
-                        
+                    cursor = self._c.execute( 'SELECT tag_id FROM {};'.format( self._CacheTagsGetTagsTableName( file_service_id, search_tag_service_id ) ) )
                     
                     cancelled_hook = None
                     
@@ -7500,27 +7796,35 @@ class DB( HydrusDB.HydrusDB ):
                         cancelled_hook = job_key.IsCancelled
                         
                     
-                    tag_ids = self._STL( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+                    loop_of_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
                     
-                else:
+                    if job_key is not None and job_key.IsCancelled():
+                        
+                        return set()
+                        
                     
-                    tag_ids = self._GetTagIdsFromNamespaceIds( tag_display_type, tag_service_id, file_service_id, namespace_ids, job_key = job_key )
+                    tag_ids.update( loop_of_tag_ids )
                     
                 
             else:
                 
-                subtag_ids = self._GetSubtagIdsFromWildcard( half_complete_searchable_subtag, job_key = job_key )
-                
-                if namespace == '':
-                    
-                    tag_ids = self._GetTagIdsFromSubtagIds( subtag_ids, job_key = job_key )
-                    
-                else:
-                    
-                    tag_ids = self._GetTagIdsFromNamespaceIdsSubtagIds( namespace_ids, subtag_ids, job_key = job_key )
-                    
+                tag_ids = self._GetTagIdsFromNamespaceIds( file_service_id, tag_service_id, namespace_ids, job_key = job_key )
                 
             
+        else:
+            
+            subtag_ids = self._GetSubtagIdsFromWildcard( file_service_id, tag_service_id, half_complete_searchable_subtag, job_key = job_key )
+            
+            if namespace == '':
+                
+                tag_ids = self._GetTagIdsFromSubtagIds( file_service_id, tag_service_id, subtag_ids, job_key = job_key )
+                
+            else:
+                
+                tag_ids = self._GetTagIdsFromNamespaceIdsSubtagIds( file_service_id, tag_service_id, namespace_ids, subtag_ids, job_key = job_key )
+                
+            
+        
         
         # now fetch siblings, add to set
         
@@ -8197,17 +8501,17 @@ class DB( HydrusDB.HydrusDB ):
             # reason why I JOIN each table rather than join just the UNION is based on previous hell with having query planner figure out a "( UNION ALL ) NATURAL JOIN stuff" situation
             # although this sometimes makes certifiable 2KB ( 6 UNION * 4-table ) queries, it actually works fast
             
-            table_names = self._GetMappingTables( tag_display_type, file_service_key, tag_search_context )
+            mapping_and_tag_table_names = self._GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
             
             if namespace_wildcard is None:
                 
                 # temp hashes to mappings
-                select_statements = [ 'SELECT hash_id, tag_id FROM {} CROSS JOIN {} USING ( hash_id )'.format( hash_ids_table_name, table_name ) for table_name in table_names ]
+                select_statements = [ 'SELECT hash_id, tag_id FROM {} CROSS JOIN {} USING ( hash_id )'.format( hash_ids_table_name, mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                 
             else:
                 
                 # temp hashes to mappings to tags to namespaces
-                select_statements = [ 'SELECT hash_id, tag_id FROM {} CROSS JOIN {} USING ( hash_id ) CROSS JOIN tags USING ( tag_id ) CROSS JOIN {} USING ( namespace_id )'.format( hash_ids_table_name, table_name, temp_namespace_ids_table_name ) for table_name in table_names ]
+                select_statements = [ 'SELECT hash_id, tag_id FROM {} CROSS JOIN {} USING ( hash_id ) CROSS JOIN {} USING ( tag_id ) CROSS JOIN {} USING ( namespace_id )'.format( hash_ids_table_name, mappings_table_name, tags_table_name, temp_namespace_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                 
             
             union_all = '( {} )'.format( ' UNION ALL '.join( select_statements ) )
@@ -8224,27 +8528,11 @@ class DB( HydrusDB.HydrusDB ):
                 cancelled_hook = job_key.IsCancelled
                 
             
-            results = HydrusDB.ReadFromCancellableCursor( cursor, 256, cancelled_hook = cancelled_hook )
+            results = HydrusDB.ReadFromCancellableCursor( cursor, 64, cancelled_hook = cancelled_hook )
             
             return results
             
         
-        # old method, now we are going full meme
-        '''
-        
-        if len( table_names ) == 0:
-            
-            return []
-            
-    
-        table_union_to_select_from = '( ' + ' UNION ALL '.join( ( 'SELECT * FROM ' + table_name for table_name in table_names ) ) + ' )'
-        
-        select_statement = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + table_union_to_select_from + ' WHERE hash_id = ?;'
-        
-        hash_id_tag_counts = list( self._ExecuteManySelectSingleParam( select_statement, hash_ids ) )
-        
-        return hash_id_tag_counts
-        '''
     
     def _GetHashIdsFromFileViewingStatistics( self, view_type, viewing_locations, operator, viewing_value ):
         
@@ -8303,7 +8591,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsFromNamespaceIdsSubtagIds( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace_ids, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
-        tag_ids = self._GetTagIdsFromNamespaceIdsSubtagIds( namespace_ids, subtag_ids, job_key = job_key )
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_search_context.service_key )
+        
+        tag_ids = self._GetTagIdsFromNamespaceIdsSubtagIds( file_service_id, tag_service_id, namespace_ids, subtag_ids, job_key = job_key )
         
         return self._GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
@@ -9481,7 +9772,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsFromSubtagIds( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
-        tag_ids = self._GetTagIdsFromSubtagIds( subtag_ids, job_key = job_key )
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_search_context.service_key )
+        
+        tag_ids = self._GetTagIdsFromSubtagIds( file_service_id, tag_service_id, subtag_ids, job_key = job_key )
         
         return self._GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
@@ -9499,7 +9793,10 @@ class DB( HydrusDB.HydrusDB ):
             
             subtag_id = self._GetSubtagId( subtag )
             
-            tag_ids = self._GetTagIdsFromSubtagIds( ( subtag_id, ) )
+            file_service_id = self._GetServiceId( file_service_key )
+            tag_service_id = self._GetServiceId( tag_search_context.service_key )
+            
+            tag_ids = self._GetTagIdsFromSubtagIds( file_service_id, tag_service_id, ( subtag_id, ) )
             
         else:
             
@@ -9732,7 +10029,10 @@ class DB( HydrusDB.HydrusDB ):
             return self._GetHashIdsThatHaveTags( tag_display_type, file_service_key, tag_search_context, namespace_wildcard = namespace_wildcard, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
             
         
-        possible_subtag_ids = self._GetSubtagIdsFromWildcard( subtag_wildcard, job_key = job_key )
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_search_context.service_key )
+        
+        possible_subtag_ids = self._GetSubtagIdsFromWildcard( file_service_id, tag_service_id, subtag_wildcard, job_key = job_key )
         
         if namespace_wildcard != '':
             
@@ -9762,33 +10062,41 @@ class DB( HydrusDB.HydrusDB ):
             namespace_ids = self._GetNamespaceIdsFromWildcard( namespace_wildcard )
             
         
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_search_context.service_key )
+        
+        if hash_ids_table_name is None and file_service_id != self._combined_file_service_id and tag_service_id != self._combined_tag_service_id:
+            
+            hash_ids_table_name = GenerateSpecificFilesTableName( file_service_id, tag_service_id )
+            
+        
         with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
             
-            table_names = self._GetMappingTables( tag_display_type, file_service_key, tag_search_context )
+            mapping_and_tag_table_names = self._GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
             
             if hash_ids_table_name is None:
                 
                 if namespace_wildcard is None:
                     
                     # hellmode
-                    queries = [ 'SELECT DISTINCT hash_id FROM {};'.format( table_name ) for table_name in table_names ]
+                    queries = [ 'SELECT DISTINCT hash_id FROM {};'.format( mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                     
                 else:
                     
                     # temp namespaces to tags to mappings
-                    queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN tags USING ( namespace_id ) CROSS JOIN {} USING ( tag_id );'.format( temp_namespace_ids_table_name, table_name ) for table_name in table_names ]
+                    queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN {} USING ( namespace_id ) CROSS JOIN {} USING ( tag_id );'.format( temp_namespace_ids_table_name, tags_table_name, mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                     
                 
             else:
                 
                 if namespace_wildcard is None:
                     
-                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, table_name, table_name, hash_ids_table_name ) for table_name in table_names ]
+                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, mappings_table_name, mappings_table_name, hash_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                     
                 else:
                     
                     # temp hashes to mappings to tags to temp namespaces
-                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN tags USING ( tag_id ) CROSS JOIN {} USING ( namespace_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, table_name, temp_namespace_ids_table_name, table_name, hash_ids_table_name ) for table_name in table_names ]
+                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) CROSS JOIN {} USING ( namespace_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, mappings_table_name, tags_table_name, temp_namespace_ids_table_name, mappings_table_name, hash_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                     
                 
             
@@ -9810,7 +10118,28 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsThatHaveTagAsNum( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
-        possible_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM integer_subtags WHERE integer_subtag ' + operator + ' ' + str( num ) + ';' ) )
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_search_context.service_key )
+        
+        if tag_service_id == self._combined_tag_service_id:
+            
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = ( tag_service_id, )
+            
+        
+        possible_subtag_ids = set()
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, search_tag_service_id )
+            
+            some_possible_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM {} WHERE integer_subtag {} {};'.format( integer_subtags_table_name, operator, num ) ) )
+            
+            possible_subtag_ids.update( some_possible_subtag_ids )
+            
         
         if namespace == '':
             
@@ -10305,6 +10634,68 @@ class DB( HydrusDB.HydrusDB ):
                     
                     current_tables.append( cache_current_display_mappings_table_name )
                     pending_tables.append( cache_pending_display_mappings_table_name )
+                    
+                
+            
+        
+        table_names = []
+        
+        if tag_search_context.include_current_tags:
+            
+            table_names.extend( current_tables )
+            
+        
+        if tag_search_context.include_pending_tags:
+            
+            table_names.extend( pending_tables )
+            
+        
+        return table_names
+        
+    
+    def _GetMappingAndTagTables( self, tag_display_type, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
+        
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_key = tag_search_context.service_key
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            
+        
+        current_tables = []
+        pending_tables = []
+        
+        for tag_service_id in tag_service_ids:
+            
+            tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+            
+            if file_service_id == self._combined_file_service_id:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+                
+                current_tables.append( ( current_mappings_table_name, tags_table_name ) )
+                pending_tables.append( ( pending_mappings_table_name, tags_table_name ) )
+                
+            else:
+                
+                if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
+                    
+                    ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    current_tables.append( ( cache_current_mappings_table_name, tags_table_name ) )
+                    pending_tables.append( ( cache_pending_mappings_table_name, tags_table_name ) )
+                    
+                elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+                    
+                    ( cache_current_display_mappings_table_name, cache_pending_display_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    current_tables.append( ( cache_current_display_mappings_table_name, tags_table_name ) )
+                    pending_tables.append( ( cache_pending_display_mappings_table_name, tags_table_name ) )
                     
                 
             
@@ -11433,46 +11824,6 @@ class DB( HydrusDB.HydrusDB ):
             
             subtag_id = self._c.lastrowid
             
-            #
-            
-            subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
-            
-            #
-            
-            self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
-            
-            #
-            
-            if subtag_searchable == subtag:
-                
-                searchable_subtag_id = subtag_id
-                
-            else:
-                
-                searchable_subtag_id = self._GetSubtagId( subtag_searchable )
-                
-            
-            self._c.execute( 'REPLACE INTO subtags_searchable_map ( subtag_id, searchable_subtag_id ) VALUES ( ?, ? );', ( subtag_id, searchable_subtag_id ) )
-            
-            #
-            
-            if subtag.isdecimal():
-                
-                try:
-                    
-                    integer_subtag = int( subtag )
-                    
-                    if CanCacheInteger( integer_subtag ):
-                        
-                        self._c.execute( 'REPLACE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', ( subtag_id, integer_subtag ) )
-                        
-                    
-                except ValueError:
-                    
-                    pass
-                    
-                
-            
         else:
             
             ( subtag_id, ) = result
@@ -11481,69 +11832,93 @@ class DB( HydrusDB.HydrusDB ):
         return subtag_id
         
     
-    def _GetSubtagIdsFromWildcard( self, subtag_wildcard, job_key = None ):
+    def _GetSubtagIdsFromWildcard( self, file_service_id: int, tag_service_id: int, subtag_wildcard, job_key = None ):
         
-        if '*' in subtag_wildcard:
+        if tag_service_id == self._combined_tag_service_id:
             
-            if subtag_wildcard == '*':
-                
-                # hellmode, but shouldn't be called, fingers crossed
-                cursor = self._c.execute( 'SELECT subtag_id FROM subtags;' )
-                
-            elif ClientSearch.IsComplexWildcard( subtag_wildcard ):
-                
-                # we search the 'searchable subtags', then link the various mappings back to real tags
-                
-                like_param = ConvertWildcardToSQLiteLikeParameter( subtag_wildcard )
-                
-                if subtag_wildcard.startswith( '*' ):
-                    
-                    cursor = self._c.execute( 'SELECT subtags_searchable_map.subtag_id FROM subtags_searchable_map, subtags ON ( subtags_searchable_map.searchable_subtag_id = subtags.subtag_id ) WHERE subtag LIKE ?;', ( like_param, ) )
-                    
-                else:
-                    
-                    # we have an optimisation here--rather than searching all subtags for bl*ah, let's search all the bl* subtags for bl*ah!
-                    
-                    prefix_fts4_wildcard = subtag_wildcard.split( '*' )[0]
-                    
-                    prefix_fts4_wildcard_param = '"{}*"'.format( prefix_fts4_wildcard )
-                    
-                    cursor = self._c.execute( 'SELECT docid FROM subtags_fts4 WHERE subtag MATCH ? AND EXISTS ( SELECT 1 FROM subtags_searchable_map, subtags ON ( subtags_searchable_map.searchable_subtag_id = subtags.subtag_id ) WHERE subtags_searchable_map.subtag_id = docid AND subtag LIKE ? );', ( prefix_fts4_wildcard_param, like_param ) )
-                    
-                
-            else:
-                
-                # simple 'sam*' style subtag, so we can search fts4 no prob
-                
-                subtags_fts4_param = '"{}"'.format( subtag_wildcard )
-                
-                cursor = self._c.execute( 'SELECT docid FROM subtags_fts4 WHERE subtag MATCH ?;', ( subtags_fts4_param, ) )
-                
+            search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
             
         else:
             
-            if self._SubtagExists( subtag_wildcard ):
+            search_tag_service_ids = ( tag_service_id, )
+            
+        
+        result_subtag_ids = set()
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, search_tag_service_id )
+            
+            if '*' in subtag_wildcard:
                 
-                cursor = self._c.execute( 'SELECT subtags_searchable_map.subtag_id FROM subtags_searchable_map, subtags ON ( subtags_searchable_map.searchable_subtag_id = subtags.subtag_id ) WHERE subtag = ?;', ( subtag_wildcard, ) )
+                if subtag_wildcard == '*':
+                    
+                    # hellmode, but shouldn't be called normally
+                    cursor = self._c.execute( 'SELECT docid FROM {};'.format( subtags_fts4_table_name ) )
+                    
+                elif ClientSearch.IsComplexWildcard( subtag_wildcard ):
+                    
+                    # FTS4 does not support complex wildcards, so instead we'll search our raw subtags
+                    # however, since we want to search 'searchable' text, we use the 'searchable subtags map' to cross between real and searchable
+                    
+                    like_param = ConvertWildcardToSQLiteLikeParameter( subtag_wildcard )
+                    
+                    if subtag_wildcard.startswith( '*' ):
+                        
+                        # this is a SCAN, but there we go
+                        # a potential optimisation here, in future, is to store fts4 of subtags reversed, then for '*amus', we can just search that reverse cache for 'suma*'
+                        # and this would only double the size of the fts4 cache, the largest cache in the whole db! a steal!
+                        # it also would not fix '*amu*', but with some cleverness could speed up '*amus ar*'
+                        
+                        query = 'SELECT docid FROM {} WHERE subtag LIKE ?;'.format( subtags_fts4_table_name )
+                        
+                        cursor = self._c.execute( query, ( like_param, ) )
+                        
+                    else:
+                        
+                        # we have an optimisation here--rather than searching all subtags for bl*ah, let's search all the bl* subtags for bl*ah!
+                        
+                        prefix_fts4_wildcard = subtag_wildcard.split( '*' )[0]
+                        
+                        prefix_fts4_wildcard_param = '"{}*"'.format( prefix_fts4_wildcard )
+                        
+                        query = 'SELECT docid FROM {} WHERE subtag MATCH ? AND subtag LIKE ?;'.format( subtags_fts4_table_name )
+                        
+                        cursor = self._c.execute( query, ( prefix_fts4_wildcard_param, like_param ) )
+                        
+                    
+                else:
+                    
+                    # simple 'sam*' style subtag, so we can search fts4 no prob
+                    
+                    subtags_fts4_param = '"{}"'.format( subtag_wildcard )
+                    
+                    cursor = self._c.execute( 'SELECT docid FROM {} WHERE subtag MATCH ?;'.format( subtags_fts4_table_name ), ( subtags_fts4_param, ) )
+                    
                 
             else:
                 
-                return []
+                cursor = self._c.execute( 'SELECT docid FROM {} WHERE subtag = ?;'.format( subtags_fts4_table_name ), ( subtag_wildcard, ) )
                 
             
-        
-        results = []
-        
-        cancelled_hook = None
-        
-        if job_key is not None:
+            cancelled_hook = None
             
-            cancelled_hook = job_key.IsCancelled
+            if job_key is not None:
+                
+                cancelled_hook = job_key.IsCancelled
+                
+            
+            loop_of_subtag_ids = self._STL( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return set()
+                
+            
+            result_subtag_ids.update( loop_of_subtag_ids )
             
         
-        results = self._STL( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
-        
-        return results
+        return result_subtag_ids
         
     
     def _GetTag( self, tag_id ):
@@ -11587,35 +11962,78 @@ class DB( HydrusDB.HydrusDB ):
         return tag_id
         
     
-    def _GetTagIdsFromNamespaceIds( self, tag_display_type: int, tag_service_id: int, file_service_id: int, namespace_ids: typing.Collection[ int ], job_key = None ):
-        
-        # YO, this will be obviated when we get the master definition cache sorted
-        
-        # ok, so this lad can get bonkers. if a user syncs (or once synced) with the PTR, then their master tables are huge
-        # when they are just searching a little domain, or any specific file domain, we don't really want to effectively SCAN that gubbins only to later cut it down to 20 results, we want to cross-reference
-        # HOWEVER, namespace_id is only indexed in 'tags' table atm, so we do need to hit that, and if we go ac_cache table first, then this is a SCAN
-        # the question is whether a cache scan is faster than a tags search
-        # specific caches are so small, we can iterate them real quick and do CROSS JOIN
+    def _GetTagIdsFromNamespaceIds( self, file_service_id: int, tag_service_id: int, namespace_ids: typing.Collection[ int ], job_key = None ):
         
         if len( namespace_ids ) == 0:
             
             return set()
             
         
+        final_result_tag_ids = set()
+        
         with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
             
-            self._AnalyzeTempTable( temp_namespace_ids_table_name )
-            
-            if file_service_id == self._combined_file_service_id:
+            if tag_service_id == self._combined_tag_service_id:
                 
-                ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( tag_display_type, tag_service_id )
-                
-                # it is possible this is a 98%-of-master-size cache, so we will do NATURAL here
-                # in some experimental testing, it looks like sqlite is always doing tags first anyway, even on tiny ac tables, so bleh, but at least this cuts down final answer size
-                
-                do_natural = True
+                search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
                 
             else:
+                
+                search_tag_service_ids = ( tag_service_id, )
+                
+            
+            for search_tag_service_id in search_tag_service_ids:
+                
+                tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, search_tag_service_id )
+                
+                if len( namespace_ids ) == 1:
+                    
+                    ( namespace_id, ) = namespace_ids
+                    
+                    cursor = self._c.execute( 'SELECT tag_id FROM {} WHERE namespace_id = ?;'.format( tags_table_name ), ( namespace_id, ) )
+                    
+                else:
+                    
+                    # temp namespaces to tags
+                    cursor = self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( temp_namespace_ids_table_name, tags_table_name ) )
+                    
+                
+                cancelled_hook = None
+                
+                if job_key is not None:
+                    
+                    cancelled_hook = job_key.IsCancelled
+                    
+                
+                result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+                
+                if job_key is not None:
+                    
+                    if job_key.IsCancelled():
+                        
+                        return set()
+                        
+                    
+                
+                final_result_tag_ids.update( result_tag_ids )
+                
+            
+        
+        return final_result_tag_ids
+        
+    
+    def _GetTagIdsFromNamespaceIdsSubtagIds( self, file_service_id: int, tag_service_id: int, namespace_ids: typing.Collection[ int ], subtag_ids: typing.Collection[ int ], job_key = None ):
+        
+        if len( namespace_ids ) == 0 or len( subtag_ids ) == 0:
+            
+            return set()
+            
+        
+        final_result_tag_ids = set()
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
+            
+            with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
                 
                 if tag_service_id == self._combined_tag_service_id:
                     
@@ -11626,68 +12044,64 @@ class DB( HydrusDB.HydrusDB ):
                     search_tag_service_ids = ( tag_service_id, )
                     
                 
-                union_select = ' UNION '.join( 'SELECT tag_id FROM {}'.format( GenerateSpecificACCacheTableName( tag_display_type, file_service_id, search_tag_service_id ) ) for search_tag_service_id in search_tag_service_ids )
-                
-                ac_cache_table_name = '( {} )'.format( union_select )
-                
-                # typical scenarios here are that these are tiny, no problem to SCAN
-                # ugly situation is if this is a million+ file service and the namespace is small
-                # in the ugly situation, the user must expect a little slowdown, so there we are for now
-                
-                # essentially, I think this adds overhead to all queries, particularly for large file clients, but it reduces distaster scenario
-                
-                do_natural = False
-                
-            
-            if do_natural:
-                
-                tag_table_join = '{} NATURAL JOIN tags'.format( ac_cache_table_name )
-                
-            else:
-                
-                tag_table_join = '{} CROSS JOIN tags USING ( tag_id )'.format( ac_cache_table_name )
-                
-            
-            if len( namespace_ids ) == 1:
-                
-                ( namespace_id, ) = namespace_ids
-                
-                cursor = self._c.execute( 'SELECT tag_id FROM {} WHERE namespace_id = ?;'.format( tag_table_join ), ( namespace_id, ) )
-                
-            else:
-                
-                if do_natural:
+                for search_tag_service_id in search_tag_service_ids:
                     
-                    cursor = self._c.execute( 'SELECT tag_id FROM {} NATURAL JOIN {};'.format( tag_table_join, temp_namespace_ids_table_name ) )
+                    tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, search_tag_service_id )
                     
-                else:
+                    # temp subtags to tags to temp namespaces
+                    cursor = self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id ) CROSS JOIN {} USING ( namespace_id );'.format( temp_subtag_ids_table_name, tags_table_name, temp_namespace_ids_table_name ) )
                     
-                    # temp namespaces to tags
-                    cursor = self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( tag_table_join, temp_namespace_ids_table_name ) )
+                    cancelled_hook = None
+                    
+                    if job_key is not None:
+                        
+                        cancelled_hook = job_key.IsCancelled
+                        
+                    
+                    result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+                    
+                    if job_key is not None:
+                        
+                        if job_key.IsCancelled():
+                            
+                            return set()
+                            
+                        
+                    
+                    final_result_tag_ids.update( result_tag_ids )
                     
                 
-            
-            cancelled_hook = None
-            
-            if job_key is not None:
-                
-                cancelled_hook = job_key.IsCancelled
-                
-            
-            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
             
         
-        return result_tag_ids
+        return final_result_tag_ids
         
     
-    def _GetTagIdsFromNamespaceIdsSubtagIds( self, namespace_ids: typing.Collection[ int ], subtag_ids: typing.Collection[ int ], job_key = None ):
+    def _GetTagIdsFromSubtagIds( self, file_service_id: int, tag_service_id: int, subtag_ids: typing.Collection[ int ], job_key = None ):
+        
+        if len( subtag_ids ) == 0:
+            
+            return set()
+            
+        
+        final_result_tag_ids = set()
         
         with HydrusDB.TemporaryIntegerTable( self._c, subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
             
-            with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
+            if tag_service_id == self._combined_tag_service_id:
                 
-                # temp subtags to tags to temp namespaces
-                cursor = self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN tags USING ( subtag_id ) CROSS JOIN {} USING ( namespace_id );'.format( temp_subtag_ids_table_name, temp_namespace_ids_table_name ) )
+                search_tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                search_tag_service_ids = ( tag_service_id, )
+                
+            
+            for search_tag_service_id in search_tag_service_ids:
+                
+                tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, search_tag_service_id )
+                
+                # temp subtags to tags
+                cursor = self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id );'.format( temp_subtag_ids_table_name, tags_table_name ) )
                 
                 cancelled_hook = None
                 
@@ -11696,31 +12110,21 @@ class DB( HydrusDB.HydrusDB ):
                     cancelled_hook = job_key.IsCancelled
                     
                 
-                tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook ) )
+                result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+                
+                if job_key is not None:
+                    
+                    if job_key.IsCancelled():
+                        
+                        return set()
+                        
+                    
+                
+                final_result_tag_ids.update( result_tag_ids )
                 
             
         
-        return tag_ids
-        
-    
-    def _GetTagIdsFromSubtagIds( self, subtag_ids: typing.Collection[ int ], job_key = None ):
-        
-        with HydrusDB.TemporaryIntegerTable( self._c, subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
-            
-            # temp subtags to tags
-            cursor = self._c.execute( 'SELECT tag_id FROM {} CROSS JOIN tags USING ( subtag_id );'.format( temp_subtag_ids_table_name ) )
-            
-            cancelled_hook = None
-            
-            if job_key is not None:
-                
-                cancelled_hook = job_key.IsCancelled
-                
-            
-            tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
-            
-        
-        return tag_ids
+        return final_result_tag_ids
         
     
     def _GetTagParents( self, service_key ):
@@ -13634,14 +14038,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if job_key is not None:
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_stop ) = job_key.WaitIfNeeded()
                     
-                    should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
-                    
-                    if should_quit or should_stop:
+                    if should_stop:
                         
                         return ( still_work_to_do, num_done )
                         
+                    
+                
+                should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
+                
+                if should_stop:
+                    
+                    return ( still_work_to_do, num_done )
                     
                 
                 media_id = self._DuplicatesGetMediaId( hash_id )
@@ -15134,8 +15543,6 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'modal_message', job_key )
             
-            # need this here to ensure that local_tags_cache exists, as the mappings cache regens use it
-            # we can't move it up, as it relies on them for its own regen. just make an empty table here to get repopulated
             self._CreateDBCaches()
             
             message = 'generating local tag cache'
@@ -15155,6 +15562,86 @@ class DB( HydrusDB.HydrusDB ):
             
             self.pub_after_job( 'notify_new_tag_display_application' )
             self.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            
+        
+    
+    def _RegenerateTagCache( self, tag_service_key = None ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'regenerating tag fast search cache' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self._GetServiceId( tag_service_key ), )
+                
+            
+            file_service_ids = self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            def status_hook( s ):
+                
+                job_key.SetVariable( 'popup_text_2', s )
+                
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'generating specific cache {}_{}'.format( file_service_id, tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                time.sleep( 0.01 )
+                
+                self._CacheTagsDrop( file_service_id, tag_service_id )
+                
+                self._CacheTagsGenerate( file_service_id, tag_service_id )
+                
+                self._CacheTagsPopulate( file_service_id, tag_service_id, status_hook = status_hook )
+                
+            
+            for tag_service_id in tag_service_ids:
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'generating combined cache {}'.format( tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                time.sleep( 0.01 )
+                
+                self._CacheTagsDrop( self._combined_file_service_id, tag_service_id )
+                
+                self._CacheTagsGenerate( self._combined_file_service_id, tag_service_id )
+                
+                self._CacheTagsPopulate( self._combined_file_service_id, tag_service_id, status_hook = status_hook )
+                
+            
+        finally:
+            
+            job_key.DeleteVariable( 'popup_text_2' )
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
             
         
     
@@ -15184,12 +15671,24 @@ class DB( HydrusDB.HydrusDB ):
                 ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
                 ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
                 
+                tag_ids_in_dispute = set()
+                
+                tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT DISTINCT bad_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
+                tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT ideal_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
+                tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT DISTINCT child_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
+                tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT DISTINCT ancestor_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
+                
                 self._c.execute( 'DELETE FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) )
                 self._c.execute( 'DELETE FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) )
                 
                 if tag_service_id in self._service_ids_to_display_application_status:
                     
                     del self._service_ids_to_display_application_status[ tag_service_id ]
+                    
+                
+                if len( tag_ids_in_dispute ) > 0:
+                    
+                    self._CacheTagsSyncTags( tag_service_id, tag_ids_in_dispute )
                     
                 
             
@@ -15288,6 +15787,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+            tag_cache_file_service_ids = self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
             
             for tag_service_id in tag_service_ids:
                 
@@ -15319,6 +15819,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 time.sleep( 0.01 )
                 
+                if file_service_id in tag_cache_file_service_ids:
+                    
+                    self._CacheTagsDrop( file_service_id, tag_service_id )
+                    self._CacheTagsGenerate( file_service_id, tag_service_id )
+                    
+                
                 self._CacheSpecificMappingsDrop( file_service_id, tag_service_id )
                 
                 self._CacheSpecificMappingsGenerate( file_service_id, tag_service_id )
@@ -15337,6 +15843,9 @@ class DB( HydrusDB.HydrusDB ):
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
+                
+                self._CacheTagsDrop( self._combined_file_service_id, tag_service_id )
+                self._CacheTagsGenerate( self._combined_file_service_id, tag_service_id )
                 
                 self._CacheCombinedFilesMappingsDrop( tag_service_id )
                 
@@ -15565,14 +16074,6 @@ class DB( HydrusDB.HydrusDB ):
         main_cache_tables.add( 'shape_maintenance_branch_regen' )
         main_cache_tables.add( 'shape_search_cache' )
         
-        if version >= 396:
-            
-            main_cache_tables.add( 'subtags_fts4' )
-            main_cache_tables.add( 'subtags_searchable_map' )
-            
-        
-        main_cache_tables.add( 'integer_subtags' )
-        
         missing_main_tables = sorted( main_cache_tables.difference( existing_cache_tables ) )
         
         if len( missing_main_tables ) > 0:
@@ -15593,8 +16094,6 @@ class DB( HydrusDB.HydrusDB ):
         if version >= 414:
             
             # tag display caches
-            
-            existing_cache_tables = self._STS( self._c.execute( 'SELECT name FROM external_caches.sqlite_master WHERE type = ?;', ( 'table', ) ) )
             
             tag_display_cache_service_ids = list( self._GetServiceIds( HC.REAL_TAG_SERVICES ) )
             
@@ -15748,6 +16247,65 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version >= 424:
+            
+            # tag fast text search caches
+            
+            file_cache_service_ids = list( self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES ) )
+            file_cache_service_ids.append( self._combined_file_service_id )
+            
+            tag_cache_service_ids = list( self._GetServiceIds( HC.REAL_TAG_SERVICES ) )
+            
+            missing_tag_cache_tables = []
+            
+            missing_service_pairs = []
+            
+            for tag_service_id in tag_cache_service_ids:
+                
+                for file_service_id in file_cache_service_ids:
+                    
+                    tag_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id ).split( '.' )[1]
+                    
+                    subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id ).split( '.' )[1]
+                    
+                    integer_tags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id ).split( '.' )[1]
+                    
+                    expected_tables = { tag_table_name, subtags_fts4_table_name, integer_tags_table_name }
+                    
+                    missing_tables = expected_tables.difference( existing_cache_tables )
+                    
+                    if len( missing_tables ) > 0:
+                        
+                        missing_tag_cache_tables.extend( sorted( missing_tables ) )
+                        
+                        missing_service_pairs.append( ( file_service_id, tag_service_id ) )
+                        
+                    
+                
+            
+            if len( missing_tag_cache_tables ) > 0:
+                
+                missing_tag_cache_tables.sort()
+                
+                message = 'On boot, some important tag search cache tables were missing! This could be due to the entire \'caches\' database file being missing or some other problem. All of this data can be regenerated. The exact missing tables were:'
+                message += os.linesep * 2
+                message += os.linesep.join( missing_tag_cache_tables )
+                message += os.linesep * 2
+                message += 'If you wish, click ok on this message and the client will recreate these tables with the correct data. But if you want to solve this problem otherwise, kill the hydrus process now.'
+                message += os.linesep * 2
+                message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
+                
+                BlockingSafeShowMessage( message )
+                
+                for ( file_service_id, tag_service_id ) in missing_service_pairs:
+                    
+                    self._CacheTagsDrop( file_service_id, tag_service_id )
+                    self._CacheTagsGenerate( file_service_id, tag_service_id )
+                    self._CacheTagsPopulate( file_service_id, tag_service_id )
+                    
+                
+            
+        
         #
         
         new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
@@ -15768,6 +16326,9 @@ class DB( HydrusDB.HydrusDB ):
             
             self._SetJSONDump( new_options )
             
+        
+        # an explicit empty string so we don't linger on 'checking for faults' if the next stage lags a bit on its own update. no need to give anyone heart attacks
+        self._controller.frame_splash_status.SetText( '' )
         
     
     def _RepairInvalidTags( self, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
@@ -15818,6 +16379,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        file_service_ids = list( self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES ) )
+        file_service_ids.append( self._combined_file_service_id )
+        
+        tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+        
         for ( i, ( tag_id, tag, cleaned_tag ) ) in enumerate( invalid_tag_ids_and_tags ):
             
             if job_key is not None:
@@ -15853,7 +16419,20 @@ class DB( HydrusDB.HydrusDB ):
             subtag_id = self._GetSubtagId( subtag )
             
             self._c.execute( 'UPDATE tags SET namespace_id = ?, subtag_id = ? WHERE tag_id = ?;', ( namespace_id, subtag_id, tag_id ) )
-            self._c.execute( 'UPDATE local_tags_cache SET tag = ? WHERE tag_id = ?;', ( tag, tag_id ) )
+            self._c.execute( 'UPDATE local_tags_cache SET tag = ? WHERE tag_id = ?;', ( cleaned_tag, tag_id ) )
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+                
+                result = self._c.execute( 'SELECT 1 FROM {} WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
+                
+                if result is not None:
+                    
+                    self._CacheTagsDeleteTags( file_service_id, tag_service_id, ( tag_id, ) )
+                    self._CacheTagsAddTags( file_service_id, tag_service_id, ( tag_id, ) )
+                    
+                
             
             try:
                 
@@ -15963,91 +16542,6 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_text_1', 'Done! Rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) ) )
             
             job_key.Finish()
-            
-        
-    
-    def _RepopulateAndUpdateTagSearchCache( self, status_hook: typing.Optional[ typing.Callable[ [ str ], None ] ] = None, do_fts = True, do_searchable = True, do_integers = True ):
-        
-        BLOCK_SIZE = 1000
-        
-        select_statement = 'SELECT subtag_id FROM subtags;'
-        
-        for ( i, group_of_subtag_ids ) in enumerate( HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, select_statement, BLOCK_SIZE ) ):
-            
-            if status_hook is not None:
-                
-                message = 'Regenerating tag search cache\u2026 {}'.format( HydrusData.ToHumanInt( i * BLOCK_SIZE ) )
-                
-                status_hook( message )
-                
-            
-            for subtag_id in group_of_subtag_ids:
-                
-                ( subtag, ) = self._c.execute( 'SELECT subtag FROM subtags WHERE subtag_id = ?;', ( subtag_id, ) ).fetchone()
-                
-                subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
-                
-                if do_fts:
-                    
-                    do_it = True
-                    
-                    result = self._c.execute( 'SELECT subtag FROM subtags_fts4 WHERE docid = ?;', ( subtag_id, ) ).fetchone()
-                    
-                    if result is not None:
-                        
-                        ( current_subtag_fts, ) = result
-                        
-                        if current_subtag_fts == subtag_searchable:
-                            
-                            do_it = False
-                            
-                        
-                    
-                    if do_it:
-                        
-                        self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
-                        
-                    
-                
-                if do_searchable:
-                    
-                    if subtag_searchable == subtag:
-                        
-                        searchable_subtag_id = subtag_id
-                        
-                    else:
-                        
-                        searchable_subtag_id = self._GetSubtagId( subtag_searchable )
-                        
-                    
-                    self._c.execute( 'REPLACE INTO subtags_searchable_map ( subtag_id, searchable_subtag_id ) VALUES ( ?, ? );', ( subtag_id, searchable_subtag_id ) )
-                    
-                
-                if do_integers:
-                    
-                    if subtag.isdecimal():
-                        
-                        try:
-                            
-                            integer_subtag = int( subtag )
-                            
-                            if CanCacheInteger( integer_subtag ):
-                                
-                                self._c.execute( 'REPLACE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', ( subtag_id, integer_subtag ) )
-                                
-                            
-                        except ValueError:
-                            
-                            pass
-                            
-                        
-                    
-                
-            
-        
-        if status_hook is not None:
-            
-            status_hook( 'Done!' )
             
         
     
@@ -18090,22 +18584,6 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                status_hook = lambda s: self._controller.frame_splash_status.SetSubtext( s )
-                
-                self._RepopulateAndUpdateTagSearchCache( status_hook = status_hook, do_searchable = False, do_integers = False )
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'Failed to repopulate fts tag cache:' )
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update the tag search cache failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
                 domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
                 
                 domain_manager.Initialise()
@@ -18540,61 +19018,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                     raise
                     
-                
-            
-            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'subtags_fts4', ) ).fetchone()
-            
-            try:
-                
-                if result is None:
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'moving fts fast tag search cache' )
-                    
-                    self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.subtags_fts4 USING fts4( subtag );' )
-                    
-                    self._c.execute( 'INSERT OR IGNORE INTO external_caches.subtags_fts4 ( docid, subtag ) SELECT docid, subtag FROM external_master.subtags_fts4;' )
-                    
-                    self._c.execute( 'DROP TABLE external_master.subtags_fts4;' )
-                    
-                    self._AnalyzeTable( 'subtags_fts4' )
-                    
-                
-            except Exception as e:
-                
-                message = 'Trying to move tag fast search cache failed! Please let hydrus dev know!'
-                
-                HydrusData.Print( message )
-                BlockingSafeShowMessage( message )
-                HydrusData.PrintException( e )
-                
-                raise
-                
-            
-            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'subtags_searchable_map', ) ).fetchone()
-            
-            try:
-                
-                if result is None:
-                    
-                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.subtags_searchable_map ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );' )
-                    self._CreateIndex( 'external_caches.subtags_searchable_map', [ 'searchable_subtag_id' ] )
-                    
-                    status_hook = lambda s: self._controller.frame_splash_status.SetSubtext( s )
-                    
-                    self._RepopulateAndUpdateTagSearchCache( status_hook = status_hook, do_fts = False, do_integers = False )
-                    
-                    self._AnalyzeTable( 'subtags_searchable_map' )
-                    
-                
-            except Exception as e:
-                
-                message = 'Trying to update tag search cache failed! Please let hydrus dev know!'
-                
-                HydrusData.Print( message )
-                BlockingSafeShowMessage( message )
-                HydrusData.PrintException( e )
-                
-                raise
                 
             
         
@@ -19453,6 +19876,94 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 423:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'e621 file page parser' ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'nitter media timeline', 'nitter timeline' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            result_master = self._c.execute( 'SELECT 1 FROM external_master.sqlite_master WHERE name = ?;', ( 'subtags_fts4', ) ).fetchone()
+            result_caches = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'subtags_fts4', ) ).fetchone()
+            
+            if result_master is not None or result_caches is not None:
+                
+                try:
+                    
+                    self._controller.frame_splash_status.SetText( 'dropping old cache - subtags fts4' )
+                    
+                    self._c.execute( 'DROP TABLE IF EXISTS subtags_fts4;' )
+                    
+                    self._controller.frame_splash_status.SetText( 'dropping old cache - subtags searchable map' )
+                    
+                    self._c.execute( 'DROP TABLE IF EXISTS subtags_searchable_map;' )
+                    
+                    self._controller.frame_splash_status.SetText( 'dropping old cache - integer subtags' )
+                    
+                    self._c.execute( 'DROP TABLE IF EXISTS integer_subtags;' )
+                    
+                    self._combined_file_service_id = self._GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
+                    
+                    file_service_ids = self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+                    tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+                    
+                    for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                        
+                        self._controller.frame_splash_status.SetText( 'creating new specific cache - {} {}'.format( file_service_id, tag_service_id ) )
+                        
+                        self._CacheTagsDrop( file_service_id, tag_service_id )
+                        
+                        self._CacheTagsGenerate( file_service_id, tag_service_id )
+                        
+                        self._CacheTagsPopulate( file_service_id, tag_service_id )
+                        
+                    
+                    for tag_service_id in tag_service_ids:
+                        
+                        self._controller.frame_splash_status.SetText( 'creating new combined files cache - {}'.format( tag_service_id ) )
+                        
+                        self._CacheTagsDrop( self._combined_file_service_id, tag_service_id )
+                        
+                        self._CacheTagsGenerate( self._combined_file_service_id, tag_service_id )
+                        
+                        self._CacheTagsPopulate( self._combined_file_service_id, tag_service_id )
+                        
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    raise Exception( 'The v424 cache update failed to work! The error has been printed to the log. Please rollback to 423 and let hydev know the details.' )
+                    
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -19634,9 +20145,9 @@ class DB( HydrusDB.HydrusDB ):
         combined_files_seen_ids = set( ( key for ( key, value ) in list( combined_files_current_counter.items() ) if value != 0 ) )
         combined_files_seen_ids.update( ( key for ( key, value ) in list( combined_files_pending_counter.items() ) if value != 0 ) )
         
-        combined_files_counts = [ ( tag_id, combined_files_current_counter[ tag_id ], combined_files_pending_counter[ tag_id ] ) for tag_id in combined_files_seen_ids ]
+        ac_cache_changes = [ ( tag_id, combined_files_current_counter[ tag_id ], combined_files_pending_counter[ tag_id ] ) for tag_id in combined_files_seen_ids ]
         
-        self._CacheCombinedFilesMappingsUpdate( tag_service_id, combined_files_counts )
+        self._CacheCombinedFilesMappingsUpdate( tag_service_id, ac_cache_changes )
         
         #
         
@@ -20028,12 +20539,12 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_local_tag_cache': self._RegenerateLocalTagCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
+        elif action == 'regenerate_tag_cache': self._RegenerateTagCache( *args, **kwargs )
         elif action == 'regenerate_tag_display_mappings_cache': self._RegenerateTagDisplayMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_parents_cache': self._RegenerateTagParentsCache( *args, **kwargs )
         elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
-        elif action == 'repopulate_tag_search_cache': self._RepopulateAndUpdateTagSearchCache( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )

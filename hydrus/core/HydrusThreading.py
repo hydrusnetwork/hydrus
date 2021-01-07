@@ -371,11 +371,22 @@ class THREADCallToThread( DAEMON ):
                 
                 CheckIfThreadShuttingDown()
                 
-                self._DoPreCall()
-                
                 try:
                     
-                    ( callable, args, kwargs ) = self._queue.get()
+                    try:
+                        
+                        ( callable, args, kwargs ) = self._queue.get( 1.0 )
+                        
+                    except queue.Empty:
+                        
+                        # https://github.com/hydrusnetwork/hydrus/issues/750
+                        # this shouldn't happen, but...
+                        # even if we assume we'll never get this, we don't want to make a business of hanging forever on things
+                        
+                        continue
+                        
+                    
+                    self._DoPreCall()
                     
                     self._callable = ( callable, args, kwargs )
                     

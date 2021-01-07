@@ -1151,6 +1151,8 @@ class DialogTextEntry( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
+        self._text.setFocus( QC.Qt.OtherFocusReason )
+        
     
     def _CheckText( self ):
         

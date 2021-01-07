@@ -36,8 +36,8 @@ class HydrusLogger( object ):
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         
-        #sys.stdout = self._previous_sys_stdout
-        #sys.stderr = self._previous_sys_stderr
+        sys.stdout = self._previous_sys_stdout
+        sys.stderr = self._previous_sys_stderr
         
         self._CloseLog()
         

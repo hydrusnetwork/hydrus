@@ -128,6 +128,7 @@ SIMPLE_MOVE_PAGES_SELECTION_LEFT = 121
 SIMPLE_MOVE_PAGES_SELECTION_RIGHT = 122
 SIMPLE_MOVE_PAGES_SELECTION_HOME = 123
 SIMPLE_MOVE_PAGES_SELECTION_END = 124
+SIMPLE_REFRESH_RELATED_TAGS = 125
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -224,6 +225,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS : 'keyboard focus: to manage tags\' file lookup scripts',
     SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS : 'keyboard focus: to manage tags\' recent tags',
     SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS : 'keyboard focus: to manage tags\' related tags',
+    SIMPLE_REFRESH_RELATED_TAGS : 'refresh manage tags\' related tags with thorough duration',
     SIMPLE_SHOW_HIDE_SPLITTERS : 'show/hide the left page panel and preview canvas',
     SIMPLE_SHOW_MENU : 'show menu',
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM : 'zoom: switch between 100% and canvas fit',

@@ -35,15 +35,19 @@
 			<p>You may want to do all that in smaller batches.</p>
 			<p>You will also need Qt5. Either PySide2 (default) or PyQt5 are supported, through qtpy. You can install, again, with pip:</p>
 			<ul>
-				<li>pip3 install qtpy PySide2==5.13.2</li>
+				<li>pip3 install qtpy PySide2</li>
 			</ul>
 			<p>-or-</p>
 			<ul>
-				<li>pip3 install qtpy PyQtChart==5.13.1 PyQt5==5.13.1</li>
+				<li>pip3 install qtpy PyQtChart PyQt5</li>
 			</ul>
-			<p>I have had some stability trouble with the recent Qt 5.14, so I recommend the 5.13.</p>
+			<p>Qt 5.15 currently seems to be working well, but 5.14 caused some trouble.</p>
 			<p>And optionally, you can add these packages:</p>
 			<ul>
+				<li>
+					<p><b>python-mpv - to get nice video and audio support!</b></p>
+					<blockquote>If you are on Linux/macOS, you will likely need the mpv library installed to your system, <i>not just mpv</i>, which is often called 'libmpv1'. You can usually get it with <i>apt</i>.</blockquote>
+				</li>
 				<li>lz4 - for some memory compression in the client</li>
 				<li>pylzma - for importing rare ZWS swf files</li>
 				<li>cloudscraper - for attempting to solve CloudFlare check pages</li>

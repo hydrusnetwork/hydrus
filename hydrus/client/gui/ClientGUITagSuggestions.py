@@ -330,11 +330,11 @@ class RelatedTagsPanel( QW.QWidget ):
         vbox = QP.VBoxLayout()
         
         self._button_2 = QW.QPushButton( 'medium', self )
-        self._button_2.clicked.connect( self.EventSuggestedRelatedTags2 )
+        self._button_2.clicked.connect( self.RefreshMedium )
         self._button_2.setMinimumWidth( 30 )
         
         self._button_3 = QW.QPushButton( 'thorough', self )
-        self._button_3.clicked.connect( self.EventSuggestedRelatedTags3 )
+        self._button_3.clicked.connect( self.RefreshThorough )
         self._button_3.setMinimumWidth( 30 )
         
         self._related_tags = ListBoxTagsSuggestionsRelated( self, service_key, activate_callable )
@@ -404,14 +404,14 @@ class RelatedTagsPanel( QW.QWidget ):
         self._related_tags.SetPredicates( predicates )
         
     
-    def EventSuggestedRelatedTags2( self ):
+    def RefreshMedium( self ):
         
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) / 1000.0
         
         self._FetchRelatedTags( max_time_to_take )
         
     
-    def EventSuggestedRelatedTags3( self ):
+    def RefreshThorough( self ):
         
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) / 1000.0
         
@@ -750,6 +750,14 @@ class SuggestedTagsPanel( QW.QWidget ):
         if self._related_tags is not None:
             
             self._related_tags.MediaUpdated()
+            
+        
+    
+    def RefreshRelatedThorough( self ):
+        
+        if self._related_tags is not None:
+            
+            self._related_tags.RefreshThorough()
             
         
     

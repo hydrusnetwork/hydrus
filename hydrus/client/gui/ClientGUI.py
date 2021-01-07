@@ -3008,6 +3008,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._statusbar.SetStatusText( db_status, 5, tooltip = db_tooltip )
         
     
+    def _RegenerateTagCache( self ):
+        
+        message = 'This will delete and then recreate the fast search cache for one or all tag services.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags and files, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless. It fixes missing autocomplete or tag search results.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'regenerate_tag_cache', tag_service_key = tag_service_key )
+            
+        
+    
     def _RegenerateLocalTagCache( self ):
         
         message = 'This will delete and then recreate the local tag cache, which keeps a small record of tags for files on your hard drive. It isn\'t super important, but it speeds most operations up, and this routine fixes it when broken.'
@@ -3055,7 +3080,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         message += os.linesep * 2
         message += 'This will delete and then recreate the entire tag \'storage\' mappings cache, which is used for tag calculation based on actual values and autocomplete counts in editing contexts like _manage tags_. This is useful if miscounting has somehow occurred.'
         message += os.linesep * 2
-        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It necessarily involves a regeneration of the tag display mappings cache, which relies on the storage cache. All siblings and parents will have to be resynced.'
+        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It necessarily involves a regeneration of the tag display mappings cache, which relies on the storage cache, and the tag text search cache. All siblings and parents will have to be resynced.'
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
@@ -3114,68 +3139,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _RepopulateMappingsTables( self ):
-        
-        message = 'WARNING: Do not run this for no reason!'
-        message += os.linesep * 2
-        message += 'If you have significant local tags (e.g. \'my tags\') storage, recently had a \'malformed\' client.mappings.db file, and have since gone through clone/repair and now have a truncated file, this routine will attempt to recover missing tags from the smaller tag cache stored in client.caches.db.'
-        message += os.linesep * 2
-        message += 'It can only recover tags for files currently stored by your client. It will take some time, during which the gui may hang. Once it is done, you probably want to regenerate your tag mappings cache, so that you are completely synced again.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'I have a reason to run this, let\'s do it--now choose which service', no_label = 'forget it' )
-        
-        if result == QW.QDialog.Accepted:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            job_key.SetVariable( 'popup_text_title', 'repopulating mapping tables' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            try:
-                
-                tag_service_key = GetTagServiceKeyForMaintenance( self )
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            
-            self._controller.Write( 'repopulate_mappings_from_cache', tag_service_key = tag_service_key, job_key = job_key )
-            
-        
-    
-    def _RepopulateTagSearchCache( self ):
-        
-        message = 'This will go through all the tag definitions in the database and make sure there is a correct fast-search record for it.'
-        message += os.linesep * 2
-        message += 'It may take a long time, and the gui may hang.'
-        message += os.linesep * 2
-        message += 'If you do not have a specific reason to run this, it is pointless.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
-        
-        if result == QW.QDialog.Accepted:
-            
-            job_key = ClientThreading.JobKey()
-            
-            job_key.SetVariable( 'popup_text_title', 'repopulating and updating tag text search cache' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            status_hook = lambda s: job_key.SetVariable( 'popup_text_1', s )
-            
-            def do_it():
-                
-                self._controller.WriteSynchronous( 'repopulate_tag_search_cache', status_hook = status_hook )
-                
-                job_key.Finish()
-                
-            
-            self._controller.CallToThreadLongRunning( do_it )
-            
-        
-    
     def _RegenerateTagParentsLookupCache( self ):
         
         message = 'This will delete and then recreate the tag parents lookup cache, which is used for all basic tag parents operations. This is useful if it has become damaged or otherwise desynchronised.'
@@ -3205,6 +3168,37 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         if result == QW.QDialog.Accepted:
             
             self._controller.Write( 'regenerate_tag_siblings_cache' )
+            
+        
+    
+    def _RepopulateMappingsTables( self ):
+        
+        message = 'WARNING: Do not run this for no reason!'
+        message += os.linesep * 2
+        message += 'If you have significant local tags (e.g. \'my tags\') storage, recently had a \'malformed\' client.mappings.db file, and have since gone through clone/repair and now have a truncated file, this routine will attempt to recover missing tags from the smaller tag cache stored in client.caches.db.'
+        message += os.linesep * 2
+        message += 'It can only recover tags for files currently stored by your client. It will take some time, during which the gui may hang. Once it is done, you probably want to regenerate your tag mappings cache, so that you are completely synced again.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'I have a reason to run this, let\'s do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetVariable( 'popup_text_title', 'repopulating mapping tables' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'repopulate_mappings_from_cache', tag_service_key = tag_service_key, job_key = job_key )
             
         
     
@@ -4919,12 +4913,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
             
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag search for local files.', self._RegenerateLocalTagCache )
+            
             ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
-            ClientGUIMenus.AppendMenuItem( submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag search for local files.', self._RegenerateLocalTagCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag definition search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RepopulateTagSearchCache )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
@@ -6853,6 +6848,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
                             text += os.linesep * 2
+                            
+                            if HG.client_controller.IsFirstStart():
+                                
+                                text += 'Since this is your first session, this maintenance should should just be some quick initialisation work. It should only take a few seconds.'
+                                text += os.linesep * 2
+                                
+                            
                             text += 'The outstanding jobs appear to be:'
                             text += os.linesep * 2
                             text += os.linesep.join( work_to_do )

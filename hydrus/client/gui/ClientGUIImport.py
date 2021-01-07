@@ -1642,13 +1642,20 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         path = self._example_path_input.text()
         
+        if path.startswith( '"' ) and path.endswith( '"' ):
+            
+            path = path[1:-1]
+            
+            self._example_path_input.setText( path )
+            
+        
         if path.startswith( 'file:///' ):
             
             path = path.replace( 'file:///', '', 1 )
             
-            self._example_path_input.setText( path )
+            path = os.path.normpath( path )
             
-            return
+            self._example_path_input.setText( path )
             
         
         if self._schedule_refresh_tags_job is not None:

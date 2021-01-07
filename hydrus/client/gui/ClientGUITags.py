@@ -2301,6 +2301,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     suggestions.append( 'mangled parse/typo' )
                     suggestions.append( 'not applicable' )
                     suggestions.append( 'should be namespaced' )
+                    suggestions.append( 'splitting filename/title/etc... into individual tags' )
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                         
@@ -2605,6 +2606,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 elif action in ( CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS ):
                     
                     self._suggested_tags.TakeFocusForUser( action )
+                    
+                elif action == CAC.SIMPLE_REFRESH_RELATED_TAGS:
+                    
+                    self._suggested_tags.RefreshRelatedThorough()
                     
                 else:
                     
@@ -2946,7 +2951,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         suggestions.append( 'obvious by definition (a sword is a weapon)' )
                         suggestions.append( 'character/series/studio/etc... belonging (character x belongs to series y)' )
-                        suggestions.append( 'character/person/etc... properties (character x is a female)' )
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
@@ -3473,7 +3477,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def THREADInitialise( self, tags, service_key ):
             
-            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, needs_sync_work ):
+            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do ):
                 
                 if not self or not QP.isValid( self ):
                     
@@ -3485,17 +3489,82 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._status_st.setText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
                 
-                if needs_sync_work:
+                looking_good = True
+                
+                if len( service_keys_to_work_to_do ) == 0:
                     
-                    self._sync_status_st.setText( 'This tag service may not be fully synced to its siblings and parents. Changes from this dialog may not appear immediately.' )
+                    looking_good = False
                     
-                    self._sync_status_st.setObjectName( 'HydrusWarning' )
+                    status_text = 'No services currently apply these parents. Changes here will have no effect unless parent application is changed later.'
                     
                 else:
                     
-                    self._sync_status_st.setText( 'This tag service seems to be fully synced to its siblings and parents. Changes to parents should be reflected soon after closing the dialog.' )
+                    synced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if not work_to_do ) )
+                    unsynced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if work_to_do ) )
+                    
+                    synced_string = ', '.join( ( '"{}"'.format( name ) for name in synced_names ) )
+                    unsynced_string = ', '.join( ( '"{}"'.format( name ) for name in unsynced_names ) )
+                    
+                    if len( unsynced_names ) == 0:
+                        
+                        service_part = '{} apply these parents and are fully synced.'.format( synced_string )
+                        
+                    else:
+                        
+                        looking_good = False
+                        
+                        if len( synced_names ) > 0:
+                            
+                            service_part = '{} apply these parents and are fully synced, but {} still have work to do.'.format( synced_string, unsynced_string )
+                            
+                        else:
+                            
+                            service_part = '{} apply these parents and still have sync work to do.'.format( unsynced_string )
+                            
+                        
+                    
+                    if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                        
+                        maintenance_part = 'Parents are set to sync all the time in the background.'
+                        
+                        if looking_good:
+                            
+                            changes_part = 'Changes from this dialog should be reflected soon after closing the dialog.'
+                            
+                        else:
+                            
+                            changes_part = 'It may take some time for changes here to apply everywhere, though.'
+                            
+                        
+                    else:
+                        
+                        looking_good = False
+                        
+                        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                            
+                            maintenance_part = 'Parents are set to sync only when you are not using the client.'
+                            changes_part = 'It may take some time for changes here to apply.'
+                            
+                        else:
+                            
+                            maintenance_part = 'Parents are not set to sync.'
+                            changes_part = 'Changes here will not apply unless sync is manually forced to run.'
+                            
+                        
+                    
+                    s = os.linesep * 2
+                    status_text = s.join( ( service_part, maintenance_part, changes_part ) )
+                    
+                
+                self._sync_status_st.setText( status_text )
+                
+                if looking_good:
                     
                     self._sync_status_st.setObjectName( 'HydrusValid' )
+                    
+                else:
+                    
+                    self._sync_status_st.setObjectName( 'HydrusWarning' )
                     
                 
                 self._sync_status_st.style().polish( self._sync_status_st )
@@ -3517,15 +3586,26 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
             
-            status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
+            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = HG.client_controller.Read( 'tag_display_application' )
             
-            work_to_do = status[ 'num_siblings_to_sync' ] + status[ 'num_parents_to_sync' ] > 0
+            service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_parent_applicable_service_keys.items() if service_key in s_ks }
+            
+            service_keys_to_work_to_do = {}
+            
+            for s_k in service_keys_we_care_about:
+                
+                status = HG.client_controller.Read( 'tag_display_maintenance_status', s_k )
+                
+                work_to_do = status[ 'num_parents_to_sync' ] > 0
+                
+                service_keys_to_work_to_do[ s_k ] = work_to_do
+                
             
             current_statuses_to_pairs = collections.defaultdict( set )
             
             current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in list(original_statuses_to_pairs.items()) } )
             
-            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, work_to_do )
+            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do )
             
         
     
@@ -4400,7 +4480,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def THREADInitialise( self, tags, service_key ):
             
-            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, needs_sync_work ):
+            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do ):
                 
                 if not self or not QP.isValid( self ):
                     
@@ -4412,17 +4492,82 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._status_st.setText( 'Tags on the left will be appear as those on the right.' )
                 
-                if needs_sync_work:
+                looking_good = True
+                
+                if len( service_keys_to_work_to_do ) == 0:
                     
-                    self._sync_status_st.setText( 'This tag service may not be fully synced to its siblings. Changes from this dialog may not appear immediately.' )
+                    looking_good = False
                     
-                    self._sync_status_st.setObjectName( 'HydrusWarning' )
+                    status_text = 'No services currently apply these siblings. Changes here will have no effect unless sibling application is changed later.'
                     
                 else:
                     
-                    self._sync_status_st.setText( 'This tag service seems to be fully synced to its siblings. Changes to siblings should be reflected soon after closing the dialog.' )
+                    synced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if not work_to_do ) )
+                    unsynced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if work_to_do ) )
+                    
+                    synced_string = ', '.join( ( '"{}"'.format( name ) for name in synced_names ) )
+                    unsynced_string = ', '.join( ( '"{}"'.format( name ) for name in unsynced_names ) )
+                    
+                    if len( unsynced_names ) == 0:
+                        
+                        service_part = '{} apply these siblings and are fully synced.'.format( synced_string )
+                        
+                    else:
+                        
+                        looking_good = False
+                        
+                        if len( synced_names ) > 0:
+                            
+                            service_part = '{} apply these siblings and are fully synced, but {} still have work to do.'.format( synced_string, unsynced_string )
+                            
+                        else:
+                            
+                            service_part = '{} apply these siblings but still have sync work to do.'.format( unsynced_string )
+                            
+                        
+                    
+                    if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                        
+                        maintenance_part = 'Siblings are set to sync all the time in the background.'
+                        
+                        if looking_good:
+                            
+                            changes_part = 'Changes from this dialog should be reflected soon after closing the dialog.'
+                            
+                        else:
+                            
+                            changes_part = 'It may take some time for changes here to apply everywhere, though.'
+                            
+                        
+                    else:
+                        
+                        looking_good = False
+                        
+                        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                            
+                            maintenance_part = 'Siblings are set to sync only when you are not using the client.'
+                            changes_part = 'It may take some time for changes here to apply.'
+                            
+                        else:
+                            
+                            maintenance_part = 'Siblings are not set to sync.'
+                            changes_part = 'Changes here will not apply unless sync is manually forced to run.'
+                            
+                        
+                    
+                    s = os.linesep * 2
+                    status_text = s.join( ( service_part, maintenance_part, changes_part ) )
+                    
+                
+                self._sync_status_st.setText( status_text )
+                
+                if looking_good:
                     
                     self._sync_status_st.setObjectName( 'HydrusValid' )
+                    
+                else:
+                    
+                    self._sync_status_st.setObjectName( 'HydrusWarning' )
                     
                 
                 self._sync_status_st.style().polish( self._sync_status_st )
@@ -4444,15 +4589,26 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
             
-            status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
+            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = HG.client_controller.Read( 'tag_display_application' )
             
-            work_to_do = status[ 'num_siblings_to_sync' ] > 0
+            service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_sibling_applicable_service_keys.items() if service_key in s_ks }
+            
+            service_keys_to_work_to_do = {}
+            
+            for s_k in service_keys_we_care_about:
+                
+                status = HG.client_controller.Read( 'tag_display_maintenance_status', s_k )
+                
+                work_to_do = status[ 'num_siblings_to_sync' ] > 0
+                
+                service_keys_to_work_to_do[ s_k ] = work_to_do
+                
             
             current_statuses_to_pairs = collections.defaultdict( set )
             
             current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
             
-            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, work_to_do )
+            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do )
             
         
     
