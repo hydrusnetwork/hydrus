@@ -63,6 +63,34 @@ hash_str_to_type_lookup[ 'sha1' ] = HASH_TYPE_SHA1
 hash_str_to_type_lookup[ 'sha256' ] = HASH_TYPE_SHA256
 hash_str_to_type_lookup[ 'sha512' ] = HASH_TYPE_SHA512
 
+def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
+    
+    table_name = 'tempbigread' + os.urandom( 32 ).hex()
+    
+    cursor.execute( 'CREATE TEMPORARY TABLE ' + table_name + ' ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, temp_id INTEGER );' )
+    
+    cursor.execute( 'INSERT INTO ' + table_name + ' ( temp_id ) ' + select_statement ) # given statement should end in semicolon, so we are good
+    
+    num_to_do = cursor.rowcount
+    
+    if num_to_do is None or num_to_do == -1:
+        
+        num_to_do = 0
+        
+    
+    i = 0
+    
+    while i < num_to_do:
+        
+        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' WHERE job_id BETWEEN ? AND ?;', ( i, i + chunk_size - 1 ) ) ]
+        
+        yield chunk
+        
+        i += chunk_size
+        
+    
+    cursor.execute( 'DROP TABLE ' + table_name + ';' )
+    
 class HydrusTagArchive( object ):
     
     def __init__( self, path ):
@@ -108,13 +136,23 @@ class HydrusTagArchive( object ):
         self._c = self._db.cursor()
         
     
+    def _GetHashes( self, tag_id ):
+        
+        result = { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM mappings NATURAL JOIN hashes WHERE tag_id = ?;', ( tag_id, ) ) }
+        
+        return result
+        
+    
     def _GetHashId( self, hash, read_only = False ):
         
         result = self._c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
         
         if result is None:
             
-            if read_only: raise Exception()
+            if read_only:
+                
+                raise Exception()
+                
             
             self._c.execute( 'INSERT INTO hashes ( hash ) VALUES ( ? );', ( sqlite3.Binary( hash ), ) )
             
@@ -128,7 +166,32 @@ class HydrusTagArchive( object ):
         return hash_id
         
     
-    def _GetTagId( self, tag ):
+    def _GetTags( self, hash_id ):
+        
+        result = { tag for ( tag, ) in self._c.execute( 'SELECT tag FROM mappings NATURAL JOIN tags WHERE hash_id = ?;', ( hash_id, ) ) }
+        
+        return result
+        
+    
+    def _GetTagId( self, tag, read_only = False ):
+        
+        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
+        
+        if result is None:
+            
+            if read_only:
+                
+                raise Exception()
+                
+            
+            self._c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
+            
+            tag_id = self._c.lastrowid
+            
+        else:
+            
+            ( tag_id, ) = result
+            
         
         if ':' in tag:
             
@@ -140,19 +203,6 @@ class HydrusTagArchive( object ):
                 
                 self._namespaces.add( namespace )
                 
-            
-        
-        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
-            
-            tag_id = self._c.lastrowid
-            
-        else:
-            
-            ( tag_id, ) = result
             
         
         return tag_id
@@ -218,6 +268,20 @@ class HydrusTagArchive( object ):
         self._namespaces.add( '' )
         
         self._c.execute( 'DELETE FROM namespaces;' )
+        
+    
+    def GetHashes( self, tag ):
+        
+        try:
+            
+            tag_id = self._GetTagId( tag, read_only = True )
+            
+        except:
+            
+            return set()
+            
+        
+        return self._GetHashes( tag_id )
         
     
     def GetHashType( self ):
@@ -290,9 +354,7 @@ class HydrusTagArchive( object ):
             return set()
             
         
-        result = { tag for ( tag, ) in self._c.execute( 'SELECT DISTINCT tag FROM mappings NATURAL JOIN tags WHERE hash_id = ?;', ( hash_id, ) ) }
-        
-        return result
+        return self._GetTags( hash_id )
         
     
     def HasHash( self, hash ):
@@ -318,22 +380,44 @@ class HydrusTagArchive( object ):
     
     def IterateHashes( self ):
         
-        for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes;' ): yield hash
+        for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes;' ):
+            
+            yield hash
+            
         
     
     def IterateMappings( self ):
         
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM hashes;' ) ]
-        
-        for hash_id in hash_ids:
+        for group_of_hash_ids in ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT hash_id FROM hashes;', 256 ):
             
-            ( hash, ) = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-            
-            tags = self.GetTags( hash )
-            
-            if len( tags ) > 0:
+            for hash_id in group_of_hash_ids:
                 
-                yield ( hash, tags )
+                tags = self._GetTags( hash_id )
+                
+                if len( tags ) > 0:
+                    
+                    ( hash, ) = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                    
+                    yield ( hash, tags )
+                    
+                
+            
+        
+    
+    def IterateMappingsTagFirst( self ):
+        
+        for group_of_tag_ids in ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT tag_id FROM tags;', 256 ):
+            
+            for tag_id in group_of_tag_ids:
+                
+                hashes = self._GetHashes( tag_id )
+                
+                if len( hashes ) > 0:
+                    
+                    ( tag, ) = self._c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
+                    
+                    yield ( tag, hashes )
+                    
                 
             
         

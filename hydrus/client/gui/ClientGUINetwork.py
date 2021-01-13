@@ -1434,6 +1434,8 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._SetCookie( name, value, domain, path, expires )
                 
+                self._session_manager.SetSessionDirty( self._network_context )
+                
             
         
         self._Update()
@@ -1486,6 +1488,8 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._session.cookies.clear( domain, path, name )
                 
+                self._session_manager.SetSessionDirty( self._network_context )
+                
             
             self._Update()
             
@@ -1512,6 +1516,8 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     ( name, value, domain, path, expires ) = panel.GetValue()
                     
                     self._SetCookie( name, value, domain, path, expires )
+                    
+                    self._session_manager.SetSessionDirty( self._network_context )
                     
                 else:
                     

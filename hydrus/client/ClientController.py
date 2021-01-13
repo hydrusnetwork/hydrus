@@ -871,11 +871,15 @@ class Controller( HydrusController.HydrusController ):
             
             bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
+            tracker_containers = self.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER_TRACKER_CONTAINER )
+            
+            bandwidth_manager.SetTrackerContainers( tracker_containers )
+            
             ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
             
-            bandwidth_manager._dirty = True
+            bandwidth_manager.SetDirty()
             
-            self.SafeShowCriticalMessage( 'Problem loading object', 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your bandwidth manager was missing on boot! I have recreated a new one. It may have your bandwidth record, but some/all may be missing. Your rules have been reset to default. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         session_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
@@ -884,9 +888,13 @@ class Controller( HydrusController.HydrusController ):
             
             session_manager = ClientNetworkingSessions.NetworkSessionManager()
             
-            session_manager._dirty = True
+            session_containers = self.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER )
             
-            self.SafeShowCriticalMessage( 'Problem loading object', 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            session_manager.SetSessionContainers( session_containers )
+            
+            session_manager.SetDirty()
+            
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your session manager was missing on boot! I have recreated a new one. It may have your sessions, or some/all may be missing. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         domain_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
@@ -1097,7 +1105,7 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'important_dirt_to_clean' )
         self._daemon_jobs[ 'save_dirty_objects_important' ] = job
         
-        job = self.CallRepeating( 0.0, 600.0, self.SaveDirtyObjectsInfrequent )
+        job = self.CallRepeating( 0.0, 300.0, self.SaveDirtyObjectsInfrequent )
         self._daemon_jobs[ 'save_dirty_objects_infrequent' ] = job
         
         job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
@@ -1471,7 +1479,7 @@ class Controller( HydrusController.HydrusController ):
                 self.column_list_manager.SetClean()
                 
             
-            if self.network_engine.bandwidth_manager.IsDirty():
+            if self.network_engine.bandwidth_manager.IsDirty() or self.network_engine.bandwidth_manager.HasDirtyTrackerContainers():
                 
                 self.frame_splash_status.SetSubtext( 'bandwidth manager' )
                 
@@ -1480,7 +1488,7 @@ class Controller( HydrusController.HydrusController ):
                 self.network_engine.bandwidth_manager.SetClean()
                 
             
-            if self.network_engine.session_manager.IsDirty():
+            if self.network_engine.session_manager.IsDirty() or self.network_engine.session_manager.HasDirtySessionContainers():
                 
                 self.frame_splash_status.SetSubtext( 'session manager' )
                 

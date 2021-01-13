@@ -634,6 +634,23 @@ class TestClientDBTags( unittest.TestCase ):
             
         
     
+    def _test_ac( self, search_text, tag_service_key, file_service_key, expected_storage_tags_to_counts, expected_display_tags_to_counts ):
+        
+        tag_search_context = ClientSearch.TagSearchContext( tag_service_key )
+        
+        preds = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = search_text )
+        
+        tags_to_counts = { pred.GetValue() : pred.GetAllCounts() for pred in preds }
+        
+        self.assertEqual( expected_storage_tags_to_counts, tags_to_counts )
+        
+        preds = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = search_text )
+        
+        tags_to_counts = { pred.GetValue() : pred.GetAllCounts() for pred in preds }
+        
+        self.assertEqual( expected_display_tags_to_counts, tags_to_counts )
+        
+    
     def test_display_pairs_lookup_web_parents( self ):
         
         self._clear_db()
@@ -805,6 +822,199 @@ class TestClientDBTags( unittest.TestCase ):
             }, {
                 'studio:blizzard entertainment'
             } ) )
+        
+    
+    def test_display_pending_to_current_bug_both_bad( self ):
+        
+        # rescinding pending (when you set current on pending) two tags that imply the same thing at once can lead to ghost pending when you don't interleave processing
+        # so lets test that, both for combined and specific domains!
+        
+        self._clear_db()
+        
+        # add samus
+        
+        bad_samus_tag_1 = 'samus_aran_(character)'
+        bad_samus_tag_2 = 'samus aran'
+        good_samus_tag = 'character:samus aran'
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        
+        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        self._sync_display()
+        
+        # import a file
+        
+        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
+        
+        muh_jpg_hash = file_import_job.GetHash()
+        
+        # pend samus to it in one action
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
+        
+        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        # let's check those tags on the file's media result, which uses specific domain to populate tag data
+        
+        ( media_result, ) = self._read( 'media_results', ( muh_jpg_hash, ) )
+        
+        tags_manager = media_result.GetTagsManager()
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        
+        # and a/c results, both specific and combined
+        
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 0, None, 1, None ), bad_samus_tag_2 : ( 0, None, 1, None ) }, { good_samus_tag : ( 0, None, 1, None ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 0, None, 1, None ), bad_samus_tag_2 : ( 0, None, 1, None ) }, { good_samus_tag : ( 0, None, 1, None ) } )
+        
+        # now we'll currentify the tags in one action
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
+        
+        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        # and magically our tags should now be both current, no ghost pending
+        
+        ( media_result, ) = self._read( 'media_results', ( muh_jpg_hash, ) )
+        
+        tags_manager = media_result.GetTagsManager()
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        
+        # and a/c results, both specific and combined
+        
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 1, None, 0, None ), bad_samus_tag_2 : ( 1, None, 0, None ) }, { good_samus_tag : ( 1, None, 0, None ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 1, None, 0, None ), bad_samus_tag_2 : ( 1, None, 0, None ) }, { good_samus_tag : ( 1, None, 0, None ) } )
+        
+    
+    def test_display_pending_to_current_bug_bad_and_ideal( self ):
+        
+        # like the test above, this will test 'a' and 'b' being commited at the same time, but when 'a->b', rather than 'a->c' and 'b->c'
+        
+        self._clear_db()
+        
+        # add samus
+        
+        bad_samus_tag_1 = 'samus_aran_(character)'
+        bad_samus_tag_2 = 'samus aran'
+        good_samus_tag = 'character:samus aran'
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        
+        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        self._sync_display()
+        
+        # import a file
+        
+        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
+        
+        muh_jpg_hash = file_import_job.GetHash()
+        
+        # pend samus to it in one action
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
+        
+        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        # let's check those tags on the file's media result, which uses specific domain to populate tag data
+        
+        ( media_result, ) = self._read( 'media_results', ( muh_jpg_hash, ) )
+        
+        tags_manager = media_result.GetTagsManager()
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        
+        # and a/c results, both specific and combined
+        
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 0, None, 1, None ), good_samus_tag : ( 0, None, 1, None ) }, { good_samus_tag : ( 0, None, 1, None ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 0, None, 1, None ), good_samus_tag : ( 0, None, 1, None ) }, { good_samus_tag : ( 0, None, 1, None ) } )
+        
+        # now we'll currentify the tags in one action
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
+        
+        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        # and magically our tags should now be both current, no ghost pending
+        
+        ( media_result, ) = self._read( 'media_results', ( muh_jpg_hash, ) )
+        
+        tags_manager = media_result.GetTagsManager()
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
+        
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        
+        # and a/c results, both specific and combined
+        
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 1, None, 0, None ), good_samus_tag : ( 1, None, 0, None ) }, { good_samus_tag : ( 1, None, 0, None ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ( 1, None, 0, None ), good_samus_tag : ( 1, None, 0, None ) }, { good_samus_tag : ( 1, None, 0, None ) } )
         
     
     def test_parents_pairs_lookup( self ):

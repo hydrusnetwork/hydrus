@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 425</h3></li>
+				<ul>
+					<li>optimisations:</li>
+					<li>I fixed the new tag cache's slow tag autocomplete when in 'all known files' domain (which is usually in the manage tags dialog). what was taking about 2.5 seconds in 424 should now take about 58ms!!! for technical details, I was foolishly performing the pre-search exact match lookup (where exactly what you type appears before the full results fetch) on the new quick-text search tables, but it turns out this is unoptimised and was wasting a ton of CPU once the table got big. sorry for the trouble here--this was driving me nuts IRL. I have now fleshed out my dev machine's test client with many more millions of tag mappings so I can test these scales better in future before they go live</li>
+					<li>internal autocomplete count fetches for single tags now have less overhead, which should add up for various rapid small checks across the program, mostly for tag processing, where the client frequently consults current counts on single tags for pre-processing analysis</li>
+					<li>autocomplete count fetch requests for zero tags (lol) are also dealt with more efficiently</li>
+					<li>thanks to the new tag definition cache, the 'num tags' service info cache is now updated and regenerated more efficiently. this speeds up all tag processing a couple percent</li>
+					<li>tag update now quickly filters out redundant data before the main processing job. it is now significantly faster to process tag mappings that already exist--e.g. when a downloaded file pends tags that already exist, or repo processing gives you tags you already have, or you are filling in content gaps in reprocessing</li>
+					<li>tag processing is now more efficient when checking against membership in the display cache, which greatly speeds up processing on services with many siblings and parents. thank you to the users who have contributed profiles and other feedback regarding slower processing speeds since the display cache was added</li>
+					<li>various tag filtering and display membership tests are now shunted to the top of the mappings update routine, reducing much other overhead, especially when the mappings being added are redundant</li>
+					<li>.</li>
+					<li>tag logic fixes:</li>
+					<li>I explored the 'ghost tag' issue, where sometimes committing a pending tag still leaves a pending record. this has been happening in the new display system when two pending tags that imply the same tag through siblings or parents are committed at the same time. I fixed a previous instance of this, but more remained. I replicated the problem through a unit test, rewrote several update loops to remain in sync when needed, and have fixed potential ghost tag instances in the specific and 'all known files' domains, for 'add', 'pend', 'delete', and 'rescind pend' actions</li>
+					<li>also tested and fixed are possible instances where both a tag and its implication tag are pend-committed at the same time, not just two that imply a shared other</li>
+					<li>furthermore, in a complex counting issue, storage autocomplete count updates are no longer deferred when updating mappings--they are 'interleaved' into mappings updates so counts are always synchronised to tables. this unfortunately adds some processing overhead back in, but as a number of newer cache calculations rely on autocomplete numbers, this change improves counting and pre-processing logic</li>
+					<li>fixed a 'commit pending to current' counting bug in the new autocomplete update routine for 'all known files' domain</li>
+					<li>while display tag logic is working increasingly ok and fast, most clients will have some miscounts and ghost tags here and there. I have yet to write efficient correction maintenance routines for particular files or tags, but this is planned and will come. at the moment, you just have the nuclear 'regen' maintenance calls, which are no good for little problems</li>
+					<li>.</li>
+					<li>network object breakup:</li>
+					<li>the network session and bandwidth managers, which store your cookies and bandwidth history for all the different network contexts, are no longer monolithic objects. on updates to individual network contexts (which happens all the time during network activity), only the particular updated session or bandwidth tracker now needs to be saved to the database. this reduces CPU and UI lag on heavy clients. basically the same thing as the subscriptions breakup last year, but all behind the scenes</li>
+					<li>your existing managers will be converted on update. all existing login and bandwidth log data should be preserved</li>
+					<li>sessions will now keep delayed cookie changes that occured in the final network request before client exit</li>
+					<li>we won't go too crazy yet, but session and bandwidth data is now synced to the database every 5 minutes, instead of 10, so if the client crashes, you only lose 5 mins of login/bandwidth data</li>
+					<li>some session clearing logic is improved</li>
+					<li>the bandwidth manager no longer considers future bandwidth in tests. if your computer clock goes haywire and your client records bandwidth in the future, it shouldn't bosh you _so much_ now</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the 'system:number of tags' query now has greatly improved cancelability, even on gigantic result domains</li>
+					<li>fixed a bad example in the client api help that mislabeled 'request_new_permissions' as 'request_access_permissions' (issue #780)</li>
+					<li>the 'check and repair db' boot routine now runs _after_ version checks, so if you accidentally install a version behind, you now get the 'weird version m8' warning before the db goes bananas about missing tables or similar</li>
+					<li>added some methods and optimised some access in Hydrus Tag Archives</li>
+					<li>if you delete all the rules from a default bandwidth ruleset, it no longer disappears momentarily in the edit UI</li>
+					<li>updated the python mpv bindings to 0.5.2 on windows, although the underlying dll is the same. this seems to fix at least one set of dll load problems. also updated is macOS, but not Linux (yet), because it broke there, hooray</li>
+					<li>updated cloudscraper to 1.2.52 for all platforms</li>
+				</ul>
 				<li><h3>version 424</h3></li>
 				<ul>
 					<li>new tag caches:</li>

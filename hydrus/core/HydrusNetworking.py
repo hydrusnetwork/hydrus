@@ -624,9 +624,12 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             search_time_delta = time_delta + window
             
-            since = HydrusData.GetNow() - search_time_delta
+            now = HydrusData.GetNow()
+            since = now - search_time_delta
             
-            return sum( ( value for ( timestamp, value ) in list(counter.items()) if timestamp >= since ) )
+            # we test 'now' as upper bound because a lad once had a motherboard reset and lost his clock time, ending up with a lump of data recorded several decades in the future
+            # I'm pretty sure this ended up in the seconds thing, so all his short-time tests were failing
+            return sum( ( value for ( timestamp, value ) in counter.items() if since <= timestamp <= now ) )
             
         
     

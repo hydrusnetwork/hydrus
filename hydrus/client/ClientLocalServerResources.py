@@ -1879,7 +1879,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
             HG.client_controller.pub( 'message', job_key )
             
         
-        HG.client_controller.network_engine.session_manager.SetDirty()
+        HG.client_controller.network_engine.session_manager.SetSessionDirty( network_context )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

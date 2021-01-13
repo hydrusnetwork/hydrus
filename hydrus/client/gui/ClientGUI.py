@@ -1540,7 +1540,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             paths = []
             
         
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'importing files' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review files to import' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewLocalFileImports( frame, paths )
         

@@ -221,8 +221,6 @@ class HydrusDB( object ):
         
         self._InitDB()
         
-        self._RepairDB()
-        
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
         if version > HC.SOFTWARE_VERSION:
@@ -239,6 +237,8 @@ class HydrusDB( object ):
             
             raise Exception( 'Your current database version of hydrus ' + str( version ) + ' is too old for this software version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
             
+        
+        self._RepairDB()
         
         while version < HC.SOFTWARE_VERSION:
             
