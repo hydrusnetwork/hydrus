@@ -11,7 +11,7 @@ The client can do quite a lot! Please check out the help inside the release or [
 * [homepage](http://hydrusnetwork.github.io/hydrus/)
 * [issue tracker](https://github.com/hydrusnetwork/hydrus/issues)
 * [email](mailto:hydrus.admin@gmail.com)
-* [8kun board](https://8kun.top/hydrus/index.html)
+* [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
 * [endchan bunker](https://endchan.net/hydrus/)
 * [twitter](https://twitter.com/hydrusnetwork)
 * [tumblr](http://hydrus.tumblr.com/)

@@ -1175,6 +1175,12 @@ class NetworkJob( object ):
                     # but this will do as a patch for now
                     self._actual_fetched_url = response.url
                     
+                    
+                    if self._actual_fetched_url != self._url and HG.network_report_mode:
+                        
+                        HydrusData.ShowText( 'Network Jobs Redirect: {} -> {}'.format( self._url, self._actual_fetched_url ) )
+                        
+                    
                     with self._lock:
                         
                         if self._body is not None:

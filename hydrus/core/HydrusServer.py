@@ -25,6 +25,16 @@ class HydrusRequest( Request ):
         self.client_api_permissions = None
         
     
+    def IsGET( self ):
+        
+        return self.method == b'GET'
+        
+    
+    def IsPOST( self ):
+        
+        return self.method == b'POST'
+        
+    
 class HydrusRequestLogging( HydrusRequest ):
     
     def finish( self ):

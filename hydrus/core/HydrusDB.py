@@ -71,7 +71,7 @@ def ReadFromCancellableCursor( cursor, largest_group_size, cancelled_hook = None
             break
             
         
-        if NUM_TO_GET < 1024:
+        if NUM_TO_GET < largest_group_size:
             
             NUM_TO_GET *= 2
             
@@ -949,9 +949,7 @@ class HydrusDB( object ):
                         
                         summary = 'Profiling ' + job.ToString()
                         
-                        HydrusData.ShowText( summary )
-                        
-                        HydrusData.Profile( summary, 'self._ProcessJob( job )', globals(), locals() )
+                        HydrusData.Profile( summary, 'self._ProcessJob( job )', globals(), locals(), show_summary = True )
                         
                     else:
                         

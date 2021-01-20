@@ -70,7 +70,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 19
-SOFTWARE_VERSION = 425
+SOFTWARE_VERSION = 426
 CLIENT_API_VERSION = 15
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -299,37 +299,37 @@ permissions_string_lookup[ UNKNOWN_PERMISSION ] = 'unknown'
 
 PERMISSION_ACTION_PETITION = 0
 PERMISSION_ACTION_CREATE = 1
-PERMISSION_ACTION_OVERRULE = 2
+PERMISSION_ACTION_MODERATE = 2
 
 permission_pair_string_lookup = {}
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, None ) ] = 'cannot change accounts'
 permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_CREATE ) ] = 'can create accounts'
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_OVERRULE ) ] = 'can manage accounts completely'
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_MODERATE ) ] = 'can manage accounts completely'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, None ) ] = 'cannot change account types'
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, PERMISSION_ACTION_OVERRULE ) ] = 'can manage account types completely'
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, PERMISSION_ACTION_MODERATE ) ] = 'can manage account types completely'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, None ) ] = 'cannot change services'
-permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, PERMISSION_ACTION_OVERRULE ) ] = 'can manage services completely'
+permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, PERMISSION_ACTION_MODERATE ) ] = 'can manage services completely'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, None ) ] = 'can only download files'
 permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_PETITION ) ] = 'can petition to remove existing files'
 permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_CREATE ) ] = 'can upload new files and petition existing ones'
-permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete files and process petitions'
+permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete files and process petitions'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, None ) ] = 'can only download mappings'
 permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_PETITION ) ] = 'can petition to remove existing mappings'
 permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_CREATE ) ] = 'can upload new mappings and petition existing ones'
-permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete mappings and process petitions'
+permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete mappings and process petitions'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, None ) ] = 'can only download tag parents'
 permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_PETITION ) ] = 'can petition to add or remove tag parents'
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete tag parents and process petitions'
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete tag parents and process petitions'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, None ) ] = 'can only download tag siblings'
 permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_PETITION ) ] = 'can petition to add or remove tag siblings'
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete tag siblings and process petitions'
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete tag siblings and process petitions'
 
 TAG_REPOSITORY = 0
 FILE_REPOSITORY = 1

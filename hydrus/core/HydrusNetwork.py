@@ -101,22 +101,22 @@ def GetPossiblePermissions( service_type ):
     
     permissions = []
     
-    permissions.append( ( HC.CONTENT_TYPE_ACCOUNTS, [ None, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_OVERRULE ] ) )
-    permissions.append( ( HC.CONTENT_TYPE_ACCOUNT_TYPES, [ None, HC.PERMISSION_ACTION_OVERRULE ] ) )
+    permissions.append( ( HC.CONTENT_TYPE_ACCOUNTS, [ None, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE ] ) )
+    permissions.append( ( HC.CONTENT_TYPE_ACCOUNT_TYPES, [ None, HC.PERMISSION_ACTION_MODERATE ] ) )
     
     if service_type == HC.FILE_REPOSITORY:
         
-        permissions.append( ( HC.CONTENT_TYPE_FILES, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_OVERRULE ] ) )
+        permissions.append( ( HC.CONTENT_TYPE_FILES, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE ] ) )
         
     elif service_type == HC.TAG_REPOSITORY:
         
-        permissions.append( ( HC.CONTENT_TYPE_MAPPINGS, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_OVERRULE ] ) )
-        permissions.append( ( HC.CONTENT_TYPE_TAG_PARENTS, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_OVERRULE ] ) )
-        permissions.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_OVERRULE ] ) )
+        permissions.append( ( HC.CONTENT_TYPE_MAPPINGS, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE ] ) )
+        permissions.append( ( HC.CONTENT_TYPE_TAG_PARENTS, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_MODERATE ] ) )
+        permissions.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, [ None, HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_MODERATE ] ) )
         
     elif service_type == HC.SERVER_ADMIN:
         
-        permissions.append( ( HC.CONTENT_TYPE_SERVICES, [ None, HC.PERMISSION_ACTION_OVERRULE ] ) )
+        permissions.append( ( HC.CONTENT_TYPE_SERVICES, [ None, HC.PERMISSION_ACTION_MODERATE ] ) )
         
     
     return permissions
@@ -366,7 +366,7 @@ class Account( object ):
             raise HydrusExceptions.ConflictException( 'account is unsynced' )
             
         
-        if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ):
+        if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE ):
             
             return # admins can do anything
             
@@ -458,6 +458,17 @@ class Account( object ):
             self._banned_info = ( reason, created, expires )
             
             self._SetDirty()
+            
+        
+    
+    def CheckAtLeastOnePermission( self, content_types_and_actions ):
+        
+        with self._lock:
+            
+            if True not in ( self._account_type.HasPermission( content_type, action ) for ( content_type, action ) in content_types_and_actions ):
+                
+                raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to do that.' )
+                
             
         
     
@@ -807,7 +818,7 @@ class AccountType( object ):
         
         dictionary = HydrusSerialisable.SerialisableDictionary()
         
-        dictionary[ 'permissions' ] = list(self._permissions.items())
+        dictionary[ 'permissions' ] = list( self._permissions.items() )
         
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         
@@ -835,17 +846,17 @@ class AccountType( object ):
         
         my_permission = self._permissions[ content_type ]
         
-        if permission == HC.PERMISSION_ACTION_OVERRULE:
+        if permission == HC.PERMISSION_ACTION_MODERATE:
             
-            return my_permission == HC.PERMISSION_ACTION_OVERRULE
+            return my_permission == HC.PERMISSION_ACTION_MODERATE
             
         elif permission == HC.PERMISSION_ACTION_CREATE:
             
-            return my_permission in ( HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_OVERRULE )
+            return my_permission in ( HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE )
             
         elif permission == HC.PERMISSION_ACTION_PETITION:
             
-            return my_permission in ( HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_OVERRULE )
+            return my_permission in ( HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE )
             
         
         return False
@@ -936,19 +947,19 @@ class AccountType( object ):
         
         permissions = {}
         
-        permissions[ HC.CONTENT_TYPE_ACCOUNTS ] = HC.PERMISSION_ACTION_OVERRULE
-        permissions[ HC.CONTENT_TYPE_ACCOUNT_TYPES ] = HC.PERMISSION_ACTION_OVERRULE
+        permissions[ HC.CONTENT_TYPE_ACCOUNTS ] = HC.PERMISSION_ACTION_MODERATE
+        permissions[ HC.CONTENT_TYPE_ACCOUNT_TYPES ] = HC.PERMISSION_ACTION_MODERATE
         
         if service_type in HC.REPOSITORIES:
             
             for content_type in HC.REPOSITORY_CONTENT_TYPES:
                 
-                permissions[ content_type ] = HC.PERMISSION_ACTION_OVERRULE
+                permissions[ content_type ] = HC.PERMISSION_ACTION_MODERATE
                 
             
         elif service_type == HC.SERVER_ADMIN:
             
-            permissions[ HC.CONTENT_TYPE_SERVICES ] = HC.PERMISSION_ACTION_OVERRULE
+            permissions[ HC.CONTENT_TYPE_SERVICES ] = HC.PERMISSION_ACTION_MODERATE
             
         else:
             

@@ -37,6 +37,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         QW.QTreeWidget.__init__( self, parent )
         
+        self._have_shown_a_column_data_error = False
+        
         self._creation_time = HydrusData.GetNow()
         
         self._column_list_type = column_list_type
@@ -263,7 +265,24 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def _GetDisplayAndSortTuples( self, data ):
         
-        ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+        try:
+            
+            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            
+        except Exception as e:
+            
+            if not self._have_shown_a_column_data_error:
+                
+                HydrusData.ShowText( 'A multi-column list was unable to generate text or sort data for one or more rows! Please send hydrus dev the traceback!' )
+                HydrusData.ShowException( e )
+                
+                self._have_shown_a_column_data_error = True
+                
+            
+            error_display_tuple = [ 'unable to display' for i in range( self._column_list_status.GetColumnCount() ) ]
+            
+            return ( error_display_tuple, None )
+            
         
         better_sort = []
         
@@ -329,6 +348,9 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         data_infos = list( self._indices_to_data_info.values() )
         
+        data_infos_good = [ ( data, display_tuple, sort_tuple ) for ( data, display_tuple, sort_tuple ) in data_infos if sort_tuple is not None ]
+        data_infos_bad = [ ( data, display_tuple, sort_tuple ) for ( data, display_tuple, sort_tuple ) in data_infos if sort_tuple is None ]
+        
         def sort_key( data_info ):
             
             ( data, display_tuple, sort_tuple ) = data_info
@@ -336,7 +358,19 @@ class BetterListCtrl( QW.QTreeWidget ):
             return ( sort_tuple[ sort_column_index ], sort_tuple ) # add the sort tuple to get secondary sorting
             
         
-        data_infos.sort( key = sort_key, reverse = not self._sort_asc )
+        try:
+            
+            data_infos_good.sort( key = sort_key, reverse = not self._sort_asc )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'A multi-column list failed to sort! Please send hydrus dev the traceback!' )
+            HydrusData.ShowException( e )
+            
+        
+        data_infos_bad.extend( data_infos_good )
+        
+        data_infos = data_infos_bad
         
         return data_infos
         
@@ -795,9 +829,13 @@ class BetterListCtrl( QW.QTreeWidget ):
                     
                     ( existing_data, existing_display_tuple, existing_sort_tuple ) = existing_data_info
                     
-                    if sort_tuple[ sort_index ] != existing_sort_tuple[ sort_index ]: # this does not govern secondary sorts, but let's not spam sorts m8
+                    if existing_sort_tuple is not None and sort_tuple is not None:
                         
-                        sort_data_has_changed = True
+                        # this does not govern secondary sorts, but let's not spam sorts m8
+                        if sort_tuple[ sort_index ] != existing_sort_tuple[ sort_index ]:
+                            
+                            sort_data_has_changed = True
+                            
                         
                     
                 
@@ -1083,9 +1121,13 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            obj = HydrusSerialisable.CreateFromString( raw_text, raise_error_on_future_version = True )
             
             self._ImportObject( obj )
+            
+        except HydrusExceptions.SerialisationException as e:
+            
+            QW.QMessageBox.critical( self, 'Problem loading', str( e ) )
             
         except Exception as e:
             
@@ -1164,6 +1206,8 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportJSONs( self, paths ):
         
+        have_shown_load_error = False
+        
         for path in paths:
             
             try:
@@ -1182,9 +1226,26 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( payload )
+                obj = HydrusSerialisable.CreateFromString( payload, raise_error_on_future_version = True )
                 
                 self._ImportObject( obj )
+                
+            except HydrusExceptions.SerialisationException as e:
+                
+                if not have_shown_load_error:
+                    
+                    message = str( e )
+                    
+                    if len( paths ) > 1:
+                        
+                        message += os.linesep * 2
+                        message += 'If there are more objects in this import with similar load problems, they will now be skipped silently.'
+                        
+                    
+                    QW.QMessageBox.critical( self, 'Problem loading', str( e ) )
+                    
+                    have_shown_load_error = True
+                    
                 
             except:
                 
@@ -1196,6 +1257,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         
     
     def _ImportPNGs( self, paths ):
+        
+        have_shown_load_error = False
         
         for path in paths:
             
@@ -1212,9 +1275,26 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                obj = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version = True )
                 
                 self._ImportObject( obj )
+                
+            except HydrusExceptions.SerialisationException as e:
+                
+                if not have_shown_load_error:
+                    
+                    message = str( e )
+                    
+                    if len( paths ) > 1:
+                        
+                        message += os.linesep * 2
+                        message += 'If there are more objects in this import with similar load problems, they will now be skipped silently.'
+                        
+                    
+                    QW.QMessageBox.critical( self, 'Problem loading', str( e ) )
+                    
+                    have_shown_load_error = True
+                    
                 
             except:
                 

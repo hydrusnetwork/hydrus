@@ -3795,9 +3795,6 @@ class DB( HydrusDB.HydrusDB ):
             
             with HydrusDB.TemporaryIntegerTable( self._c, actually_new_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
                 
-                # temp tags to tag definitions
-                self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, namespace_id, subtag_id ) SELECT tag_id, namespace_id, subtag_id FROM {} CROSS JOIN tags USING ( tag_id );'.format( tags_table_name, temp_tag_ids_table_name ) )
-                
                 # temp tags to fast tag definitions to subtags
                 subtag_ids_and_subtags = self._c.execute( 'SELECT subtag_id, subtag FROM {} CROSS JOIN {} USING ( tag_id ) CROSS JOIN subtags USING ( subtag_id );'.format( temp_tag_ids_table_name, tags_table_name ) ).fetchall()
                 
@@ -3864,8 +3861,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                self._c.executemany( 'DELETE FROM {} WHERE docid = ?;'.format( subtags_fts4_table_name ), ( ( subtag_id, ) for subtag_id in subtag_ids ) )
-                self._c.executemany( 'DELETE FROM {} WHERE subtag_id = ?;'.format( integer_subtags_table_name ), ( ( subtag_id, ) for subtag_id in subtag_ids ) )
+                # subtags may exist under other namespaces, so exclude those that do
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
+                    
+                    still_existing_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM {} CROSS JOIN {} USING ( subtag_id );'.format( temp_subtag_ids_table_name, tags_table_name ) ) )
+                    
+                
+                deletee_subtag_ids = subtag_ids.difference( still_existing_subtag_ids )
+                
+                self._c.executemany( 'DELETE FROM {} WHERE docid = ?;'.format( subtags_fts4_table_name ), ( ( subtag_id, ) for subtag_id in deletee_subtag_ids ) )
+                self._c.executemany( 'DELETE FROM {} WHERE subtag_id = ?;'.format( integer_subtags_table_name ), ( ( subtag_id, ) for subtag_id in deletee_subtag_ids ) )
                 
             
         
@@ -4002,6 +4008,55 @@ class DB( HydrusDB.HydrusDB ):
         self._AnalyzeTable( self._CacheTagsGetTagsTableName( file_service_id, tag_service_id ) )
         self._AnalyzeTable( self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id ) )
         self._AnalyzeTable( self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id ) )
+        
+    
+    def _CacheTagsRepopulateMissingSubtags( self, file_service_id, tag_service_id ):
+        
+        tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+        subtags_fts4_table_name = self._CacheTagsGetSubtagsFTS4TableName( file_service_id, tag_service_id )
+        integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id )
+        
+        missing_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM {} EXCEPT SELECT docid FROM {};'.format( tags_table_name, subtags_fts4_table_name ) ) )
+        
+        for subtag_id in missing_subtag_ids:
+            
+            result = self._c.execute( 'SELECT subtag FROM subtags WHERE subtag_id = ?;', ( subtag_id, ) ).fetchone()
+            
+            if result is None:
+                
+                continue
+                
+            
+            ( subtag, ) = result
+            
+            subtag_searchable = ClientSearch.ConvertSubtagToSearchable( subtag )
+            
+            #
+            
+            self._c.execute( 'INSERT OR IGNORE INTO {} ( docid, subtag ) VALUES ( ?, ? );'.format( subtags_fts4_table_name ), ( subtag_id, subtag_searchable ) )
+            
+            if subtag.isdecimal():
+                
+                try:
+                    
+                    integer_subtag = int( subtag )
+                    
+                    if CanCacheInteger( integer_subtag ):
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO {} ( subtag_id, integer_subtag ) VALUES ( ?, ? );'.format( integer_subtags_table_name ), ( subtag_id, integer_subtag ) )
+                        
+                    
+                except ValueError:
+                    
+                    pass
+                    
+                
+            
+        
+        if len( missing_subtag_ids ) > 0:
+            
+            HydrusData.ShowText( 'Repopulated {} missing subtags for {}_{}.'.format( HydrusData.ToHumanInt( len( missing_subtag_ids ) ), file_service_id, tag_service_id ) )
+            
         
     
     def _CacheTagsSyncTags( self, tag_service_id, tag_ids ):
@@ -7976,7 +8031,6 @@ class DB( HydrusDB.HydrusDB ):
                 tag_ids = self._GetTagIdsFromNamespaceIdsSubtagIds( file_service_id, tag_service_id, namespace_ids, subtag_ids, job_key = job_key )
                 
             
-        
         
         # now fetch siblings, add to set
         
@@ -16729,6 +16783,78 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RepopulateTagCacheMissingSubtags( self, tag_service_key = None ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'repopulate tag fast search cache subtags' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self._GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self._GetServiceId( tag_service_key ), )
+                
+            
+            file_service_ids = self._GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            def status_hook( s ):
+                
+                job_key.SetVariable( 'popup_text_2', s )
+                
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'repopulating specific cache {}_{}'.format( file_service_id, tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                time.sleep( 0.01 )
+                
+                self._CacheTagsRepopulateMissingSubtags( file_service_id, tag_service_id )
+                
+            
+            for tag_service_id in tag_service_ids:
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'repopulating combined cache {}'.format( tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                time.sleep( 0.01 )
+                
+                self._CacheTagsRepopulateMissingSubtags( self._combined_file_service_id, tag_service_id )
+                
+            
+        finally:
+            
+            job_key.DeleteVariable( 'popup_text_2' )
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
     def _ReportOverupdatedDB( self, version ):
         
         message = 'This client\'s database is version {}, but the software is version {}! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusData.ToHumanInt( version ), HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) )
@@ -20121,7 +20247,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultParsers( ( 'e621 file page parser' ) )
+                domain_manager.OverwriteDefaultParsers( ( 'e621 file page parser', ) )
                 
                 domain_manager.OverwriteDefaultURLClasses( ( 'nitter media timeline', 'nitter timeline' ) )
                 
@@ -20275,6 +20401,51 @@ class DB( HydrusDB.HydrusDB ):
                     
                     raise Exception( 'The v425 bandwidth update failed to work! The error has been printed to the log. Please rollback to 424 and let hydev know the details.' )
                     
+                
+            
+        
+        if version == 425:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'gelbooru 0.2.x gallery page parser', 'e621 file page parser', 'gelbooru 0.2.5 file page parser' ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'gelbooru gallery pool page', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                self._RepopulateTagCacheMissingSubtags()
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'The v426 subtag repopulation routine failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
                 
             
         
@@ -20851,6 +21022,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_parents_cache': self._RegenerateTagParentsCache( *args, **kwargs )
         elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
+        elif action == 'repopulate_tag_cache_missing_subtags': self._RepopulateTagCacheMissingSubtags( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )

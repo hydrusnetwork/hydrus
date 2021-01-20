@@ -334,12 +334,12 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
         if result == QW.QDialog.Accepted:
-             
+            
             account_types_about_to_delete = self._account_types_listctrl.GetData( only_selected = True )
             
             all_account_types = set( self._account_types_listctrl.GetData() )
             
-            account_types_can_move_to = list( all_account_types - account_types_about_to_delete )
+            account_types_can_move_to = all_account_types.difference( account_types_about_to_delete )
             
             if len( account_types_can_move_to ) == 0:
                 

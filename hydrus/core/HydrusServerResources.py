@@ -531,7 +531,7 @@ class HydrusResource( Resource ):
     
     def _profileJob( self, call, request ):
         
-        HydrusData.Profile( 'client api {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals() )
+        HydrusData.Profile( 'client api {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = 3, show_summary = True )
         
         return request.result_lmao
         

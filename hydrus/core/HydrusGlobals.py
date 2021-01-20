@@ -28,6 +28,7 @@ callto_report_mode = False
 server_profile_mode = False
 db_report_mode = False
 db_profile_mode = False
+callto_profile_mode = False
 file_report_mode = False
 media_load_report_mode = False
 gui_report_mode = False

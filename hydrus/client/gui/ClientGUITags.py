@@ -2052,7 +2052,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items.append( ( 'normal', 'migrate tags for these files', 'Migrate the tags for the files used to launch this manage tags panel.', self._MigrateTags ) )
             
-            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
+            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ):
                 
                 menu_items.append( ( 'separator', 0, 0, 0 ) )
                 
@@ -2112,7 +2112,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tags = HydrusTags.CleanTags( tags )
             
-            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
+            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE ):
                 
                 forced_reason = 'admin'
                 
@@ -2465,7 +2465,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
             
             return
-            
+            '''
             contents = []
             
             tags = self._tags_box.GetSelectedTags()
@@ -2486,7 +2486,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     dlg.exec()
                     
                 
-            
+            '''
         
         def _Paste( self ):
             
@@ -2930,7 +2930,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if not self._i_am_local_tag_service:
                     
-                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
                         
                         reason = 'admin'
                         
@@ -3008,7 +3008,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if result == QW.QDialog.Accepted:
                             
-                            if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+                            if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
                                 
                                 reason = 'admin'
                                 
@@ -3864,7 +3864,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         reason = default_reason
                         
-                    elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                    elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                         
                         reason = 'admin'
                         
@@ -3922,7 +3922,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                             reason = default_reason
                             
-                        elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                        elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                             
                             reason = 'admin'
                             

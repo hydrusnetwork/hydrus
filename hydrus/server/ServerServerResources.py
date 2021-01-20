@@ -191,6 +191,8 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
         
         self._checkAccount( request )
         
+        self._checkAccountPermissions( request )
+        
         return request
         
     
@@ -254,6 +256,11 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
         return request
         
     
+    def _checkAccountPermissions( self, request ):
+        
+        raise NotImplementedError()
+        
+    
     def _checkBandwidth( self, request ):
         
         if not self._service.BandwidthOK():
@@ -300,6 +307,13 @@ class HydrusResourceRestrictedAccount( HydrusResourceRestricted ):
         return request
         
     
+    def _checkAccountPermissions( self, request ):
+        
+        # you can always fetch your account
+        
+        pass
+        
+    
     def _threadDoGETJob( self, request ):
         
         account = request.hydrus_account
@@ -312,6 +326,11 @@ class HydrusResourceRestrictedAccount( HydrusResourceRestricted ):
         
     
 class HydrusResourceRestrictedAccountInfo( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
+        
     
     def _threadDoGETJob( self, request ):
         
@@ -337,29 +356,44 @@ class HydrusResourceRestrictedAccountInfo( HydrusResourceRestricted ):
         return response_context
         
     
-class HydrusResourceRestrictedAccountModification( HydrusResourceRestricted ):
+class HydrusResourceRestrictedAccountOtherAccount( HydrusResourceRestricted ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _checkAccountPermissions( self, request ):
         
-        action = request.parsed_request_args[ 'action' ]
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
         
-        subject_accounts = request.parsed_request_args[ 'accounts' ]
+    
+    def _threadDoGETJob( self, request ):
         
-        kwargs = request.parsed_request_args # for things like expires, title, and so on
+        subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
         
-        with HG.dirty_object_lock:
-            
-            HG.server_controller.WriteSynchronous( 'account_modification', self._service_key, request.hydrus_account, action, subject_accounts, **kwargs )
-            
-            HG.server_controller.server_session_manager.UpdateAccounts( self._service_key, subject_accounts )
-            
+        other_account = HG.server_controller.Read( 'other_accounts', self._service_key, request.hydrus_account, subject_identifier )
         
-        response_context = HydrusServerResources.ResponseContext( 200 )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'other_account' : other_account } )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
         return response_context
         
     
+    def _threadDoPOSTJob( self, request ):
+        
+        pass
+        
+    
 class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        if request.IsGET():
+            
+            request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+            
+        elif request.IsPOST():
+            
+            request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE )
+            
+        
     
     def _threadDoGETJob( self, request ):
         
@@ -388,10 +422,12 @@ class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedBackup( HydrusResourceRestricted ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _checkAccountPermissions( self, request ):
         
-        # check permission here since this is an asynchronous job
-        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoPOSTJob( self, request ):
         
         HG.server_controller.Write( 'backup' )
         
@@ -401,6 +437,11 @@ class HydrusResourceRestrictedBackup( HydrusResourceRestricted ):
         
     
 class HydrusResourceRestrictedIP( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
+        
     
     def _threadDoGETJob( self, request ):
         
@@ -417,10 +458,12 @@ class HydrusResourceRestrictedIP( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedLockOn( HydrusResourceRestricted ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _checkAccountPermissions( self, request ):
         
-        # check permission here since no db work
-        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoPOSTJob( self, request ):
         
         locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
         
@@ -442,10 +485,12 @@ class HydrusResourceRestrictedLockOff( HydrusResourceRestricted ):
     
     BLOCKED_WHEN_BUSY = False
     
-    def _threadDoPOSTJob( self, request ):
+    def _checkAccountPermissions( self, request ):
         
-        # check permission here since no db work
-        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoPOSTJob( self, request ):
         
         try:
             
@@ -465,6 +510,13 @@ class HydrusResourceRestrictedLockOff( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
     
+    def _checkAccountPermissions( self, request ):
+        
+        # further permissions checked in the db
+        
+        request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ] )
+        
+    
     def _threadDoGETJob( self, request ):
         
         petition_count_info = HG.server_controller.Read( 'num_petitions', self._service_key, request.hydrus_account )
@@ -477,6 +529,13 @@ class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
         
     
 class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        content_type = request.parsed_request_args[ 'content_type' ]
+        
+        request.hydrus_account.CheckPermission( content_type, HC.PERMISSION_ACTION_MODERATE )
+        
     
     def _threadDoGETJob( self, request ):
         
@@ -493,6 +552,11 @@ class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
         
     
 class HydrusResourceRestrictedRegistrationKeys( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+        
     
     def _threadDoGETJob( self, request ):
         
@@ -518,6 +582,16 @@ class HydrusResourceRestrictedRegistrationKeys( HydrusResourceRestricted ):
         
     
 class HydrusResourceRestrictedRepositoryFile( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        # everyone with a functional account can read files
+        
+        if request.IsPOST():
+            
+            request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE )
+            
+        
     
     def _DecompressionBombsOK( self, request ):
         
@@ -573,6 +647,13 @@ class HydrusResourceRestrictedRepositoryFile( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedRepositoryThumbnail( HydrusResourceRestricted ):
     
+    def _checkAccountPermissions( self, request ):
+        
+        # everyone with a functional account can read thumbs
+        
+        pass
+        
+    
     def _threadDoGETJob( self, request ):
         
         self._checkBandwidth( request )
@@ -601,6 +682,11 @@ class HydrusResourceRestrictedRepositoryThumbnail( HydrusResourceRestricted ):
         
     
 class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+        
     
     def _threadDoGETJob( self, request ):
         
@@ -640,6 +726,18 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
     
+    def _checkAccountPermissions( self, request ):
+        
+        # everyone with a functional account can read updates
+        
+        if request.IsPOST():
+            
+            # further permissions checked in the db
+            
+            request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_PETITION ) for content_type in HC.REPOSITORY_CONTENT_TYPES ] )
+            
+        
+    
     def _threadDoGETJob( self, request ):
         
         self._checkBandwidth( request )
@@ -675,6 +773,11 @@ class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedImmediateUpdate( HydrusResourceRestricted ):
     
+    def _checkAccountPermissions( self, request ):
+        
+        request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ] )
+        
+    
     def _threadDoGETJob( self, request ):
         
         updates = HG.server_controller.Read( 'immediate_update', self._service_key, request.hydrus_account )
@@ -690,9 +793,12 @@ class HydrusResourceRestrictedImmediateUpdate( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedMetadataUpdate( HydrusResourceRestricted ):
     
-    def _threadDoGETJob( self, request ):
+    def _checkAccountPermissions( self, request ):
         
-        # no permissions check as any functional account can get metadata slices
+        pass # everyone with a functional account can get metadata slices
+        
+    
+    def _threadDoGETJob( self, request ):
         
         since = request.parsed_request_args[ 'since' ]
         
@@ -707,10 +813,12 @@ class HydrusResourceRestrictedMetadataUpdate( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedVacuum( HydrusResourceRestricted ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _checkAccountPermissions( self, request ):
         
-        # check permission here since this is an asynchronous job
-        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoPOSTJob( self, request ):
         
         HG.server_controller.Write( 'vacuum' )
         

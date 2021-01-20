@@ -374,8 +374,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteAllAccountContributions( self, service_key, account, subject_accounts, superban, timestamp ):
         
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-        
         service_id = self._GetServiceId( service_key )
         
         subject_account_keys = [ subject_account.GetAccountKey() for subject_account in subject_accounts ]
@@ -437,8 +435,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _GenerateRegistrationKeysFromAccount( self, service_key, account, num, account_type_key, expires ):
-        
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
         
         service_id = self._GetServiceId( service_key )
         
@@ -687,8 +683,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAccountInfo( self, service_key, account, subject_account ):
         
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-        
         service_id = self._GetServiceId( service_key )
         
         subject_account_key = subject_account.GetAccountKey()
@@ -724,8 +718,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _GetAccountTypes( self, service_key, account ):
-        
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
         
         service_id = self._GetServiceId( service_key )
         
@@ -960,8 +952,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetServicesFromAccount( self, account ):
         
-        account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
-        
         return self._GetServices()
         
     
@@ -1095,8 +1085,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ModifyAccounts( self, service_key, account, subject_accounts ):
         
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-        
         service_id = self._GetServiceId( service_key )
         
         self._SaveAccounts( service_id, subject_accounts )
@@ -1107,8 +1095,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _ModifyAccountTypes( self, service_key, account, account_types, deletee_account_type_keys_to_new_account_type_keys ):
-        
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
         
         service_id = self._GetServiceId( service_key )
         
@@ -1164,8 +1150,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _ModifyServices( self, account, services ):
-        
-        account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
         
         current_service_keys = { service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services;' ) }
         
@@ -1680,11 +1664,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryGenerateImmediateUpdate( self, service_key, account, begin, end ):
         
-        if True not in ( account.HasPermission( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ):
-            
-            raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to generate an immediate update!' )
-            
-        
         service_id = self._GetServiceId( service_key )
         
         updates = self._RepositoryGenerateUpdates( service_id, begin, end )
@@ -1937,8 +1916,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryGetIPTimestamp( self, service_key, account, hash ):
         
-        account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-        
         service_id = self._GetServiceId( service_key )
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
@@ -2121,7 +2098,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE ):
+        if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ):
             
             ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' LIMIT 1000 );' ).fetchone()
             
@@ -2130,7 +2107,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
+        if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE ):
             
             ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT service_tag_id, account_id, reason_id FROM ' + petitioned_mappings_table_name + ' LIMIT 1000 );' ).fetchone()
             
@@ -2139,7 +2116,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+        if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
             
             ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + pending_tag_parents_table_name + ' LIMIT 1000 );' ).fetchone()
             
@@ -2152,7 +2129,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+        if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
             
             ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + pending_tag_siblings_table_name + ' LIMIT 1000 );' ).fetchone()
             
@@ -2169,8 +2146,6 @@ class DB( HydrusDB.HydrusDB ):
     def _RepositoryGetPetition( self, service_key, account, content_type, status ):
         
         service_id = self._GetServiceId( service_key )
-        
-        account.CheckPermission( content_type, HC.PERMISSION_ACTION_OVERRULE )
         
         if content_type == HC.CONTENT_TYPE_FILES:
             
@@ -2637,15 +2612,14 @@ class DB( HydrusDB.HydrusDB ):
         
         account_id = self._GetAccountId( account_key )
         
-        can_petition_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION )
         can_create_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE )
-        can_overrule_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE )
+        can_moderate_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE )
         
         # later add pend file here however that is neat
         
-        if can_create_files or can_overrule_files:
+        if can_create_files or can_moderate_files:
             
-            if not can_overrule_files:
+            if not can_moderate_files:
                 
                 max_storage = service.GetMaxStorage()
                 
@@ -2678,7 +2652,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            overwrite_deleted = can_overrule_files
+            overwrite_deleted = can_moderate_files
             
             self._RepositoryAddFile( service_id, account_id, file_dict, overwrite_deleted, timestamp )
             
@@ -2693,21 +2667,21 @@ class DB( HydrusDB.HydrusDB ):
         account_id = self._GetAccountId( account_key )
         
         can_petition_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION )
-        can_overrule_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE )
+        can_moderate_files = account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE )
         
         can_petition_mappings = account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_PETITION )
         can_create_mappings = account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_CREATE )
-        can_overrule_mappings = account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE )
+        can_moderate_mappings = account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE )
         
         can_petition_tag_parents = account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION )
         can_create_tag_parents = account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_CREATE )
-        can_overrule_tag_parents = account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE )
+        can_moderate_tag_parents = account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE )
         
         can_petition_tag_siblings = account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION )
         can_create_tag_siblings = account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_CREATE )
-        can_overrule_tag_siblings = account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE )
+        can_moderate_tag_siblings = account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE )
         
-        if can_overrule_files or can_petition_files:
+        if can_moderate_files or can_petition_files:
             
             for ( hashes, reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION ):
                 
@@ -2715,7 +2689,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
                 
-                if can_overrule_files:
+                if can_moderate_files:
                     
                     self._RepositoryDeleteFiles( service_id, account_id, service_hash_ids, timestamp )
                     
@@ -2728,7 +2702,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if can_overrule_files:
+        if can_moderate_files:
             
             for ( hashes, reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DENY_PETITION ):
                 
@@ -2744,7 +2718,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # later add pend mappings here however that is neat
         
-        if can_create_mappings or can_overrule_mappings:
+        if can_create_mappings or can_moderate_mappings:
             
             for ( ( tag, hashes ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND ):
                 
@@ -2752,13 +2726,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 master_hash_ids = self._GetMasterHashIds( hashes )
                 
-                overwrite_deleted = can_overrule_mappings
+                overwrite_deleted = can_moderate_mappings
                 
                 self._RepositoryAddMappings( service_id, account_id, master_tag_id, master_hash_ids, overwrite_deleted, timestamp )
                 
             
         
-        if can_overrule_mappings or can_petition_mappings:
+        if can_moderate_mappings or can_petition_mappings:
             
             for ( ( tag, hashes ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
                 
@@ -2770,7 +2744,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
                 
-                if can_overrule_mappings:
+                if can_moderate_mappings:
                     
                     self._RepositoryDeleteMappings( service_id, account_id, service_tag_id, service_hash_ids, timestamp )
                     
@@ -2783,7 +2757,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if can_overrule_mappings:
+        if can_moderate_mappings:
             
             for ( ( tag, hashes ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
                 
@@ -2801,16 +2775,16 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        if can_create_tag_parents or can_overrule_tag_parents or can_petition_tag_parents:
+        if can_create_tag_parents or can_moderate_tag_parents or can_petition_tag_parents:
             
             for ( ( child_tag, parent_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND ):
                 
                 child_master_tag_id = self._GetMasterTagId( child_tag )
                 parent_master_tag_id = self._GetMasterTagId( parent_tag )
                 
-                if can_create_tag_parents or can_overrule_tag_parents:
+                if can_create_tag_parents or can_moderate_tag_parents:
                     
-                    overwrite_deleted = can_overrule_tag_parents
+                    overwrite_deleted = can_moderate_tag_parents
                     
                     self._RepositoryAddTagParent( service_id, account_id, child_master_tag_id, parent_master_tag_id, overwrite_deleted, timestamp )
                     
@@ -2830,7 +2804,7 @@ class DB( HydrusDB.HydrusDB ):
                 child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, timestamp )
                 parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, timestamp )
                 
-                if can_overrule_tag_parents:
+                if can_moderate_tag_parents:
                     
                     self._RepositoryDeleteTagParent( service_id, account_id, child_service_tag_id, parent_service_tag_id, timestamp )
                     
@@ -2843,7 +2817,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if can_overrule_tag_parents:
+        if can_moderate_tag_parents:
             
             for ( ( child_tag, parent_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
                 
@@ -2867,16 +2841,16 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        if can_create_tag_siblings or can_overrule_tag_siblings or can_petition_tag_siblings:
+        if can_create_tag_siblings or can_moderate_tag_siblings or can_petition_tag_siblings:
             
             for ( ( bad_tag, good_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND ):
                 
                 bad_master_tag_id = self._GetMasterTagId( bad_tag )
                 good_master_tag_id = self._GetMasterTagId( good_tag )
                 
-                if can_create_tag_siblings or can_overrule_tag_siblings:
+                if can_create_tag_siblings or can_moderate_tag_siblings:
                     
-                    overwrite_deleted = can_overrule_tag_siblings
+                    overwrite_deleted = can_moderate_tag_siblings
                     
                     self._RepositoryAddTagSibling( service_id, account_id, bad_master_tag_id, good_master_tag_id, overwrite_deleted, timestamp )
                     
@@ -2896,7 +2870,7 @@ class DB( HydrusDB.HydrusDB ):
                 bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, timestamp )
                 good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, timestamp )
                 
-                if can_overrule_tag_siblings:
+                if can_moderate_tag_siblings:
                     
                     self._RepositoryDeleteTagSibling( service_id, account_id, bad_service_tag_id, good_service_tag_id, timestamp )
                     
@@ -2909,7 +2883,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if can_overrule_tag_siblings:
+        if can_moderate_tag_siblings:
             
             for ( ( bad_tag, good_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
                 

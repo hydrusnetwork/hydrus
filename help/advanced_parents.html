@@ -6,22 +6,22 @@
 	</head>
 	<body>
 		<div class="content">
-			<h3>quick version</h3>
+			<h3 id="intro"><a href="#intro">quick version</a></h3>
 			<p>Tag parents let you automatically add a particular tag every time another tag is added. The relationship will also apply retroactively.</p>
-			<h3>what's the problem?</h3>
+			<h3 id="the_problem"><a href="#the_problem">what's the problem?</a></h3>
 			<p>Tags often fall into certain heirarchies. Certain tags <i>always</i> imply certain other tags, and it is annoying and time-consuming to add them all individually every time.</p>
 			<p>For example, whenever you tag a file with <i>ak-47</i>, you probably also want to tag it <i>assault rifle</i>, and maybe even <i>firearm</i> as well.</p>
 			<p><img src="tag_parents_venn.png" /></p>
 			<p>Another time, you might tag a file <i>character:eddard stark</i>, and then also have to type in <i>house stark</i> and then <i>series:game of thrones</i>. (you might also think <i>series:game of thrones</i> should actually be <i>series:a song of ice and fire</i>, but that is an issue for <a href="advanced_siblings.html">siblings</a>)</p>
 			<p>Drawing more relationships would make a significantly more complicated venn diagram, so let's draw a family tree instead:</p>
 			<p><img src="tag_parents_got.png" /></p>
-			<h3>tag parents</h3>
+			<h3 id="tag_parents"><a href="#tag_parents">tag parents</a></h3>
 			<p>Let's define the child-parent relationship 'C->P' as saying that tag P is the semantic superset/superclass of tag C. <b>All files that have C should also have P, without exception.</b> When the user tries to add tag C to a file, tag P is added automatically.</p>
 			<p>Let's expand our weapon example:</p>
 			<p><img src="tag_parents_firearms.png" /></p>
 			<p>In that graph, adding <i>ar-15</i> to a file would also add <i>semi-automatic rifle</i>, <i>rifle</i>, and <i>firearm</i>. Searching for <i>handgun</i> would return everything with <i>m1911</i> and <i>smith and wesson model 10</i>.</p>
 			<p>This can obviously get as complicated and autistic as you like, but be careful of being too confident--this is just a fun example, but is an AK-47 truly <i>always</i> an assault rifle? Some people would say no, and beyond its own intellectual neatness, what is the purpose of attempting to create such a complicated and 'perfect' tree? Of course you can create any sort of parent tags on your local tags or your own tag repositories, but this sort of thing can easily lead to arguments between reasonable people. I only mean to say, as someone who does a lot of tag work, to try not to create anything 'perfect', as it usually ends up wasting time. Act from need, not toward purpose.</p>
-			<h3>how you do it</h3>
+			<h3 id="how_to_do_it"><a href="#how_to_do_it">how you do it</a></h3>
 			<p>Go to <i>services->manage tag parents</i>:</p>
 			<p><img src="tag_parents_dialog.png" /></p>
 			<p>Which looks and works just like the manage tag siblings dialog.</p>
@@ -30,7 +30,7 @@
 			<p><img src="tag_parents_ac_1.png" /></p>
 			<p>Hitting enter on cersei will try to add <i>house lannister</i> and <i>series:game of thrones</i> as well.</p>
 			<p><img src="tag_parents_ac_2.png" /></p>
-			<h3>remote parents</h3>
+			<h3 id="remote_parents"><a href="#remote_parents">remote parents</a></h3>
 			<p>Whenever you add or remove a tag parent pair to a tag repository, you will have to supply a reason (like when you petition a tag). A janitor will review this petition, and will approve or deny it. If it is approved, all users who synchronise with that tag repository will gain that parent pair. If it is denied, only you will see it.</p>
 		</div>
 	</body>

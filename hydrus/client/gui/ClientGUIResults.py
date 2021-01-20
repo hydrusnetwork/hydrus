@@ -972,7 +972,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         QW.QMessageBox.information( self, 'Information', 'this does not work yet!' )
         
         return
-        
+        '''
         hashes = self._GetSelectedHashes()
         
         if hashes is not None and len( hashes ) > 0:   
@@ -985,7 +985,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             self.setFocus( QC.Qt.OtherFocusReason )
             
-        
+        '''
     
     def _OpenExternally( self ):
         
@@ -3302,9 +3302,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
             upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
-            petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE ) }
+            petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ) }
             petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ) } - petition_resolve_permission_file_service_keys
-            user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ) }
+            user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ) }
             ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
             
             focused_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focused_media.GetLocationsManager().GetCurrentRemote() )

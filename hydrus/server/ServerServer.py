@@ -13,8 +13,8 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         root.putChild( b'session_key', ServerServerResources.HydrusResourceSessionKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         root.putChild( b'account', ServerServerResources.HydrusResourceRestrictedAccount( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        #root.putChild( b'other_account', ServerServerResources.HydrusResourceRestrictedAccountOtherAccount( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'account_info', ServerServerResources.HydrusResourceRestrictedAccountInfo( self._service, HydrusServer.REMOTE_DOMAIN ) )
-        #root.putChild( b'account_modification', ServerServerResources.HydrusResourceRestrictedAccountModification( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'account_types', ServerServerResources.HydrusResourceRestrictedAccountTypes( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'registration_keys', ServerServerResources.HydrusResourceRestrictedRegistrationKeys( self._service, HydrusServer.REMOTE_DOMAIN ) )
         

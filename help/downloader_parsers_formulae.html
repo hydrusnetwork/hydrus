@@ -7,11 +7,11 @@
 	<body>
 		<div class="content">
 			<p><a href="downloader_parsers.html"><---- Back to main parsers page</a></p>
-			<h3 id="formulae">formulae</h3>
+			<h3 id="formulae"><a href="#formulae">formulae</a></h3>
 			<p>Formulae are tools used by higher-level components of the parsing system. They take some data (typically some HTML or JSON) and return 0 to n strings. For our purposes, these strings will usually be tags, URLs, and timestamps. You will usually see them summarised with this panel:</p>
 			<p><img src="edit_formula_panel.png" /></p>
 			<p>The different types are currently <a href="#html_formula">html</a>, <a href="#json_formula">json</a>, <a href="#compound_formula">compound</a>, and <a href="#context_variable_formula">context variable</a>.</p>
-			<h3 id="html_formula">html</h3>
+			<h3 id="html_formula"><a href="#html_formula">html</a></h3>
 			<p>This takes a full HTML document or a sample of HTML--and any regular sort of XML <i>should</i> also work. It starts at the root node and searches for lower nodes using one or more ordered rules based on tag name and attributes, and then returns string data from those final nodes.</p>
 			<p>For instance, if you have this:</p>
 			<p><pre>&lt;html&gt;
@@ -72,7 +72,7 @@
 			<p>You won't use these much, but they can sometimes get you out of a complicated situation.</p>
 			<p><b>testing</b></p>
 			<p>The testing panel on the right is important and worth using. Copy the html from the source you want to parse and then hit the paste buttons to set that as the data to test with.</p>
-			<p><h3 id="json_formula">json</h3></p>
+			<h3 id="json_formula"><a href="#json_formula">json</a></h3>
 			<p>This takes some JSON and does a similar style of search:</p>
 			<p><img src="edit_json_formula_panel.png" /></p>
 			<p>It is a bit simpler than HTML--if the current node is a list (called an 'Array' in JSON), you can fetch every item or the xth item, and if it is a dictionary (called an 'Object' in JSON), you can fetch a particular entry by name. Since you can't jump down several layers with attribute lookups or tag names like with HTML, you have to go down every layer one at a time. In any case, if you have something like this:</p>
@@ -83,12 +83,12 @@
 			<p>Searching for "posts"->1st list item->"com" will give you the OP's comment, <span class="dealwithit">~AS RAW UNPARSED HTML~</span>.</p>
 			<p>The default is to fetch the final nodes' 'data content', which means coercing simple variables into strings. If the current node is a list or dict, no string is returned.</p>
 			<p>But if you like, you can return the json beneath the current node (which, like HTML, includes the current node). This again will come in useful later.</p>
-			<p><h3 id="compound_formula">compound</h3></p>
+			<h3 id="compound_formula"><a href="#compound_formula">compound</a></h3>
 			<p>If you want to create a string from multiple parsed strings--for instance by appending the 'tim' and the 'ext' in our json example together--you can use a Compound formula. This fetches multiple lists of strings and tries to place them into a single string using '\1' regex substitution syntax:</p>
 			<p><img src="edit_compound_formula_panel.png" /></p>
 			<p>This is a complicated example taken from one of my thread parsers. I have to take a modified version of the original thread URL (the first rule, so \1) and then append the filename (\2) and its extension (\3) on the end to get the final file URL of a post. You can mix in more characters in the substitution phrase, like "\1.jpg" or even have multiple instances ("https://\2.muhsite.com/\2/\1"), if that is appropriate.</p>
 			<p>This is where the magic happens, sometimes, so keep it in mind if you need to do something cleverer than the data you have seems to provide.</p>
-			<p><h3 id="context_variable_formula">context variable</h3></p>
+			<h3 id="context_variable_formula"><a href="#context_variable_formula">context variable</a></h3>
 			<p>This is a basic hacky answer to a particular problem. It is a simple key:value dictionary that at the moment only stores one variable, 'url', which contains the original URL used to fetch the data being parsed.</p>
 			<p class="warning">If a different URL Class links to this parser via an API URL, this 'url' variable will always be the API URL (i.e. it literally is the URL used to fetch the data), not any thread/whatever URL the user entered.</p>
 			<p><img src="edit_context_variable_formula_panel.png" /></p>

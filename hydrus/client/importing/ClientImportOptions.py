@@ -1341,6 +1341,13 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             all_tags = tags.union( sibling_tags )
             
+            for tag in list( all_tags ):
+                
+                ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                
+                all_tags.add( subtag )
+                
+            
             intersecting_tags = all_tags.intersection( self._tag_whitelist )
             
             if len( intersecting_tags ) == 0:

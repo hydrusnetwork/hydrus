@@ -8,13 +8,13 @@
 		<div class="content">
 			<p class="warning">The PTR is now run by users with more bandwidth than I had to give, so the bandwidth limits are gone! If you would like to talk with the new management, please check the <a href="https://discord.gg/wPHPCUZ">discord</a>.</p>
 			<p class="warning">A guide and schema for the new PTR is <a href="https://github.com/Zweibach/text/blob/master/Hydrus/PTR.md">here</a>.</p>
-			<h3>first off</h3>
+			<h3 id="first_off"><a href="#first_off">first off</a></h3>
 			<p>I have purposely not pre-baked any default repositories into the client. You have to choose to connect yourself. <b>The client will never connect anywhere until you tell it to.</b></p>
 			<p>For a long time, I ran the Public Tag Repository. It grew to 650 million tags and I no longer had the bandwidth or janitor time it deserved. It is now run by users.</p>
 			<p>I created a 'frozen' copy of the PTR when I stopped running it. If you are an advanced user, you can run your own new tag repository starting from that frozen point or, if you know python or SQLite and wish to play around with its data, get more easily accessible Hydrus Tag Archives of its tags and siblings and pairs, right <a href="https://mega.nz/#F!w7REiS7a!bTKhQvZP48Fpo-zj5MAlhQ">here</a>.</p>
-			<h3>easy setup</h3>
+			<h3 id="easy_setup"><a href="#easy_setup">easy setup</a></h3>
 			<p>Hit <i>help->add the public tag repository</i> and you will all be set up.</p>
-			<h3>manually</h3>
+			<h3 id="manually"><a href="#manually">manually</a></h3>
 			<p>To add a new repository to your client, hit <i>services->manage services</i> and click the add button:</p>
 			<p><img src="edit_repos_public_tag_repo.png" /></p>
 			<p>Here's the info so you can copy it:</p>
@@ -25,7 +25,7 @@
 			</ul>
 			<p>It is worth checking the 'test address' and 'test access key' buttons just to double-check your firewall and key are all correct.</p>
 			<p><b>Tags are rich, cpu-intensive metadata. The Public Tag Repository has hundreds of millions of mappings, and your client will eventually download and index them all. Be aware that the PTR has been growing since 2011 and now has hundreds of millions of mappings. As of 2020-03, it requires about 4GB of bandwidth and file storage, and your database itself will grow by 25GB! It will take <i>hours</i> of total processing time to fully synchronise. <span class="warning">Because of mechanical drive latency, HDDs are often too slow to process hundreds of millions of tags in reasonable time. Syncing with large repositories is only recommended <a href="database_migration.html">if your hydrus db is on an SSD</a>.</span> Even then, it is best left to work on this in small pieces in the background, either during idle time or shutdown time, so unless you are an advanced user, just leave it to download and process on its own--it usually takes a couple of weeks to quietly catch up.</b></p>
-			<h3>jump-starting an install</h3>
+			<h3 id="quicksync"><a href="#quicksync">jump-starting an install</a></h3>
 			<p>A user kindly manages a store of update files and pre-processed empty client databases to get your synced quicker. This is generally recommended for advanced users or those following a guide, but if you are otherwise interested, please check it out:</p>
 			<p><a href="https://cuddlebear92.github.io/Quicksync/">https://cuddlebear92.github.io/Quicksync/</a></p>
 		</div>

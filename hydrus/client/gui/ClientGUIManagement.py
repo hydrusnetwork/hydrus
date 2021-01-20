@@ -3820,7 +3820,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
         self._service = self._controller.services_manager.GetService( self._petition_service_key )
-        self._can_ban = self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
+        self._can_ban = self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
         
         service_type = self._service.GetServiceType()
         
@@ -4497,14 +4497,14 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventModifyPetitioner( self ):
         
-        QW.QMessageBox.warning( self, 'Warning', 'modify users does not work yet!' )
+        QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
         
         return
         
-        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerAccount(), ) ) as dlg:
-            
-            dlg.exec()
-            
+        #with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerAccount(), ) ) as dlg:
+        #    
+        #    dlg.exec()
+        #    
         
     
     def EventRowRightClick( self ):

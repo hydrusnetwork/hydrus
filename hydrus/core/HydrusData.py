@@ -1129,7 +1129,7 @@ def PrintException( e, do_wait = True ):
     
 ShowException = PrintException
 
-def Profile( summary, code, g, l, min_duration_ms = 20 ):
+def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
     
     profile = cProfile.Profile()
     
@@ -1165,6 +1165,11 @@ def Profile( summary, code, g, l, min_duration_ms = 20 ):
         output.seek( 0 )
         
         details = output.read()
+        
+        if show_summary:
+            
+            ShowText( summary )
+            
         
     else:
         

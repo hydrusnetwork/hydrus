@@ -14,6 +14,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNetwork
+from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientConstants as CC
@@ -63,14 +64,15 @@ class TestServer( unittest.TestCase ):
         services_manager._keys_to_services[ cls._clientside_tag_service.GetServiceKey() ] = cls._clientside_tag_service
         services_manager._keys_to_services[ cls._clientside_admin_service.GetServiceKey() ] = cls._clientside_admin_service
         
-        permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
-        
         account_key = HydrusData.GenerateKey()
         account_type = HydrusNetwork.AccountType.GenerateAdminAccountType( HC.SERVER_ADMIN )
         created = HydrusData.GetNow() - 100000
         expires = None
         
         cls._account = HydrusNetwork.Account( account_key, account_type, created, expires )
+        
+        cls._service_keys_to_empty_account_types = {}
+        cls._service_keys_to_empty_accounts = {}
         
         cls._file_hash = HydrusData.GenerateKey()
         
@@ -528,6 +530,10 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response[ 'account_types' ][0].GetAccountTypeKey(), account_types[0].GetAccountTypeKey() )
         
+        empty_account_type = HydrusNetwork.AccountType.GenerateNewAccountTypeFromParameters( 'empty account', {}, HydrusNetworking.BandwidthRules() )
+        
+        account_types.append( empty_account_type )
+        
         service.Request( HC.POST, 'account_types', { 'account_types' : account_types, 'deletee_account_type_keys_to_new_account_type_keys' : {} } )
         
         written = HG.test_controller.GetWrite( 'account_types' )
@@ -536,7 +542,7 @@ class TestServer( unittest.TestCase ):
         
         ( written_service_key, written_account, written_account_types, written_deletee_account_type_keys_to_new_account_type_keys ) = args
         
-        self.assertEqual( written_account_types[0].GetAccountTypeKey(), account_types[0].GetAccountTypeKey() )
+        self.assertEqual( { wat.GetAccountTypeKey() for wat in written_account_types }, { at.GetAccountTypeKey() for at in account_types } )
         self.assertEqual( written_deletee_account_type_keys_to_new_account_type_keys, {} )
         
         # registration_keys

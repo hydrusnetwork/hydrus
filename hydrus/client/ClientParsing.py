@@ -137,78 +137,85 @@ def ConvertParseResultToPrettyString( result ):
     
 def ConvertParsableContentToPrettyString( parsable_content, include_veto = False ):
     
-    pretty_strings = []
-    
-    content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( ( content_type, name ), additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
-    
-    data = list( content_type_to_additional_infos.items() )
-    
-    for ( ( content_type, name ), additional_infos ) in data:
+    try:
         
-        if content_type == HC.CONTENT_TYPE_URLS:
+        pretty_strings = []
+        
+        content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( ( content_type, name ), additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
+        
+        data = list( content_type_to_additional_infos.items() )
+        
+        for ( ( content_type, name ), additional_infos ) in data:
             
-            for ( url_type, priority ) in additional_infos:
+            if content_type == HC.CONTENT_TYPE_URLS:
                 
-                if url_type == HC.URL_TYPE_DESIRED:
+                for ( url_type, priority ) in additional_infos:
                     
-                    pretty_strings.append( 'downloadable/pursuable url' )
-                    
-                elif url_type == HC.URL_TYPE_SOURCE:
-                    
-                    pretty_strings.append( 'associable/source url' )
-                    
-                elif url_type == HC.URL_TYPE_NEXT:
-                    
-                    pretty_strings.append( 'gallery next page url' )
-                    
-                elif url_type == HC.URL_TYPE_SUB_GALLERY:
-                    
-                    pretty_strings.append( 'sub-gallery url' )
-                    
-                
-            
-        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
-            
-            namespaces = [ namespace for namespace in additional_infos if namespace != '' ]
-            
-            if '' in additional_infos:
-                
-                namespaces.append( 'unnamespaced' )
-                
-            
-            pretty_strings.append( 'tags: ' + ', '.join( namespaces ) )
-            
-        elif content_type == HC.CONTENT_TYPE_HASH:
-            
-            s = 'hash: {}'.format( ', '.join( ( '{} in {}'.format( hash_type, hash_encoding ) for ( hash_type, hash_encoding ) in additional_infos ) ) )
-            
-            pretty_strings.append( s )
-            
-        elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
-            
-            for timestamp_type in additional_infos:
-                
-                if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
-                    
-                    pretty_strings.append( 'source time' )
+                    if url_type == HC.URL_TYPE_DESIRED:
+                        
+                        pretty_strings.append( 'downloadable/pursuable url' )
+                        
+                    elif url_type == HC.URL_TYPE_SOURCE:
+                        
+                        pretty_strings.append( 'associable/source url' )
+                        
+                    elif url_type == HC.URL_TYPE_NEXT:
+                        
+                        pretty_strings.append( 'gallery next page url' )
+                        
+                    elif url_type == HC.URL_TYPE_SUB_GALLERY:
+                        
+                        pretty_strings.append( 'sub-gallery url' )
+                        
                     
                 
-            
-        elif content_type == HC.CONTENT_TYPE_TITLE:
-            
-            pretty_strings.append( 'watcher page title' )
-            
-        elif content_type == HC.CONTENT_TYPE_VETO:
-            
-            if include_veto:
+            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
                 
-                pretty_strings.append( 'veto: ' + name )
+                namespaces = [ namespace for namespace in additional_infos if namespace != '' ]
+                
+                if '' in additional_infos:
+                    
+                    namespaces.append( 'unnamespaced' )
+                    
+                
+                pretty_strings.append( 'tags: ' + ', '.join( namespaces ) )
+                
+            elif content_type == HC.CONTENT_TYPE_HASH:
+                
+                s = 'hash: {}'.format( ', '.join( ( '{} in {}'.format( hash_type, hash_encoding ) for ( hash_type, hash_encoding ) in additional_infos ) ) )
+                
+                pretty_strings.append( s )
+                
+            elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
+                
+                for timestamp_type in additional_infos:
+                    
+                    if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+                        
+                        pretty_strings.append( 'source time' )
+                        
+                    
+                
+            elif content_type == HC.CONTENT_TYPE_TITLE:
+                
+                pretty_strings.append( 'watcher page title' )
+                
+            elif content_type == HC.CONTENT_TYPE_VETO:
+                
+                if include_veto:
+                    
+                    pretty_strings.append( 'veto: ' + name )
+                    
+                
+            elif content_type == HC.CONTENT_TYPE_VARIABLE:
+                
+                pretty_strings.append( 'temp variables: ' + ', '.join( additional_infos ) )
                 
             
-        elif content_type == HC.CONTENT_TYPE_VARIABLE:
-            
-            pretty_strings.append( 'temp variables: ' + ', '.join( additional_infos ) )
-            
+        
+    except:
+        
+        return 'COULD NOT RENDER--probably a broken object!'
         
     
     pretty_strings.sort()
@@ -1948,7 +1955,22 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
             if isinstance( self._additional_info, list ):
                 
-                self._additional_info = tuple( self._additional_info )
+                additional_info = []
+                
+                for item in self._additional_info:
+                    
+                    # this fixes some garbage accidental update caused by borked version numbers that made ( [ 'md5', 'hex' ], 'hex' )
+                    if isinstance( item, list ):
+                        
+                        additional_info = tuple( item )
+                        
+                        break
+                        
+                    
+                    additional_info.append( item )
+                    
+                
+                self._additional_info = tuple( additional_info )
                 
             
         
@@ -2029,7 +2051,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
             ( name, content_type, serialisable_formula, sort_type, sort_asc, additional_info ) = old_serialisable_info
             
-            if content_type == HC.CONTENT_TYPE_HASH:
+            if content_type == HC.CONTENT_TYPE_HASH and not isinstance( additional_info, list ):
                 
                 hash_encoding = 'hex'
                 

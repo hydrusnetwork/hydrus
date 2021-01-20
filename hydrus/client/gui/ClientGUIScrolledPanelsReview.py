@@ -1781,6 +1781,8 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ImportPaths( self, paths ):
         
+        have_shown_load_error = False
+        
         gugs = []
         url_classes = []
         parsers = []
@@ -1808,7 +1810,26 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj_list = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                obj_list = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version= True )
+                
+            except HydrusExceptions.SerialisationException as e:
+                
+                if not have_shown_load_error:
+                    
+                    message = str( e )
+                    
+                    if len( paths ) > 1:
+                        
+                        message += os.linesep * 2
+                        message += 'If there are more unloadable objects in this import, they will be skipped silently.'
+                        
+                    
+                    QW.QMessageBox.critical( self, 'Error', message )
+                    
+                    have_shown_load_error = True
+                    
+                
+                continue
                 
             except:
                 

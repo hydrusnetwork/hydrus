@@ -232,6 +232,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
                     
                 
                 self._session_container_names.discard( session_container_name )
+                self._dirty_session_container_names.discard( session_container_name )
                 self._deletee_session_container_names.add( session_container_name )
                 
                 self._SetDirty()

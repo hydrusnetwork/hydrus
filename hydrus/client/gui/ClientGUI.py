@@ -2866,10 +2866,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ModifyAccount( self, service_key ):
         
-        QW.QMessageBox.information( self, 'Information', 'this does not work yet!' )
+        QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
         
         return
-        
+        '''
         service = self._controller.services_manager.GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
@@ -2889,10 +2889,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 subject_account = 'blah' # fetch account from service
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, service_key, [ subject_account ] ) as dlg2: dlg2.exec()
+                with ClientGUIDialogs.DialogModifyAccounts( self, service_key, [ subject_account ] ) as dlg2:
+                    
+                    dlg2.exec()
+                    
                 
             
-        
+        '''
     
     def _OpenDBFolder( self ):
         
@@ -3199,6 +3202,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
             
             self._controller.Write( 'repopulate_mappings_from_cache', tag_service_key = tag_service_key, job_key = job_key )
+            
+        
+    
+    def _RepopulateTagCacheMissingSubtags( self ):
+        
+        message = 'This will repopulate the fast search cache\'s subtag search, filling in missing entries, for one or all tag services.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags and files, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless. It fixes missing autocomplete or tag search results.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'repopulate_tag_cache_missing_subtags', tag_service_key = tag_service_key )
             
         
     
@@ -4117,6 +4145,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.daemon_report_mode = not HG.daemon_report_mode
             
+        elif name == 'callto_profile_mode':
+            
+            HG.callto_profile_mode = not HG.callto_profile_mode
+            
         elif name == 'db_report_mode':
             
             HG.db_report_mode = not HG.db_report_mode
@@ -4465,6 +4497,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def AskToDeleteAllClosedPages( self ):
+        
+        message = 'Clear the {} closed pages?'.format( HydrusData.ToHumanInt( len( self._closed_pages ) ) )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self.DeleteAllClosedPages()
+            
+        
+    
     def AutoSaveLastSession( self ):
         
         only_save_last_session_during_idle = self._controller.new_options.GetBoolean( 'only_save_last_session_during_idle' )
@@ -4688,7 +4732,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         summary = 'Profiling animation timer: ' + repr( window )
                         
-                        HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = 3 )
+                        HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = 3, show_summary = True )
                         
                     else:
                         
@@ -4783,10 +4827,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 menu = QW.QMenu( self )
                 
                 if undo_string is not None:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, undo_string, 'Undo last operation.', self._controller.pub, 'undo' )
                     
                 
                 if redo_string is not None:
+                    
                     ClientGUIMenus.AppendMenuItem( menu, redo_string, 'Redo last operation.', self._controller.pub, 'redo' )
                     
                 
@@ -4796,7 +4842,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     undo_pages = QW.QMenu( menu )
                     
-                    ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self.DeleteAllClosedPages )
+                    ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self.AskToDeleteAllClosedPages )
                     
                     undo_pages.addSeparator()
                     
@@ -4912,8 +4958,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache', 'Delete and recreate the tag display mappings cache, fixing any miscounts.', self._RegenerateTagDisplayMappingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache (subtags repopulation)', 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Repopulate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag search for local files.', self._RegenerateLocalTagCache )
             
             ClientGUIMenus.AppendSeparator( submenu )
@@ -5074,13 +5121,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
             ClientGUIMenus.AppendMenuItem( menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
             
-            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE ) ]
+            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE ) ]
             
             repositories = self._controller.services_manager.GetServices( HC.REPOSITORIES )
             admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
             
             servers_admin = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
-            server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ) ]
+            server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE ) ]
             
             if len( admin_repositories ) > 0 or len( server_admins ) > 0:
                 
@@ -5093,8 +5140,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     service_key = service.GetServiceKey()
                     
                     can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
-                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
+                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE )
                     
                     if can_create_accounts:
                         
@@ -5129,8 +5176,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     service_key = service.GetServiceKey()
                     
                     can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
-                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
+                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE )
                     
                     if can_create_accounts:
                         ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
@@ -5149,7 +5196,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
                         
                     
-                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
                     
                     if can_overrule_services:
                         
@@ -5235,8 +5282,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8kun board', 'Open hydrus dev\'s 8kun board, where he makes release posts and other status updates.', CC.global_pixmaps().eight_kun, ClientPaths.LaunchURLInWebBrowser, 'https://8kun.top/hydrus/index.html' )
-            site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan.moe /t/ (Hydrus Network General)', 'Open the 8chan.moe /t/ board, where a Hydrus Network General should exist with release posts and other status updates.', CC.global_pixmaps().eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8chan.moe/t/catalog.html' )
+            site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for the case when 8chan.moe is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.global_pixmaps().twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_pixmaps().tumblr, ClientPaths.LaunchURLInWebBrowser, 'https://hydrus.tumblr.com/' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_pixmaps().discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/wPHPCUZ' )
@@ -5289,8 +5336,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
             
             ClientGUIMenus.AppendMenuItem( profile_modes, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'callto profile mode', 'Run detailed \'profiles\' on most threaded jobs and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you in UI!).', HG.callto_profile_mode, self._SwitchBoolean, 'callto_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'client api profile mode', 'Run detailed \'profiles\' on every client api query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.server_profile_mode, self._SwitchBoolean, 'server_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you in the DB!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
@@ -5631,7 +5679,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         services = self._controller.services_manager.GetServices()
         
-        petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
+        petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
         
         repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
         
@@ -6399,7 +6447,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
+        global_tracker = self._controller.network_engine.bandwidth_manager.GetMySessionTracker()
         
         boot_time = self._controller.GetBootTime()
         
@@ -6508,7 +6556,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 summary = 'Profiling page timer: ' + repr( page )
                 
-                HydrusData.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = 3 )
+                HydrusData.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = 3, show_summary = True )
                 
             else:
                 
@@ -6553,7 +6601,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     summary = 'Profiling ui update timer: ' + repr( window )
                     
-                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = 3 )
+                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = 3, show_summary = True )
                     
                 else:
                     

@@ -6,7 +6,7 @@
 	</head>
 	<body>
 		<div class="content">
-			<h3>client api</h3>
+			<h3 id="intro"><a href="#intro">client api</a></h3>
 			<p>The hydrus client now supports a very simple API so you can access it with external programs.</p>
 			<p>By default, the Client API is not turned on. Go to <i>services->manage services</i> and give it a port to get it started. I recommend you not allow non-local connections (i.e. only requests from the same computer will work) to start with.</p>
 			<p>The Client API should start immediately. It will only be active while the client is open. To test it is running all correct (and assuming you used the default port of 45869), try loading this:</p>
@@ -14,7 +14,7 @@
 			<p>You should get a welcome page. By default, the Client API is HTTP, which means it is ok for communication on the same computer or across your home network (e.g. your computer's web browser talking to your computer's hydrus), but not secure for transmission across the internet (e.g. your phone to your home computer). You can turn on HTTPS, but due to technical complexities it will give itself a self-signed 'certificate', so the security is good but imperfect, and whatever is talking to it (e.g. your web browser looking at <a href="https://127.0.0.1:45869">https://127.0.0.1:45869</a>) may need to add an exception.</p>
 			<p>The Client API is still experimental and sometimes not user friendly. If you want to talk to your home computer across the internet, you will need some networking experience. You'll need a static IP or reverse proxy service or dynamic domain solution like no-ip.org so your device can locate it, and potentially port-forwarding on your router to expose the port. If you have a way of hosting a domain and have a signed certificate (e.g. from <a href="https://letsencrypt.org/">Let's Encrypt</a>), you can overwrite the client.crt and client.key files in your 'db' directory and HTTPS hydrus should host with those.</p>
 			<p>Once the API is running, go to its entry in <i>services->review services</i>. Each external program trying to access the API will need its own access key, which is the familiar 64-character hexadecimal used in many places in hydrus. You can enter the details manually from the review services panel and then copy/paste the key to your external program, or the program may have the ability to request its own access while a mini-dialog launched from the review services panel waits to catch the request.</p>
-			<h3>Browsers and tools created by hydrus users:</h3>
+			<h3 id="tools"><a href="#tools">Browsers and tools created by hydrus users:</a></h3>
 			<ul>
 				<li><a href="https://gitgud.io/prkc/hydrus-companion">https://gitgud.io/prkc/hydrus-companion</a> - Hydrus Companion, a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support</li>
 				<li><a href="https://github.com/floogulinc/hydrus-web">https://github.com/floogulinc/hydrus-web</a> - Hydrus Web, a web client for hydrus (allows phone browsing of hydrus)</li>
@@ -23,14 +23,14 @@
 				<li><a href="https://gitgud.io/koto/hydrus-dd">https://gitgud.io/koto/hydrus-dd</a> - DeepDanbooru neural network tagging for Hydrus</li>
 				<li><a href="https://gitgud.io/prkc/dolphin-hydrus-actions">https://gitgud.io/prkc/dolphin-hydrus-actions</a> - Adds Hydrus right-click context menu actions to Dolphin file manager.</li>
 			</ul>
-			<h3>Library modules created by hydrus users:</h3>
+			<h3 id="modules"><a href="#modules">Library modules created by hydrus users:</a></h3>
 			<ul>
 				<li><a href="https://gitlab.com/cryzed/hydrus-api">https://gitlab.com/cryzed/hydrus-api</a> - A python module that talks to the API.</li>
 				<li><a href="https://github.com/cravxx/hydrus.js">https://github.com/cravxx/hydrus.js</a> - A node.js module that talks to the API.</li>
 			</ul>
-			<h3>API</h3>
+			<h3 id="api"><a href="#api">API</a></h3>
 			<p>On 200 OK, the API returns JSON for everything except actual file/thumbnail requests. On 4XX and 5XX, assume it will return plain text, sometimes a raw traceback. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.</p>
-			<h3>Access and permissions</h3>
+			<h3 id="access"><a href="#access">Access and permissions</a></h3>
 			<p>The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.</p>
 			<p>Access is required for every request. You can provide this as an http header, like so:</p>
 			<ul>
@@ -43,7 +43,7 @@
 			<p>There is now a simple 'session' system, where you can get a temporary key that gives the same access without having to include the permanent access key in every request. You can fetch a session key with the <a href="#session_key">/session_key</a> command and thereafter use it just as you would an access key, just with <i>Hydrus-Client-API-Session-Key</i> instead.</p>
 			<p>Session keys will expire if they are not used within 24 hours, or if the client is restarted, or if the underlying access key is deleted. An invalid/expired session key will give a <b>419</b> result with an appropriate error text.</p>
 			<p>Bear in mind the Client API is still under construction and is http-only for the moment--be careful about transmitting sensitive content outside of localhost. The access key will be unencrypted across any connection, and if it is included as a GET parameter, as simple and convenient as that is, it could be cached in all sorts of places.</p>
-			<h3>Contents</h3>
+			<h3 id="contents"><a href="#contents">>Contents</h3>
 			<ul>
 				<li>
 					<h4>Access Management</h4>

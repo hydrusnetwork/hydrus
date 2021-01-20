@@ -867,7 +867,7 @@ class ServiceRestricted( ServiceRemote ):
     
     def _GetErrorWaitPeriod( self ):
         
-        if self._account.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
+        if self._account.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ):
             
             return 900
             

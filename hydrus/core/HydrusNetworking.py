@@ -527,17 +527,17 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
             elif time_delta < self.MAX_MINUTES_TIME_DELTA:
                 
-                window = 60
+                window = 59
                 counter = self._minutes_bytes
                 
             elif time_delta < self.MAX_HOURS_TIME_DELTA:
                 
-                window = 3600
+                window = 3599
                 counter = self._hours_bytes
                 
             else:
                 
-                window = 86400
+                window = 86399
                 counter = self._days_bytes
                 
             
@@ -550,17 +550,17 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
             elif time_delta < self.MAX_MINUTES_TIME_DELTA:
                 
-                window = 60
+                window = 59
                 counter = self._minutes_requests
                 
             elif time_delta < self.MAX_HOURS_TIME_DELTA:
                 
-                window = 3600
+                window = 3599
                 counter = self._hours_requests
                 
             else:
                 
-                window = 86400
+                window = 86399
                 counter = self._days_requests
                 
             
@@ -680,9 +680,9 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         since = now - SEARCH_DELTA
         
-        valid_keys = [ key for key in list(counter.keys()) if key >= since ]
+        valid_timestamps = [ timestamp for timestamp in counter.keys() if since <= timestamp <= now ]
         
-        if len( valid_keys ) == 0:
+        if len( valid_timestamps ) == 0:
             
             return 0
             
@@ -690,11 +690,11 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         # If we want the average speed over past five secs but nothing has happened in sec 4 and 5, we don't want to count them
         # otherwise your 1MB/s counts as 200KB/s
         
-        earliest_timestamp = min( valid_keys )
+        earliest_timestamp = min( valid_timestamps )
         
         SAMPLE_DELTA = max( now - earliest_timestamp, 1 )
         
-        total_bytes = sum( ( counter[ key ] for key in valid_keys ) )
+        total_bytes = sum( ( counter[ timestamp ] for timestamp in valid_timestamps ) )
         
         time_delta_average_per_sec = total_bytes / SAMPLE_DELTA
         
@@ -712,9 +712,9 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             oldest_hour = now - self.MAX_HOURS_TIME_DELTA
             oldest_day = now - self.MAX_DAYS_TIME_DELTA
             
-            def clear_counter( counter, timestamp ):
+            def clear_counter( counter, oldest_timestamp ):
                 
-                bad_keys = [ key for key in list(counter.keys()) if key < timestamp ]
+                bad_keys = [ timestamp for timestamp in counter.keys() if timestamp < oldest_timestamp ]
                 
                 for bad_key in bad_keys:
                     
@@ -816,7 +816,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
                 time_delta_in_which_bandwidth_counts = time_delta + window
                 
-                time_and_values = list(counter.items())
+                time_and_values = list( counter.items() )
                 
                 time_and_values.sort( reverse = True )
                 

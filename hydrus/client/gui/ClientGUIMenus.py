@@ -167,9 +167,7 @@ def GetEventCallable( callable, *args, **kwargs ):
             
             summary = 'Profiling menu: ' + repr( callable )
             
-            HydrusData.ShowText( summary )
-            
-            HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals() )
+            HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = 3, show_summary = True )
             
         else:
             

@@ -11,7 +11,7 @@
 			<p>Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It currently works on still images, but an extension for gifs and video is planned.</p>
 			<p>Hydrus finds <i>potential</i> duplicates using a search algorithm that compares images by their shape. Once these pairs of potentials are found, they are presented to you through a filter like the archive/delete filter to determine their exact relationship and if you want to make a further action, such as deleting the 'worse' file of a pair. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.</p>
 			<p>This all starts on--</p>
-			<h3 id="duplicates_page">the duplicates processing page</h3>
+			<h3 id="duplicates_page"><a href="#duplicates_page">the duplicates processing page</a></h3>
 			<p>On the normal 'new page' selection window, hit <i>special->duplicates processing</i>. This will open this page:</p>
 			<p><img src="dupe_management.png" /></p>
 			<p>Let's go to the preparation page first:</p>
@@ -21,20 +21,20 @@
 			<p>Searching for duplicates is fairly fast per file, but with a large client with hundreds of thousands of files, the total CPU time adds up. You can do a little manual searching if you like, but once you are all settled here, I recommend you hit the cog icon on the preparation page and let hydrus do this page's catch-up search work in your regular maintenance time. It'll swiftly catch up and keep you up to date without you even thinking about it.</p>
 			<p>Start searching on the 'exact match' search distance of 0. It is generally easier and more valuable to get exact duplicates out of the way first.</p>
 			<p>Once you have some files searched, you should see a potential pair count appear in the 'filtering' page.</p>
-			<h3 id="duplicate_filtering_page">the filtering page</h3>
+			<h3 id="duplicate_filtering_page"><a href="#duplicate_filtering_page">the filtering page</a></h3>
 			<p><i>Processing duplicates can be real trudge-work if you do not set up a workflow you enjoy. It is a little slower than the archive/delete filter, and sometimes takes a bit more cognitive work. For many users, it is a good task to do while listening to a podcast or having a video going on another screen.</i></p>
 			<p>If you have a client with tens of thousands of files, you will likely have thousands of potential pairs. This can be intimidating, but do not worry--due to the A, B, C logical inferrences as above, you will not have to go through every single one. The more information you put into the system, the faster the number will drop.</p>
 			<p>The filter has a regular file search interface attached. As you can see, it defaults to <i>system:everything</i>, but you can limit what files you will be working on simply by adding new search predicates. You might like to only work on files in your archive (i.e. that you know you care about to begin with), for instance. You can choose whether both files of the pair should match the search, or just one. 'creator:' tags work very well at cutting the search domain to something more manageable and consistent--try your favourite creator!</p>
 			<p>If you would like an example from the current search domain, hit the 'show some random potential pairs' button, and it will show two or more files that seem related. It is often interesting and surprising to see what it finds! The action buttons below allow for quick processing of these pairs and groups when convenient (particularly for large cg sets with 100+ alternates), but I recommend you leave these alone until you know the system better.</p>
 			<p>When you are ready, launch the filter.</p>
-			<h3 id="duplicates_filter">the duplicates filter</h3>
+			<h3 id="duplicates_filter"><a href="#duplicates_filter">the duplicates filter</a></h3>
 			<p><i>We have not set up your duplicate 'merge' options yet, so do not get too into this. For this first time, just poke around, make some pretend choices, and then cancel out and choose to forget them.</i></p>
 			<p><img src="dupe_filter.png" /></p>
 			<p>Like the archive/delete filter, this uses quick mouse-clicks, keyboard shortcuts, or button clicks to action pairs. It presents two files at a time, labelled A and B, which you can quickly switch between just as in the normal media viewer. As soon as you action them, the next pair is shown. The two files will have their current zoom-size locked so they stay the same size (and in the same position) as you switch between them. Scroll your mouse wheel a couple of times and see if any obvious differences stand out.</p>
 			<p class="warning">Please note the hydrus media viewer does not currently work well with large resolutions at high zoom (it gets laggy and may have memory issues). Don't zoom in to 1600% and try to look at jpeg artifact differences on very large files, as this is simply not well supported yet.</p>
 			<p>The hover window on the right also presents a number of 'comparison statements' to help you make your decision. Green statements mean this current file is probably 'better', and red the opposite. Larger, older, higher-quality, more-tagged files are generally considered better. These statements have scores associated with them (which you can edit in <i>file->options->duplicates</i>), and the file of the pair with the highest score is presented first. If the files are duplicates, you can <i>generally</i> assume the first file you see, the 'A', is the better, particularly if there are several green statements.</p>
 			<p>The filter will need to occasionally checkpoint, saving the decisions so far to the database, before it can fetch the next batch. This allows it to apply inferred information from your current batch and reduce your pending count faster before serving up the next set. It will present you with a quick interstitial 'confirm/back' dialog just to let you know. This happens more often as the potential count decreases.</p>
-			<h3 id="duplicates_decisions">the decisions to make</h3>
+			<h3 id="duplicates_decisions"><a href="#duplicates_decisions">the decisions to make</a></h3>
 			<p>There are three ways a file can be related to another in the current duplicates system: duplicates, alternates, or false positive (not related).</p>
 			<p><b>False positive (not related)</b> is the easiest. You will not see completely unrelated pairs presented very often in the filter, particularly at low search distances, but if the shape of face and hair and clothing happen to line up (or geometric shapes, often), the search system may make a false positive match. In this case, just click 'they are not related'.</p>
 			<p><b>Alternate</b> relations are files that are not duplicates but obviously related in some way. Perhaps a costume change or a recolour. Hydrus does not have rich alternate support yet (but it is planned, and highly requested), so this relationship is mostly a 'holding area' for files that we will revisit for further processing in the future.</p>
@@ -54,7 +54,7 @@
 					<p>Enter/Escape: <b>Stop filtering.</b></p>
 				</li>
 			</ul>
-			<h3 id="duplicates_merging">merging metadata</h3>
+			<h3 id="duplicates_merging"><a href="#duplicates_merging">merging metadata</a></h3>
 			<p>If two duplicates have different metadata like tags or archive status, you probably want to merge them. Cancel out of the filter and click the 'edit default duplicate metadata merge options' button:</p>
 			<p><img src="dupe_merge_options.png" /></p>
 			<p>By default, these options are fairly empty. You will have to set up what you want based on your services and preferences. Setting a simple 'copy all tags' is generally a good idea, and like/dislike ratings also often make sense. The settings for better and same quality should probably be similar, but it depends on your situation.</p>
@@ -67,10 +67,10 @@
 			<p>I expect future versions of the system to also auto-resolve easy duplicate pairs, such as clearing out pixel-for-pixel png versions of jpgs.</p>
 			<h3>game cgs</h3>
 			<p>If you import a lot of game CGs, which frequently have dozens or hundreds of alternates, I recommend you set them as alternates by selecting them all and setting the status through the thumbnail right-click menu. The duplicate filter, being limited to pairs, needs to compare all new members of an alternate group to all other members once to verify they are not duplicates. This is not a big deal for alternates with three or four members, but game CGs provide an overwhelming edge case. Setting a group of thumbnails as alternate 'fixes' their alternate status immediately, discounting the possibility of any internate duplicates, and provides an easy way out of this situation.</p>
-			<h3 id="duplicates_examples">more information and examples</h3>
+			<h3 id="duplicates_examples"><a href="#duplicates_examples">more information and examples</a></h3>
 			<ul>
 				<li>
-					<h3 id="duplicates_examples_better_worse">better/worse</h3>
+					<h3 id="duplicates_examples_better_worse"><a href="#duplicates_examples_better_worse">better/worse</a></h3>
 					<p>Which of two files is better? Here are some common reasons:</p>
 					<ul>
 						<li>higher resolution</li>
@@ -91,7 +91,7 @@
 					<p>Again, this is mostly due to some online service resizing and lowering quality to ease on their bandwidth costs. There is usually no reason to keep the lower quality version.</p>
 				</li>
 				<li>
-					<h3 id="duplicates_examples_same">same quality duplicates</h3>
+					<h3 id="duplicates_examples_same"><a href="#duplicates_examples_same">same quality duplicates</a></h3>
 					<p>When are two files the same quality? A good rule of thumb is if you scroll between them and see no obvious differences, and the comparison statements do not suggest anything significant, just set them as same quality.</p>
 					<p>Here are two same quality duplicates:</p>
 					<p><a href="dupe_exact_match_1.png"><img src="dupe_exact_match_1.png" /></a> <a href="dupe_exact_match_2.png"><img src="dupe_exact_match_2.png" /></a></p>
@@ -100,7 +100,7 @@
 					<p>Sometimes, you will see pixel-for-pixel duplicate jpegs of very slightly different size, such as 787KB vs 779KB. The smaller of these is usually an exact duplicate that has had its internal metadata (e.g. EXIF tags) stripped by a program or website CDN. They are same quality unless you have a strong opinion on whether having internal metadata in a file is useful.</p>
 				</li>
 				<li>
-					<h3 id="duplicates_examples_alternates">alternates</h3>
+					<h3 id="duplicates_examples_alternates"><a href="#duplicates_examples_alternates">alternates</a></h3>
 					<p>As I wrote above, hydrus's alternates system in not yet properly ready. It is important to have a basic 'alternates' relationship for now, but it is a holding area until we have a workflow to apply 'WIP'- or 'recolour'-type labels and present that information nicely in the media viewer.</p>
 					<p>Alternates are not of exactly the same thing, but one is variant of the other or they are both descended from a common original. The precise definition is up to you, but it generally means something like:</p>
 					<ul>
@@ -127,7 +127,7 @@
 					<p>These are all based on the same template--which is why the dupe filter found them--but they are not so closely related as those above, and the last one is joking about a different ideology entirely and might deserve to be in its own group. Ultimately, you might prefer just to give them some shared tag and consider them not alternates <i>per se</i>.</p>
 				</li>
 				<li>
-					<h3 id="duplicates_examples_false_positive">not related/false positive</h3>
+					<h3 id="duplicates_examples_false_positive"><a href="#duplicates_examples_false_positive">not related/false positive</a></h3>
 					<p>Here are two files that match false positively:</p>
 					<p><a href="dupe_not_dupes_1.png"><img style="max-width: 100%;" src="dupe_not_dupes_1.png" /></a></p>
 					<p><a href="dupe_not_dupes_2.jpg"><img style="max-width: 100%;"  src="dupe_not_dupes_2.jpg" /></a></p>
@@ -137,7 +137,7 @@
 					<p><a href="dupe_garbage.png"><img style="max-width: 100%;"  src="dupe_garbage.png" /></a></p>
 				</li>
 			</ul>
-			<h3 id="duplicates_advanced">the duplicates system</h3>
+			<h3 id="duplicates_advanced"><a href="#duplicates_advanced">the duplicates system</a></h3>
 			<p class="warning"><i>(advanced nonsense, you can skip this section. tl;dr: duplicate file groups keep track of their best quality file, sometimes called the King)</i></p>
 			<p>Hydrus achieves duplicate transitivity by treating duplicate files as groups. Although you action pairs, if you set (A duplicate B), that creates a group (A,B). Subsequently setting (B duplicate C) extends the group to be (A,B,C), and so (A duplicate C) is transitively implied.</p>
 			<p>The first version of the duplicate system attempted to record better/worse/same information for all files in a virtual duplicate group, but this proved very complicated, workflow-heavy, and not particularly useful. The new system instead appoints a single <i>King</i> as the best file of a group. All other files in the group are beneath the King and have no other relationship data retained.</p>
