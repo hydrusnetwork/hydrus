@@ -1285,6 +1285,47 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self.SetURLClasses( url_classes )
         
     
+    def DissolveParserLink( self, url_class_name, parser_name ):
+        
+        with self._lock:
+            
+            the_url_class = None
+            
+            for url_class in self._url_classes:
+                
+                if url_class.GetName() == url_class_name:
+                    
+                    the_url_class = url_class
+                    
+                    break
+                    
+                
+            
+            the_parser = None
+            
+            for parser in self._parsers:
+                
+                if parser.GetName() == parser_name:
+                    
+                    the_parser = parser
+                    
+                    break
+                    
+                
+            
+            if the_url_class is not None and the_parser is not None:
+                
+                url_class_key = the_url_class.GetClassKey()
+                parser_key = the_parser.GetParserKey()
+                
+                if url_class_key in self._url_class_keys_to_parser_keys and self._url_class_keys_to_parser_keys[ url_class_key ] == parser_key:
+                    
+                    del self._url_class_keys_to_parser_keys[ url_class_key ]
+                    
+                
+            
+        
+    
     def DomainOK( self, url ):
         
         with self._lock:

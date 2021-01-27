@@ -26,7 +26,6 @@ from hydrus.core import HydrusVideoHandling
 from hydrus.client import ClientAPI
 from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDB
 from hydrus.client import ClientDaemons
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDownloading
@@ -36,6 +35,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client.db import ClientDB
 from hydrus.client.gui import ClientGUI
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement

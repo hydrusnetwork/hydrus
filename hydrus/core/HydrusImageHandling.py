@@ -103,7 +103,6 @@ except:
     
     OPENCV_OK = False
     
-
 def ConvertToPNGIfBMP( path ):
     
     with open( path, 'rb' ) as f:

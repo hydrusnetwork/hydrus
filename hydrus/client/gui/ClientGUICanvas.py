@@ -373,7 +373,7 @@ class Canvas( QW.QWidget ):
         # once we have catch_mouse full shortcut support for canvases, swap out this out for an option to swallow activating clicks
         ignore_activating_mouse_click = catch_mouse and not self.PREVIEW_WINDOW
         
-        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, initial_shortcuts_names = ( 'media', 'media_viewer' ), catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
+        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'media_viewer' ], catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
         
         self._click_drag_reporting_filter = MediaContainerDragClickReportingFilter( self )
         

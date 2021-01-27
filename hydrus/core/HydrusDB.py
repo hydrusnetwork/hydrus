@@ -163,6 +163,8 @@ class HydrusDB( object ):
         self._db_dir = db_dir
         self._db_name = db_name
         
+        self._modules = []
+        
         TemporaryIntegerTableNameCache()
         
         self._transaction_started = 0
@@ -366,6 +368,8 @@ class HydrusDB( object ):
             self._db = None
             self._c = None
             
+            self._UnloadModules()
+            
         
     
     def _Commit( self ):
@@ -558,6 +562,8 @@ class HydrusDB( object ):
             
             self._c = self._db.cursor()
             
+            self._LoadModules()
+            
             if HG.no_db_temp_files:
                 
                 self._c.execute( 'PRAGMA temp_store = 2;' ) # use memory for temp store exclusively
@@ -623,6 +629,11 @@ class HydrusDB( object ):
         
     
     def _InitExternalDatabases( self ):
+        
+        pass
+        
+    
+    def _LoadModules( self ):
         
         pass
         
@@ -809,6 +820,11 @@ class HydrusDB( object ):
         result = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
         
         return result is None
+        
+    
+    def _UnloadModules( self ):
+        
+        pass
         
     
     def _UpdateDB( self, version ):

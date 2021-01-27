@@ -6,7 +6,7 @@
 	</head>
 	<body>
 		<div class="content">
-			<h3>duplicates</h3>
+			<h3 id="intro"><a href="#intro">duplicates</a></h3>
 			<p>As files are shared on the internet, they are often resized, cropped, converted to a different format, altered by the original or a new artist, or turned into a template and reinterpreted over and over and over. Even if you have a very restrictive importing workflow, your client is almost certainly going to get some <b>duplicates</b>. Some will be interesting alternate versions that you want to keep, and others will be thumbnails and other low-quality garbage you accidentally imported and would rather delete. Along the way, it would be nice to merge your ratings and tags to the better files so you don't lose any work.</p>
 			<p>Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It currently works on still images, but an extension for gifs and video is planned.</p>
 			<p>Hydrus finds <i>potential</i> duplicates using a search algorithm that compares images by their shape. Once these pairs of potentials are found, they are presented to you through a filter like the archive/delete filter to determine their exact relationship and if you want to make a further action, such as deleting the 'worse' file of a pair. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.</p>
@@ -60,12 +60,12 @@
 			<p>By default, these options are fairly empty. You will have to set up what you want based on your services and preferences. Setting a simple 'copy all tags' is generally a good idea, and like/dislike ratings also often make sense. The settings for better and same quality should probably be similar, but it depends on your situation.</p>
 			<p>If you choose the 'custom action' in the duplicate filter, you will be presented with a fresh 'edit duplicate merge options' panel for the action you select and can customise the merge specifically for that choice. ('favourite' options will come here in the future!)</p>
 			<p>Once you are all set up here, you can dive into the duplicate filter. Please let me know how you get on with it!</p>
-			<h3>what now?</h3>
+			<h3 id="future"><a href="#future">what now?</a></h3>
 			<p>The duplicate system is still incomplete. Now the db side is solid, the UI needs to catch up. Future versions will show duplicate information on thumbnails and the media viewer and allow quick-navigation to a file's duplicates and alternates.</p>
 			<p>For now, if you wish to see a file's duplicates, right-click it and select <i>file relationships</i>. You can review all its current duplicates, open them in a new page, appoint the new 'best file' of a duplicate group, and even mass-action selections of thumbnails.</p>
 			<p>You can also search for files based on the number of file relations they have (including when setting the search domain of the duplicate filter!) using <i>system:file relationships</i>. You can also search for best/not best files of groups, which makes it easy, for instance, to find all the spare duplicate files if you decide you no longer want to keep them.</p>
 			<p>I expect future versions of the system to also auto-resolve easy duplicate pairs, such as clearing out pixel-for-pixel png versions of jpgs.</p>
-			<h3>game cgs</h3>
+			<h3 id="game_cgs"><a href="#game_cgs">game cgs</a></h3>
 			<p>If you import a lot of game CGs, which frequently have dozens or hundreds of alternates, I recommend you set them as alternates by selecting them all and setting the status through the thumbnail right-click menu. The duplicate filter, being limited to pairs, needs to compare all new members of an alternate group to all other members once to verify they are not duplicates. This is not a big deal for alternates with three or four members, but game CGs provide an overwhelming edge case. Setting a group of thumbnails as alternate 'fixes' their alternate status immediately, discounting the possibility of any internate duplicates, and provides an easy way out of this situation.</p>
 			<h3 id="duplicates_examples"><a href="#duplicates_examples">more information and examples</a></h3>
 			<ul>

@@ -847,11 +847,6 @@ class Page( QW.QSplitter ):
             
         
     
-    def PausePlaySearch( self ):
-        
-        self._management_panel.PausePlaySearch()
-        
-    
     def _StartInitialMediaResultsLoad( self ):
         
         def qt_code_status( status ):

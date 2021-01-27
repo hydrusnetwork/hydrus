@@ -6,9 +6,11 @@
 	</head>
 	<body>
 		<div class="content">
-			<h3>privacy</h3>
-			<p>Repositories never know what you are searching for. The client synchronises (copies) the repository's entire file or mapping list to its internal database, and does its own searches over those internal caches, all on your hard drive. <span class="warning">It <i>never</i> sends search queries outside your own computer, nor does it log what you do look for</span>. Your searches are your business, and no-one else's.</p>
-			<p>Repositories know nothing more about your client than they can infer, and the software usually commands them to forget as much as possible as soon as possible. Specifically:</p>
+			<h3 id="intro"><a href="#intro">privacy</a></h3>
+			<p>Repositories are designed to respect your privacy. They never know what you are searching for. The client synchronises (copies) the repository's entire file or mapping list to its internal database, and does its own searches over those internal caches, all on your hard drive. <span class="warning">It <i>never</i> sends search queries outside your own computer, nor does it log what you do look for</span>. Your searches are your business, and no-one else's.</p>
+			<p class="warning">The PTR has a public shared access key. You do not have to contact anyone to get the key, so no one can infer who you are from it, and all regular user uploads are merged together, making it all a big mess. The PTR is more private than this document's worst case scenarios.</p>
+			<p>The only privacy risk for hydrus's repositories are in what you upload (ultimately by using the pending menu at the top of the program). Even then, it would typically be very difficult even for an admin to figure anything about you, but it is possible.</p>
+			<p>Repositories know nothing more about your client than they can infer from what you choose upload, and the software usually commands them to forget as much as possible as soon as possible. Specifically:</p>
 			<table cellpadding="5" cellspacing="2" border="1">
 				<tr>
 					<td />
@@ -23,7 +25,7 @@
 					<th>download file</th>
 				</tr>
 				<tr>
-					<th>Account is linked to action</th>
+					<th>Anonymous account is linked to action</th>
 					<td>Yes</td>
 					<td>No</td>
 					<td>Yes</td>
@@ -53,9 +55,10 @@
 					<li>All accounts are anonymous. Repositories do not <i>know</i> any of their accounts' access keys and cannot produce them on demand; they can determine whether a particular access key refers to a particular account, but the access keys themselves are all irreversibly hashed inside the repository database.</li>
 				</ul>
 			</p>
-			<p>There are of course some clever exceptions. If you tag a file three years before it surfaces on the internet, someone with enough knowledge will be able to infer it was most likely you who created it. If you set up a file repository for just a friend and yourself, it becomes trivial by elimination to guess who uploaded the NarutoXSonichu shota diaper fanon. If you sign up for a file repository that hosts only certain stuff and rack up a huge bandwidth record for the current month, anyone who knows that and also knows the account is yours alone will know basically what you were up to.</p>
-			<p>Note also that the file repository code is freely available and entirely mutable. If someone wants to put the time in, they can create a file repository that looks from the outside like any other but nonetheless logs the IP and nature of every request. Just make sure you trust the person running the repository. (And make sure they suck at programming python!)</p>
-			<p><a href="https://en.wikipedia.org/wiki/AOL_search_data_leak">Even anonymised records can reveal personally identifying information.</a> Don't trust anyone who plans to release maps of accounts -> files or accounts -> mappings, even for some benevolent academic purpose.</p>
+			<p>As always, there are some clever exceptions, mostly in servers between friends that will just have a handful of users, where the admin would be handing out registration keys and, with effort, could pick through the limited user creation records to figure out which access key you were. In that case, if you were to tag a file three years before it surfaced on the internet, and the admin knew you are attached to the account that made that tag, they could infer you most likely created it. If you set up a file repository for just a friend and yourself, it becomes trivial by elimination to guess who uploaded the NarutoXSonichu shota diaper fanon. If you sign up for a file repository that hosts only certain stuff and rack up a huge bandwidth record for the current month, anyone who knows that and also knows the account is yours alone will know basically what you were up to.</p>
+			<p>The PTR has a shared access key that is already public, so the risks are far smaller. No one can figure out who you are from the access key.</p>
+			<p>Note that the code is freely available and entirely mutable. If someone wants to put the time in, they could create a file repository that looks from the outside like any other but nonetheless logs the IP and nature of every request. As with any website, protect yourself, and if you do not trust an admin, do not give them or their server any information about you.</p>
+			<p><a href="https://en.wikipedia.org/wiki/AOL_search_data_leak">Even anonymised records can reveal personally identifying information.</a> Don't trust anyone on any site who plans to release internal maps of 'anonymised' accounts -> content, even for some benevolent academic purpose.</p>
 		</div>
 	</body>
 </html>

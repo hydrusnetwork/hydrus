@@ -3077,6 +3077,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RegenerateTagDisplayPendingMappingsCache( self ):
+        
+        message = 'This will delete and then recreate the pending tags on the tag \'display\' mappings cache, which is used for user-presented tag searching, loading, and autocomplete counts. This is useful if you have \'ghost\' pending tags or counts hanging around.'
+        message += os.linesep * 2
+        message += 'If you have a millions of pending tags, it can take a long time, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'regenerate_tag_display_pending_mappings_cache', tag_service_key = tag_service_key )
+            
+        
+    
     def _RegenerateTagMappingsCache( self ):
         
         message = 'WARNING: Do not run this for no reason! On a large database, this could take hours to finish!'
@@ -3993,16 +4018,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if page is not None:
             
             page.SetSearchFocus()
-            
-        
-    
-    def _PausePlaySearch( self ):
-        
-        page = self._notebook.GetCurrentMediaPage()
-        
-        if page is not None:
-            
-            page.PausePlaySearch()
             
         
     
@@ -4955,7 +4970,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache', 'Delete and recreate the tag display mappings cache, fixing any miscounts.', self._RegenerateTagDisplayMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing any miscounts.', self._RegenerateTagDisplayMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing any miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
@@ -6252,10 +6268,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == CAC.SIMPLE_SHOW_HIDE_SPLITTERS:
                 
                 self._ShowHideSplitters()
-                
-            elif action == CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH:
-                
-                self._PausePlaySearch()
                 
             elif action == CAC.SIMPLE_SET_MEDIA_FOCUS:
                 

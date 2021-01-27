@@ -11,10 +11,10 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.test import TestController
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDB
 from hydrus.client import ClientManagers
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
+from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.media import ClientMediaResultCache

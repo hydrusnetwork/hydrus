@@ -793,6 +793,8 @@ class Controller( object ):
         
         runner = unittest.TextTestRunner( verbosity = 2 )
         
+        runner.failfast = True
+        
         def do_it():
             
             try:

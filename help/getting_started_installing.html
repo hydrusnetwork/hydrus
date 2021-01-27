@@ -77,13 +77,13 @@
 			<p>By default, hydrus stores all your user data in one location, so backing up is simple:</p>
 			<ul>
 				<li>
-					<h3>the simple way - inside the client</h3>
+					<h4>the simple way - inside the client</h4>
 					<p>Go <i>database->set up a database backup location</i> in the client. This will tell the client where you want your backup to be stored. A fresh, empty directory on a different drive is ideal.</p>
 					<p>Once you have your location set up, you can thereafter hit <i>database->update database backup</i>. It will lock everything and mirror your files, showing its progress in a popup message. The first time you make this backup, it may take a little while (as it will have to fully copy your database and all its files), but after that, it will only have to copy new or altered files and should only ever take a couple of minutes.</p>
 					<p>Advanced users who have migrated their database across multiple locations will not have this option--use an external program in this case.</p>
 				</li>
 				<li>
-					<h3>the powerful way - using an external program</h3>
+					<h4>the powerful way - using an external program</h4>
 					<p>If you would like to integrate hydrus into a broader backup scheme you already run, or you are an advanced user with a complicated hydrus install that you have migrated across multiple drives, then you need to backup two things: the client*.db files and your client_files directory(ies). By default, they are all stored in install_dir/db. The .db files contain your settings and file metadata like inbox/archive and tags, while the client_files subdirs store your actual media and its thumbnails. If everything is still under install_dir/db, then it is usually easiest to just backup the whole install dir, keeping a functional 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!</p>
 					<p>Shut the client down while you run the backup, obviously.</p>
 				</li>

@@ -9,11 +9,11 @@ from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDB
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
+from hydrus.client.db import ClientDB
 from hydrus.client.gui import ClientGUIManagement
 from hydrus.client.gui import ClientGUIPages
 from hydrus.client.importing import ClientImportLocal

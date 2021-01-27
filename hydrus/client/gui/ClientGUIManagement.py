@@ -902,11 +902,6 @@ class ManagementPanel( QW.QScrollArea ):
         pass
         
     
-    def PausePlaySearch( self ):
-        
-        pass
-        
-    
     def REPEATINGPageUpdate( self ):
         
         pass
@@ -1852,9 +1847,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             sort_gallery_paused = 1
             
         
-        status = gallery_import.GetSimpleStatus()
+        pretty_status = gallery_import.GetSimpleStatus()
         
-        pretty_status = status
+        sort_status = ( sort_gallery_paused, pretty_status )
         
         file_seed_cache_status = gallery_import.GetFileSeedCache().GetStatus()
         
@@ -1869,7 +1864,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
-        sort_tuple = ( query_text, pretty_source, files_paused, sort_gallery_paused, status, progress, added )
+        sort_tuple = ( query_text, pretty_source, files_paused, sort_gallery_paused, sort_status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -2659,17 +2654,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
-        watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
+        pretty_watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
-        pretty_watcher_status = watcher_status
-        
-        if watcher_status == '':
-            
-            watcher_status = 'zzz' # to sort _after_ DEAD and other interesting statuses on ascending sort
-            
+        sort_watcher_status = ( sort_checking_paused, pretty_watcher_status )
         
         display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
-        sort_tuple = ( subject, files_paused, sort_checking_paused, watcher_status, progress, added )
+        sort_tuple = ( subject, files_paused, sort_checking_paused, sort_watcher_status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -4885,14 +4875,6 @@ class ManagementPanelQuery( ManagementPanel ):
         if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
             
             QP.CallAfter( self.RefreshQuery )
-            
-        
-    
-    def PausePlaySearch( self ):
-        
-        if self._search_enabled:
-            
-            self._tag_autocomplete.PausePlaySearch()
             
         
     
