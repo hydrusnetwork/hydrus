@@ -129,6 +129,14 @@ SIMPLE_MOVE_PAGES_SELECTION_RIGHT = 122
 SIMPLE_MOVE_PAGES_SELECTION_HOME = 123
 SIMPLE_MOVE_PAGES_SELECTION_END = 124
 SIMPLE_REFRESH_RELATED_TAGS = 125
+SIMPLE_AUTOCOMPLETE_FORCE_FETCH = 126
+SIMPLE_AUTOCOMPLETE_IME_MODE = 127
+SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT = 128
+SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_RIGHT = 129
+SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT = 130
+SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT = 131
+SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS = 132
+SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT = 133
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -256,7 +264,15 @@ simple_enum_to_str_lookup = {
     SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS : 'file relationships: remote files from potential duplicate pairs',
     SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL : 'file relationships: set files as potential duplicates',
     SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES : 'file relationships: clear false positives',
-    SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES : 'file relationships: clear focused file false positives'
+    SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES : 'file relationships: clear focused file false positives',
+    SIMPLE_AUTOCOMPLETE_FORCE_FETCH : 'force-fetch tag autocomplete results',
+    SIMPLE_AUTOCOMPLETE_IME_MODE : 'flip IME-friendly mode on/off (this disables extra shortcut processing so you can do IME popup stuff)',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT : 'if input is empty, move left one autocomplete dropdown tab',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_RIGHT : 'if input is empty, move right one autocomplete dropdown tab',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT : 'if input & results list are empty, move to left one service page',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT : 'if input & results list are empty, move to right one service page',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media'
     }
 
 legacy_simple_str_to_enum_lookup = {

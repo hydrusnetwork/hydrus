@@ -180,6 +180,7 @@ shortcut_names_to_pretty_names = {}
 
 shortcut_names_to_pretty_names[ 'global' ] = 'global'
 shortcut_names_to_pretty_names[ 'main_gui' ] = 'the main window'
+shortcut_names_to_pretty_names[ 'tags_autocomplete' ] = 'tag autocomplete'
 shortcut_names_to_pretty_names[ 'media' ] = 'media actions, either thumbnails or the viewer'
 shortcut_names_to_pretty_names[ 'media_viewer' ] = 'media viewers - all (zoom and pan)'
 shortcut_names_to_pretty_names[ 'media_viewer_browser' ] = 'media viewer - \'normal\' browser'
@@ -188,17 +189,18 @@ shortcut_names_to_pretty_names[ 'duplicate_filter' ] = 'media viewer - duplicate
 shortcut_names_to_pretty_names[ 'preview_media_window' ] = 'media viewer - the preview window'
 shortcut_names_to_pretty_names[ 'media_viewer_media_window' ] = 'the actual media in a media viewer'
 
-shortcut_names_to_sort_order = {}
-
-shortcut_names_to_sort_order[ 'global' ] = 0
-shortcut_names_to_sort_order[ 'main_gui' ] = 1
-shortcut_names_to_sort_order[ 'media' ] = 2
-shortcut_names_to_sort_order[ 'media_viewer' ] = 3
-shortcut_names_to_sort_order[ 'media_viewer_browser' ] = 4
-shortcut_names_to_sort_order[ 'archive_delete_filter' ] = 5
-shortcut_names_to_sort_order[ 'duplicate_filter' ] = 6
-shortcut_names_to_sort_order[ 'preview_media_window' ] = 7
-shortcut_names_to_sort_order[ 'media_viewer_media_window' ] = 8
+shortcut_names_sorted = [
+    'global',
+    'main_gui',
+    'tags_autocomplete',
+    'media',
+    'media_viewer',
+    'media_viewer_browser',
+    'archive_delete_filter',
+    'duplicate_filter',
+    'preview_media_window',
+    'media_viewer_media_window'
+]
 
 shortcut_names_to_descriptions = {}
 
@@ -207,6 +209,7 @@ shortcut_names_to_descriptions[ 'archive_delete_filter' ] = 'Navigation actions 
 shortcut_names_to_descriptions[ 'duplicate_filter' ] = 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.'
 shortcut_names_to_descriptions[ 'media' ] = 'Actions to alter metadata for media in the media viewer or the thumbnail grid.'
 shortcut_names_to_descriptions[ 'main_gui' ] = 'Actions to control pages in the main window of the program.'
+shortcut_names_to_descriptions[ 'tags_autocomplete' ] = 'Actions to control tag autocomplete when its input text box is focused.'
 shortcut_names_to_descriptions[ 'media_viewer_browser' ] = 'Navigation actions for the regular browsable media viewer.'
 shortcut_names_to_descriptions[ 'media_viewer' ] = 'Zoom and pan and player actions for any media viewer.'
 shortcut_names_to_descriptions[ 'media_viewer_media_window' ] = 'Actions for any video or audio player in a media viewer window.'
@@ -214,13 +217,14 @@ shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any vide
 
 # shortcut commands
 
-SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
+SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'tags_autocomplete', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
 
 SHORTCUTS_GLOBAL_ACTIONS = [ CAC.SIMPLE_GLOBAL_AUDIO_MUTE, CAC.SIMPLE_GLOBAL_AUDIO_UNMUTE, CAC.SIMPLE_GLOBAL_AUDIO_MUTE_FLIP, CAC.SIMPLE_EXIT_APPLICATION, CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE, CAC.SIMPLE_RESTART_APPLICATION, CAC.SIMPLE_HIDE_TO_SYSTEM_TRAY ]
 SHORTCUTS_MEDIA_ACTIONS = [ CAC.SIMPLE_MANAGE_FILE_TAGS, CAC.SIMPLE_MANAGE_FILE_RATINGS, CAC.SIMPLE_MANAGE_FILE_URLS, CAC.SIMPLE_MANAGE_FILE_NOTES, CAC.SIMPLE_ARCHIVE_FILE, CAC.SIMPLE_INBOX_FILE, CAC.SIMPLE_DELETE_FILE, CAC.SIMPLE_UNDELETE_FILE, CAC.SIMPLE_EXPORT_FILES, CAC.SIMPLE_EXPORT_FILES_QUICK_AUTO_EXPORT, CAC.SIMPLE_REMOVE_FILE_FROM_VIEW, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE, CAC.SIMPLE_LAUNCH_THE_ARCHIVE_DELETE_FILTER, CAC.SIMPLE_COPY_BMP, CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE, CAC.SIMPLE_COPY_FILE, CAC.SIMPLE_COPY_PATH, CAC.SIMPLE_COPY_SHA256_HASH, CAC.SIMPLE_COPY_MD5_HASH, CAC.SIMPLE_COPY_SHA1_HASH, CAC.SIMPLE_COPY_SHA512_HASH, CAC.SIMPLE_GET_SIMILAR_TO_EXACT, CAC.SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR, CAC.SIMPLE_GET_SIMILAR_TO_SIMILAR, CAC.SIMPLE_GET_SIMILAR_TO_SPECULATIVE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS, CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM, CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER, CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING, CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY, CAC.SIMPLE_OPEN_KNOWN_URL ]
 SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_MOVE_ANIMATION_TO_PREVIOUS_FRAME, CAC.SIMPLE_MOVE_ANIMATION_TO_NEXT_FRAME, CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW, CAC.SIMPLE_PAN_UP, CAC.SIMPLE_PAN_DOWN, CAC.SIMPLE_PAN_LEFT, CAC.SIMPLE_PAN_RIGHT, CAC.SIMPLE_PAN_TOP_EDGE, CAC.SIMPLE_PAN_BOTTOM_EDGE, CAC.SIMPLE_PAN_LEFT_EDGE, CAC.SIMPLE_PAN_RIGHT_EDGE, CAC.SIMPLE_PAN_VERTICAL_CENTER, CAC.SIMPLE_PAN_HORIZONTAL_CENTER, CAC.SIMPLE_ZOOM_IN, CAC.SIMPLE_ZOOM_OUT, CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM, CAC.SIMPLE_FLIP_DARKMODE, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
 SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ CAC.SIMPLE_VIEW_NEXT, CAC.SIMPLE_VIEW_FIRST, CAC.SIMPLE_VIEW_LAST, CAC.SIMPLE_VIEW_PREVIOUS, CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW, CAC.SIMPLE_SHOW_MENU, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
-SHORTCUTS_MAIN_GUI_ACTIONS = [ CAC.SIMPLE_REFRESH, CAC.SIMPLE_REFRESH_ALL_PAGES, CAC.SIMPLE_REFRESH_PAGE_OF_PAGES_PAGES, CAC.SIMPLE_NEW_PAGE, CAC.SIMPLE_NEW_PAGE_OF_PAGES, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE, CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH, CAC.SIMPLE_SET_MEDIA_FOCUS, CAC.SIMPLE_SHOW_HIDE_SPLITTERS, CAC.SIMPLE_SET_SEARCH_FOCUS, CAC.SIMPLE_UNCLOSE_PAGE, CAC.SIMPLE_CLOSE_PAGE, CAC.SIMPLE_REDO, CAC.SIMPLE_UNDO, CAC.SIMPLE_FLIP_DARKMODE, CAC.SIMPLE_RUN_ALL_EXPORT_FOLDERS, CAC.SIMPLE_CHECK_ALL_IMPORT_FOLDERS, CAC.SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS, CAC.SIMPLE_REFRESH_RELATED_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS, CAC.SIMPLE_FOCUS_MEDIA_VIEWER, CAC.SIMPLE_MOVE_PAGES_SELECTION_LEFT, CAC.SIMPLE_MOVE_PAGES_SELECTION_RIGHT, CAC.SIMPLE_MOVE_PAGES_SELECTION_HOME, CAC.SIMPLE_MOVE_PAGES_SELECTION_END ]
+SHORTCUTS_MAIN_GUI_ACTIONS = [ CAC.SIMPLE_REFRESH, CAC.SIMPLE_REFRESH_ALL_PAGES, CAC.SIMPLE_REFRESH_PAGE_OF_PAGES_PAGES, CAC.SIMPLE_NEW_PAGE, CAC.SIMPLE_NEW_PAGE_OF_PAGES, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE, CAC.SIMPLE_SET_MEDIA_FOCUS, CAC.SIMPLE_SHOW_HIDE_SPLITTERS, CAC.SIMPLE_SET_SEARCH_FOCUS, CAC.SIMPLE_UNCLOSE_PAGE, CAC.SIMPLE_CLOSE_PAGE, CAC.SIMPLE_REDO, CAC.SIMPLE_UNDO, CAC.SIMPLE_FLIP_DARKMODE, CAC.SIMPLE_RUN_ALL_EXPORT_FOLDERS, CAC.SIMPLE_CHECK_ALL_IMPORT_FOLDERS, CAC.SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FAVOURITE_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RELATED_TAGS, CAC.SIMPLE_REFRESH_RELATED_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_FILE_LOOKUP_SCRIPT_TAGS, CAC.SIMPLE_SHOW_AND_FOCUS_MANAGE_TAGS_RECENT_TAGS, CAC.SIMPLE_FOCUS_MEDIA_VIEWER, CAC.SIMPLE_MOVE_PAGES_SELECTION_LEFT, CAC.SIMPLE_MOVE_PAGES_SELECTION_RIGHT, CAC.SIMPLE_MOVE_PAGES_SELECTION_HOME, CAC.SIMPLE_MOVE_PAGES_SELECTION_END ]
+SHORTCUTS_TAGS_AUTOCOMPLETE_ACTIONS = [ CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH, CAC.SIMPLE_AUTOCOMPLETE_FORCE_FETCH, CAC.SIMPLE_AUTOCOMPLETE_IME_MODE ]
 SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER, CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_BUT_KEEP_BOTH, CAC.SIMPLE_DUPLICATE_FILTER_EXACTLY_THE_SAME, CAC.SIMPLE_DUPLICATE_FILTER_ALTERNATES, CAC.SIMPLE_DUPLICATE_FILTER_FALSE_POSITIVE, CAC.SIMPLE_DUPLICATE_FILTER_CUSTOM_ACTION, CAC.SIMPLE_DUPLICATE_FILTER_SKIP, CAC.SIMPLE_DUPLICATE_FILTER_BACK, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
 SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_DELETE, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
 SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
@@ -233,6 +237,7 @@ simple_shortcut_name_to_action_lookup[ 'media' ] = SHORTCUTS_MEDIA_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'media_viewer' ] = SHORTCUTS_MEDIA_VIEWER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'media_viewer_browser' ] = SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'main_gui' ] = SHORTCUTS_MAIN_GUI_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'tags_autocomplete' ] = SHORTCUTS_TAGS_AUTOCOMPLETE_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'duplicate_filter' ] = SHORTCUTS_DUPLICATE_FILTER_ACTIONS + SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'archive_delete_filter' ] = SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'media_viewer_media_window' ] = SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS
@@ -999,6 +1004,14 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def DeleteShortcut( self, shortcut ):
+        
+        if shortcut in self._shortcuts_to_commands:
+            
+            del self._shortcuts_to_commands[ shortcut ]
+            
+        
+    
     def GetCommand( self, shortcut ):
         
         if shortcut in self._shortcuts_to_commands:
@@ -1035,19 +1048,23 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ShortcutsHandler( QC.QObject ):
     
-    def __init__( self, parent: QW.QWidget, initial_shortcuts_names = None, catch_mouse = False, ignore_activating_mouse_click = False ):
+    def __init__( self, parent: QW.QWidget, initial_shortcuts_names: typing.Collection[ str ], alternate_filter_target = None, catch_mouse = False, ignore_activating_mouse_click = False ):
         
         QC.QObject.__init__( self, parent )
         
         self._catch_mouse = catch_mouse
         
-        if initial_shortcuts_names is None:
+        filter_target = parent
+        
+        if alternate_filter_target is not None:
             
-            initial_shortcuts_names = []
+            filter_target = alternate_filter_target
             
         
+        self._filter_target = filter_target
+        
         self._parent = parent
-        self._parent.installEventFilter( self )
+        self._filter_target.installEventFilter( self )
         self._shortcuts_names = list( initial_shortcuts_names )
         
         self._ignore_activating_mouse_click = ignore_activating_mouse_click
@@ -1113,7 +1130,7 @@ class ShortcutsHandler( QC.QObject ):
             
             if HG.shortcut_report_mode:
                 
-                message = 'Shortcut "' + shortcut.ToString() + '" matched to command "' + command.ToString() + '" on ' + repr( self._parent ) + '.'
+                message = 'Shortcut "{}" matched to command "{}" on {}.'.format( shortcut.ToString(), command.ToString(), repr( self._parent ) )
                 
                 if command_processed:
                     
@@ -1140,7 +1157,7 @@ class ShortcutsHandler( QC.QObject ):
         
         if event.type() == QC.QEvent.KeyPress:
             
-            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, watched, event = event )
+            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )
             
             shortcut = ConvertKeyEventToShortcut( event )
             
@@ -1148,7 +1165,7 @@ class ShortcutsHandler( QC.QObject ):
                 
                 if HG.shortcut_report_mode:
                     
-                    message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                    message = 'Key shortcut "{}" passing through {}.'.format( shortcut.ToString(), repr( self._parent ) )
                     
                     if i_should_catch_shortcut_event:
                         
@@ -1189,7 +1206,7 @@ class ShortcutsHandler( QC.QObject ):
                     return False
                     
                 
-                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._parent, watched, event = event )
+                i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )
                 
                 shortcut = ConvertMouseEventToShortcut( event )
                 

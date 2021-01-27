@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_427"><a href="#version_427">version 427</a></h3></li>
+				<ul>
+					<li>ghost pending tags:</li>
+					<li>fixed another ghost pending tags bug. this may have been new or there since the display cache started, I am not sure, but it shouldn't happen again. it was occuring when a pending tag was being committed to 'current' and another tag in its sibling group already existed as a current tag for that file. the pending tag and its count would not clear for non-'all known files' domains, causing ghosts to appear in search pages but not typically manage tags. you may have noticed ghost tags hanging around after a pending commit--this was it. the true problem here was in the 'rescind pending' action that occurs just before an add/commit. a new unit test tests for this situation both for two non-ideal tags being pend-merged, and a non-ideal tag being pend-merged into the existing ideal</li>
+					<li>wrote a routine to regenerate _pending_ tag storage and autocomplete counts from scratch for the combined and specific display tag caches. this job is special in that it regens tags instantly without having to reset sibling/parent sync. you can run the job from the database->regen menu. this is the start of 'fix just this tag' maintenance ability</li>
+					<li>the pending regen routines will occur on update. it shouldn't take long at all, unless you have five million tags pending, where it could be a couple minutes</li>
+					<li>.</li>
+					<li>autocomplete shortcuts:</li>
+					<li>there is a new shortcut set under _file->shortcuts_ just for tag autocomplete shortcuts. any 'switch searching immediately' shortcut previously on 'main gui' will be migrated over</li>
+					<li>the tag autocomplete input text box is now plugged into the new shortcut system and uses this set</li>
+					<li>migrated previously hardcoded autocomplete shortcuts to the shortcut system (defaults):</li>
+					<li>- force search now, for when you have automatic searching turned off (ctrl+space)</li>
+					<li>- enable IME-friendly mode (insert)</li>
+					<li>- if input empty, move left/right a tab (left/right arrow)</li>
+					<li>- if input empty, move left/right a service page (up/down arrow)</li>
+					<li>- if input empty and on media viewer, move to previous/next media (page up/down)</li>
+					<li>misc improvements to my shortcut handler</li>
+					<li>misc shortcut code cleanup</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>I fixed a bad example url in the new gelbooru file page parser that was sometimes leading to a link to the gallery url class. this was an artifact of an old experiment with md5-search parsing, now fixed with newer redirection tech. the updated parser is folded into update, and if you ended up with the incorrect link, it should be detected, dissolved, and re-linked with the file page parser</li>
+					<li>thanks to a user report, wrote a new url class for 420chan's newer thread url format</li>
+					<li>sorting a gallery downloader or thread watcher multi-column list by 'status' should now group 'done' and 'paused' items separately</li>
+					<li>fixed a bug in the /add_tags/add_tags Client API call when checking some petitioned tags data types. cleaned all that code, it was ugly (issue #788)</li>
+					<li>added unit tests for /add_tags/add_tags to test the service_names_to_actions_to_tags parameter better and repository actions, including petitioning with and without specified reason</li>
+					<li>.</li>
+					<li>code refactoring:</li>
+					<li>finally addressing the near-1MB ClientDB file, I have started a framework to break the db into separate modules with their own creation/repair/work responsibilities. this will make the file easier to work on, maintain, update, and test. this week starts off simple, with the master definitions being peeled off into hashes, tags, urls, and texts submodules</li>
+					<li>cleaned some misc code around here, including a bunch of related decoupling</li>
+					<li>ClientDB.py is now in its own 'db' module as well. the db will further fracture and this module will gain more files in future</li>
+					<li>the boot code in the launch scripts is now migrated to the 'hydrus' directory, with the actual launch scripts now doing nicer __main__ checks to not launch the program if you want to play around with importing hydrus. more work to come here</li>
+					<li>finished the help's header linking job--all headers across the help are now #fragment links</li>
+					<li>misc help cleanup</li>
+				</ul>
 				<li><h3 id="version_426"><a href="#version_426">version 426</a></h3></li>
 				<ul>
 					<li>misc:</li>
@@ -36,7 +70,7 @@
 					<li>the parser 'show what this can parse in nice text' routine now fails gracefully</li>
 					<li>multi-column lists now handle a situation where either the display or sort data for a row cannot be generated. a single error popup per list will be generated so as not to spam, bad sorts will be put at the top, and 'unable to render' will occupy all display cells</li>
 					<li>.</li>
-					<li>network server stuff</li>
+					<li>network server stuff:</li>
 					<li>fixed being able to delete an account type in the server admin menu</li>
 					<li>the way accounts are checked for permissions serverside now works how the client api does it, unified into a neater system that checks before the job starts</li>
 					<li>did some misc server code cleanup, and clientside, prepped for restoring account modification and future improvements</li>

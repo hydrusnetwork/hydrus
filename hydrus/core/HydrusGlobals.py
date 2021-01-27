@@ -7,6 +7,8 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+server_action = 'start'
+
 no_daemons = False
 db_journal_mode = 'WAL'
 no_db_temp_files = False

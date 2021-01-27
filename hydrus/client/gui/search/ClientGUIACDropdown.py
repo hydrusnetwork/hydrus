@@ -13,6 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientSearch
@@ -671,7 +672,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._intercept_key_events = True
+        self._can_intercept_unusual_key_events = True
         
         if self.window() == HG.client_controller.gui:
             
@@ -766,6 +767,8 @@ class AutoCompleteDropdown( QW.QWidget ):
         self._current_fetch_job_key = None
         
         self._schedule_results_refresh_job = None
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'tags_autocomplete' ], alternate_filter_target = self._text_ctrl )
         
         if self._float_mode:
             
@@ -1005,7 +1008,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         colour = HG.client_controller.new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
         
-        if not self._intercept_key_events:
+        if not self._can_intercept_unusual_key_events:
             
             colour = ClientGUIFunctions.GetLighterDarkerColour( colour )
             
@@ -1047,25 +1050,11 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in ( QC.Qt.Key_Insert, ):
-            
-            self._intercept_key_events = not self._intercept_key_events
-            
-            self._UpdateBackgroundColour()
-            
-        elif key == QC.Qt.Key_Space and event.modifiers() & QC.Qt.ControlModifier:
-            
-            self._ScheduleResultsRefresh( 0.0 )
-            
-        elif self._intercept_key_events:
+        if self._can_intercept_unusual_key_events:
             
             send_input_to_current_list = False
             
             current_results_list = self._dropdown_notebook.currentWidget()
-            
-            current_list_is_empty = len( current_results_list ) == 0
-            
-            input_is_empty = self._text_ctrl.text() == ''
             
             if key in ( ord( 'A' ), ord( 'a' ) ) and modifier == QC.Qt.ControlModifier:
                 
@@ -1082,48 +1071,6 @@ class AutoCompleteDropdown( QW.QWidget ):
                 escape_caught = self._HandleEscape()
                 
                 if not escape_caught:
-                    
-                    send_input_to_current_list = True
-                    
-                
-            elif input_is_empty: # maybe we should be sending a 'move' event to a different place
-                
-                if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down ) and current_list_is_empty:
-                    
-                    if key in ( QC.Qt.Key_Up, ):
-                        
-                        self.selectUp.emit()
-                        
-                    elif key in ( QC.Qt.Key_Down, ):
-                        
-                        self.selectDown.emit()
-                        
-                    
-                elif key in ( QC.Qt.Key_PageDown, QC.Qt.Key_PageUp ) and current_list_is_empty:
-                    
-                    if key in ( QC.Qt.Key_PageUp, ):
-                        
-                        self.showPrevious.emit()
-                        
-                    elif key in ( QC.Qt.Key_PageDown, ):
-                        
-                        self.showNext.emit()
-                        
-                    
-                elif key in ( QC.Qt.Key_Right, QC.Qt.Key_Left ):
-                    
-                    if key in ( QC.Qt.Key_Left, ):
-                        
-                        direction = -1
-                        
-                    elif key in ( QC.Qt.Key_Right, ):
-                        
-                        direction = 1
-                        
-                    
-                    self.MoveNotebookPageFocus( direction = direction )
-                    
-                else:
                     
                     send_input_to_current_list = True
                     
@@ -1284,6 +1231,83 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self.setFocus( QC.Qt.OtherFocusReason )
             
+        
+    
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        data = command.GetData()
+        
+        if command.IsSimpleCommand():
+            
+            action = data
+            
+            if action == CAC.SIMPLE_AUTOCOMPLETE_IME_MODE:
+                
+                self._can_intercept_unusual_key_events = not self._can_intercept_unusual_key_events
+                
+                self._UpdateBackgroundColour()
+                
+            elif self._can_intercept_unusual_key_events:
+                
+                current_results_list = self._dropdown_notebook.currentWidget()
+                
+                current_list_is_empty = len( current_results_list ) == 0
+                
+                input_is_empty = self._text_ctrl.text() == ''
+                
+                everything_is_empty = input_is_empty and current_list_is_empty
+                
+                if action == CAC.SIMPLE_AUTOCOMPLETE_FORCE_FETCH:
+                    
+                    self._ScheduleResultsRefresh( 0.0 )
+                    
+                elif input_is_empty and action in ( CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT, CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_RIGHT ):
+                    
+                    if action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT:
+                        
+                        direction = -1
+                        
+                    else:
+                        
+                        direction = 1
+                        
+                    
+                    self.MoveNotebookPageFocus( direction = direction )
+                    
+                elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT:
+                    
+                    self.selectUp.emit()
+                    
+                elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT:
+                    
+                    self.selectDown.emit()
+                    
+                elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS:
+                    
+                    self.showPrevious.emit()
+                    
+                elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT:
+                    
+                    self.showNext.emit()
+                    
+                else:
+                    
+                    command_processed = False
+                    
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     def SetFetchedResults( self, job_key: ClientThreading.JobKey, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, results_cache: ClientSearch.PredicateResultsCache, results: list ):
@@ -2054,6 +2078,38 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     def PauseSearching( self ):
         
         self._search_pause_play.SetOnOff( False )
+        
+    
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        data = command.GetData()
+        
+        if self._can_intercept_unusual_key_events and command.IsSimpleCommand():
+            
+            action = data
+            
+            if action == CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH:
+                
+                self.PausePlaySearch()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            command_processed = AutoCompleteDropdownTags.ProcessApplicationCommand( self, command )
+            
+        
+        return command_processed
         
     
     def SetFetchedResults( self, job_key: ClientThreading.JobKey, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, results_cache: ClientSearch.PredicateResultsCache, results: list ):

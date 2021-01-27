@@ -43,17 +43,17 @@
 			<p>There is now a simple 'session' system, where you can get a temporary key that gives the same access without having to include the permanent access key in every request. You can fetch a session key with the <a href="#session_key">/session_key</a> command and thereafter use it just as you would an access key, just with <i>Hydrus-Client-API-Session-Key</i> instead.</p>
 			<p>Session keys will expire if they are not used within 24 hours, or if the client is restarted, or if the underlying access key is deleted. An invalid/expired session key will give a <b>419</b> result with an appropriate error text.</p>
 			<p>Bear in mind the Client API is still under construction and is http-only for the moment--be careful about transmitting sensitive content outside of localhost. The access key will be unencrypted across any connection, and if it is included as a GET parameter, as simple and convenient as that is, it could be cached in all sorts of places.</p>
-			<h3 id="contents"><a href="#contents">>Contents</h3>
+			<h3 id="contents"><a href="#contents">Contents</a></h3>
 			<ul>
 				<li>
-					<h4>Access Management</h4>
+					<h4><a href="#access_management">Access Management</a></h4>
 					<ul>
 						<li><a href="#api_version">GET /api_version</a></li>
 						<li><a href="#request_new_permissions">GET /request_new_permissions</a></li>
 						<li><a href="#session_key">GET /session_key</a></li>
 						<li><a href="#verify_access_key">GET /verify_access_key</a></li>
 					</ul>
-					<h4>Adding Files</h4>
+					<h4><a href="#adding_files">Adding Files</a></h4>
 					<ul>
 						<li><a href="#add_files_add_file">POST /add_files/add_file</a></li>
 						<li><a href="#add_files_delete_files">POST /add_files/delete_files</a></li>
@@ -61,31 +61,31 @@
 						<li><a href="#add_files_archive_files">POST /add_files/archive_files</a></li>
 						<li><a href="#add_files_unarchive_files">POST /add_files/unarchive_files</a></li>
 					</ul>
-					<h4>Adding Tags</h4>
+					<h4><a href="#adding_tags">Adding Tags</a></h4>
 					<ul>
 						<li><a href="#add_tags_clean_tags">GET /add_tags/clean_tags</a></li>
 						<li><a href="#add_tags_get_tag_services">GET /add_tags/get_tag_services</a></li>
 						<li><a href="#add_tags_add_tags">POST /add_tags/add_tags</a></li>
 					</ul>
-					<h4>Adding URLs</h4>
+					<h4><a href="#adding_urls">Adding URLs</a></h4>
 					<ul>
 						<li><a href="#add_urls_get_url_files">GET /add_urls/get_url_files</a></li>
 						<li><a href="#add_urls_get_url_info">GET /add_urls/get_url_info</a></li>
 						<li><a href="#add_urls_add_url">POST /add_urls/add_url</a></li>
 						<li><a href="#add_urls_associate_url">POST /add_urls/associate_url</a></li>
 					</ul>
-					<h4>Managing Cookies</h4>
+					<h4><a href="#managing_cookies">Managing Cookies</a></h4>
 					<ul>
 						<li><a href="#manage_cookies_get_cookies">GET /manage_cookies/get_cookies</a></li>
 						<li><a href="#manage_cookies_set_cookies">POST /manage_cookies/set_cookies</a></li>
 					</ul>
-					<h4>Managing Pages</h4>
+					<h4><a href="#managing_pages">Managing Pages</a></h4>
 					<ul>
 						<li><a href="#manage_pages_get_pages">GET /manage_pages/get_pages</a></li>
 						<li><a href="#manage_pages_get_page_info">GET /manage_pages/get_page_info</a></li>
 						<li><a href="#manage_pages_focus_page">POST /manage_pages/focus_page</a></li>
 					</ul>
-					<h4>Searching and Fetching Files</h4>
+					<h4><a href="#searching_files">Searching and Fetching Files</a></h4>
 					<ul>
 						<li><a href="#get_files_search_files">GET /get_files/search_files</a></li>
 						<li><a href="#get_files_file_metadata">GET /get_files/file_metadata</a></li>
@@ -93,9 +93,9 @@
 						<li><a href="#get_files_thumbnail">GET /get_files/thumbnail</a></li>
 					</ul>
 			</ul>
-			<h3>Access Management</h3>
-			<div class="apiborder" id="api_version">
-				<h3><b>GET /api_version</b></h3>
+			<h3 id="access_management"><a href="#access_management">Access Management</a></h3>
+			<div class="apiborder">
+				<h3 id="api_version"><a href="#api_version"><b>GET /api_version</b></a></h3>
 				<p><i>Gets the current API version. I will increment this every time I alter the API.</i></p>
 				<ul>
 					<li><p>Restricted access: NO.</p></li>
@@ -110,8 +110,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="request_new_permissions">
-				<h3><b>GET /request_new_permissions</b></h3>
+			<div class="apiborder">
+				<h3 id="request_new_permissions"><a href="#request_new_permissions"><b>GET /request_new_permissions</b></a></h3>
 				<p><i>Register a new external program with the client. This requires the 'add from api request' mini-dialog under </i>services->review services<i> to be open, otherwise it will 403.</i></p>
 				<ul>
 					<li><p>Restricted access: NO.</p></li>
@@ -149,8 +149,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="session_key">
-				<h3><b>GET /session_key</b></h3>
+			<div class="apiborder">
+				<h3 id="session_key"><a href="#session_key"><b>GET /session_key</b></a></h3>
 				<p><i>Get a new session key.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. No permissions required.</p></li>
@@ -171,8 +171,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="verify_access_key">
-				<h3><b>GET /verify_access_key</b></h3>
+			<div class="apiborder">
+				<h3 id="verify_access_key"><a href="#verify_access_key"><b>GET /verify_access_key</b></a></h3>
 				<p><i>Check your access key is valid.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. No permissions required.</p></li>
@@ -192,9 +192,9 @@
 					</li>
 				</ul>
 			</div>
-			<h3>Adding Files</h3>
-			<div class="apiborder" id="add_files_add_file">
-				<h3><b>POST /add_files/add_file</b></h3>
+			<h3 id="adding_files"><a href="#adding_files">Adding Files</a></h3>
+			<div class="apiborder">
+				<h3 id="add_files_add_file"><a href="#add_files_add_file"><b>POST /add_files/add_file</b></a></h3>
 				<p><i>Tell the client to import a file.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
@@ -232,8 +232,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_files_delete_files">
-				<h3><b>POST /add_files/delete_files</b></h3>
+			<div class="apiborder">
+				<h3 id="add_files_delete_files"><a href="#add_files_delete_files"><b>POST /add_files/delete_files</b></a></h3>
 				<p><i>Tell the client to send files to the trash.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
@@ -259,8 +259,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_files_undelete_files">
-				<h3><b>POST /add_files/undelete_files</b></h3>
+			<div class="apiborder">
+				<h3 id="add_files_undelete_files"><a href="#add_files_undelete_files"><b>POST /add_files/undelete_files</b></a></h3>
 				<p><i>Tell the client to pull files back out of the trash.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
@@ -286,8 +286,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_files_archive_files">
-				<h3><b>POST /add_files/archive_files</b></h3>
+			<div class="apiborder">
+				<h3 id="add_files_archive_files"><a href="#add_files_archive_files"><b>POST /add_files/archive_files</b></a></h3>
 				<p><i>Tell the client to archive inboxed files.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
@@ -313,8 +313,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_files_unarchive_files">
-				<h3><b>POST /add_files/unarchive_files</b></h3>
+			<div class="apiborder">
+				<h3 id="add_files_unarchive_files"><a href="#add_files_unarchive_files"><b>POST /add_files/unarchive_files</b></a></h3>
 				<p><i>Tell the client re-inbox archived files.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
@@ -340,9 +340,9 @@
 					</li>
 				</ul>
 			</div>
-			<h3>Adding Tags</h3>
-			<div class="apiborder" id="add_tags_clean_tags">
-				<h3><b>GET /add_tags/clean_tags</b></h3>
+			<h3 id="adding_tags"><a href="#adding_tags">Adding Tags</a></h3>
+			<div class="apiborder">
+				<h3 id="add_tags_clean_tags"><a href="#add_tags_clean_tags"><b>GET /add_tags/clean_tags</b></a></h3>
 				<p><i>Ask the client about how it will see certain tags.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
@@ -374,8 +374,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_tags_get_tag_services">
-				<h3><b>GET /add_tags/get_tag_services</b></h3>
+			<div class="apiborder">
+				<h3 id="add_tags_get_tag_services"><a href="#add_tags_get_tag_services"><b>GET /add_tags/get_tag_services</b></a></h3>
 				<p><i>Ask the client about its tag services.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
@@ -398,8 +398,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_tags_add_tags">
-				<h3><b>POST /add_tags/add_tags</b></h3>
+			<div class="apiborder">
+				<h3 id="add_tags_add_tags"><a href="#add_tags_add_tags"><b>POST /add_tags/add_tags</b></a></h3>
 				<p><i>Make changes to the tags that files have.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
@@ -462,9 +462,9 @@
 					<p>Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended and not worry about an error--it will be discarded. The same for other reasonable logical scenarios: deleting a tag that does not exist will silently make no change, pending a tag that is already 'current' will again be passed over. It is fine to just throw 'process this' tags at every file import you add and not have to worry about checking which files you already added it to.</p>
 				</ul>
 			</div>
-			<h3>Adding URLs</h3>
-			<div class="apiborder" id="add_urls_get_url_files">
-				<h3><b>GET /add_urls/get_url_files</b></h3>
+			<h3 id="adding_urls"><a href="#adding_urls">Adding URLs</a></h3>
+			<div class="apiborder">
+				<h3 id="add_urls_get_url_files"><a href="#add_urls_get_url_files"><b>GET /add_urls/get_url_files</b></a></h3>
 				<p><i>Ask the client about an URL's files.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import URLs permission needed.</p></li>
@@ -511,8 +511,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_urls_get_url_info">
-				<h3><b>GET /add_urls/get_url_info</b></h3>
+			<div class="apiborder">
+				<h3 id="add_urls_get_url_info"><a href="#add_urls_get_url_info"><b>GET /add_urls/get_url_info</b></a></h3>
 				<p><i>Ask the client for information about a URL.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import URLs permission needed.</p></li>
@@ -557,8 +557,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_urls_add_url">
-				<h3><b>POST /add_urls/add_url</b></h3>
+			<div class="apiborder">
+				<h3 id="add_urls_add_url"><a href="#add_urls_add_url"><b>POST /add_urls/add_url</b></a></h3>
 				<p><i>Tell the client to 'import' a URL. This triggers the exact same routine as drag-and-dropping a text URL onto the main client window.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import URLs permission needed. Add Tags needed to include tags.</p></li>
@@ -650,8 +650,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="add_urls_associate_url">
-				<h3><b>POST /add_urls/associate_url</b></h3>
+			<div class="apiborder">
+				<h3 id="add_urls_associate_url"><a href="#add_urls_associate_url"><b>POST /add_urls/associate_url</b></a></h3>
 				<p><i>Manage which URLs the client considers to be associated with which files.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Import URLs permission needed.</p></li>
@@ -686,10 +686,11 @@
 					</li>
 					<li><p>Response description: 200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.</p></li>
 				</ul>
-			</div><h3>Managing Cookies</h3>
+			</div>
+			<h3 id="managing_cookies"><a href="#managing_cookies">Managing Cookies</a></h3>
 			<p>This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.</p>
-			<div class="apiborder" id="manage_cookies_get_cookies">
-				<h3><b>GET /manage_cookies/get_cookies</b></h3>
+			<div class="apiborder">
+				<h3 id="manage_cookies_get_cookies"><a href="#manage_cookies_get_cookies"><b>GET /manage_cookies/get_cookies</b></a></h3>
 				<p><i>Get the cookies for a particular domain.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Manage Cookies permission needed.</p></li>
@@ -722,8 +723,8 @@
 					<p>This request will also return any cookies for subdomains. The session system in hydrus generally stores cookies according to the second-level domain, so if you request for specific.someoverbooru.net, you will still get the cookies for someoverbooru.net and all its subdomains.</p>
 				</ul>
 			</div>
-			<div class="apiborder" id="manage_cookies_set_cookies">
-				<h3><b>POST /manage_cookies/set_cookies</b></h3>
+			<div class="apiborder">
+				<h3 id="manage_cookies_set_cookies"><a href="#manage_cookies_set_cookies"><b>POST /manage_cookies/set_cookies</b></a></h3>
 				<p>Set some new cookies for the client. This makes it easier to 'copy' a login from a web browser or similar to hydrus if hydrus's login system can't handle the site yet.</p>
 				<ul>
 					<li><p>Restricted access: YES. Manage Cookies permission needed.</p></li>
@@ -756,10 +757,10 @@
 					<p>Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.</p>
 				</ul>
 			</div>
-			<h3>Managing Pages</h3>
+			<h3 id="managing_pages"><a href="#managing_pages">Managing Pages</a></h3>
 			<p>This refers to the pages of the main client UI.</p>
-			<div class="apiborder" id="manage_pages_get_pages">
-				<h3><b>GET /manage_pages/get_pages</b></h3>
+			<div class="apiborder">
+				<h3 id="manage_pages_get_pages"><a href="#manage_pages_get_pages"><b>GET /manage_pages/get_pages</b></a></h3>
 				<p><i>Get the page structure of the current UI session.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Manage Pages permission needed.</p></li>
@@ -833,8 +834,8 @@
 					<p>The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.</p>
 				</ul>
 			</div>
-			<div class="apiborder" id="manage_pages_get_page_info">
-				<h3><b>GET /manage_pages/get_page_info</b></h3>
+			<div class="apiborder">
+				<h3 id="manage_pages_get_page_info"><a href="#manage_pages_get_page_info"><b>GET /manage_pages/get_page_info</b></a></h3>
 				<p><i>Get information about a specific page.</i></p>
 				<p class="warning">This is under construction. The current call dumps a ton of info for different downloader pages. Please experiment in IRL situations and give feedback for now! I will flesh out this help with more enumeration info and examples as this gets nailed down. POST commands to alter pages (adding, removing, highlighting), will come later.</p>
 				<ul>
@@ -929,8 +930,8 @@
 					</li>
 				</ul>
 			</div>
-			<div class="apiborder" id="manage_pages_focus_page">
-				<h3><b>POST /manage_pages/focus_page</b></h3>
+			<div class="apiborder">
+				<h3 id="manage_pages_focus_page"><a href="#manage_pages_focus_page"><b>POST /manage_pages/focus_page</b></a></h3>
 				<p><i>'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Manage Pages permission needed.</p></li>
@@ -960,10 +961,10 @@
 					<li><p>Response description: 200 with no content. If the page key is not found, this will 404.</p></li>
 				</ul>
 			</div>
-			<h3>Searching Files</h3>
+			<h3 id="searching_files"><a href="#searching_files">Searching Files</a></h3>
 			<p>File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.</p>
-			<div class="apiborder" id="get_files_search_files">
-				<h3><b>GET /get_files/search_files</b></h3>
+			<div class="apiborder">
+				<h3 id="get_files_search_files"><a href="#get_files_search_files"><b>GET /get_files/search_files</b></a></h3>
 				<p><i>Search for the client's files.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
@@ -999,8 +1000,8 @@
 					<p>Note that most clients will have an invisible system:limit of 10,000 files on all queries. I expect to add more system predicates to help searching for untagged files, but it is tricky to fetch all files under any circumstance. Large queries may take several seconds to respond.</p>
 				</ul>
 			</div>
-			<div class="apiborder" id="get_files_file_metadata">
-				<h3><b>GET /get_files/file_metadata</b></h3>
+			<div class="apiborder">
+				<h3 id="get_files_file_metadata"><a href="#get_files_file_metadata"><b>GET /get_files/file_metadata</b></a></h3>
 				<p><i>Get metadata about files in the client.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
@@ -1158,8 +1159,8 @@
 					
 				</ul>
 			</div>
-			<div class="apiborder" id="get_files_file">
-				<h3><b>GET /get_files/file</b></h3>
+			<div class="apiborder">
+				<h3 id="get_files_file"><a href="#get_files_file"><b>GET /get_files/file</b></a></h3>
 				<p><i>Get a file.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
@@ -1182,8 +1183,8 @@
 					<li><p>Response description: The file itself. You should get the correct mime type as the Content-Type header.</p></li>
 				</ul>
 			</div>
-			<div class="apiborder" id="get_files_thumbnail">
-				<h3><b>GET /get_files/thumbnail</b></h3>
+			<div class="apiborder">
+				<h3 id="get_files_thumbnail"><a href="#get_files_thumbnail"><b>GET /get_files/thumbnail</b></a></h3>
 				<p><i>Get a file's thumbnail.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>

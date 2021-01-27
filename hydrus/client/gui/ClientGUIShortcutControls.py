@@ -455,7 +455,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
             
             pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
-            sort_name = ClientGUIShortcuts.shortcut_names_to_sort_order[ name ]
+            sort_name = ClientGUIShortcuts.shortcut_names_sorted.index( name )
             
         else:
             
