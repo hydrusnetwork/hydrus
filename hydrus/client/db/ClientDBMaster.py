@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client.networking import ClientNetworkingDomain
@@ -293,7 +294,7 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         
         self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
         
-
+    
 class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
@@ -382,7 +383,7 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client master', cursor )
+        HydrusDBModule.HydrusDBModule.__init__( self, 'client tags master', cursor )
         
         self.null_namespace_id = None
         
@@ -476,7 +477,7 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         return expected_table_names
         
     
-    def GetNamespaceId( self, namespace ):
+    def GetNamespaceId( self, namespace ) -> int:
         
         if namespace == '':
             
@@ -504,7 +505,7 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         return namespace_id
         
     
-    def GetSubtagId( self, subtag ):
+    def GetSubtagId( self, subtag ) -> int:
         
         result = self._c.execute( 'SELECT subtag_id FROM subtags WHERE subtag = ?;', ( subtag, ) ).fetchone()
         
@@ -522,7 +523,14 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         return subtag_id
         
     
-    def GetTagId( self, tag ):
+    def GetTag( self, tag_id ) -> str:
+        
+        self._PopulateTagIdsToTagsCache( ( tag_id, ) )
+        
+        return self._tag_ids_to_tags_cache[ tag_id ]
+        
+    
+    def GetTagId( self, tag ) -> int:
         
         clean_tag = HydrusTags.CleanTag( tag )
         
@@ -556,7 +564,7 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         return tag_id
         
     
-    def GetTagIdsToTags( self, tag_ids = None, tags = None ):
+    def GetTagIdsToTags( self, tag_ids = None, tags = None ) -> typing.Dict[ int, str ]:
         
         if tag_ids is not None:
             
@@ -572,11 +580,21 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         return tag_ids_to_tags
         
     
+    def UpdateTagId( self, tag_id, namespace_id, subtag_id ):
+        
+        self._c.execute( 'UPDATE tags SET namespace_id = ?, subtag_id = ? WHERE tag_id = ?;', ( namespace_id, subtag_id, tag_id ) )
+    
+        if tag_id in self._tag_ids_to_tags_cache:
+    
+            del self._tag_ids_to_tags_cache[ tag_id ]
+            
+        
+    
 class ClientDBMasterURLs( HydrusDBModule.HydrusDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client master', cursor )
+        HydrusDBModule.HydrusDBModule.__init__( self, 'client urls master', cursor )
         
     
     def _GetIndexGenerationTuples( self ):

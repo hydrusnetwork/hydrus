@@ -232,6 +232,11 @@ class Controller( HydrusController.HydrusController ):
         return self.services_manager.GetServices( ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) )
         
     
+    def _GetWakeDelayPeriod( self ):
+        
+        return self.new_options.GetInteger( 'wake_delay_period' )
+        
+    
     def _PublishShutdownSubtext( self, text ):
         
         self.frame_splash_status.SetSubtext( text )
@@ -260,6 +265,53 @@ class Controller( HydrusController.HydrusController ):
         
         self._doing_fast_exit = True
         
+    
+    def _ShowJustWokeToUser( self ):
+        
+        def do_it( job_key: ClientThreading.JobKey ):
+            
+            while not HG.view_shutdown:
+                
+                with self._sleep_lock:
+                    
+                    if job_key.IsCancelled():
+                        
+                        self._timestamps[ 'now_awake' ] = HydrusData.GetNow()
+                        
+                        job_key.SetVariable( 'popup_text_1', 'enabling I/O now' )
+                        
+                        job_key.Delete()
+                        
+                        return
+                        
+                    
+                    wake_time = self._timestamps[ 'now_awake' ]
+                    
+                
+                if HydrusData.TimeHasPassed( wake_time ):
+                    
+                    job_key.Delete()
+                    
+                    return
+                    
+                else:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'enabling I/O {}'.format( HydrusData.TimestampToPrettyTimeDelta( wake_time ) ) )
+                    
+                
+                time.sleep( 0.5 )
+                
+            
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'just woke up from sleep' )
+        
+        self.pub( 'message', job_key )
+        
+        self.CallToThread( do_it, job_key )
+        
+    
     
     def _ShutdownManagers( self ):
         

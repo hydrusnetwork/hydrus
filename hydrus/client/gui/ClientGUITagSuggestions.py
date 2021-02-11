@@ -19,6 +19,7 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.metadata import ClientTags
 
 def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
@@ -57,7 +58,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, service_key, activate_callable, sort_tags = True ):
         
-        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = sort_tags )
+        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = sort_tags, render_for_user = False )
         
         self._activate_callable = activate_callable
         
@@ -73,7 +74,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         if len( self._selected_terms ) > 0:
             
-            tags = set( self._selected_terms )
+            tags = set( self._GetTagsFromTerms( self._selected_terms ) )
             
             self._activate_callable( tags, only_add = True )
             
@@ -94,10 +95,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def TakeFocusForUser( self ):
         
-        if len( self._selected_terms ) == 0 and len( self._terms ) > 0:
-            
-            self._Hit( False, False, 0 )
-            
+        self.SelectTopItem()
         
         self.setFocus( QC.Qt.OtherFocusReason )
         
@@ -106,7 +104,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, service_key, activate_callable ):
         
-        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent )
+        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, render_for_user = False )
         
         self._activate_callable = activate_callable
         
@@ -119,7 +117,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         if len( self._selected_terms ) > 0:
             
-            tags = { predicate.GetValue() for predicate in self._selected_terms }
+            tags = set( self._GetTagsFromTerms( self._selected_terms ) )
             
             self._activate_callable( tags, only_add = True )
             
@@ -133,19 +131,18 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         return False
         
     
-    def _GetTextFromTerm( self, term ):
+    def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ):
         
-        predicate = term
+        predicate.ClearCounts()
         
-        return predicate.ToString( tag_display_type = ClientTags.TAG_DISPLAY_STORAGE, with_count = False )
+        show_ideal_siblings = True
+        
+        return ClientGUIListBoxesData.ListBoxItemPredicate( predicate, show_ideal_siblings )
         
     
     def TakeFocusForUser( self ):
         
-        if len( self._selected_terms ) == 0 and len( self._terms ) > 0:
-            
-            self._Hit( False, False, 0 )
-            
+        self.SelectTopItem()
         
         self.setFocus( QC.Qt.OtherFocusReason )
         

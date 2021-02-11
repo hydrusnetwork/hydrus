@@ -1,4 +1,5 @@
 import collections
+import itertools
 import os
 import threading
 import typing
@@ -25,6 +26,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUISearch
+from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
@@ -916,7 +918,7 @@ class ListBox( QW.QScrollArea ):
     
     TEXT_X_PADDING = 3
     
-    def __init__( self, parent, height_num_chars = 10, has_async_text_info = False ):
+    def __init__( self, parent, height_num_chars = 10, has_async_text_info = False, render_for_user = False ):
         
         QW.QScrollArea.__init__( self, parent )
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -927,15 +929,16 @@ class ListBox( QW.QScrollArea ):
         
         self._background_colour = QG.QColor( 255, 255, 255 )
         
-        self._terms = set()
         self._ordered_terms = []
+        self._terms_to_logical_indices = {}
+        self._terms_to_positional_indices = {}
+        self._positional_indices_to_terms = {}
         self._selected_terms = set()
-        self._terms_to_texts = {}
+        self._total_positional_rows = 0
         
-        self._last_drag_start_index = None
+        self._last_hit_logical_index = None
+        self._last_drag_start_logical_index = None
         self._drag_started = False
-        
-        self._last_hit_index = None
         
         self._last_view_start = None
         
@@ -943,6 +946,8 @@ class ListBox( QW.QScrollArea ):
         self._minimum_height_num_chars = 8
         
         self._num_rows_per_page = 0
+        
+        self._render_for_user = render_for_user
         
         #
         
@@ -987,9 +992,9 @@ class ListBox( QW.QScrollArea ):
             
             try:
                 
-                index = self._GetIndexFromTerm( term )
+                logical_index = self._GetLogicalIndexFromTerm( term )
                 
-                selected_indices.append( index )
+                selected_indices.append( logical_index )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -1007,7 +1012,7 @@ class ListBox( QW.QScrollArea ):
             
             for ideal_index in ideal_indices:
                 
-                if self._CanSelectIndex( ideal_index ):
+                if ideal_index <= len( self._ordered_terms ) - 1:
                     
                     self._Hit( False, False, ideal_index )
                     
@@ -1024,54 +1029,63 @@ class ListBox( QW.QScrollArea ):
         pass
         
     
+    def _ApplyAsyncInfoToTerm( self, term, info ):
+        
+        # this guy comes with the lock
+        
+        pass
+        
+    
     def _DeleteActivate( self ):
         
         pass
         
     
-    def _AppendTerm( self, term ):
+    def _AppendTerms( self, terms ):
         
-        was_selected_before = term in self._selected_terms
+        previously_selected_terms = { term for term in terms if term in self._selected_terms }
         
-        if term in self._terms:
+        clear_terms = [ term for term in terms if term in self._terms_to_logical_indices ]
+        
+        if len( clear_terms ) > 0:
             
-            self._RemoveTerm( term )
-            
-        
-        self._terms.add( term )
-        self._ordered_terms.append( term )
-        
-        self._terms_to_texts[ term ] = self._GetTextFromTerm( term )
-        
-        if was_selected_before:
-            
-            self._selected_terms.add( term )
+            self._RemoveTerms( clear_terms )
             
         
-        if self._has_async_text_info:
+        for term in terms:
             
-            self._StartAsyncTextInfoLookup( term )
+            self._ordered_terms.append( term )
+            
+            self._terms_to_logical_indices[ term ] = len( self._ordered_terms ) - 1
+            self._terms_to_positional_indices[ term ] = self._total_positional_rows
+            self._positional_indices_to_terms[ self._total_positional_rows ] = term
+            
+            if self._has_async_text_info:
+                
+                # goes before getrowcount so we can populate if needed
+                
+                self._StartAsyncTextInfoLookup( term )
+                
+            
+            self._total_positional_rows += term.GetRowCount()
             
         
-    
-    def _CanHitIndex( self, index ):
-        
-        return True
-        
-    
-    def _CanSelectIndex( self, index ):
-        
-        return True
+        if len( previously_selected_terms ) > 0:
+            
+            self._selected_terms.update( previously_selected_terms )
+            
         
     
     def _Clear( self ):
         
-        self._terms = set()
         self._ordered_terms = []
         self._selected_terms = set()
-        self._terms_to_texts = {}
+        self._terms_to_logical_indices = {}
+        self._terms_to_positional_indices = {}
+        self._positional_indices_to_terms = {}
+        self._total_positional_rows = 0
         
-        self._last_hit_index = None
+        self._last_hit_logical_index = None
         
         self._last_view_start = None
         
@@ -1087,7 +1101,7 @@ class ListBox( QW.QScrollArea ):
     
     def _Deselect( self, index ):
         
-        term = self._GetTerm( index )
+        term = self._GetTermFromLogicalIndex( index )
         
         self._selected_terms.discard( term )
         
@@ -1097,17 +1111,17 @@ class ListBox( QW.QScrollArea ):
         self._selected_terms = set()
         
     
-    def _GetIndexFromTerm( self, term ):
+    def _GetLogicalIndexFromTerm( self, term ):
         
-        if term in self._ordered_terms:
+        if term in self._terms_to_logical_indices:
             
-            return self._ordered_terms.index( term )
+            return self._terms_to_logical_indices[ term ]
             
         
         raise HydrusExceptions.DataMissing()
         
     
-    def _GetIndexUnderMouse( self, mouse_event ):
+    def _GetLogicalIndexUnderMouse( self, mouse_event ):
         
         y = mouse_event.pos().y()
         
@@ -1122,42 +1136,66 @@ class ListBox( QW.QScrollArea ):
         
         text_height = self.fontMetrics().height()
         
-        row_index = y // text_height
+        positional_index = y // text_height
         
-        if row_index >= len( self._ordered_terms ):
+        if positional_index >= self._total_positional_rows:
             
             return None
             
         
-        return row_index
+        ( logical_index, positional_index ) = self._GetLogicalIndicesFromPositionalIndex( positional_index )
+        
+        return logical_index
+        
+    
+    def _GetLogicalIndicesFromPositionalIndex( self, positional_index: int ):
+        
+        if positional_index < 0 or positional_index >= self._total_positional_rows:
+            
+            return ( None, positional_index )
+            
+        
+        while positional_index not in self._positional_indices_to_terms and positional_index >= 0:
+            
+            positional_index -= 1
+            
+        
+        if positional_index < 0:
+            
+            return ( None, 0 )
+            
+        
+        return ( self._terms_to_logical_indices[ self._positional_indices_to_terms[ positional_index ] ], positional_index )
+        
+    
+    def _GetPositionalIndexFromLogicalIndex( self, logical_index: int ):
+        
+        try:
+            
+            term = self._GetTermFromLogicalIndex( logical_index )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return 0
+            
+        
+        return self._terms_to_positional_indices[ term ]
+        
+    
+    def _GetPredicatesFromTerms( self, terms: typing.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
+        
+        return list( itertools.chain.from_iterable( ( term.GetSearchPredicates() for term in terms ) ) )
+        
+    
+    def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ):
+        
+        raise NotImplementedError()
         
     
     def _GetSelectedPredicatesAndInverseCopies( self ):
         
-        predicates = []
-        inverse_predicates = []
-        
-        for term in self._selected_terms:
-            
-            if isinstance( term, ClientSearch.Predicate ):
-                
-                predicates.append( term )
-                
-                if term.IsInvertible():
-                    
-                    inverse_predicate = term.GetInverseCopy()
-                    
-                    inverse_predicates.append( inverse_predicate )
-                    
-                
-            else:
-                
-                s = term
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) )
-                inverse_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term, False ) )
-                
-            
+        predicates = self._GetPredicatesFromTerms( self._selected_terms )
+        inverse_predicates = [ predicate.GetInverseCopy() for predicate in predicates if predicate.IsInvertible() ]
         
         if len( predicates ) > 1 and ClientSearch.PREDICATE_TYPE_OR_CONTAINER not in ( p.GetType() for p in predicates ):
             
@@ -1171,11 +1209,11 @@ class ListBox( QW.QScrollArea ):
         return ( predicates, or_predicate, inverse_predicates )
         
     
-    def _GetSafeHitIndex( self, hit_index, direction = None ):
+    def _GetSafeHitIndex( self, logical_index, direction = None ):
         
         if direction is None:
             
-            if hit_index == 0:
+            if logical_index == 0:
                 
                 direction = 1
                 
@@ -1192,78 +1230,55 @@ class ListBox( QW.QScrollArea ):
             return None
             
         
-        original_hit_index = hit_index
+        original_logical_index = logical_index
         
-        if hit_index is not None:
+        if logical_index is not None:
             
             # if click/selection is out of bounds, fix it
-            if hit_index == -1 or hit_index > num_terms:
+            if logical_index == -1 or logical_index > num_terms:
                 
-                hit_index = num_terms - 1
+                logical_index = num_terms - 1
                 
-            elif hit_index == num_terms or hit_index < -1:
+            elif logical_index == num_terms or logical_index < -1:
                 
-                hit_index = 0
-                
-            
-            # while it is not ok to hit, move index
-            
-            while not self._CanHitIndex( hit_index ):
-                
-                hit_index = ( hit_index + direction ) % num_terms
-                
-                if hit_index == original_hit_index:
-                    
-                    # bail out if we circled around not finding an ok one to hit
-                    
-                    return None
-                    
+                logical_index = 0
                 
             
         
-        return hit_index
+        return logical_index
         
     
-    def _GetSimplifiedTextFromTerm( self, term ):
+    def _GetTagsFromTerms( self, terms: typing.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
         
-        return self._GetTextFromTerm( term )
+        return list( itertools.chain.from_iterable( ( term.GetTags() for term in terms ) ) )
         
     
-    def _GetTerm( self, index ):
+    def _GetTermFromLogicalIndex( self, logical_index ) -> ClientGUIListBoxesData.ListBoxItem:
         
-        if index < 0 or index > len( self._ordered_terms ) - 1:
+        if logical_index < 0 or logical_index > len( self._ordered_terms ) - 1:
             
-            raise HydrusExceptions.DataMissing( 'No term for index ' + str( index ) )
+            raise HydrusExceptions.DataMissing( 'No term for index ' + str( logical_index ) )
             
         
-        return self._ordered_terms[ index ]
-        
-    
-    def _GetTextsAndColours( self, term ):
-        
-        text = self._terms_to_texts[ term ]
-        
-        return [ ( text, ( 0, 111, 250 ) ) ]
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        raise NotImplementedError()
+        return self._ordered_terms[ logical_index ]
         
     
     def _HandleClick( self, event ):
         
-        hit_index = self._GetIndexUnderMouse( event )
+        logical_index = self._GetLogicalIndexUnderMouse( event )
         
         shift = event.modifiers() & QC.Qt.ShiftModifier
         ctrl = event.modifiers() & QC.Qt.ControlModifier
         
-        self._Hit( shift, ctrl, hit_index )
+        self._Hit( shift, ctrl, logical_index )
         
 
-    def _Hit( self, shift, ctrl, hit_index, only_add = False ):
+    def _Hit( self, shift, ctrl, logical_index, only_add = False ):
         
-        hit_index = self._GetSafeHitIndex( hit_index )
+        if logical_index is not None and ( logical_index < 0 or logical_index >= len( self._ordered_terms ) ):
+            
+            logical_index = None
+            
         
         to_select = set()
         to_deselect = set()
@@ -1272,40 +1287,40 @@ class ListBox( QW.QScrollArea ):
         
         if shift:
             
-            if hit_index is not None:
+            if logical_index is not None:
                 
                 if ctrl:
                     
-                    if self._IsSelected( hit_index ):
+                    if self._LogicalIndexIsSelected( logical_index ):
                         
-                        if self._last_hit_index is not None:
+                        if self._last_hit_logical_index is not None:
                             
-                            lower = min( hit_index, self._last_hit_index )
-                            upper = max( hit_index, self._last_hit_index )
+                            lower = min( logical_index, self._last_hit_logical_index )
+                            upper = max( logical_index, self._last_hit_logical_index )
                             
                             to_deselect = list( range( lower, upper + 1 ) )
                             
                         else:
                             
-                            to_deselect.add( hit_index )
+                            to_deselect.add( logical_index )
                             
                         
                     
                 else:
                     
                     # we are now saying if you shift-click on something already selected, we'll make no changes, but we'll move focus ghost
-                    if not self._IsSelected( hit_index ):
+                    if not self._LogicalIndexIsSelected( logical_index ):
                         
-                        if self._last_hit_index is not None:
+                        if self._last_hit_logical_index is not None:
                             
-                            lower = min( hit_index, self._last_hit_index )
-                            upper = max( hit_index, self._last_hit_index )
+                            lower = min( logical_index, self._last_hit_logical_index )
+                            upper = max( logical_index, self._last_hit_logical_index )
                             
                             to_select = list( range( lower, upper + 1 ) )
                             
                         else:
                             
-                            to_select.add( hit_index )
+                            to_select.add( logical_index )
                             
                         
                     
@@ -1313,30 +1328,30 @@ class ListBox( QW.QScrollArea ):
             
         elif ctrl:
             
-            if hit_index is not None:
+            if logical_index is not None:
                 
-                if self._IsSelected( hit_index ):
+                if self._LogicalIndexIsSelected( logical_index ):
                     
-                    to_deselect.add( hit_index )
+                    to_deselect.add( logical_index )
                     
                 else:
                     
-                    to_select.add( hit_index )
+                    to_select.add( logical_index )
                     
                 
             
         else:
             
-            if hit_index is None:
+            if logical_index is None:
                 
                 deselect_all = True
                 
             else:
                 
-                if not self._IsSelected( hit_index ):
+                if not self._LogicalIndexIsSelected( logical_index ):
                     
                     deselect_all = True
-                    to_select.add( hit_index )
+                    to_select.add( logical_index )
                     
                 
             
@@ -1356,13 +1371,15 @@ class ListBox( QW.QScrollArea ):
             self._Deselect( index )
             
         
-        self._last_hit_index = hit_index
+        self._last_hit_logical_index = logical_index
         
-        if self._last_hit_index is not None:
+        if self._last_hit_logical_index is not None:
             
             text_height = self.fontMetrics().height()
             
-            y = text_height * self._last_hit_index
+            last_hit_positional_index = self._GetPositionalIndexFromLogicalIndex( self._last_hit_logical_index )
+            
+            y = text_height * last_hit_positional_index
             
             visible_rect = QP.ScrollAreaVisibleRect( self )
             
@@ -1393,9 +1410,9 @@ class ListBox( QW.QScrollArea ):
                 
                 try:
                     
-                    index = self._GetIndexFromTerm( term )
+                    logical_index = self._GetLogicalIndexFromTerm( term )
                     
-                    selected_indices.append( index )
+                    selected_indices.append( logical_index )
                     
                 except HydrusExceptions.DataMissing:
                     
@@ -1405,12 +1422,11 @@ class ListBox( QW.QScrollArea ):
             
             if len( selected_indices ) > 0:
                 
-                first_index = min( selected_indices )
+                first_logical_index = min( selected_indices )
                 
-                self._Hit( False, False, first_index )
+                self._Hit( False, False, first_logical_index )
                 
             
-        
         
     
     def _InitialiseAsyncTextInfoUpdater( self ):
@@ -1424,14 +1440,41 @@ class ListBox( QW.QScrollArea ):
         
         def publish_callable( terms_to_info ):
             
+            rows_changed = False
+            
             with self._async_text_info_lock:
                 
                 self._currently_fetching_async_text_info_terms.difference_update( terms_to_info.keys() )
                 
                 self._terms_to_async_text_info.update( terms_to_info )
                 
+                for ( term, info ) in terms_to_info.items():
+                    
+                    # ok in the time since this happened, we may have actually changed the term object, so let's cycle to the actual object in use atm!
+                    if term in self._terms_to_positional_indices:
+                        
+                        term = self._positional_indices_to_terms[ self._terms_to_positional_indices[ term ] ]
+                        
+                    
+                    old_num_rows = term.GetRowCount()
+                    
+                    self._ApplyAsyncInfoToTerm( term, info )
+                    
+                    new_num_rows = term.GetRowCount()
+                    
+                    if old_num_rows != new_num_rows:
+                        
+                        rows_changed = True
+                        
+                    
+                
             
-            self._RefreshTexts( set( terms_to_info.keys() ) )
+            if rows_changed:
+                
+                self._RegenTermsToIndices()
+                
+            
+            self._DataHasChanged()
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
@@ -1462,11 +1505,11 @@ class ListBox( QW.QScrollArea ):
         return work_callable
         
     
-    def _IsSelected( self, index ):
+    def _LogicalIndexIsSelected( self, logical_index ):
         
         try:
             
-            term = self._GetTerm( index )
+            term = self._GetTermFromLogicalIndex( logical_index )
             
         except HydrusExceptions.DataMissing:
             
@@ -1478,6 +1521,17 @@ class ListBox( QW.QScrollArea ):
     
     def _Redraw( self, painter ):
         
+        painter.setBackground( QG.QBrush( self._background_colour ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if len( self._ordered_terms ) == 0:
+            
+            return
+            
+        
+        #
+        
         text_height = self.fontMetrics().height()
         
         visible_rect = QP.ScrollAreaVisibleRect( self )
@@ -1487,26 +1541,80 @@ class ListBox( QW.QScrollArea ):
         visible_rect_width = visible_rect.width()
         visible_rect_height = visible_rect.height()
         
-        first_visible_index = visible_rect_y // text_height
+        first_visible_positional_index = visible_rect_y // text_height
         
-        last_visible_index = ( visible_rect_y + visible_rect_height ) // text_height
+        last_visible_positional_index = ( visible_rect_y + visible_rect_height ) // text_height
         
         if ( visible_rect_y + visible_rect_height ) % text_height != 0:
             
-            last_visible_index += 1
+            last_visible_positional_index += 1
             
         
-        last_visible_index = min( last_visible_index, len( self._ordered_terms ) - 1 )
+        last_visible_positional_index = min( last_visible_positional_index, self._total_positional_rows - 1 )
         
-        painter.setBackground( QG.QBrush( self._background_colour ) )
+        #
         
-        painter.eraseRect( painter.viewport() )
+        ( first_visible_logical_index, first_visible_positional_index ) = self._GetLogicalIndicesFromPositionalIndex( first_visible_positional_index )
+        ( last_visible_logical_index, last_visible_positional_index ) = self._GetLogicalIndicesFromPositionalIndex( last_visible_positional_index )
         
-        for ( i, current_index ) in enumerate( range( first_visible_index, last_visible_index + 1 ) ):
+        current_visible_index = first_visible_positional_index
+        
+        for logical_index in range( first_visible_logical_index, last_visible_logical_index + 1 ):
             
-            term = self._GetTerm( current_index )
+            term = self._GetTermFromLogicalIndex( logical_index )
             
-            texts_and_colours = self._GetTextsAndColours( term )
+            rows_of_texts_and_colours = self._GetRowsOfTextsAndColours( term )
+            
+            for texts_and_colours in rows_of_texts_and_colours:
+                
+                x_start = self.TEXT_X_PADDING
+                y_top = current_visible_index * text_height
+                
+                for ( text, ( r, g, b ) ) in texts_and_colours:
+                    
+                    text_colour = QG.QColor( r, g, b )
+                    
+                    if term in self._selected_terms:
+                        
+                        painter.setBrush( QG.QBrush( text_colour ) )
+                        
+                        painter.setPen( QC.Qt.NoPen )
+                        
+                        if x_start == self.TEXT_X_PADDING:
+                            
+                            background_colour_x = 0
+                            
+                        else:
+                            
+                            background_colour_x = x_start
+                            
+                        
+                        painter.drawRect( background_colour_x, y_top, visible_rect_width, text_height )
+                        
+                        text_colour = self._background_colour
+                        
+                    
+                    painter.setPen( QG.QPen( text_colour ) )
+                    
+                    ( this_text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
+                    
+                    this_text_width = this_text_size.width()
+                    this_text_height = this_text_size.height()
+                    
+                    painter.drawText( QC.QRectF( x_start, y_top, this_text_width, this_text_height ), text )
+                    
+                    x_start += this_text_width
+                    
+                
+                current_visible_index += 1
+                
+            
+        '''
+        for current_index in range( first_visible_positional_index, last_visible_positional_index + 1 ):
+            
+            term = self._GetTermFromLogicalIndex( current_index )
+            
+            texts_and_colours = self._GetRowsOfTextsAndColours( term )
             
             there_is_more_than_one_text = len( texts_and_colours ) > 1
             
@@ -1553,62 +1661,56 @@ class ListBox( QW.QScrollArea ):
                     
                 
             
-        
+        '''
     
-    def _RefreshTexts( self, only_these_terms = None ):
+    def _RegenTermsToIndices( self ):
         
-        if only_these_terms:
-            
-            for term in only_these_terms:
-                
-                if term in self._terms_to_texts:
-                    
-                    self._terms_to_texts[ term ] = self._GetTextFromTerm( term )
-                    
-                
-            
-        else:
-            
-            self._terms_to_texts = { term : self._GetTextFromTerm( term ) for term in self._terms }
-            
+        self._terms_to_logical_indices = {}
+        self._terms_to_positional_indices = {}
+        self._positional_indices_to_terms = {}
+        self._total_positional_rows = 0
         
-        self.widget().update()
+        for ( logical_index, term ) in enumerate( self._ordered_terms ):
+            
+            self._terms_to_logical_indices[ term ] = logical_index
+            self._terms_to_positional_indices[ term ] = self._total_positional_rows
+            self._positional_indices_to_terms[ self._total_positional_rows ] = term
+            
+            self._total_positional_rows += term.GetRowCount()
+            
         
     
     def _RemoveSelectedTerms( self ):
         
-        for term in list( self._selected_terms ):
-            
-            self._RemoveTerm( term )
-            
+        self._RemoveTerms( list( self._selected_terms ) )
         
     
-    def _RemoveTerm( self, term ):
+    def _RemoveTerms( self, terms ):
         
-        if term in self._terms:
-            
-            self._terms.discard( term )
-            
-            self._ordered_terms.remove( term )
-            
-            self._selected_terms.discard( term )
-            
-            self._last_hit_index = None
-            
-            del self._terms_to_texts[ term ]
-            
+        removable_terms = { term for term in terms if term in self._terms_to_logical_indices }
         
-    
-    def _Select( self, index ):
-        
-        if not self._CanSelectIndex( index ):
+        if len( removable_terms ) == 0:
             
             return
             
         
+        for term in removable_terms:
+            
+            self._ordered_terms.remove( term )
+            
+        
+        self._selected_terms.difference_update( removable_terms )
+        
+        self._RegenTermsToIndices()
+        
+        self._last_hit_logical_index = None
+        
+    
+    def _Select( self, index ):
+        
         try:
             
-            term = self._GetTerm( index )
+            term = self._GetTermFromLogicalIndex( index )
             
             self._selected_terms.add( term )
             
@@ -1620,7 +1722,7 @@ class ListBox( QW.QScrollArea ):
     
     def _SelectAll( self ):
         
-        self._selected_terms = set( self._terms )
+        self._selected_terms = set( self._terms_to_logical_indices.keys() )
         
     
     def _SetVirtualSize( self ):
@@ -1631,7 +1733,7 @@ class ListBox( QW.QScrollArea ):
         
         text_height = self.fontMetrics().height()
         
-        ideal_virtual_size = QC.QSize( my_size.width(), text_height * len( self._ordered_terms ) )
+        ideal_virtual_size = QC.QSize( my_size.width(), text_height * self._total_positional_rows )
         
         if ideal_virtual_size != self.widget().size():
             
@@ -1639,21 +1741,24 @@ class ListBox( QW.QScrollArea ):
             
         
     
-    def _SortByText( self ):
+    def _Sort( self ):
         
-        def lexicographic_key( term ):
-            
-            return self._terms_to_texts[ term ]
-            
+        self._ordered_terms.sort()
         
-        self._ordered_terms.sort( key = lexicographic_key )
+        self._RegenTermsToIndices()
         
     
     def _StartAsyncTextInfoLookup( self, term ):
         
         with self._async_text_info_lock:
             
-            if term not in self._terms_to_async_text_info and term not in self._currently_fetching_async_text_info_terms:
+            if term in self._terms_to_async_text_info:
+                
+                info = self._terms_to_async_text_info[ term ]
+                
+                self._ApplyAsyncInfoToTerm( term, info )
+                
+            elif term not in self._currently_fetching_async_text_info_terms:
                 
                 self._pending_async_text_info_terms.add( term )
                 
@@ -1692,7 +1797,7 @@ class ListBox( QW.QScrollArea ):
                 
             else:
                 
-                hit_index = None
+                hit_logical_index = None
                 
                 if len( self._ordered_terms ) > 1:
                     
@@ -1701,61 +1806,50 @@ class ListBox( QW.QScrollArea ):
                     
                     if key_code in ( QC.Qt.Key_Home, ):
                         
-                        hit_index = 0
+                        hit_logical_index = 0
                         
                     elif key_code in ( QC.Qt.Key_End, ):
                         
-                        hit_index = len( self._ordered_terms ) - 1
+                        hit_logical_index = len( self._ordered_terms ) - 1
                         
                         roll_up = True
                         
-                    elif self._last_hit_index is not None:
+                    elif self._last_hit_logical_index is not None:
                         
                         if key_code in ( QC.Qt.Key_Up, ):
                             
-                            hit_index = self._last_hit_index - 1
-                            
-                            roll_up = True
+                            hit_logical_index = ( self._last_hit_logical_index - 1 ) % len( self._ordered_terms )
                             
                         elif key_code in ( QC.Qt.Key_Down, ):
                             
-                            hit_index = self._last_hit_index + 1
+                            hit_logical_index = ( self._last_hit_logical_index + 1 ) % len( self._ordered_terms )
                             
-                            roll_down = True
+                        elif key_code in ( QC.Qt.Key_PageUp, QC.Qt.Key_PageDown ):
                             
-                        elif key_code in ( QC.Qt.Key_PageUp, ):
+                            last_hit_positional_index = self._GetPositionalIndexFromLogicalIndex( self._last_hit_logical_index )
                             
-                            hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
+                            if key_code == QC.Qt.Key_PageUp:
+                                
+                                hit_positional_index = max( 0, last_hit_positional_index - self._num_rows_per_page )
+                                
+                            else:
+                                
+                                hit_positional_index = min( self._total_positional_rows - 1, last_hit_positional_index + self._num_rows_per_page )
+                                
                             
-                            roll_up = True
-                            
-                        elif key_code in ( QC.Qt.Key_PageDown, ):
-                            
-                            hit_index = min( len( self._ordered_terms ) - 1, self._last_hit_index + self._num_rows_per_page )
-                            
-                            roll_down = True
+                            ( hit_logical_index, hit_positional_index ) = self._GetLogicalIndicesFromPositionalIndex( hit_positional_index )
                             
                         
                     
                 
-                if hit_index is None:
+                if hit_logical_index is None:
                     
                     # don't send to parent, which will do silly scroll window business with arrow key presses
                     event.ignore()
                     
                 else:
                     
-                    if roll_up:
-                        
-                        hit_index = self._GetSafeHitIndex( hit_index, -1 )
-                        
-                    
-                    if roll_down:
-                        
-                        hit_index = self._GetSafeHitIndex( hit_index, 1 )
-                        
-                    
-                    self._Hit( shift, ctrl, hit_index )
+                    self._Hit( shift, ctrl, hit_logical_index )
                     
                 
             
@@ -1786,24 +1880,24 @@ class ListBox( QW.QScrollArea ):
         
         if is_dragging:
             
-            hit_index = self._GetIndexUnderMouse( event )
+            logical_index = self._GetLogicalIndexUnderMouse( event )
             
-            if self._last_drag_start_index is None:
+            if self._last_drag_start_logical_index is None:
                 
-                self._last_drag_start_index = hit_index
+                self._last_drag_start_logical_index = logical_index
                 
-            elif hit_index != self._last_drag_start_index:
+            elif logical_index != self._last_drag_start_logical_index:
                 
                 ctrl = event.modifiers() & QC.Qt.ControlModifier
                 
                 if not self._drag_started:
                     
-                    self._Hit( True, ctrl, self._last_drag_start_index )
+                    self._Hit( True, ctrl, self._last_drag_start_logical_index )
                     
                     self._drag_started = True
                     
                 
-                self._Hit( True, ctrl, hit_index )
+                self._Hit( True, ctrl, logical_index )
                 
             
         else:
@@ -1814,7 +1908,7 @@ class ListBox( QW.QScrollArea ):
     
     def mouseReleaseEvent( self, event ):
         
-        self._last_drag_start_index = None
+        self._last_drag_start_logical_index = None
         self._drag_started = False
         
         event.ignore()
@@ -1865,7 +1959,7 @@ class ListBox( QW.QScrollArea ):
         
         text_height = self.fontMetrics().height()
         
-        return text_height * len( self._ordered_terms ) + 20
+        return text_height * self._total_positional_rows + 20
         
     
     def HasValues( self ):
@@ -1888,25 +1982,21 @@ class ListBox( QW.QScrollArea ):
     
     def MoveSelectionDown( self ):
         
-        if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
+        if len( self._ordered_terms ) > 1 and self._last_hit_logical_index is not None:
             
-            hit_index = ( self._last_hit_index + 1 ) % len( self._ordered_terms )
+            logical_index = ( self._last_hit_logical_index + 1 ) % len( self._ordered_terms )
             
-            hit_index = self._GetSafeHitIndex( hit_index, 1 )
-            
-            self._Hit( False, False, hit_index )
+            self._Hit( False, False, logical_index )
             
         
     
     def MoveSelectionUp( self ):
         
-        if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
+        if len( self._ordered_terms ) > 1 and self._last_hit_logical_index is not None:
             
-            hit_index = ( self._last_hit_index - 1 ) % len( self._ordered_terms )
+            logical_index = ( self._last_hit_logical_index - 1 ) % len( self._ordered_terms )
             
-            hit_index = self._GetSafeHitIndex( hit_index, -1 )
-            
-            self._Hit( False, False, hit_index )
+            self._Hit( False, False, logical_index )
             
         
     
@@ -1914,7 +2004,7 @@ class ListBox( QW.QScrollArea ):
         
         if len( self._ordered_terms ) > 0:
             
-            if len( self._selected_terms ) == 1 and self._IsSelected( 0 ):
+            if len( self._selected_terms ) == 1 and self._LogicalIndexIsSelected( 0 ):
                 
                 return
                 
@@ -1955,8 +2045,6 @@ COPY_ALL_SUBTAGS = 6
 COPY_ALL_SUBTAGS_WITH_COUNTS = 7
 
 class ListBoxTags( ListBox ):
-    
-    ors_are_under_construction = False
     
     can_spawn_new_windows = True
     
@@ -2000,46 +2088,7 @@ class ListBoxTags( ListBox ):
             terms = self._ordered_terms
             
         
-        copyable_tag_strings = []
-        
-        for term in terms:
-            
-            if isinstance( term, ClientSearch.Predicate ):
-                
-                if term.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_WILDCARD ):
-                    
-                    tag = term.GetValue()
-                    
-                elif term.GetType() == ClientSearch.PREDICATE_TYPE_NAMESPACE:
-                    
-                    namespace = term.GetValue()
-                    
-                    # this is useful for workflow
-                    tag = '{}:*'.format( namespace )
-                    
-                elif term.GetType() == ClientSearch.PREDICATE_TYPE_PARENT:
-                    
-                    tag = HydrusTags.CleanTag( term.GetValue() )
-                    
-                else:
-                    
-                    tag = term.ToString( with_count = with_counts )
-                    
-                
-            else:
-                
-                if self._HasCounts() and with_counts:
-                    
-                    tag = self._terms_to_texts[ term ]
-                    
-                else:
-                    
-                    tag = str( term )
-                    
-                
-            
-            copyable_tag_strings.append( tag )
-            
+        copyable_tag_strings = [ term.GetCopyableText( with_counts = with_counts ) for term in terms ]
         
         if only_subtags:
             
@@ -2074,77 +2123,41 @@ class ListBoxTags( ListBox ):
         return HC.options[ 'namespace_colours' ]
         
     
-    def _GetNamespaceFromTerm( self, term ):
-        
-        raise NotImplementedError()
-        
-    
     def _CanProvideCurrentPagePredicates( self ):
         
         return False
         
     
-    def _GetSelectedActualTags( self ):
-        
-        selected_actual_tags = set()
-        
-        for term in self._selected_terms:
-            
-            tag = self._GetTagFromTerm( term )
-            
-            if tag is not None:
-                
-                selected_actual_tags.add( tag )
-                
-            
-        
-        return selected_actual_tags
-        
-    
-    def _GetTagFromTerm( self, term ):
-        
-        raise NotImplementedError()
-        
-    
-    def _GetTextsAndColours( self, term ):
+    def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ):
         
         namespace_colours = self._GetNamespaceColours()
         
-        if isinstance( term, ClientSearch.Predicate ) and term.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
-            
-            texts_and_namespaces = term.GetTextsAndNamespaces( or_under_construction = self.ors_are_under_construction )
-            
-        else:
-            
-            text = self._terms_to_texts[ term ]
-            
-            namespace = self._GetNamespaceFromTerm( term )
-            
-            texts_and_namespaces = [ ( text, namespace ) ]
-            
+        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user )
         
-        texts_and_colours = []
+        rows_of_texts_and_colours = []
         
-        for ( text, namespace ) in texts_and_namespaces:
+        for texts_and_namespaces in rows_of_texts_and_namespaces:
             
-            if namespace in namespace_colours:
+            texts_and_colours = []
+            
+            for ( text, namespace ) in texts_and_namespaces:
                 
-                ( r, g, b ) = namespace_colours[ namespace ]
+                if namespace in namespace_colours:
+                    
+                    rgb = namespace_colours[ namespace ]
+                    
+                else:
+                    
+                    rgb = namespace_colours[ None ]
+                    
                 
-            else:
-                
-                ( r, g, b ) = namespace_colours[ None ]
+                texts_and_colours.append( ( text, rgb ) )
                 
             
-            texts_and_colours.append( ( text, ( r, g, b ) ) )
+            rows_of_texts_and_colours.append( texts_and_colours )
             
         
-        return texts_and_colours
-        
-    
-    def _GetTextFromTerm( self, term, with_count = True ):
-        
-        raise NotImplementedError()
+        return rows_of_texts_and_colours
         
     
     def _HasCounts( self ):
@@ -2196,7 +2209,7 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuTagEvent( self, command ):
         
-        tags = [ self._GetTagFromTerm( term ) for term in self._selected_terms ]
+        tags = self._GetTagsFromTerms( self._selected_terms )
         
         tags = [ tag for tag in tags if tag is not None ]
         
@@ -2346,9 +2359,77 @@ class ListBoxTags( ListBox ):
         
         if len( self._ordered_terms ) > 0:
             
-            selected_actual_tags = self._GetSelectedActualTags()
+            selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
             
             menu = QW.QMenu()
+            
+            copy_menu = QW.QMenu( menu )
+            
+            selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
+            selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
+            
+            if len( selected_copyable_tag_strings ) == 1:
+                
+                ( selection_string, ) = selected_copyable_tag_strings 
+                
+            else:
+                
+                selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
+                
+            
+            if len( selected_copyable_tag_strings ) > 0:
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
+                
+                if len( selected_copyable_subtag_strings ) == 1:
+                    
+                    # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
+                    if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
+                        
+                        ( sub_selection_string, ) = selected_copyable_subtag_strings
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                        
+                    
+                else:
+                    
+                    sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                    
+                
+                if self._HasCounts():
+                    
+                    ClientGUIMenus.AppendSeparator( copy_menu )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( selection_string ), 'Copy the selected tags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS_WITH_COUNTS )
+                    
+                    if sub_selection_string is not None:
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( sub_selection_string ), 'Copy the selected subtags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+                        
+                    
+                
+            
+            copy_all_is_appropriate = len( self._ordered_terms ) > len( self._selected_terms )
+            
+            if copy_all_is_appropriate:
+                
+                ClientGUIMenus.AppendSeparator( copy_menu )
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the tags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags', 'Copy all the subtags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS )
+                
+                if self._HasCounts():
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the tags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS_WITH_COUNTS )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags with counts', 'Copy all the subtags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS_WITH_COUNTS )
+                    
+                
+            
+            ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
+            
+            #
             
             fallback_service_key = self._GetFallbackServiceKey()
             
@@ -2357,7 +2438,11 @@ class ListBoxTags( ListBox ):
             
             if can_show_siblings_and_parents or can_launch_sibling_and_parent_dialogs:
                 
-                siblings_and_parents_menu = QW.QMenu( menu )
+                siblings_menu = QW.QMenu( menu )
+                parents_menu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenu( menu, siblings_menu, 'siblings' )
+                ClientGUIMenus.AppendMenu( menu, parents_menu, 'parents' )
                 
                 if can_launch_sibling_and_parent_dialogs:
                     
@@ -2372,19 +2457,11 @@ class ListBoxTags( ListBox ):
                         text = 'selection'
                         
                     
-                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
-                    ClientGUIMenus.AppendMenuItem( siblings_and_parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                    ClientGUIMenus.AppendMenuItem( siblings_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                    ClientGUIMenus.AppendMenuItem( parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
                     
                 
                 if can_show_siblings_and_parents:
-                    
-                    ClientGUIMenus.AppendSeparator( siblings_and_parents_menu )
-                    
-                    siblings_menu = QW.QMenu( siblings_and_parents_menu )
-                    parents_menu = QW.QMenu( siblings_and_parents_menu )
-                    
-                    ClientGUIMenus.AppendMenu( siblings_and_parents_menu, siblings_menu, 'loading siblings\u2026' )
-                    ClientGUIMenus.AppendMenu( siblings_and_parents_menu, parents_menu, 'loading parents\u2026' )
                     
                     ( selected_tag, ) = selected_actual_tags
                     
@@ -2523,6 +2600,8 @@ class ListBoxTags( ListBox ):
                             
                             #
                             
+                            ClientGUIMenus.AppendSeparator( siblings_menu )
+                            
                             ideals = sorted( ideals_to_service_keys.keys(), key = HydrusTags.ConvertTagToSortable )
                             
                             for ideal in ideals:
@@ -2532,7 +2611,7 @@ class ListBoxTags( ListBox ):
                                     continue
                                     
                                 
-                                ideal_label = 'ideal is {} on: {}'.format( ideal, convert_service_keys_to_name_string( ideals_to_service_keys[ ideal ] ) )
+                                ideal_label = 'ideal is "{}" on: {}'.format( ideal, convert_service_keys_to_name_string( ideals_to_service_keys[ ideal ] ) )
                                 
                                 ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal_tag )
                                 
@@ -2565,6 +2644,8 @@ class ListBoxTags( ListBox ):
                             
                             parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( num_parents ), HydrusData.ToHumanInt( num_children ) ) )
                             
+                            ClientGUIMenus.AppendSeparator( parents_menu )
+                            
                             for ( s_k_name, ( parents, children ) ) in group_and_sort_parents_to_service_keys( parents_to_service_keys, children_to_service_keys ):
                                 
                                 ClientGUIMenus.AppendSeparator( parents_menu )
@@ -2591,81 +2672,15 @@ class ListBoxTags( ListBox ):
                             
                         
                     
-                    async_job = ClientGUIAsync.AsyncQtJob( siblings_and_parents_menu, sp_work_callable, sp_publish_callable )
+                    async_job = ClientGUIAsync.AsyncQtJob( menu, sp_work_callable, sp_publish_callable )
                     
                     async_job.start()
                     
                 
-                ClientGUIMenus.AppendMenu( menu, siblings_and_parents_menu, 'siblings and parents' )
-                
-            
-            copy_menu = QW.QMenu( menu )
-            
-            selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
-            selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
-            
-            if len( selected_copyable_tag_strings ) == 1:
-                
-                ( selection_string, ) = selected_copyable_tag_strings 
-                
-            else:
-                
-                selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
-                
-            
-            if len( selected_copyable_tag_strings ) > 0:
-                
-                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
-                
-                if len( selected_copyable_subtag_strings ) == 1:
-                    
-                    # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
-                    if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
-                        
-                        ( sub_selection_string, ) = selected_copyable_subtag_strings
-                        
-                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
-                        
-                    
-                else:
-                    
-                    sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
-                    
-                
-                if self._HasCounts():
-                    
-                    ClientGUIMenus.AppendSeparator( copy_menu )
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( selection_string ), 'Copy the selected tags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS_WITH_COUNTS )
-                    
-                    if sub_selection_string is not None:
-                        
-                        ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( sub_selection_string ), 'Copy the selected subtags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
-                        
-                    
-                
-            
-            copy_all_is_appropriate = len( self._ordered_terms ) > len( self._selected_terms )
-            
-            if copy_all_is_appropriate:
-                
-                ClientGUIMenus.AppendSeparator( copy_menu )
-                
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the tags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS )
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags', 'Copy all the subtags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS )
-                
-                if self._HasCounts():
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the tags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS_WITH_COUNTS )
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags with counts', 'Copy all the subtags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS_WITH_COUNTS )
-                    
-                
-            
-            ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
             
             if len( self._selected_terms ) > 0:
+                
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 if len( selected_actual_tags ) > 0 and self._page_key is not None:
                     
@@ -2712,78 +2727,83 @@ class ListBoxTags( ListBox ):
                 
                 ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
                 
-                if self.can_spawn_new_windows:
+                if len( predicates ) > 0:
                     
-                    ClientGUIMenus.AppendSeparator( menu )
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPages, [ predicates ] )
-                    
-                    if or_predicate is not None:
+                    if self.can_spawn_new_windows:
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'open a new OR search page for ' + selection_string, 'Open a new search page starting with the selected merged as an OR search predicate.', self._NewSearchPages, [ ( or_predicate, ) ] )
+                        open_menu = QW.QMenu( menu )
                         
-                    
-                    if len( predicates ) > 1:
+                        ClientGUIMenus.AppendMenuItem( open_menu, 'a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPages, [ predicates ] )
                         
-                        for_each_predicates = [ ( predicate, ) for predicate in predicates ]
+                        if or_predicate is not None:
+                            
+                            ClientGUIMenus.AppendMenuItem( open_menu, 'a new OR search page for ' + selection_string, 'Open a new search page starting with the selected merged as an OR search predicate.', self._NewSearchPages, [ ( or_predicate, ) ] )
+                            
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPages, for_each_predicates )
+                        if len( predicates ) > 1:
+                            
+                            for_each_predicates = [ ( predicate, ) for predicate in predicates ]
+                            
+                            ClientGUIMenus.AppendMenuItem( open_menu, 'new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPages, for_each_predicates )
+                            
                         
-                    
-                
-                self._AddEditMenu( menu )
-                
-                if self._CanProvideCurrentPagePredicates():
-                    
-                    current_predicates = self._GetCurrentPagePredicates()
-                    
-                    ClientGUIMenus.AppendSeparator( menu )
-                    
-                    predicates = set( predicates )
-                    inverse_predicates = set( inverse_predicates )
-                    
-                    if len( predicates ) == 1:
-                        
-                        ( pred, ) = predicates
-                        
-                        predicates_selection_string = pred.ToString( with_count = False )
-                        
-                    else:
-                        
-                        predicates_selection_string = 'selected'
+                        ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
                         
                     
-                    some_selected_in_current = HydrusData.SetsIntersect( predicates, current_predicates )
+                    self._AddEditMenu( menu )
                     
-                    if some_selected_in_current:
+                    if self._CanProvideCurrentPagePredicates():
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
+                        current_predicates = self._GetCurrentPagePredicates()
                         
-                    
-                    some_selected_not_in_current = len( predicates.intersection( current_predicates ) ) < len( predicates )
-                    
-                    if some_selected_not_in_current:
+                        ClientGUIMenus.AppendSeparator( menu )
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
+                        predicates = set( predicates )
+                        inverse_predicates = set( inverse_predicates )
                         
-                    
-                    if or_predicate is not None:
+                        if len( predicates ) == 1:
+                            
+                            ( pred, ) = predicates
+                            
+                            predicates_selection_string = pred.ToString( with_count = False )
+                            
+                        else:
+                            
+                            predicates_selection_string = 'selected'
+                            
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
+                        some_selected_in_current = HydrusData.SetsIntersect( predicates, current_predicates )
                         
-                    
-                    some_selected_are_excluded_explicitly = HydrusData.SetsIntersect( inverse_predicates, current_predicates )
-                    
-                    if some_selected_are_excluded_explicitly:
+                        if some_selected_in_current:
+                            
+                            ClientGUIMenus.AppendMenuItem( menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
+                            
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'permit {} for current search'.format( predicates_selection_string ), 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_inverse_predicates' )
+                        some_selected_not_in_current = len( predicates.intersection( current_predicates ) ) < len( predicates )
                         
-                    
-                    some_selected_are_not_excluded_explicitly = len( inverse_predicates.intersection( current_predicates ) ) < len( inverse_predicates )
-                    
-                    if some_selected_are_not_excluded_explicitly:
+                        if some_selected_not_in_current:
+                            
+                            ClientGUIMenus.AppendMenuItem( menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
+                            
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'exclude {} from current search'.format( predicates_selection_string ), 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
+                        if or_predicate is not None:
+                            
+                            ClientGUIMenus.AppendMenuItem( menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
+                            
+                        
+                        some_selected_are_excluded_explicitly = HydrusData.SetsIntersect( inverse_predicates, current_predicates )
+                        
+                        if some_selected_are_excluded_explicitly:
+                            
+                            ClientGUIMenus.AppendMenuItem( menu, 'permit {} for current search'.format( predicates_selection_string ), 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_inverse_predicates' )
+                            
+                        
+                        some_selected_are_not_excluded_explicitly = len( inverse_predicates.intersection( current_predicates ) ) < len( inverse_predicates )
+                        
+                        if some_selected_are_not_excluded_explicitly:
+                            
+                            ClientGUIMenus.AppendMenuItem( menu, 'exclude {} from current search'.format( predicates_selection_string ), 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
+                            
                         
                     
                 
@@ -2848,11 +2868,6 @@ class ListBoxTags( ListBox ):
             
         
     
-    def GetSelectedTags( self ):
-        
-        return set( self._selected_terms )
-        
-    
     def ForceTagRecalc( self ):
         
         pass
@@ -2860,135 +2875,25 @@ class ListBoxTags( ListBox ):
     
 class ListBoxTagsPredicates( ListBoxTags ):
     
-    def _CanHitIndex( self, index ):
+    def __init__( self, *args, render_for_user = True, **kwargs ):
         
-        result = ListBoxTags._CanHitIndex( self, index )
-        
-        if not result:
-            
-            return False
-            
-        
-        try:
-            
-            term = self._GetTerm( index )
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-        if term.GetType() in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
-            
-            return False
-            
-        
-        return True
+        ListBoxTags.__init__( self, *args, render_for_user = render_for_user, **kwargs )
         
     
-    def _CanSelectIndex( self, index ):
+    def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ) -> ClientGUIListBoxesData.ListBoxItemPredicate:
         
-        result = ListBoxTags._CanSelectIndex( self, index )
+        show_ideal_siblings = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
-        if not result:
-            
-            return False
-            
-        
-        try:
-            
-            term = self._GetTerm( index )
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-        if term.GetType() == ClientSearch.PREDICATE_TYPE_LABEL:
-            
-            return False
-            
-        
-        return True
-        
-    
-    def _Deselect( self, index ):
-        
-        to_deselect = self._GetWithParentIndices( index )
-        
-        for index in to_deselect:
-            
-            ListBoxTags._Deselect( self, index )
-            
+        return ClientGUIListBoxesData.ListBoxItemPredicate( predicate, show_ideal_siblings )
         
     
     def _GetMutuallyExclusivePredicates( self, predicate ):
         
-        m_e_predicates = { existing_predicate for existing_predicate in self._terms if existing_predicate.IsMutuallyExclusive( predicate ) }
+        all_predicates = self._GetPredicatesFromTerms( self._ordered_terms )
+        
+        m_e_predicates = { existing_predicate for existing_predicate in all_predicates if existing_predicate.IsMutuallyExclusive( predicate ) }
         
         return m_e_predicates
-        
-    
-    def _GetNamespaceFromTerm( self, term ):
-        
-        predicate = term
-        
-        namespace = predicate.GetNamespace()
-        
-        return namespace
-        
-    
-    def _GetTagFromTerm( self, term ):
-        
-        predicate = term
-        
-        if term.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
-            
-            return term.GetValue()
-            
-        else:
-            
-            return None
-            
-        
-    
-    def _GetSimplifiedTextFromTerm( self, term ):
-        
-        predicate = term
-        
-        return predicate.ToString( with_count = False )
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        predicate = term
-        
-        return predicate.ToString()
-        
-    
-    def _GetWithParentIndices( self, index ):
-        
-        indices = [ index ]
-        
-        index += 1
-        
-        while index < len( self._ordered_terms ):
-            
-            term = self._GetTerm( index )
-            
-            if term.GetType() == ClientSearch.PREDICATE_TYPE_PARENT:
-                
-                indices.append( index )
-                
-            else:
-                
-                break
-                
-            
-            index += 1
-            
-        
-        return indices
         
     
     def _HasCounts( self ):
@@ -2996,24 +2901,9 @@ class ListBoxTagsPredicates( ListBoxTags ):
         return True
         
     
-    def _HasPredicate( self, predicate ):
-        
-        return predicate in self._terms
-        
-    
-    def _Select( self, index ):
-        
-        to_select = self._GetWithParentIndices( index )
-        
-        for index in to_select:
-            
-            ListBoxTags._Select( self, index )
-            
-        
-    
     def GetPredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
         
-        return set( self._terms )
+        return set( self._GetPredicatesFromTerms( self._ordered_terms ) )
         
     
     def SetPredicates( self, predicates ):
@@ -3022,14 +2912,13 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         self._Clear()
         
-        for predicate in predicates:
-            
-            self._AppendTerm( predicate )
-            
+        terms = [ self._GenerateTermFromPredicate( predicate ) for predicate in predicates ]
+        
+        self._AppendTerms( terms )
         
         for term in selected_terms:
             
-            if term in self._ordered_terms:
+            if term in self._terms_to_logical_indices:
                 
                 self._selected_terms.add( term )
                 
@@ -3038,133 +2927,6 @@ class ListBoxTagsPredicates( ListBoxTags ):
         self._HitFirstSelectedItem()
         
         self._DataHasChanged()
-        
-    
-class ListBoxTagsCensorship( ListBoxTags ):
-    
-    def __init__( self, parent, removed_callable = None ):
-        
-        ListBoxTags.__init__( self, parent )
-        
-        self._removed_callable = removed_callable
-        
-    
-    def _Activate( self, shift_down ) -> bool:
-        
-        if len( self._selected_terms ) > 0:
-            
-            tags = set( self._selected_terms )
-            
-            for tag in tags:
-                
-                self._RemoveTerm( tag )
-                
-            
-            if self._removed_callable is not None:
-                
-                self._removed_callable( tags )
-                
-            
-            self._ordered_terms.sort()
-            
-            self._DataHasChanged()
-            
-            return True
-            
-        
-        return False
-        
-    
-    def _GetNamespaceFromTerm( self, term ):
-        
-        tag_slice = term
-        
-        if tag_slice == ':':
-            
-            return None
-            
-        else:
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag_slice )
-            
-            return namespace
-            
-        
-    
-    def _GetTagFromTerm( self, term ):
-        
-        tag_slice = term
-        
-        if tag_slice in ( ':', '' ):
-            
-            return None
-            
-        else:
-            
-            return tag_slice
-            
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        tag_slice = term
-        
-        return ClientTags.ConvertTagSliceToString( tag_slice )
-        
-    
-    def AddTags( self, tags ):
-        
-        for tag in tags:
-            
-            self._AppendTerm( tag )
-            
-        
-        self._ordered_terms.sort()
-        
-        self._DataHasChanged()
-        
-    
-    def EnterTags( self, tags ):
-        
-        for tag in tags:
-            
-            if tag in self._terms:
-                
-                self._RemoveTerm( tag )
-                
-            else:
-                
-                self._AppendTerm( tag )
-                
-            
-        
-        self._ordered_terms.sort()
-        
-        self._DataHasChanged()
-        
-    
-    def GetTags( self ):
-        
-        return list( self._ordered_terms )
-        
-    
-    def RemoveTags( self, tags ):
-        
-        for tag in tags:
-            
-            self._RemoveTerm( tag )
-            
-        
-        self._ordered_terms.sort()
-        
-        self._DataHasChanged()
-        
-    
-    def SetTags( self, tags ):
-        
-        self._Clear()
-        
-        self.AddTags( tags )
         
     
 class ListBoxTagsColourOptions( ListBoxTags ):
@@ -3176,23 +2938,29 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         ListBoxTags.__init__( self, parent )
         
+        terms = []
+        
         for ( namespace, colour ) in initial_namespace_colours.items():
             
             colour = tuple( colour ) # tuple to convert from list, for oooold users who have list colours
             
-            self._AppendTerm( ( namespace, colour ) )
+            term = self._GenerateTermFromNamespaceAndColour( namespace, colour )
+            
+            terms.append( term )
             
         
-        self._SortByText()
+        self._AppendTerms( terms )
+        
+        self._Sort()
         
         self._DataHasChanged()
         
     
     def _Activate( self, shift_down ):
         
-        namespaces = [ namespace for ( namespace, colour ) in self._selected_terms ]
+        deletable_terms = [ term for term in self._selected_terms if term.GetNamespace() not in self.PROTECTED_TERMS ]
         
-        if len( namespaces ) > 0:
+        if len( deletable_terms ) > 0:
             
             from hydrus.client.gui import ClientGUIDialogsQuick
             
@@ -3200,7 +2968,9 @@ class ListBoxTagsColourOptions( ListBoxTags ):
             
             if result == QW.QDialog.Accepted:
                 
-                self._RemoveNamespaces( namespaces )
+                self._RemoveTerms( deletable_terms )
+                
+                self._DataHasChanged()
                 
                 return True
                 
@@ -3216,74 +2986,35 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._Activate( shift_down )
         
     
+    def _GenerateTermFromNamespaceAndColour( self, namespace, colour ) -> ClientGUIListBoxesData.ListBoxItemNamespaceColour:
+        
+        return ClientGUIListBoxesData.ListBoxItemNamespaceColour( namespace, colour )
+        
+    
     def _GetNamespaceColours( self ):
         
-        return dict( self._terms )
-        
-    
-    def _GetNamespaceFromTerm( self, term ):
-        
-        ( namespace, colour ) = term
-        
-        return namespace
-        
-    
-    def _GetTagFromTerm( self, term ):
-        
-        return None
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        ( namespace, colour ) = term
-        
-        if namespace is None:
-            
-            namespace_string = 'default namespace:tag'
-            
-        elif namespace == '':
-            
-            namespace_string = 'unnamespaced tag'
-            
-        else:
-            
-            namespace_string = namespace + ':tag'
-            
-        
-        return namespace_string
-        
-    
-    def _RemoveNamespaces( self, namespaces ):
-        
-        namespaces = [ namespace for namespace in namespaces if namespace not in self.PROTECTED_TERMS ]
-        
-        removees = [ ( existing_namespace, existing_colour ) for ( existing_namespace, existing_colour ) in self._terms if existing_namespace in namespaces ]
-        
-        for removee in removees:
-            
-            self._RemoveTerm( removee )
-            
-        
-        self._DataHasChanged()
+        return dict( ( term.GetNamespaceAndColour() for term in self._ordered_terms ) )
         
     
     def SetNamespaceColour( self, namespace, colour: QG.QColor ):
         
         colour_tuple = ( colour.red(), colour.green(), colour.blue() )
         
-        for ( existing_namespace, existing_colour ) in self._terms:
+        for term in self._ordered_terms:
             
-            if existing_namespace == namespace:
+            if term.GetNamespace() == namespace:
                 
-                self._RemoveTerm( ( existing_namespace, existing_colour ) )
+                self._RemoveTerms( ( term, ) )
                 
                 break
                 
             
         
-        self._AppendTerm( ( namespace, colour_tuple ) )
+        term = self._GenerateTermFromNamespaceAndColour( namespace, colour_tuple )
         
-        self._SortByText()
+        self._AppendTerms( ( term, ) )
+        
+        self._Sort()
         
         self._DataHasChanged()
         
@@ -3295,14 +3026,109 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def GetSelectedNamespaceColours( self ):
         
-        namespace_colours = dict( self._selected_terms )
+        namespace_colours = dict( ( term.GetNamespaceAndColour() for term in self._selected_terms ) )
         
         return namespace_colours
         
     
+class ListBoxTagsFilter( ListBoxTags ):
+    
+    def __init__( self, parent, removed_callable = None ):
+        
+        ListBoxTags.__init__( self, parent )
+        
+        self._removed_callable = removed_callable
+        
+    
+    def _Activate( self, shift_down ) -> bool:
+        
+        if len( self._selected_terms ) > 0:
+            
+            tag_slices = [ term.GetTagSlice() for term in self._selected_terms ]
+            
+            self._RemoveSelectedTerms()
+            
+            if self._removed_callable is not None:
+                
+                self._removed_callable( tag_slices )
+                
+            
+            self._DataHasChanged()
+            
+            return True
+            
+        
+        return False
+        
+    
+    def _GenerateTermFromTagSlice( self, tag_slice ) -> ClientGUIListBoxesData.ListBoxItemTagSlice:
+        
+        return ClientGUIListBoxesData.ListBoxItemTagSlice( tag_slice )
+        
+    
+    def AddTagSlices( self, tag_slices ):
+        
+        terms = [ self._GenerateTermFromTagSlice( tag_slice ) for tag_slice in tag_slices ]
+        
+        self._AppendTerms( terms )
+        
+        self._Sort()
+        
+        self._DataHasChanged()
+        
+    
+    def EnterTagSlices( self, tag_slices ):
+        
+        for tag_slice in tag_slices:
+            
+            term = self._GenerateTermFromTagSlice( tag_slice )
+            
+            if term in self._terms_to_logical_indices:
+                
+                self._RemoveTerms( ( term, ) )
+                
+            else:
+                
+                self._AppendTerms( ( term, ) )
+                
+            
+        
+        self._Sort()
+        
+        self._DataHasChanged()
+        
+    
+    def GetSelectedTagSlices( self ):
+        
+        return [ term.GetTagSlice() for term in self._selected_terms ]
+        
+    
+    def GetTagSlices( self ):
+        
+        return [ term.GetTagSlice() for term in self._ordered_terms ]
+        
+    
+    def RemoveTagSlices( self, tag_slices ):
+        
+        removee_terms = [ self._GenerateTermFromTagSlice( tag_slice ) for tag_slice in tag_slices ]
+        
+        self._RemoveTerms( removee_terms )
+        
+        self._Sort()
+        
+        self._DataHasChanged()
+        
+    
+    def SetTagSlices( self, tag_slices ):
+        
+        self._Clear()
+        
+        self.AddTagSlices( tag_slices )
+        
+    
 class ListBoxTagsDisplayCapable( ListBoxTags ):
     
-    def __init__( self, parent, service_key = None, show_display_decorators = True, **kwargs ):
+    def __init__( self, parent, service_key = None, show_display_decorators = True, render_for_user = True, **kwargs ):
         
         if service_key is None:
             
@@ -3314,32 +3140,29 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         
         has_async_text_info = self._show_display_decorators
         
-        ListBoxTags.__init__( self, parent, has_async_text_info = has_async_text_info, **kwargs )
+        ListBoxTags.__init__( self, parent, has_async_text_info = has_async_text_info, render_for_user = render_for_user, **kwargs )
         
     
-    def _AddDisplayDecoratorSuffix( self, term, tag_string ):
+    def _ApplyAsyncInfoToTerm( self, term, info ):
         
-        if term in self._terms_to_async_text_info:
+        # this guy comes with the lock
+        
+        if info is None:
             
-            result = self._terms_to_async_text_info[ term ]
-            
-            if result is not None:
-                
-                ( ideal, parents ) = result
-                
-                if ideal is not None:
-                    
-                    tag_string = '{} (will display as {})'.format( tag_string, ideal )
-                    
-                
-                if parents is not None:
-                    
-                    tag_string = '{} ({} parents)'.format( tag_string, HydrusData.ToHumanInt( len( parents ) ) )
-                    
-                
+            return
             
         
-        return tag_string
+        ( ideal, parents ) = info
+        
+        if ideal is not None and ideal != term.GetTag():
+            
+            term.SetIdealTag( ideal )
+            
+        
+        if parents is not None:
+            
+            term.SetParents( parents )
+            
         
     
     def _GetFallbackServiceKey( self ):
@@ -3378,15 +3201,24 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             
             for batch_to_lookup in HydrusData.SplitListIntoChunks( to_lookup, 500 ):
                 
-                db_tags_to_ideals_and_parents = HG.client_controller.Read( 'tag_display_decorators', service_key, set( batch_to_lookup ) )
+                tags_to_terms = { term.GetTag() : term for term in batch_to_lookup }
                 
-                terms_to_info.update( db_tags_to_ideals_and_parents )
+                tags_to_lookup = set( tags_to_terms.keys() )
+                
+                db_tags_to_ideals_and_parents = HG.client_controller.Read( 'tag_display_decorators', service_key, tags_to_lookup )
+                
+                terms_to_info.update( { tags_to_terms[ tag ] : info for ( tag, info ) in db_tags_to_ideals_and_parents.items() } )
                 
             
             return terms_to_info
             
         
         return work_callable
+        
+    
+    def GetSelectedTags( self ):
+        
+        return set( self._GetTagsFromTerms( self._selected_terms ) )
         
     
     def SetTagServiceKey( self, service_key ):
@@ -3405,88 +3237,36 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
     
 class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
     
-    def __init__( self, parent, service_key = None, show_display_decorators = True, sort_tags = True ):
+    def __init__( self, parent, service_key = None, show_display_decorators = True, sort_tags = True, **kwargs ):
         
         self._sort_tags = sort_tags
         
-        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators )
+        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators, **kwargs )
         
     
-    def _GetNamespaceFromTerm( self, term ):
+    def _GenerateTermFromTag( self, tag: str ) -> ClientGUIListBoxesData.ListBoxItemTextTag:
         
-        tag = term
-        
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-        
-        return namespace
-        
-    
-    def _GetSimplifiedTextFromTerm( self, term ):
-        
-        tag = term
-        
-        return str( tag )
-        
-    
-    def _GetTagFromTerm( self, term ):
-        
-        tag = term
-        
-        return tag
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        tag = term
-        
-        tag_string = ClientTags.RenderTag( tag, True )
-        
-        if self._show_display_decorators:
-            
-            tag_string = self._AddDisplayDecoratorSuffix( term, tag_string )
-            
-        
-        return tag_string
-        
-    
-    def _RecalcTags( self ):
-        
-        self._RefreshTexts()
-        
-        if self._sort_tags:
-            
-            self._SortByText()
-            
-        
-        self._DataHasChanged()
-        
-    
-    def SetTagServiceKey( self, service_key ):
-        
-        ListBoxTagsDisplayCapable.SetTagServiceKey( self, service_key )
-        
-        self._RecalcTags()
+        return ClientGUIListBoxesData.ListBoxItemTextTag( tag )
         
     
     def GetTags( self ):
         
-        return set( self._terms )
+        return set( self._GetTagsFromTerms( self._ordered_terms ) )
         
     
     def SetTags( self, tags ):
         
-        selected_terms = set( self._selected_terms )
+        previously_selected_terms = set( self._selected_terms )
         
         self._Clear()
         
-        for tag in tags:
-            
-            self._AppendTerm( tag )
-            
+        terms_to_add = [ self._GenerateTermFromTag( tag ) for tag in tags ]
         
-        for term in selected_terms:
+        self._AppendTerms( terms_to_add )
+        
+        for term in previously_selected_terms:
             
-            if term in self._ordered_terms:
+            if term in self._terms_to_logical_indices:
                 
                 self._selected_terms.add( term )
                 
@@ -3494,12 +3274,12 @@ class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
         
         self._HitFirstSelectedItem()
         
-        self._RecalcTags()
+        if self._sort_tags:
+            
+            self._Sort()
+            
         
-    
-    def ForceTagRecalc( self ):
-        
-        self._RecalcTags()
+        self._DataHasChanged()
         
     
 class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
@@ -3515,9 +3295,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         if len( self._selected_terms ) > 0:
             
-            tags = set( self._selected_terms )
-            
-            self._RemoveTags( tags )
+            self._RemoveSelectedTerms()
             
             return True
             
@@ -3527,12 +3305,11 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def _RemoveTags( self, tags ):
         
-        for tag in tags:
-            
-            self._RemoveTerm( tag )
-            
+        terms = [ self._GenerateTermFromTag( tag ) for tag in tags ]
         
-        self._RecalcTags()
+        self._RemoveTerms( terms )
+        
+        self._DataHasChanged()
         
         if self._removed_callable is not None:
             
@@ -3542,44 +3319,55 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def AddTags( self, tags ):
         
-        for tag in tags:
+        terms = [ self._GenerateTermFromTag( tag ) for tag in tags ]
+        
+        self._AppendTerms( terms )
+        
+        if self._sort_tags:
             
-            self._AppendTerm( tag )
+            self._Sort()
             
         
-        self._RecalcTags()
+        self._DataHasChanged()
         
     
     def Clear( self ):
         
         self._Clear()
         
-        self._RecalcTags()
+        self._DataHasChanged()
         
     
     def EnterTags( self, tags ):
         
-        removed = set()
+        removed_tags = set()
         
         for tag in tags:
             
-            if tag in self._terms:
+            term = self._GenerateTermFromTag( tag )
+            
+            if term in self._terms_to_logical_indices:
                 
-                self._RemoveTerm( tag )
+                self._RemoveTerms( ( term, ) )
                 
-                removed.add( tag )
+                removed_tags.add( tag )
                 
             else:
                 
-                self._AppendTerm( tag )
+                self._AppendTerms( ( term, ) )
                 
             
         
-        self._RecalcTags()
-        
-        if len( removed ) > 0 and self._removed_callable is not None:
+        if self._sort_tags:
             
-            self._removed_callable( removed )
+            self._Sort()
+            
+        
+        self._DataHasChanged()
+        
+        if len( removed_tags ) > 0 and self._removed_callable is not None:
+            
+            self._removed_callable( removed_tags )
             
         
     
@@ -3606,16 +3394,14 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
 class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
-    render_for_user = True
-    
-    def __init__( self, parent, tag_display_type, service_key = None, show_display_decorators = False, include_counts = True ):
+    def __init__( self, parent, tag_display_type, service_key = None, show_display_decorators = False, include_counts = True, render_for_user = True ):
         
         if service_key is None:
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators, height_num_chars = 24 )
+        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, show_display_decorators = show_display_decorators, render_for_user = render_for_user, height_num_chars = 24 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
@@ -3636,81 +3422,21 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._show_petitioned = True
         
     
-    def _GetNamespaceFromTerm( self, term ):
+    def _GenerateTermFromTag( self, tag: str ) -> ClientGUIListBoxesData.ListBoxItemTextTag:
         
-        tag = term
+        current_count = self._current_tags_to_count[ tag ] if self._show_current else 0
+        deleted_count = self._deleted_tags_to_count[ tag ] if self._show_deleted else 0
+        pending_count = self._pending_tags_to_count[ tag ] if self._show_pending else 0
+        petitioned_count = self._petitioned_tags_to_count[ tag ] if self._show_petitioned else 0
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-        
-        return namespace
-        
-    
-    def _GetSimplifiedTextFromTerm( self, term ):
-        
-        tag = term
-        
-        return str( tag )
-        
-    
-    def _GetTagFromTerm( self, term ):
-        
-        tag = term
-        
-        return tag
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        tag = term
-        
-        tag_string = ClientTags.RenderTag( tag, self.render_for_user )
-        
-        if self._include_counts:
-            
-            if self._show_current and tag in self._current_tags_to_count:
-                
-                tag_string += ' (' + HydrusData.ToHumanInt( self._current_tags_to_count[ tag ] ) + ')'
-                
-            
-            if self._show_pending and tag in self._pending_tags_to_count:
-                
-                tag_string += ' (+' + HydrusData.ToHumanInt( self._pending_tags_to_count[ tag ] ) + ')'
-                
-            
-            if self._show_petitioned and tag in self._petitioned_tags_to_count:
-                
-                tag_string += ' (-' + HydrusData.ToHumanInt( self._petitioned_tags_to_count[ tag ] ) + ')'
-                
-            
-            if self._show_deleted and tag in self._deleted_tags_to_count:
-                
-                tag_string += ' (X' + HydrusData.ToHumanInt( self._deleted_tags_to_count[ tag ] ) + ')'
-                
-            
-        else:
-            
-            if self._show_pending and tag in self._pending_tags_to_count:
-                
-                tag_string += ' (+)'
-                
-            
-            if self._show_petitioned and tag in self._petitioned_tags_to_count:
-                
-                tag_string += ' (-)'
-                
-            
-            if self._show_deleted and tag in self._deleted_tags_to_count:
-                
-                tag_string += ' (X)'
-                
-            
-        
-        if self._show_display_decorators:
-            
-            tag_string = self._AddDisplayDecoratorSuffix( term, tag_string )
-            
-        
-        return tag_string
+        return ClientGUIListBoxesData.ListBoxItemTextTagWithCounts(
+            tag,
+            current_count,
+            deleted_count,
+            pending_count,
+            petitioned_count,
+            self._include_counts
+        )
         
     
     def _HasCounts( self ):
@@ -3718,7 +3444,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         return self._include_counts
         
     
-    def _RecalcStrings( self, limit_to_these_tags = None ):
+    def _UpdateTerms( self, limit_to_these_tags = None ):
         
         previous_selected_terms = set( self._selected_terms )
         
@@ -3728,15 +3454,10 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             
             nonzero_tags = set()
             
-            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in list(self._current_tags_to_count.items()) if count > 0 ) )
-            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in list(self._deleted_tags_to_count.items()) if count > 0 ) )
-            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in list(self._pending_tags_to_count.items()) if count > 0 ) )
-            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in list(self._petitioned_tags_to_count.items()) if count > 0 ) )
-            
-            for tag in nonzero_tags:
-                
-                self._AppendTerm( tag )
-                
+            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
+            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
+            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
+            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
             
         else:
             
@@ -3745,36 +3466,34 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
                 limit_to_these_tags = set( limit_to_these_tags )
                 
             
-            for tag in limit_to_these_tags:
-                
-                self._RemoveTerm( tag )
-                
+            clear_terms = [ self._GenerateTermFromTag( tag ) for tag in limit_to_these_tags ]
+            
+            self._RemoveTerms( clear_terms )
             
             nonzero_tags = set()
             
-            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in list(self._current_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
-            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in list(self._deleted_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
-            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in list(self._pending_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
-            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in list(self._petitioned_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
             
-            for tag in nonzero_tags:
-                
-                self._AppendTerm( tag )
-                
-            
+        
+        nonzero_terms = [ self._GenerateTermFromTag( tag ) for tag in nonzero_tags ]
+        
+        self._AppendTerms( nonzero_terms )
         
         for term in previous_selected_terms:
             
-            if term in self._terms:
+            if term in self._terms_to_logical_indices:
                 
                 self._selected_terms.add( term )
                 
             
         
-        self._SortTags()
+        self._Sort()
         
     
-    def _SortTags( self ):
+    def _Sort( self ):
         
         tags_to_count = collections.Counter()
         
@@ -3783,9 +3502,11 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         if self._show_pending: tags_to_count.update( self._pending_tags_to_count )
         if self._show_petitioned: tags_to_count.update( self._petitioned_tags_to_count )
         
-        ClientTags.SortTags( self._sort, self._ordered_terms, tags_to_count )
+        item_to_tag_key_wrapper = lambda term: term.GetTag()
         
-        self._DataHasChanged()
+        ClientTags.SortTags( self._sort, self._ordered_terms, tags_to_count = tags_to_count, item_to_tag_key_wrapper = item_to_tag_key_wrapper )
+        
+        self._RegenTermsToIndices()
         
     
     def SetTagServiceKey( self, service_key ):
@@ -3799,7 +3520,9 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         self._sort = sort
         
-        self._SortTags()
+        self._Sort()
+        
+        self._DataHasChanged()
         
     
     def SetShow( self, show_type, value ):
@@ -3809,7 +3532,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         elif show_type == 'pending': self._show_pending = value
         elif show_type == 'petitioned': self._show_petitioned = value
         
-        self._RecalcStrings()
+        self._UpdateTerms()
         
     
     def IncrementTagsByMedia( self, media ):
@@ -3819,24 +3542,26 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._service_key, self._tag_display_type )
         
+        tags_changed = set()
+        
+        if self._show_current: tags_changed.update( current_tags_to_count.keys() )
+        if self._show_deleted: tags_changed.update( deleted_tags_to_count.keys() )
+        if self._show_pending: tags_changed.update( pending_tags_to_count.keys() )
+        if self._show_petitioned: tags_changed.update( petitioned_tags_to_count.keys() )
+        
         self._current_tags_to_count.update( current_tags_to_count )
         self._deleted_tags_to_count.update( deleted_tags_to_count )
         self._pending_tags_to_count.update( pending_tags_to_count )
         self._petitioned_tags_to_count.update( petitioned_tags_to_count )
         
-        tags_changed = set()
-        
-        if self._show_current: tags_changed.update( list(current_tags_to_count.keys()) )
-        if self._show_deleted: tags_changed.update( list(deleted_tags_to_count.keys()) )
-        if self._show_pending: tags_changed.update( list(pending_tags_to_count.keys()) )
-        if self._show_petitioned: tags_changed.update( list(petitioned_tags_to_count.keys()) )
-        
         if len( tags_changed ) > 0:
             
-            self._RecalcStrings( tags_changed )
+            self._UpdateTerms( tags_changed )
             
         
         self._last_media.update( media )
+        
+        self._DataHasChanged()
         
     
     def SetTagsByMedia( self, media ):
@@ -3850,7 +3575,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._pending_tags_to_count = pending_tags_to_count
         self._petitioned_tags_to_count = petitioned_tags_to_count
         
-        self._RecalcStrings()
+        self._UpdateTerms()
         
         self._last_media = media
         
@@ -3861,9 +3586,9 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         # this uses the last-set media and count cache to generate new numbers and is faster than re-counting from scratch when the tags have not changed
         
-        selection_shrank = len( media ) < len( self._last_media ) // 10 # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
+        selection_shrank_a_lot = len( media ) < len( self._last_media ) // 10 # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
         
-        if tags_changed or selection_shrank:
+        if tags_changed or selection_shrank_a_lot:
             
             self.SetTagsByMedia( media )
             
@@ -3873,6 +3598,14 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         media = set( media )
         
         removees = self._last_media.difference( media )
+        
+        if len( removees ) == 0:
+            
+            self.IncrementTagsByMedia( media )
+            
+            return
+            
+        
         adds = media.difference( self._last_media )
         
         ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._service_key, self._tag_display_type )
@@ -3902,24 +3635,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
                 
             
         
-        if len( removees ) == 0:
-            
-            tags_changed = set()
-            
-            if self._show_current: tags_changed.update( list(current_tags_to_count.keys()) )
-            if self._show_deleted: tags_changed.update( list(deleted_tags_to_count.keys()) )
-            if self._show_pending: tags_changed.update( list(pending_tags_to_count.keys()) )
-            if self._show_petitioned: tags_changed.update( list(petitioned_tags_to_count.keys()) )
-            
-            if len( tags_changed ) > 0:
-                
-                self._RecalcStrings( tags_changed )
-                
-            
-        else:
-            
-            self._RecalcStrings()
-            
+        self._UpdateTerms()
         
         self._last_media = media
         
@@ -4004,11 +3720,9 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
 class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
-    render_for_user = False
-    
     def __init__( self, parent, enter_func, delete_func ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, show_display_decorators = True, include_counts = True )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, render_for_user = False, show_display_decorators = True, include_counts = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func
@@ -4018,7 +3732,9 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
         
         if len( self._selected_terms ) > 0:
             
-            self._enter_func( set( self._selected_terms ) )
+            tags = set( self._GetTagsFromTerms( self._selected_terms ) )
+            
+            self._enter_func( tags )
             
             return True
             
@@ -4030,7 +3746,9 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
         
         if len( self._selected_terms ) > 0:
             
-            self._delete_func( set( self._selected_terms ) )
+            tags = set( self._GetTagsFromTerms( self._selected_terms ) )
+            
+            self._delete_func( tags )
             
         
     

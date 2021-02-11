@@ -3022,6 +3022,8 @@ class ServicesManager( object ):
             self._SetServices( services )
             
         
+        self._controller.pub( 'notify_new_services' )
+        
     
     def ServiceExists( self, service_key: bytes ):
         

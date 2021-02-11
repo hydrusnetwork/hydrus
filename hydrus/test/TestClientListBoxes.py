@@ -39,9 +39,9 @@ def GetAllClickableIndices( panel ):
     
     all_clickable_indices = {}
     
-    while panel._GetIndexUnderMouse( click ) is not None:
+    while panel._GetLogicalIndexUnderMouse( click ) is not None:
         
-        index = panel._GetIndexUnderMouse( click )
+        index = panel._GetLogicalIndexUnderMouse( click )
         
         if index not in all_clickable_indices:
             
@@ -102,7 +102,7 @@ class TestListBoxes( unittest.TestCase ):
                 
                 #
                 
-                terms = set( panel._terms )
+                terms = set( panel._terms_to_logical_indices.keys() )
                 ordered_terms = list( panel._ordered_terms )
                 
                 self.assertEqual( len( terms ), len( ordered_terms ) )
@@ -122,7 +122,7 @@ class TestListBoxes( unittest.TestCase ):
                     
                     DoClick( click, panel )
                     
-                    self.assertEqual( panel.GetSelectedNamespaceColours(), dict( [ ordered_terms[ index ] ] ) )
+                    self.assertEqual( panel.GetSelectedNamespaceColours(), dict( [ ordered_terms[ index ].GetNamespaceAndColour() ] ) )
                     
                 
                 #
@@ -131,7 +131,7 @@ class TestListBoxes( unittest.TestCase ):
                 
                 click = QG.QMouseEvent( QC.QEvent.MouseButtonPress, QC.QPointF( 10, current_y ), QC.Qt.LeftButton, QC.Qt.LeftButton, QC.Qt.NoModifier )
                 
-                while panel._GetIndexUnderMouse( click ) is not None:
+                while panel._GetLogicalIndexUnderMouse( click ) is not None:
                     
                     current_y += 5
                     
@@ -157,21 +157,21 @@ class TestListBoxes( unittest.TestCase ):
                         DoClick( click, panel )
                         
                     
-                    expected_selected_terms = [ ordered_terms[ index ] for index in indices ]
+                    expected_selected_namespaces_and_colours = [ ordered_terms[ index ].GetNamespaceAndColour() for index in indices ]
                     
-                    self.assertEqual( panel.GetSelectedNamespaceColours(), dict( expected_selected_terms ) )
+                    self.assertEqual( panel.GetSelectedNamespaceColours(), dict( expected_selected_namespaces_and_colours ) )
                     
                 
                 #
                 
                 random_index = random.choice( list(all_clickable_indices.keys()) )
                 
-                while ordered_terms[ random_index ][0] in panel.PROTECTED_TERMS:
+                while ordered_terms[ random_index ].GetNamespaceAndColour()[0] in panel.PROTECTED_TERMS:
                     
                     random_index = random.choice( list(all_clickable_indices.keys()) )
                     
                 
-                del new_namespace_colours[ ordered_terms[ random_index ][0] ]
+                del new_namespace_colours[ ordered_terms[ random_index ].GetNamespaceAndColour()[0] ]
                 
                 # select nothing
                 
@@ -179,7 +179,7 @@ class TestListBoxes( unittest.TestCase ):
                 
                 click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
                 
-                while panel._GetIndexUnderMouse( click ) is not None:
+                while panel._GetLogicalIndexUnderMouse( click ) is not None:
                     
                     current_y += 5
                     

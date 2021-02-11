@@ -331,6 +331,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self.setLayout( hbox )
             
+            self._quick_namespaces_list.columnListContentsChanged.connect( self._refresh_callable )
+            
         
         def _ConvertQuickRegexDataToListCtrlTuples( self, data ):
             
@@ -353,8 +355,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                     data = ( namespace, regex )
                     
                     self._quick_namespaces_list.AddDatas( ( data, ) )
-                    
-                    self._refresh_callable()
                     
                 
             
@@ -384,8 +384,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                         
                     
                 
-            
-            self._refresh_callable()
             
         
         def AddRegex( self ):

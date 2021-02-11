@@ -74,6 +74,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'thumbnails', 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'system', 'system', self._SystemPanel( self._listbook, self._new_options ) )
         
         #
         
@@ -924,9 +925,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._prefix_hash_when_copying = QW.QCheckBox( self )
             self._prefix_hash_when_copying.setToolTip( 'If you often paste hashes into boorus, check this to automatically prefix with the type, like "md5:2496dabcbd69e3c56a5d8caabb7acde5".' )
             
-            self._file_system_waits_on_wakeup = QW.QCheckBox( self )
-            self._file_system_waits_on_wakeup.setToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' )
-            
             self._delete_to_recycle_bin = QW.QCheckBox( self )
             
             self._confirm_trash = QW.QCheckBox( self )
@@ -959,8 +957,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._prefix_hash_when_copying.setChecked( self._new_options.GetBoolean( 'prefix_hash_when_copying' ) )
             
-            self._file_system_waits_on_wakeup.setChecked( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
-            
             self._delete_to_recycle_bin.setChecked( HC.options[ 'delete_to_recycle_bin' ] )
             
             self._confirm_trash.setChecked( HC.options[ 'confirm_trash' ] )
@@ -991,7 +987,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'When copying a file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
-            rows.append( ( 'Wait 15s after computer resume before accessing files: ', self._file_system_waits_on_wakeup ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
@@ -1060,7 +1055,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
             self._new_options.SetBoolean( 'prefix_hash_when_copying', self._prefix_hash_when_copying.isChecked() )
-            self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.isChecked() )
             
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.isChecked()
             HC.options[ 'confirm_trash' ] = self._confirm_trash.isChecked()
@@ -2771,6 +2765,61 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableString( 'qt_style_name', self._qt_style_name.GetValue() )
             self._new_options.SetNoneableString( 'qt_stylesheet_name', self._qt_stylesheet_name.GetValue() )
+            
+        
+    
+    class _SystemPanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            sleep_panel = ClientGUICommon.StaticBox( self, 'system sleep' )
+            
+            self._wake_delay_period = QP.MakeQSpinBox( sleep_panel, min = 0, max = 60 )
+            
+            tt = 'It sometimes takes a few seconds for your network adapter to reconnect after a wake. This adds a grace period after a detected wake-from-sleep to allow your OS to sort that out before Hydrus starts making requests.'
+            
+            self._wake_delay_period.setToolTip( tt )
+            
+            self._file_system_waits_on_wakeup = QW.QCheckBox( sleep_panel )
+            self._file_system_waits_on_wakeup.setToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' )
+            
+            #
+            
+            self._wake_delay_period.setValue( self._new_options.GetInteger( 'wake_delay_period' ) )
+            
+            self._file_system_waits_on_wakeup.setChecked( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'After a wake from system sleep, wait this many seconds before allowing new network access:', self._wake_delay_period ) )
+            rows.append( ( 'Include the file system in this wait: ', self._file_system_waits_on_wakeup ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( sleep_panel, rows )
+            
+            sleep_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, sleep_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetInteger( 'wake_delay_period', self._wake_delay_period.value() )
+            self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.isChecked() )
             
         
     

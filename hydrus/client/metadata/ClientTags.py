@@ -47,7 +47,7 @@ def RenderNamespaceForUser( namespace ):
         return namespace
         
     
-def RenderTag( tag, render_for_user ):
+def RenderTag( tag, render_for_user: bool ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
@@ -78,7 +78,7 @@ def RenderTag( tag, render_for_user ):
         return namespace + connector + subtag
         
     
-def SortTags( sort_by, tags_list, tags_to_count = None ):
+def SortTags( sort_by, tags_list, tags_to_count = None, item_to_tag_key_wrapper = None ):
     
     def lexicographic_key( tag ):
         
@@ -146,23 +146,25 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
             
         
     
+    sorts_to_do = []
+    
     if sort_by in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
         
         # let's establish a-z here for equal incidence values later
         if sort_by in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC ):
             
-            tags_list.sort( key = lexicographic_key, reverse = True )
+            sorts_to_do.append( ( lexicographic_key, True ) )
             
             reverse = False
             
         elif sort_by in ( CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
             
-            tags_list.sort( key = lexicographic_key )
+            sorts_to_do.append( ( lexicographic_key, False ) )
             
             reverse = True
             
         
-        tags_list.sort( key = incidence_key, reverse = reverse )
+        sorts_to_do.append( ( incidence_key, reverse ) )
         
         if sort_by in ( CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
             
@@ -177,7 +179,7 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
                 reverse = False
                 
             
-            tags_list.sort( key = namespace_key, reverse = reverse )
+            sorts_to_do.append( ( namespace_key, reverse ) )
             
         
     else:
@@ -204,7 +206,19 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
             key = subtag_lexicographic_key
             
         
-        tags_list.sort( key = key, reverse = reverse )
+        sorts_to_do.append( ( key, reverse ) )
+        
+    
+    for ( key, reverse ) in sorts_to_do:
+        
+        key_to_use = key
+        
+        if item_to_tag_key_wrapper is not None:
+            
+            key_to_use = lambda item: key( item_to_tag_key_wrapper( item ) )
+            
+        
+        tags_list.sort( key = key_to_use, reverse = reverse )
         
     
 class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaultdict ):

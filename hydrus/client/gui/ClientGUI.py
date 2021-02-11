@@ -459,6 +459,17 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'python', v ) )
         library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
         
+        from hydrus.core import HydrusEncryption
+        
+        if HydrusEncryption.OPENSSL_OK:
+            
+            library_versions.append( ( 'PyOpenSSL', 'available' ) )
+            
+        else:
+            
+            library_versions.append( ( 'PyOpenSSL', 'not available' ) )
+            
+        
         library_versions.append( ( 'OpenCV', cv2.__version__ ) )
         library_versions.append( ( 'Pillow', PIL.__version__ ) )
         

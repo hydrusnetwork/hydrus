@@ -1416,8 +1416,8 @@ class COLUMN_LIST_TAG_SIBLINGS( COLUMN_LIST_DEFINITION ):
 column_list_type_name_lookup[ COLUMN_LIST_TAG_SIBLINGS.ID ] = 'tag siblings'
 
 register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.STATUS, '', False, 6, True )
-register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.OLD, 'old', False, 25, True )
-register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.NEW, 'new', False, 25, True )
+register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.OLD, 'to be replaced', False, 25, True )
+register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.NEW, 'ideal', False, 25, True )
 register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.NOTE, 'note', False, 40, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_TAG_SIBLINGS.ID ] = ( COLUMN_LIST_TAG_SIBLINGS.NEW, True )

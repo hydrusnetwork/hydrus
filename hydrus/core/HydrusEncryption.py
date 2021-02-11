@@ -1,7 +1,16 @@
-import OpenSSL
 import os
 import stat
 
+try:
+    
+    import OpenSSL
+    
+    OPENSSL_OK = True
+    
+except:
+    
+    OPENSSL_OK = False
+    
 def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
     
     key = OpenSSL.crypto.PKey()

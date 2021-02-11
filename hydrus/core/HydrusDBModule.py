@@ -48,6 +48,27 @@ class HydrusDBModule( object ):
         return '{}_{}_index'.format( table_name, '_'.join( columns ) )
         
     
+    def _STI( self, iterable_cursor ):
+        
+        # strip singleton tuples to an iterator
+        
+        return ( item for ( item, ) in iterable_cursor )
+        
+    
+    def _STL( self, iterable_cursor ):
+        
+        # strip singleton tuples to a list
+        
+        return [ item for ( item, ) in iterable_cursor ]
+        
+    
+    def _STS( self, iterable_cursor ):
+        
+        # strip singleton tuples to a set
+        
+        return { item for ( item, ) in iterable_cursor }
+        
+    
     def CreateIndices( self ):
         
         index_generation_tuples = self._GetIndexGenerationTuples()

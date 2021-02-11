@@ -14,6 +14,10 @@
 				<li><i>ImportError: /home/user/hydrus/libX11.so.6: undefined symbol: xcb_poll_for_reply64</i></li>
 			</ul></p>
 			<p>But that by simply deleting the <i>libX11.so.6</i> file in the hydrus install directory, he was able to boot. I presume this meant my hydrus build was then relying on his local libX11.so, which happened to have better API compatibility. If you receive a similar error, you might like to try the same sort of thing. Let me know if you discover anything!</p>
+			<h3 id="windows_build"><a href="#windows_build">building on windows</a></h3>
+                        <p>Installing some packages on windows with pip may need Visual Studio's C++ Build Tools for your version of python. Although these tools are free, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Instead, install Chocolatey and use this one simple line:</p>
+                        <blockquote>choco install -y vcbuildtools visualstudio2017buildtools</blockquote>
+                        <p>Trust me, this will save a ton of headaches!</a>
 			<h3 id="what_you_need"><a href="#what_you_need">what you will need</a></h3>
 			<p>You will need basic python experience, python 3.x and a number of python modules. Most of it you can get through pip.</p>
 			<p>If you are on Linux or macOS, or if you are on Windows and have an existing python you do not want to stomp all over with new modules, I recommend you create a virtual environment:</p>
@@ -22,6 +26,7 @@
 			<ul>
 				<li>(navigate to your hydrus extract folder)</li>
 				<li>pip3 install virtualenv (if you need it)</li>
+				<li>pip3 install wheel (if you need it)</li>
 				<li>mkdir venv</li>
 				<li>virtualenv --python=python3 venv</li>
 				<li>. venv/bin/activate</li>
@@ -30,7 +35,7 @@
 			<p>On Windows, the path is venv&#92;Scripts&#92;activate, and the whole deal is done much easier in cmd than Powershell. If you get Powershell by default, just type 'cmd' to get an old fashioned command line. In cmd, the launch command is just 'venv&#92;scripts&#92;activate', no leading period.</p>
 			<p>After that, you can go nuts with pip. I think this will do for most systems:</p>
 			<ul>
-				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyOpenSSL PyYAML requests Send2Trash service_identity twisted</li>
+				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyYAML requests Send2Trash service_identity twisted</li>
 			</ul>
 			<p>You may want to do all that in smaller batches.</p>
 			<p>You will also need Qt5. Either PySide2 (default) or PyQt5 are supported, through qtpy. You can install, again, with pip:</p>
@@ -52,12 +57,13 @@
 				<li>pylzma - for importing rare ZWS swf files</li>
 				<li>cloudscraper - for attempting to solve CloudFlare check pages</li>
 				<li>pysocks - for socks4/socks5 proxy support (although you may want to try "requests[socks]" instead)</li>
+                                <li>>PyOpenSSL - to generate a certificate if you want to run the server or the client api</li>
 				<li>mock httmock pyinstaller - if you want to run test.py and make a build yourself</li>
 				<li>PyWin32 pypiwin32 pywin32-ctypes - helpful to ensure you have if you want to make a build in Windows</li>
 			</ul>
 			<p>Here is a masterline with everything for general use:</p>
 			<ul>
-				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyOpenSSL PyYAML requests Send2Trash service_identity twisted qtpy PySide2==5.13.2 lz4 pylzma cloudscraper pysocks</li>
+				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyOpenSSL PyYAML requests Send2Trash service_identity twisted qtpy PySide2 python-mpv lz4 pylzma cloudscraper pysocks</li>
 			</ul>
 			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python37\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>If you don't have ffmpeg in your PATH and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. On Windows, you can copy the exe from one of those releases, or just download the latest static build right from the FFMPEG site.</a>

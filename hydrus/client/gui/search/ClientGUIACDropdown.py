@@ -28,6 +28,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.metadata import ClientTags
 
@@ -502,23 +503,6 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
     
     InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text )
     
-    if expand_parents:
-        
-        expanded_matches = []
-        
-        for match in matches:
-            
-            expanded_matches.append( match )
-            
-            if match.HasParentPredicates():
-                
-                expanded_matches.extend( match.GetParentPredicates() )
-                
-            
-        
-        matches = expanded_matches
-        
-    
     HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
     
 class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
@@ -536,7 +520,7 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def _Activate( self, shift_down ) -> bool:
         
-        predicates = list( self._selected_terms )
+        predicates = self._GetPredicatesFromTerms( self._selected_terms )
         
         if self._float_mode:
             
@@ -592,16 +576,15 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             self._Clear()
             
-            for predicate in predicates:
-                
-                self._AppendTerm( predicate )
-                
+            terms = [ self._GenerateTermFromPredicate( predicate ) for predicate in predicates ]
+            
+            self._AppendTerms( terms )
             
             self._DataHasChanged()
             
             if len( predicates ) > 0:
                 
-                hit_index = 0
+                logical_index = 0
                 
                 if len( predicates ) > 1:
                     
@@ -624,13 +607,13 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                             continue
                             
                         
-                        hit_index = index
+                        logical_index = index
                         
                         break
                         
                     
                 
-                self._Hit( False, False, hit_index )
+                self._Hit( False, False, logical_index )
                 
             
         
@@ -642,22 +625,23 @@ class ListBoxTagsAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
 class ListBoxTagsACRead( ListBoxTagsAC ):
     
-    ors_are_under_construction = True
-    
-    def _GetTextFromTerm( self, term ):
+    def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ):
         
-        predicate = term
+        term = ListBoxTagsAC._GenerateTermFromPredicate( self, predicate )
         
-        return predicate.ToString( render_for_user = True, or_under_construction = self.ors_are_under_construction )
+        if predicate.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
+            
+            term.SetORUnderConstruction( True )
+            
+        
+        return term
         
     
 class ListBoxTagsACWrite( ListBoxTagsAC ):
     
-    def _GetTextFromTerm( self, term ):
+    def __init__( self, *args, render_for_user = False, **kwargs ):
         
-        predicate = term
-        
-        return predicate.ToString( tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
+        ListBoxTagsAC.__init__( self, *args, render_for_user = render_for_user, **kwargs )
         
     
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
@@ -1372,9 +1356,15 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         #
         
         HG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
+        HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
         
     
     def _ChangeFileService( self, file_service_key ):
+        
+        if not HG.client_controller.services_manager.ServiceExists( file_service_key ):
+            
+            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            
         
         if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -1393,6 +1383,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _ChangeTagService( self, tag_service_key ):
+        
+        if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+            
+            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
             
@@ -1493,6 +1488,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
         CGC.core().PopupMenu( self._file_repo_button, menu )
+        
+    
+    def NotifyNewServices( self ):
+        
+        self.SetFileService( self._file_service_key )
+        self.SetTagService( self._tag_service_key )
         
     
     def RefreshFavouriteTags( self ):
@@ -2196,12 +2197,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         
         if len( initial_predicates ) > 0:
             
-            for predicate in initial_predicates:
-                
-                self._AppendTerm( predicate )
-                
+            terms = [ self._GenerateTermFromPredicate( predicate ) for predicate in initial_predicates ]
             
-            self._SortByText()
+            self._AppendTerms( terms )
+            
+            self._Sort()
             
             self._DataHasChanged()
             
@@ -2211,15 +2211,17 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _Activate( self, shift_down ) -> bool:
         
-        if len( self._selected_terms ) > 0:
+        predicates = self._GetPredicatesFromTerms( self._selected_terms )
+        
+        if len( predicates ) > 0:
             
             if shift_down:
                 
-                self._EditPredicates( set( self._selected_terms ) )
+                self._EditPredicates( set( predicates ) )
                 
             else:
                 
-                self._EnterPredicates( set( self._selected_terms ) )
+                self._EnterPredicates( set( predicates ) )
                 
             
             return True
@@ -2230,7 +2232,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _AddEditMenu( self, menu: QW.QMenu ):
         
-        ( editable_predicates, non_editable_predicates ) = ClientGUISearch.GetEditablePredicates( self._selected_terms )
+        ( editable_predicates, non_editable_predicates ) = ClientGUISearch.GetEditablePredicates( self._GetPredicatesFromTerms( self._selected_terms ) )
         
         if len( editable_predicates ) > 0:
             
@@ -2286,19 +2288,17 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             return
             
         
-        for predicate in predicates_to_remove:
-            
-            self._RemoveTerm( predicate )
-            
+        terms_to_remove = [ self._GenerateTermFromPredicate( predicate ) for predicate in predicates_to_remove ]
         
-        for predicate in predicates_to_add:
-            
-            self._AppendTerm( predicate )
-            
+        self._RemoveTerms( terms_to_remove )
         
-        self._selected_terms.update( predicates_to_add )
+        terms_to_add = [ self._GenerateTermFromPredicate( predicate ) for predicate in predicates_to_add ]
         
-        self._SortByText()
+        self._AppendTerms( terms_to_add )
+        
+        self._selected_terms.update( terms_to_add )
+        
+        self._Sort()
         
         self._DataHasChanged()
         
@@ -2310,42 +2310,38 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             return
             
         
-        predicates_to_be_added = set()
-        predicates_to_be_removed = set()
+        terms_to_be_added = set()
+        terms_to_be_removed = set()
         
         for predicate in predicates:
             
             predicate = predicate.GetCountlessCopy()
             
-            if self._HasPredicate( predicate ):
+            term = self._GenerateTermFromPredicate( predicate )
+            
+            if term in self._terms_to_logical_indices:
                 
                 if permit_remove:
                     
-                    predicates_to_be_removed.add( predicate )
+                    terms_to_be_removed.add( term )
                     
                 
             else:
                 
                 if permit_add:
                     
-                    predicates_to_be_added.add( predicate )
+                    terms_to_be_added.add( term )
                     
-                    predicates_to_be_removed.update( self._GetMutuallyExclusivePredicates( predicate ) )
+                    terms_to_be_removed.update( self._GetMutuallyExclusivePredicates( predicate ) )
                     
                 
             
         
-        for predicate in predicates_to_be_added:
-            
-            self._AppendTerm( predicate )
-            
+        self._AppendTerms( terms_to_be_added )
         
-        for predicate in predicates_to_be_removed:
-            
-            self._RemoveTerm( predicate )
-            
+        self._RemoveTerms( terms_to_be_removed )
         
-        self._SortByText()
+        self._Sort()
         
         self._DataHasChanged()
         
@@ -2358,13 +2354,6 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
         
         return self.GetPredicates()
-        
-    
-    def _GetTextFromTerm( self, term ):
-        
-        predicate = term
-        
-        return predicate.ToString( render_for_user = True )
         
     
     def _HasCounts( self ):
@@ -2413,12 +2402,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         
         self._Clear()
         
-        for predicate in predicates:
-            
-            self._AppendTerm( predicate )
-            
+        terms = [ self._GenerateTermFromPredicate( predicate ) for predicate in predicates ]
         
-        self._SortByText()
+        self._AppendTerms( terms )
+        
+        self._Sort()
         
         self._DataHasChanged()
         

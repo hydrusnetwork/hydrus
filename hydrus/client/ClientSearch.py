@@ -1479,6 +1479,14 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         ( self._min_pending_count, self._max_pending_count) = ClientData.MergeCounts( self._min_pending_count, self._max_pending_count, min_pending_count, max_pending_count )
         
     
+    def ClearCounts( self ):
+        
+        self._min_current_count = 0
+        self._min_pending_count = 0
+        self._max_current_count = None
+        self._max_pending_count = None
+        
+    
     def GetAllCounts( self ):
         
         return ( self._min_current_count, self._max_current_count, self._min_pending_count, self._max_pending_count )
@@ -1546,6 +1554,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( PREDICATE_TYPE_TAG, self._ideal_sibling, self._inclusive )
             
+        
+    
+    def GetIdealSibling( self ):
+        
+        return self._ideal_sibling
         
     
     def GetInclusive( self ):
@@ -1618,7 +1631,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._parent_predicates
         
     
-    def GetTextsAndNamespaces( self, or_under_construction = False ):
+    def GetTextsAndNamespaces( self, render_for_user: bool, or_under_construction: bool = False ):
         
         if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
             
@@ -1640,7 +1653,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            texts_and_namespaces = [ ( self.ToString(), self.GetNamespace() ) ]
+            texts_and_namespaces = [ ( self.ToString( render_for_user = render_for_user ), self.GetNamespace() ) ]
             
         
         return texts_and_namespaces
@@ -2399,14 +2412,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             base += ClientTags.RenderTag( tag, render_for_user )
             
             base += count_text
-            
-            if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
-                
-                if self._ideal_sibling is not None and self._ideal_sibling != tag:
-                    
-                    base += ' (will display as ' + self._ideal_sibling + ')'
-                    
-                
             
         elif self._predicate_type == PREDICATE_TYPE_PARENT:
             

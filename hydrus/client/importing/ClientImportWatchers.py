@@ -398,7 +398,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    return 'just added'
+                    return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'just added' )
                     
                 
             
@@ -412,7 +412,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    return 'already watching'
+                    return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'already watching' )
                     
                 
             
@@ -1215,25 +1215,51 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            gallery_work_to_do = self._gallery_seed_log.WorkToDo()
+            files_work_to_do = self._file_seed_cache.WorkToDo()
+            
+            gallery_go = gallery_work_to_do and not self._checking_paused
+            files_go = files_work_to_do and not self._files_paused
+            
             if self._checking_status == ClientImporting.CHECKER_STATUS_404:
                 
-                return '404'
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DONE, '404' )
                 
             elif self._checking_status == ClientImporting.CHECKER_STATUS_DEAD:
                 
-                return 'DEAD'
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DONE, 'DEAD' )
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                return '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, text )
                 
             elif self._watcher_status != '' or self._file_status != '':
                 
-                return 'working'
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'working' )
+                
+            elif gallery_go or files_go:
+                
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PENDING, 'pending' )
                 
             else:
                 
-                return ''
+                if self._checking_paused:
+                    
+                    return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSED, '' )
+                    
+                else:
+                    
+                    if HydrusData.TimeHasPassed( self._next_check_time ):
+                        
+                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PENDING, 'pending' )
+                        
+                    else:
+                        
+                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, 'checking {}'.format( ClientData.TimestampToPrettyTimeDelta( self._next_check_time ) ) )
+                        
+                    
                 
             
         

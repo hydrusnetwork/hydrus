@@ -343,11 +343,6 @@ class HydrusDB( object ):
         self._pubsubs = []
         
     
-    def _CleanUpCaches( self ):
-        
-        pass
-        
-    
     def _CloseDBCursor( self ):
         
         TemporaryIntegerTableNameCache.instance().Clear()
@@ -889,6 +884,11 @@ class HydrusDB( object ):
             
             HydrusData.Print( 'Generating new cert/key files.' )
             
+            if not HydrusEncryption.OPENSSL_OK:
+                
+                raise Exception( 'The database was asked for ssl cert and keys to start either the server or the client api in https. The files do not exist yet, so the database wanted to create new ones, but unfortunately PyOpenSSL is not available, so this cannot be done. If you are running from source, please install this module using pip. Or drop in your own client.crt/client.key or server.crt/server.key files in the db directory.' )
+                
+            
             HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
             
         
@@ -1022,8 +1022,6 @@ class HydrusDB( object ):
                 self._InitDBCursor()
                 
             
-        
-        self._CleanUpCaches()
         
         self._CloseDBCursor()
         

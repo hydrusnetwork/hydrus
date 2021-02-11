@@ -8,6 +8,73 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_428"><a href="#version_428">version 428</a></h3></li>
+				<ul>
+					<li>interesting taglist changes:</li>
+					<li>taglists work way better behind the scenes</li>
+					<li>when siblings display with the '(will display as xxx)' suffix, this text is now coloured by the correct namespace!</li>
+					<li>parents now show in 'manage tags dialog' taglists! they show up just like in a write/edit tag autocomplete results list</li>
+					<li>the tag right-click menu has had a pass. 'copy' is now at the top, the 'siblings and parents' menu is split into 'siblings' and 'parents' with counts on the top menu label and the submenus for each merged, and the 'open in new page' commands are tucked into an 'open' submenu. the menu is typically much tighter than before</li>
+					<li>when you hit 'select files with these tags' from a taglist, the thumbgrid now takes keyboard focus if you want to hit F7 or whatever</li>
+					<li>custom tag presentation (_options->tag presentation_, when you set to always hide namespaces or use custom namespace separator in read/search views) is more reliable across the program. it isn't perfect yet, but I'll keep working</li>
+					<li>a heap of taglist code has been cleaned up. some weird logical issues should be better</li>
+					<li>now the code is nicer to work with, I am interested in feedback on how to further improve display and workflows here</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added two mirrors for nitter, whose main site is failing due to load. I added them randomly from the page here: https://github.com/zedeus/nitter/wiki/Instances . if you have nitter subs, please move their download source to one of the mirrors or set up your own url classes to other mirror addresses. thanks to a user for providing other parser fixes here</li>
+					<li>gallery download pages now show the 'stop' character in the small file column when the files are done</li>
+					<li>gallery download pages now report their 'working' status without flicker, and they report 'pending' when waiting for a download slot (this situation is a legacy hardcoded bottleneck that has been confusing)</li>
+					<li>thread watchers also now have the concept of 'pending', and also report when they are next checking</li>
+					<li>improved the new grouped status sort on gallery downloader and watcher pages. the ascending order is now DONE, working, pending, checking later (for watchers), paused</li>
+					<li>the network request delay after a system resume is now editable under the new options->system panel. default is 15 seconds</li>
+					<li>the 'wait on files too' option is moved from 'files and trash' to this panel</li>
+					<li>when the 'just woke' status is active, you now get a little popup with a cancel button to override it</li>
+					<li>'open similar-looking files' thumbnail menu entry is moved up from file relationships to the 'open' menu</li>
+					<li>the duplicate filter right-hand hover window no longer has both 'previous' and 'next' buttons, since they both act as 'flip', and the merged button is moved down, made bigger, and has a new icon</li>
+					<li>added 'view next' to the duplicate filter shortcut set, so you can set a custom 'flip between pair' mapping just for that filter</li>
+					<li>thanks to a user helping me out, I was able to figure out a set of lookups in the sibling/parent system that were performing unacceptably slow for some users. this was due to common older versions of sqlite that could not optimise a join with a multi-index OR expression. these queries are now simpler and should perform well for all clients. if your autocomplete results from a search page with thumbs were achingly slow, let me know how they work now!</li>
+					<li>the hydrus url normalisation code now treats '+' more carefully. search queries like 6+girls should now work correctly on their own on sites where '+' is used as a tag separator. they no longer have to be mixed with other tags to work</li>
+					<li>.</li>
+					<li>small/specific stuff:</li>
+					<li>the similar files maintenance search on shutdown now reports file progress every 10 files and initialises on 0. it also has faster startup time in all cases</li>
+					<li>when a service is deleted, all currently open file pages will check their current file and tag domains and update to nicer defaults if they were pointed at the now-missing services</li>
+					<li>improved missing service error handling for file searches in general--this can still hit an export folder pointed at a missing service</li>
+					<li>improved missing service error handling for tag autocomplete searches, just in case there are still some holes here</li>
+					<li>fixed a couple small things in the running from source help and added a bit about Visual Studio Build Tools on Windows</li>
+					<li>PyOpenSSL is now optional. it is only needed to generate the crt/key files for https hosting. if you try to boot the server or run the client api in https without the files and without the module available to generate new ones, you now get a nice error. the availability of this library is now in the client's about window</li>
+					<li>the mpv player will no longer throw ugly errors when you try to seek on a file that its API interface cannot support</li>
+					<li>loading a file in the media viewer no longer waits on the file system lock on the main thread (it was, very briefly), so the UI won't hang if you click a thumb just after waking up or while a big file job is going on</li>
+					<li>the 'just woke' code is a little cleaner all around</li>
+					<li>the user-made downloader repository link is now more obvious on Lain's import dialog</li>
+					<li>an old hardcoded url class sorting preference that meant gallery urls would be matched against urls before post, and post before file, is now eliminated. url classes are now just preferenced by number of path components, then how many parameters, then by example url length, with higher numbers matching first (the aim is that the more 'specific' and complicated a url class, the earlier it should attempt to match)</li>
+					<li>updated some of the labelling in manage tag siblings and parents</li>
+					<li>when you search autocomplete tags with short inputs, they do not currently give all 'collapsed' matching results, so an input of 'a' or '/a/' does not give the '/a/' tag. this is an artifact of the new search cache. after looking at the new code, there is no way I can currently provide these results efficiently. I tested the best I could figure out, but it would have added 20-200ms lag on all PTR searches, so instead I have made a plan to resurrect an old cache in a more efficient way. please bear with me on this problem</li>
+					<li>tag searches that only include unusual characters like ? or & are now supported without having to lead the query with an asterisk. they will be slower than normal text search</li>
+					<li>fixed a bug in the 'add tags before import' dialog for local imports where deleting a 'quick namespace' was not updating the tag list above</li>
+					<li>.</li>
+					<li>windows clean install:</li>
+					<li>I moved to a new windows dev machine this week and a bunch of libraries were updated. I do not believe the update on Windows _needs_ a clean install this week, as a new dll conflict actually hits the coincidentally now-optional PyOpenSSL, but it is worth doing if you want to start using the Client API soon, and it has been a while, so let's be nice and clean. if you extract the release on Windows, please check out this guide: https://hydrusnetwork.github.io/hydrus/help/getting_started_installing.html#clean_installs</li>
+					<li>the Windows installer has been updated to remove many old files. it should now do clever clean installs every week, you have nothing to worry about!™</li>
+					<li>.</li>
+					<li>boring db breakup:</li>
+					<li>the local tags cache, which caches tags for your commonly-accessed hard drive files, is now spun off to its own module</li>
+					<li>on invalid tag repair, the new master tags module and local tags cache are now better about forgetting broken tags</li>
+					<li>the main service store is spun off to its own module. several instances of service creation, deletion, update and basic fetching are merged and cleaned here. should improve a couple of logical edge cases with update and reset</li>
+					<li>.</li>
+					<li>boring taglist changes:</li>
+					<li>taglists no longer manage text and predicates, but a generalised item class that now handles all text/tag/predicate generation</li>
+					<li>taglist items can occupy more than one row. all position index calculations are now separate from logical index calculations in selection, sizing, sorting, display, and navigation</li>
+					<li>all taglist items can present multiple colours per row, like OR predicates</li>
+					<li>items are responsible for sibling and parent presentation, decoupling a heap of list responsibility mess</li>
+					<li>tag filter and tag colour lists are now a separate type handled by their own item types</li>
+					<li>subordinate parent predicates (as previously shown just in write/edit autocomplete result lists) are now part of multi-row items. previously they were 'quiet' rows with special rules that hung beneath the real result. some related selection/publish logic is a bit cleaner now</li>
+					<li>string tag items are now aware of their parents and so can present them just like autocomplete results in write/edit contexts</li>
+					<li>the main taglist content update routines have significantly reduced overhead. the various expansions this week add some, so we'll see how this all shakes out</li>
+					<li>the asynchronous sibling/parent update routine that populates sibling and parent data for certain lists is smarter and saves more work when data is cached</li>
+					<li>old borked out selection/hitting-skipping code that jumped over labels and parents is now removed</li>
+					<li>'show siblings and parents' behaviour is more unified now. basically they don't show in read/search, but do in write/edit</li>
+					<li>a heap of bad old taglist code has been deleted or cleaned up</li>
+				</ul>
 				<li><h3 id="version_427"><a href="#version_427">version 427</a></h3></li>
 				<ul>
 					<li>ghost pending tags:</li>

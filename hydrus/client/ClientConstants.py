@@ -539,6 +539,7 @@ class GlobalPixmaps( object ):
         self.previous = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )
         self.next_bmp = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'next.png' ) )
         self.last = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'last.png' ) )
+        self.pair = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'pair.png' ) )
         
 
 global_pixmaps = GlobalPixmaps.instance

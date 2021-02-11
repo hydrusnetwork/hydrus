@@ -283,11 +283,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        with self._lock:
-            
-            self._file_status = ''
-            
-        
         if did_substantial_work:
             
             time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
@@ -308,8 +303,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             if self._AmOverFileLimit():
                 
                 self._gallery_paused = True
-                
-                self._gallery_status = ''
                 
                 return
                 
@@ -391,11 +384,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
         
-        with self._lock:
-            
-            self._gallery_status = ''
-            
-        
         return True
         
     
@@ -422,6 +410,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             finished = not self._file_seed_cache.WorkToDo()
             
             return not finished and not self._files_paused
+            
+        
+    
+    def FilesFinished( self ):
+        
+        with self._lock:
+            
+            return not self._file_seed_cache.WorkToDo()
             
         
     
@@ -605,17 +601,27 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if self._gallery_status != '' or self._file_status != '':
+            gallery_work_to_do = self._gallery_seed_log.WorkToDo()
+            files_work_to_do = self._file_seed_cache.WorkToDo()
+            
+            gallery_go = gallery_work_to_do and not self._gallery_paused
+            files_go = files_work_to_do and not self._files_paused
+            
+            if not ( gallery_work_to_do or files_work_to_do ):
                 
-                return 'working'
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DONE, 'DONE' )
                 
-            elif not self._gallery_seed_log.WorkToDo() and not self._file_seed_cache.WorkToDo():
+            elif self._gallery_status != '' or self._file_status != '':
                 
-                return 'DONE'
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'working' )
+                
+            elif gallery_go or files_go:
+                
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PENDING, 'pending' )
                 
             else:
                 
-                return ''
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSED, '' )
                 
             
         
@@ -805,35 +811,45 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             ok_to_work = work_pending and no_delays and page_shown and network_engine_good
             
         
-        while ok_to_work:
+        try:
             
-            try:
+            while ok_to_work:
                 
-                self._WorkOnFiles()
+                try:
+                    
+                    self._WorkOnFiles()
+                    
+                    HG.client_controller.WaitUntilViewFree()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
                 
-                HG.client_controller.WaitUntilViewFree()
+                with self._lock:
+                    
+                    if ClientImporting.PageImporterShouldStopWorking( self._page_key ):
+                        
+                        self._files_repeating_job.Cancel()
+                        
+                        return
+                        
+                    
+                    files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+                    work_pending = self._file_seed_cache.WorkToDo() and not files_paused
+                    no_delays = HydrusData.TimeHasPassed( self._no_work_until )
+                    page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+                    network_engine_good = not HG.client_controller.network_engine.IsBusy()
+                    
+                    ok_to_work = work_pending and no_delays and page_shown and network_engine_good
+                    
                 
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
+            
+        finally:
             
             with self._lock:
                 
-                if ClientImporting.PageImporterShouldStopWorking( self._page_key ):
-                    
-                    self._files_repeating_job.Cancel()
-                    
-                    return
-                    
-                
-                files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
-                work_pending = self._file_seed_cache.WorkToDo() and not files_paused
-                no_delays = HydrusData.TimeHasPassed( self._no_work_until )
-                page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
-                network_engine_good = not HG.client_controller.network_engine.IsBusy()
-                
-                ok_to_work = work_pending and no_delays and page_shown and network_engine_good
+                self._file_status = ''
                 
             
         
@@ -859,44 +875,49 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             ok_to_work = work_pending and no_delays and page_shown and network_engine_good
             
         
-        while ok_to_work:
+        try:
             
-            try:
+            while ok_to_work:
                 
-                self._WorkOnGallery()
+                try:
+                    
+                    self._WorkOnGallery()
+                    
+                    time.sleep( 1 )
+                    
+                    HG.client_controller.WaitUntilViewFree()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
                 
-                time.sleep( 1 )
+                with self._lock:
+                    
+                    if ClientImporting.PageImporterShouldStopWorking( self._page_key ):
+                        
+                        self._gallery_repeating_job.Cancel()
+                        
+                        return
+                        
+                    
+                    gallery_paused = self._gallery_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+                    
+                    work_pending = self._gallery_seed_log.WorkToDo() and not gallery_paused
+                    no_delays = HydrusData.TimeHasPassed( self._no_work_until )
+                    page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+                    network_engine_good = not HG.client_controller.network_engine.IsBusy()
+                    
+                    ok_to_work = work_pending and no_delays and page_shown and network_engine_good
+                    
                 
-                HG.client_controller.WaitUntilViewFree()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
+            
+        finally:
             
             with self._lock:
                 
-                if ClientImporting.PageImporterShouldStopWorking( self._page_key ):
-                    
-                    self._gallery_repeating_job.Cancel()
-                    
-                    return
-                    
+                self._gallery_status = ''
                 
-                gallery_paused = self._gallery_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
-                
-                work_pending = self._gallery_seed_log.WorkToDo() and not gallery_paused
-                no_delays = HydrusData.TimeHasPassed( self._no_work_until )
-                page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
-                network_engine_good = not HG.client_controller.network_engine.IsBusy()
-                
-                ok_to_work = work_pending and no_delays and page_shown and network_engine_good
-                
-            
-        
-        with self._lock:
-            
-            self._gallery_status = ''
             
         
     

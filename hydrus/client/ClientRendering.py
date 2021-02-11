@@ -93,9 +93,7 @@ class ImageRenderer( object ):
         self._num_frames = media.GetNumFrames()
         self._resolution = media.GetResolution()
         
-        client_files_manager = HG.client_controller.client_files_manager
-        
-        self._path = client_files_manager.GetFilePath( self._hash, self._mime )
+        self._path = None
         
         HG.client_controller.CallToThread( self._Initialise )
         
@@ -115,6 +113,11 @@ class ImageRenderer( object ):
         
     
     def _Initialise( self ):
+        
+        # do this here so we are off the main thread and can wait
+        client_files_manager = HG.client_controller.client_files_manager
+        
+        self._path = client_files_manager.GetFilePath( self._hash, self._mime )
         
         self._numpy_image = ClientImageHandling.GenerateNumPyImage( self._path, self._mime )
         

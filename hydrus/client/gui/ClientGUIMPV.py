@@ -117,6 +117,7 @@ class mpvWidget( QW.QWidget ):
         self._media = None
         
         self._file_is_loaded = False
+        self._disallow_seek_on_this_file = False
         
         self._times_to_play_gif = 0
         
@@ -249,6 +250,11 @@ class mpvWidget( QW.QWidget ):
             
         
     
+    def ClearMedia( self ):
+        
+        self.SetMedia( None )
+        
+    
     def GetAnimationBarStatus( self ):
         
         buffer_indices = None
@@ -309,18 +315,6 @@ class mpvWidget( QW.QWidget ):
             
         
         self._player.command( command )
-        
-    
-    def Seek( self, time_index_ms ):
-        
-        if not self._file_is_loaded:
-            
-            return
-            
-        
-        time_index_s = time_index_ms / 1000
-        
-        self._player.seek( time_index_s, reference = 'absolute' )
         
     
     def HasPlayedOnceThrough( self ):
@@ -410,9 +404,31 @@ class mpvWidget( QW.QWidget ):
         self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
         
     
-    def StopForSlideshow( self, value ):
+    def Seek( self, time_index_ms ):
         
-        self._stop_for_slideshow = value
+        if not self._file_is_loaded:
+            
+            return
+            
+        
+        if self._disallow_seek_on_this_file:
+            
+            return
+            
+        
+        time_index_s = time_index_ms / 1000
+        
+        try:
+            
+            self._player.seek( time_index_s, reference = 'absolute' )
+            
+        except:
+            
+            self._disallow_seek_on_this_file = True
+            
+            # on some files, this seems to fail with a SystemError lmaoooo
+            # with the same elegance, we will just pass all errors
+            
         
     
     def SetMedia( self, media, start_paused = False ):
@@ -423,6 +439,7 @@ class mpvWidget( QW.QWidget ):
             
         
         self._file_is_loaded = False
+        self._disallow_seek_on_this_file = False
         
         self._media = media
         
@@ -485,9 +502,9 @@ class mpvWidget( QW.QWidget ):
             
         
     
-    def ClearMedia( self ):
+    def StopForSlideshow( self, value ):
         
-        self.SetMedia( None )
+        self._stop_for_slideshow = value
         
     
     def UpdateAudioMute( self ):

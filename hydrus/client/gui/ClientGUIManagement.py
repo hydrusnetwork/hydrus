@@ -46,6 +46,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUISearch
+from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
@@ -679,7 +680,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
     def _Activate( self, shift_down ) -> bool:
         
-        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
+        predicates = self._GetPredicatesFromTerms( self._selected_terms )
         
         if len( predicates ) > 0:
             
@@ -1814,15 +1815,26 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         pretty_source = source
         
+        files_finished = gallery_import.FilesFinished()
         files_paused = gallery_import.FilesPaused()
         
-        if files_paused:
+        if files_finished:
+            
+            pretty_files_paused = HG.client_controller.new_options.GetString( 'stop_character' )
+            
+            sort_files_paused = -1
+            
+        elif files_paused:
             
             pretty_files_paused = HG.client_controller.new_options.GetString( 'pause_character' )
+            
+            sort_files_paused = 0
             
         else:
             
             pretty_files_paused = ''
+            
+            sort_files_paused = 1
             
         
         gallery_finished = gallery_import.GalleryFinished()
@@ -1847,9 +1859,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             sort_gallery_paused = 1
             
         
-        pretty_status = gallery_import.GetSimpleStatus()
+        ( status_enum, pretty_status ) = gallery_import.GetSimpleStatus()
         
-        sort_status = ( sort_gallery_paused, pretty_status )
+        sort_status = ClientImporting.downloader_enum_sort_lookup[ status_enum ]
         
         file_seed_cache_status = gallery_import.GetFileSeedCache().GetStatus()
         
@@ -1864,7 +1876,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
-        sort_tuple = ( query_text, pretty_source, files_paused, sort_gallery_paused, sort_status, progress, added )
+        sort_tuple = ( query_text, pretty_source, sort_files_paused, sort_gallery_paused, sort_status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -2654,9 +2666,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
-        pretty_watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
+        ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
-        sort_watcher_status = ( sort_checking_paused, pretty_watcher_status )
+        sort_watcher_status = ClientImporting.downloader_enum_sort_lookup[ status_enum ]
         
         display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
         sort_tuple = ( subject, files_paused, sort_checking_paused, sort_watcher_status, progress, added )
