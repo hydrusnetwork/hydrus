@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_429"><a href="#version_429">version 429</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed a bug in the new taglist backend that would sometimes error out in a paint event(!) on display initialisation or data changes for some clients</li>
+					<li>improved the taglist 'tag' vs 'copyable string' copy/select/action menu logic. e.g. 'namespace:*' is copyable, but it is not a tag</li>
+					<li>thread watchers now skip/clean up unactioned check log entries (this usually happens when a check is due during network traffic paused, queueing the job, and then the client shuts down). if you noticed some odd perpetually 'pending' checkers in last week's status overhaul, this was the issue, and they should clean up. this was always harmless, just revealed with new status code</li>
+					<li>thread watchers now record serious network error detail in the check log</li>
+					<li>thread watchers are quicker about notifying UI on checker log changes</li>
+					<li>thread watchers now report 'time delta' as their simple status when waiting to check, rather that 'checking in (time delta)'. let's see if that fits better in the columns</li>
+					<li>fixed an issue where several dialogs with multi-column lists would reset their 'last column' size to the minimum three characters on the next load if they did not receive certain size events while they were open. you should just have to fix any broken dialogs once and you'll be good again</li>
+					<li>I believe I also improved/fixed the issue of dialogs with multi-column lists sometimes shrinking by a few pixels every open/close</li>
+					<li>the 'we just woke from sleep' detection is now more aggressive. it should now detect a wake after sleeps as short as 60 seconds (down from 5 mins). let's see if we get any false positives during maintenance or other busy periods</li>
+					<li>if you have a complicated database (one stored across multiple locations), the 'database' menu now has a label in place of the simple database's 'backup/restore' commands</li>
+					<li>improved the 'directory is writeable-to' check used in the program. on windows, due to some python tempfile weirdness, this was actually hanging on Program Files.</li>
+					<li>improved the related 'is db dir writeable-to' test in the boot script. if you try to run the program on a custom non-writeable db directory, the crash error should now be nicer, and running a straight client.exe installed to 'Program Files' should now auto-place your db in your user folder, no complaints, like the macOS App</li>
+					<li>corrected 'writable' typo to 'writeable' across the program lmao</li>
+					<li>fixed the new header links in the FAQ file, which I accidentally messed up</li>
+					<li>started work on updating neighbouring .txt tag sidecar export. it isn't ready yet, but it will add tag filters and tag display type to sidecar export with easier expansions in future, and fold it nicely into Export Folders</li>
+					<li>improved some log-off detection + clean shutdown code, but I do not yet have nice multiplatform support</li>
+					<li>.</li>
+					<li>filetypes:</li>
+					<li>the stacked expand/collapse checkbox widget that lets you select filetypes now always starts collapsed. also, some 'partially clicked' logic is improved when you click through filetype group</li>
+					<li>application/clip (clip studio paint) files are now supported! thanks to a user for helping out here</li>
+					<li>just a side note: I looked into animated webp support this week, but it turns out decoding support is rarer than encoding. my normal and fairly new FFMPEG can't reliably render subsequent frames or figure out duration, nor can PIL or OpenCV. I think we will simply have to wait for an update on one of their ends</li>
+					<li>.</li>
+					<li>boring db cleanup:</li>
+					<li>wrote a local hashes cache to store hashes for all the files on your disk, much like the tag one. this should speed up all normal searches and other common file lookups in the db</li>
+					<li>the raw storage mapping tables are spun off to their own module</li>
+					<li>basic file info and inbox is spun off to its own module</li>
+					<li>improved and sped up some inboxing file count calculations</li>
+					<li>cleaned up some more misc file metadata and inbox code</li>
+					<li>improved logic in local tags cache</li>
+				</ul>
 				<li><h3 id="version_428"><a href="#version_428">version 428</a></h3></li>
 				<ul>
 					<li>interesting taglist changes:</li>

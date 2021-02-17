@@ -1,8 +1,6 @@
-import os
 import sqlite3
 import typing
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusExceptions
@@ -10,6 +8,180 @@ from hydrus.core import HydrusTags
 
 from hydrus.client.db import ClientDBMaster
 
+class ClientDBCacheLocalHashes( HydrusDBModule.HydrusDBModule ):
+    
+    def __init__( self, cursor: sqlite3.Cursor, modules_hashes: ClientDBMaster.ClientDBMasterHashes ):
+        
+        self.modules_hashes = modules_hashes
+        
+        self._hash_ids_to_hashes_cache = {}
+        
+        HydrusDBModule.HydrusDBModule.__init__( self, 'client hashes local cache', cursor )
+        
+    
+    def _GetInitialIndexGenerationTuples( self ):
+        
+        index_generation_tuples = []
+        
+        return index_generation_tuples
+        
+    
+    def _PopulateHashIdsToHashesCache( self, hash_ids ):
+        
+        if len( self._hash_ids_to_hashes_cache ) > 100000:
+            
+            if not isinstance( hash_ids, set ):
+                
+                hash_ids = set( hash_ids )
+                
+            
+            self._hash_ids_to_hashes_cache = { hash_id : hash for ( hash_id, hash ) in self._hash_ids_to_hashes_cache.items() if hash_id in hash_ids }
+            
+        
+        uncached_hash_ids = { hash_id for hash_id in hash_ids if hash_id not in self._hash_ids_to_hashes_cache }
+        
+        if len( uncached_hash_ids ) > 0:
+            
+            if len( uncached_hash_ids ) == 1:
+                
+                ( uncached_hash_id, ) = uncached_hash_ids
+                
+                # this makes 0 or 1 rows, so do fetchall rather than fetchone
+                local_uncached_hash_ids_to_hashes = { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM local_hashes_cache WHERE hash_id = ?;', ( uncached_hash_id, ) ) }
+                
+            else:
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, uncached_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    # temp hash_ids to actual hashes
+                    local_uncached_hash_ids_to_hashes = { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM {} CROSS JOIN local_hashes_cache USING ( hash_id );'.format( temp_table_name ) ) }
+                    
+                
+            
+            self._hash_ids_to_hashes_cache.update( local_uncached_hash_ids_to_hashes )
+            
+            uncached_hash_ids = { hash_id for hash_id in uncached_hash_ids if hash_id not in self._hash_ids_to_hashes_cache }
+            
+        
+        if len( uncached_hash_ids ) > 0:
+            
+            hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = uncached_hash_ids )
+            
+            self._hash_ids_to_hashes_cache.update( hash_ids_to_hashes )
+            
+        
+    
+    def CreateInitialTables( self ):
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_hashes_cache ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
+        
+    
+    def AddHashIdsToCache( self, hash_ids ):
+        
+        hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = hash_ids )
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO local_hashes_cache ( hash_id, hash ) VALUES ( ?, ? );', ( ( hash_id, sqlite3.Binary( hash ) ) for ( hash_id, hash ) in hash_ids_to_hashes.items() ) )
+        
+    
+    def ClearCache( self ):
+        
+        self._c.execute( 'DELETE FROM local_hashes_cache;' )
+        
+    
+    def DropHashIdsFromCache( self, hash_ids ):
+        
+        self._c.executemany( 'DELETE FROM local_hashes_cache WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
+    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
+        
+        expected_table_names = [
+            'external_caches.local_hashes_cache'
+        ]
+        
+        return expected_table_names
+        
+    
+    def GetHash( self, hash_id ) -> str:
+        
+        self._PopulateHashIdsToHashesCache( ( hash_id, ) )
+        
+        return self._hash_ids_to_hashes_cache[ hash_id ]
+        
+    
+    def GetHashes( self, hash_ids ) -> typing.List[ bytes ]:
+        
+        self._PopulateHashIdsToHashesCache( hash_ids )
+        
+        return [ self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids ]
+        
+    
+    def GetHashId( self, hash ) -> int:
+        
+        result = self._c.execute( 'SELECT hash_id FROM local_hashes_cache WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+        
+        if result is None:
+            
+            return self.modules_hashes.GetHashId( hash )
+            
+        else:
+            
+            ( hash_id, ) = result
+            
+        
+        return hash_id
+        
+    
+    def GetHashIds( self, hashes ) -> typing.Set[ int ]:
+        
+        hash_ids = set()
+        hashes_not_in_cache = set()
+        
+        for hash in hashes:
+            
+            if hash is None:
+                
+                continue
+                
+            
+            result = self._c.execute( 'SELECT hash_id FROM local_hashes_cache WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+            
+            if result is None:
+                
+                hashes_not_in_cache.add( hash )
+                
+            else:
+                
+                ( hash_id, ) = result
+                
+                hash_ids.add( hash_id )
+                
+            
+        
+        if len( hashes_not_in_cache ) > 0:
+            
+            hash_ids.update( self.modules_hashes.GetHashIds( hashes_not_in_cache ) )
+            
+        
+        return hash_ids
+        
+    
+    def GetHashIdsToHashes( self, hash_ids = None, hashes = None ) -> typing.Dict[ int, str ]:
+        
+        if hash_ids is not None:
+            
+            self._PopulateHashIdsToHashesCache( hash_ids )
+            
+            hash_ids_to_hashes = { hash_id : self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids }
+            
+        elif hashes is not None:
+            
+            hash_ids_to_hashes = { self.GetHashId( hash ) : hash for hash in hashes }
+            
+        
+        return hash_ids_to_hashes
+        
+    
 class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_tags: ClientDBMaster.ClientDBMasterTags ):
@@ -21,13 +193,13 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
         HydrusDBModule.HydrusDBModule.__init__( self, 'client tags local cache', cursor )
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         index_generation_tuples = []
         
         return index_generation_tuples
         
-
+    
     def _PopulateTagIdsToTagsCache( self, tag_ids ):
         
         if len( self._tag_ids_to_tags_cache ) > 100000:
@@ -73,7 +245,7 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
         
@@ -87,9 +259,7 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
     
     def ClearCache( self ):
         
-        self._c.execute( 'DROP TABLE IF EXISTS local_tags_cache;' )
-        
-        self.CreateTables()
+        self._c.execute( 'DELETE FROM local_tags_cache;' )
         
     
     def DropTagIdsFromCache( self, tag_ids ):
@@ -126,7 +296,7 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
             raise HydrusExceptions.TagSizeException( '"{}" tag seems not valid--when cleaned, it ends up with zero size!'.format( tag ) )
             
         
-        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
+        result = self._c.execute( 'SELECT tag_id FROM local_tags_cache WHERE tag = ?;', ( tag, ) ).fetchone()
         
         if result is None:
             

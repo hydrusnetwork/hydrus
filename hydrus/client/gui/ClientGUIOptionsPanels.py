@@ -57,7 +57,7 @@ class OptionsPanelMimes( OptionsPanel ):
             
             QP.AddToLayout( gridbox, general_mime_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
             
-            show_hide_button = ClientGUICommon.BetterButton( self, self.BUTTON_CURRENTLY_SHOWING, self._ButtonShowHide, general_mime_type )
+            show_hide_button = ClientGUICommon.BetterButton( self, self.BUTTON_CURRENTLY_HIDDEN, self._ButtonShowHide, general_mime_type )
             
             max_width = ClientGUIFunctions.ConvertTextToPixelWidth( show_hide_button, 5 )
             
@@ -73,6 +73,8 @@ class OptionsPanelMimes( OptionsPanel ):
                 
                 m_checkbox = QW.QCheckBox( HC.mime_string_lookup[ mime ], self )
                 m_checkbox.clicked.connect( self.EventMimeCheckbox )
+                
+                m_checkbox.setVisible( False )
                 
                 self._mimes_to_checkboxes[ mime ] = m_checkbox
                 
@@ -194,6 +196,8 @@ class OptionsPanelMimes( OptionsPanel ):
             
             if mime_check_state is not None:
                 
+                general_mime_checkbox.setTristate( False )
+                
                 mimes_in_type = self._GetMimesForGeneralMimeType( general_mime_type )
                 
                 for mime in mimes_in_type:
@@ -227,6 +231,6 @@ class OptionsPanelMimes( OptionsPanel ):
         
         self._UpdateMimeGroupCheckboxes()
         
-        self._DoInitialHideShow()
+        #self._DoInitialHideShow()
         
     

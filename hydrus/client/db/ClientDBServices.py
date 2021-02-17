@@ -31,7 +31,7 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
         self._InitCaches()
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         index_generation_tuples = []
         
@@ -63,7 +63,7 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );' )
         

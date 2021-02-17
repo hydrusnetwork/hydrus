@@ -691,8 +691,12 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._DelayWork( delay, str( e ) )
             
+            gallery_seed.SetStatus( CC.STATUS_ERROR, str( e ) )
+            
             HydrusData.PrintException( e )
             
+        
+        self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
         
         watcher_status = gallery_seed.note
         watcher_status_should_stick = gallery_seed.status != CC.STATUS_SUCCESSFUL_AND_NEW
@@ -1257,7 +1261,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, 'checking {}'.format( ClientData.TimestampToPrettyTimeDelta( self._next_check_time ) ) )
+                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, ClientData.TimestampToPrettyTimeDelta( self._next_check_time, no_prefix = True ) )
                         
                     
                 
@@ -1580,6 +1584,16 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._checker_repeating_job.Cancel()
                 
                 return
+                
+            
+            while self._gallery_seed_log.WorkToDo():
+                # some old unworked gallery url is hanging around, let's clear it
+                
+                gallery_seed = self._gallery_seed_log.GetNextGallerySeed( CC.STATUS_UNKNOWN )
+                
+                gallery_seed.SetStatus( CC.STATUS_VETOED, note = 'check never finished' )
+                
+                self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
                 
             
             checking_paused = self._checking_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' )

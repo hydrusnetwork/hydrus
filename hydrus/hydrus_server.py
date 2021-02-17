@@ -58,7 +58,7 @@ try:
         
         db_dir = HC.DEFAULT_DB_DIR
         
-        if not HydrusPaths.DirectoryIsWritable( db_dir ) or HC.RUNNING_FROM_MACOS_APP:
+        if not HydrusPaths.DirectoryIsWriteable( db_dir ) or HC.RUNNING_FROM_MACOS_APP:
             
             db_dir = HC.USERPATH_DB_DIR
             
@@ -69,6 +69,11 @@ try:
         
     
     db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
+    
+    if not HydrusPaths.DirectoryIsWriteable( db_dir ):
+        
+        raise Exception( 'The given db path "{}" is not a writeable-to!'.format( db_dir ) )
+        
     
     try:
         
@@ -82,11 +87,6 @@ try:
     if not os.path.isdir( db_dir ):
         
         raise Exception( 'The given db path "{}" is not a directory!'.format( db_dir ) )
-        
-    
-    if not HydrusPaths.DirectoryIsWritable( db_dir ):
-        
-        raise Exception( 'The given db path "{}" is not a writable-to!'.format( db_dir ) )
         
     
     HG.no_daemons = result.no_daemons

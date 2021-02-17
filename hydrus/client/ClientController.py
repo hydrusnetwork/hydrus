@@ -121,16 +121,36 @@ class App( QW.QApplication ):
         
         self.pubsub_catcher = PubSubEventCatcher( self, self._pubsub )
         
-        self.aboutToQuit.connect( self.EventEndSession )
+        self.aboutToQuit.connect( self.EventAboutToQuit )
         
     
-    def EventEndSession( self ):
+    def EventAboutToQuit( self ):
         
         # If a user log-off causes the OS to call the Qt Application's quit/exit func, we still want to save and close nicely
+        # once this lad is done, we are OUT of the mainloop, so if this is called and we are actually waiting on THREADExitEverything, let's wait a bit more
+        
+        # on Windows, the logoff routine kills the process once all top level windows are dead, so we have no chance to do post-app work lmaooooooooo
+        # since splash screen may not appear in some cases, I now keep main gui alive but hidden until the quit call. it is never deleteLater'd
+        
+        # this is also called explicitly right at the end of the program. I set setQuitonLastWindowClosed False and then call quit explicitly, so it needs to be idempotent on the exit calls
         
         if HG.client_controller is not None:
             
-            if not HG.client_controller.ProgramIsShuttingDown():
+            if HG.client_controller.ProgramIsShuttingDown():
+                
+                screw_it_time = HydrusData.GetNow() + 30
+                
+                while not HG.client_controller.ProgramIsShutDown():
+                    
+                    time.sleep( 0.5 )
+                    
+                    if HydrusData.TimeHasPassed( screw_it_time ):
+                        
+                        return
+                        
+                    
+                
+            else:
                 
                 HG.client_controller.SetDoingFastExit( True )
                 
@@ -148,6 +168,7 @@ class Controller( HydrusController.HydrusController ):
         self._qt_app_running = False
         self._is_booted = False
         self._program_is_shutting_down = False
+        self._program_is_shut_down = False
         self._restore_backup_path = None
         
         self._splash = None
@@ -733,7 +754,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.gui is not None and QP.isValid( self.gui ):
                 
-                self.gui.SaveAndClose()
+                self.gui.SaveAndHide()
                 
             
         except Exception:
@@ -1314,6 +1335,11 @@ class Controller( HydrusController.HydrusController ):
     def PrepStringForDisplay( self, text ):
         
         return text.lower()
+        
+    
+    def ProgramIsShutDown( self ):
+        
+        return self._program_is_shut_down
         
     
     def ProgramIsShuttingDown( self ):
@@ -1996,6 +2022,8 @@ class Controller( HydrusController.HydrusController ):
             QW.QApplication.instance().setProperty( 'exit_complete', True )
             
             self._DestroySplash()
+            
+            self._program_is_shut_down = True
             
             QP.CallAfter( QW.QApplication.quit )
             

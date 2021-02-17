@@ -539,7 +539,7 @@ class HydrusController( object ):
         
         self._daemon_jobs[ 'maintain_db' ] = job
         
-        job = self.CallRepeating( 10.0, 120.0, self.SleepCheck )
+        job = self.CallRepeating( 0.0, 15.0, self.SleepCheck )
         
         self._daemon_jobs[ 'sleep_check' ] = job
         
@@ -764,9 +764,7 @@ class HydrusController( object ):
         
         with self._sleep_lock:
             
-            last_sleep_check = self._timestamps[ 'last_sleep_check' ]
-            
-            if HydrusData.TimeHasPassed( last_sleep_check + 300 ): # it has been way too long since this method last fired, so we've prob been asleep
+            if HydrusData.TimeHasPassed( self._timestamps[ 'last_sleep_check' ] + 60 ): # it has been way too long since this method last fired, so we've prob been asleep
                 
                 self._just_woke_from_sleep = True
                 

@@ -38,7 +38,7 @@ class HydrusDBModule( object ):
         self._c.execute( statement )
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         raise NotImplementedError()
         
@@ -69,9 +69,9 @@ class HydrusDBModule( object ):
         return { item for ( item, ) in iterable_cursor }
         
     
-    def CreateIndices( self ):
+    def CreateInitialIndices( self ):
         
-        index_generation_tuples = self._GetIndexGenerationTuples()
+        index_generation_tuples = self._GetInitialIndexGenerationTuples()
         
         for ( table_name, columns, unique ) in index_generation_tuples:
             
@@ -79,14 +79,14 @@ class HydrusDBModule( object ):
             
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         raise NotImplementedError()
         
     
     def GetExpectedIndexNames( self ) -> typing.Collection[ str ]:
         
-        index_generation_tuples = self._GetIndexGenerationTuples()
+        index_generation_tuples = self._GetInitialIndexGenerationTuples()
         
         expected_index_names = [ self._GenerateIndexName( table_name, columns ) for ( table_name, columns, unique ) in index_generation_tuples ]
         

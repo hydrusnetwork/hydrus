@@ -477,20 +477,9 @@ class ListBoxItemPredicate( ListBoxItem ):
     
     def GetTags( self ) -> typing.Set[ str ]:
         
-        if self._predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+        if self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
             
             tag = self._predicate.GetValue()
-            
-        elif self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_NAMESPACE:
-            
-            namespace = self._predicate.GetValue()
-            
-            # this is useful for workflow
-            tag = '{}:*'.format( namespace )
-            
-        elif self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_PARENT:
-            
-            tag = HydrusTags.CleanTag( self._predicate.GetValue() )
             
         else:
             

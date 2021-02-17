@@ -402,7 +402,7 @@ def ConvertTimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = 
         return 'unparseable time {}'.format( timestamp )
         
     
-def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, show_seconds = True ):
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, show_seconds = True, no_prefix = False ):
     
     if timestamp is None:
         
@@ -431,7 +431,14 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
             
         else:
             
-            return 'in ' + time_delta_string
+            if no_prefix:
+                
+                return time_delta_string
+                
+            else:
+                
+                return 'in ' + time_delta_string
+                
             
         
     except:

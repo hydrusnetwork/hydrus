@@ -1065,7 +1065,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     return False
                     
                 
-                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                in_inbox = hash in HG.client_controller.Read( 'inbox_hashes', ( hash, ) )
                 
             
             if file_import_options.ShouldPresent( self.status, in_inbox ):
@@ -2376,7 +2376,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         if len( file_seed_hashes ) > 0:
             
-            inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
+            inbox_hashes = HG.client_controller.Read( 'inbox_hashes', file_seed_hashes )
             
         else:
             

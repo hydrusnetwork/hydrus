@@ -207,8 +207,6 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def _SectionsResized( self, logical_index, old_size, new_size ):
         
-        visual_index = self.header().visualIndex( logical_index )
-        
         self._DoStatusChanged()
         
         self.updateGeometry()
@@ -245,10 +243,11 @@ class BetterListCtrl( QW.QTreeWidget ):
             width_pixels = header.sectionSize( logical_index )
             shown = not header.isSectionHidden( logical_index )
             
+            # if the scrollbar is in place, then when we initialise, next time, we will want to include that extra space in our final column recommended size
             # might need to update this to be 'last non-hidden section', rather than 'last 'visual' section'
             if visual_index == last_column_index and self.verticalScrollBar().isVisible():
                 
-                width_pixels -= self.verticalScrollBar().width()
+                width_pixels += self.verticalScrollBar().width()
                 
             
             width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
@@ -721,6 +720,13 @@ class BetterListCtrl( QW.QTreeWidget ):
         min_size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
         
         return min_size_hint
+        
+    
+    def resizeEvent( self, event ):
+        
+        self._DoStatusChanged()
+        
+        return QW.QTreeWidget.resizeEvent( self, event )
         
     
     def sizeHint( self ):

@@ -106,7 +106,7 @@ class TestServer( unittest.TestCase ):
         
         for path in ( cls._ssl_cert_path, cls._ssl_key_path ):
             
-            HydrusPaths.MakeFileWritable( path )
+            HydrusPaths.MakeFileWriteable( path )
             
             os.unlink( path )
             

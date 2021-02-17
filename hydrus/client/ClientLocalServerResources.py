@@ -497,6 +497,10 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
             
             path = os.path.join( HC.STATIC_DIR, 'psd.png' )
             
+        elif mime == HC.APPLICATION_CLIP:
+            
+            path = os.path.join( HC.STATIC_DIR, 'clip.png' )
+            
         else:
             
             path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )

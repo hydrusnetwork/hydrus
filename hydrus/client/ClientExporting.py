@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
+from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientTags
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
@@ -441,7 +442,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     num_copied += 1
                     
-                    HydrusPaths.MakeFileWritable( dest_path )
+                    HydrusPaths.MakeFileWriteable( dest_path )
                     
                 
             
@@ -582,3 +583,80 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ] = ExportFolder
+
+class SidecarExporter( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SIDECAR_EXPORTER
+    SERIALISABLE_NAME = 'Sidecar Exporter'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, service_keys_to_tag_data = None ):
+        
+        if service_keys_to_tag_data is None:
+            
+            service_keys_to_tag_data = {}
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._service_keys_to_tag_data = service_keys_to_tag_data
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_service_keys_and_tag_data = [ ( service_key.hex(), tag_filter.GetSerialisableTuple(), tag_display_type ) for ( service_key, ( tag_filter, tag_display_type ) ) in self._service_keys_to_tag_data.items() ]
+        
+        return serialisable_service_keys_and_tag_data
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_service_keys_and_tag_data = serialisable_info
+        
+        self._service_keys_to_tag_data = { bytes.fromhex( service_key_hex ) : ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ), tag_display_type ) for ( service_key_hex, serialisable_tag_filter, tag_display_type ) in serialisable_service_keys_and_tag_data }
+        
+    
+    def ExportSidecar( self, directory: str, filename: str, tags_manager: ClientMediaManagers.TagsManager ):
+        
+        my_service_keys = set( self._service_keys_to_tag_data.keys() )
+        
+        for service_key in my_service_keys:
+            
+            if not HG.client_controller.services_manager.ServiceExists( service_key ):
+                
+                del self._service_keys_to_tag_data[ service_key ]
+                
+            
+        
+        all_tags = set()
+        
+        for ( service_key, ( tag_filter, tag_display_type ) ) in self._service_keys_to_tag_data.items():
+            
+            tags = tags_manager.GetCurrent( service_key, tag_display_type )
+            
+            tags = tag_filter.Filter( tags )
+            
+            all_tags.update( tags )
+            
+        
+        if len( all_tags ) > 0:
+            
+            all_tags = list( all_tags )
+            
+            ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_DESC, all_tags )
+            
+            txt_path = os.path.join( directory, filename + '.txt' )
+            
+            with open( txt_path, 'w', encoding = 'utf-8' ) as f:
+                
+                f.write( os.linesep.join( tags ) )
+                
+            
+        
+    
+    def GetTagData( self ):
+        
+        return dict( self._service_keys_to_tag_data )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SIDECAR_EXPORTER ] = SidecarExporter

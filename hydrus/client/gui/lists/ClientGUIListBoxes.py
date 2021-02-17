@@ -1541,7 +1541,7 @@ class ListBox( QW.QScrollArea ):
         visible_rect_width = visible_rect.width()
         visible_rect_height = visible_rect.height()
         
-        first_visible_positional_index = visible_rect_y // text_height
+        first_visible_positional_index = max( 0, visible_rect_y // text_height )
         
         last_visible_positional_index = ( visible_rect_y + visible_rect_height ) // text_height
         
@@ -1550,12 +1550,18 @@ class ListBox( QW.QScrollArea ):
             last_visible_positional_index += 1
             
         
-        last_visible_positional_index = min( last_visible_positional_index, self._total_positional_rows - 1 )
+        last_visible_positional_index = max( 0, min( last_visible_positional_index, self._total_positional_rows - 1 ) )
         
         #
         
         ( first_visible_logical_index, first_visible_positional_index ) = self._GetLogicalIndicesFromPositionalIndex( first_visible_positional_index )
         ( last_visible_logical_index, last_visible_positional_index ) = self._GetLogicalIndicesFromPositionalIndex( last_visible_positional_index )
+        
+        # some crazy situation with ultra laggy sessions where we are rendering a zero or negative size list or something
+        if first_visible_logical_index is None or last_visible_logical_index is None:
+            
+            return
+            
         
         current_visible_index = first_visible_positional_index
         
@@ -1609,59 +1615,7 @@ class ListBox( QW.QScrollArea ):
                 current_visible_index += 1
                 
             
-        '''
-        for current_index in range( first_visible_positional_index, last_visible_positional_index + 1 ):
-            
-            term = self._GetTermFromLogicalIndex( current_index )
-            
-            texts_and_colours = self._GetRowsOfTextsAndColours( term )
-            
-            there_is_more_than_one_text = len( texts_and_colours ) > 1
-            
-            x_start = self.TEXT_X_PADDING
-            
-            for ( text, ( r, g, b ) ) in texts_and_colours:
-                
-                text_colour = QG.QColor( r, g, b )
-                
-                if term in self._selected_terms:
-                    
-                    painter.setBrush( QG.QBrush( text_colour ) )
-                    
-                    painter.setPen( QC.Qt.NoPen )
-                    
-                    if x_start == self.TEXT_X_PADDING:
-                        
-                        background_colour_x = 0
-                        
-                    else:
-                        
-                        background_colour_x = x_start
-                        
-                    
-                    painter.drawRect( background_colour_x, current_index * text_height, visible_rect_width, text_height )
-                    
-                    text_colour = self._background_colour
-                    
-                
-                painter.setPen( QG.QPen( text_colour ) )
-                
-                ( x, y ) = ( x_start, current_index * text_height )
-                
-                ( this_text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
-                
-                this_text_width = this_text_size.width()
-                this_text_height = this_text_size.height()
-                
-                painter.drawText( QC.QRectF( x, y, this_text_width, this_text_height ), text )
-                
-                if there_is_more_than_one_text:
-                    
-                    x_start += this_text_width
-                    
-                
-            
-        '''
+        
     
     def _RegenTermsToIndices( self ):
         
@@ -1735,7 +1689,7 @@ class ListBox( QW.QScrollArea ):
         
         ideal_virtual_size = QC.QSize( my_size.width(), text_height * self._total_positional_rows )
         
-        if ideal_virtual_size != self.widget().size():
+        if ideal_virtual_size != my_size:
             
             self.widget().setMinimumSize( ideal_virtual_size )
             

@@ -869,7 +869,7 @@ class ThumbnailCache( object ):
             
             self._special_thumbs = {}
             
-            names = [ 'hydrus', 'pdf', 'psd', 'audio', 'video', 'zip' ]
+            names = [ 'hydrus', 'pdf', 'psd', 'clip', 'audio', 'video', 'zip' ]
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             
@@ -976,6 +976,7 @@ class ThumbnailCache( object ):
             elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
             elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
             elif mime == HC.APPLICATION_PSD: return self._special_thumbs[ 'psd' ]
+            elif mime == HC.APPLICATION_CLIP: return self._special_thumbs[ 'clip' ]
             elif mime in HC.ARCHIVES: return self._special_thumbs[ 'zip' ]
             else: return self._special_thumbs[ 'hydrus' ]
             

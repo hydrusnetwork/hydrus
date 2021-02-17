@@ -20,7 +20,7 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         self._hash_ids_to_hashes_cache = {}
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         index_generation_tuples = []
         
@@ -98,7 +98,7 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
         
@@ -115,7 +115,7 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         return expected_table_names
         
     
-    def GetExtraHash( self, hash_type, hash_id ):
+    def GetExtraHash( self, hash_type, hash_id ) -> bytes:
         
         result = self._c.execute( 'SELECT {} FROM local_hashes WHERE hash_id = ?;'.format( hash_type ), ( hash_id, ) ).fetchone()
         
@@ -129,7 +129,7 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         return hash
         
     
-    def GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ):
+    def GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ) -> typing.Collection[ bytes ]:
         
         if given_hash_type == 'sha256':
             
@@ -169,14 +169,14 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         return desired_hashes
         
     
-    def GetHash( self, hash_id ):
+    def GetHash( self, hash_id ) -> bytes:
         
         self._PopulateHashIdsToHashesCache( ( hash_id, ) )
         
         return self._hash_ids_to_hashes_cache[ hash_id ]
         
     
-    def GetHashes( self, hash_ids ):
+    def GetHashes( self, hash_ids ) -> typing.List[ bytes ]:
         
         self._PopulateHashIdsToHashesCache( hash_ids )
         
@@ -302,14 +302,14 @@ class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
         HydrusDBModule.HydrusDBModule.__init__( self, 'client texts master', cursor )
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         index_generation_tuples = []
         
         return index_generation_tuples
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.labels ( label_id INTEGER PRIMARY KEY, label TEXT UNIQUE );' )
         
@@ -390,7 +390,7 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         self._tag_ids_to_tags_cache = {}
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         index_generation_tuples = []
         
@@ -457,7 +457,7 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT UNIQUE );' )
         
@@ -597,7 +597,7 @@ class ClientDBMasterURLs( HydrusDBModule.HydrusDBModule ):
         HydrusDBModule.HydrusDBModule.__init__( self, 'client urls master', cursor )
         
     
-    def _GetIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationTuples( self ):
         
         index_generation_tuples = []
         
@@ -606,7 +606,7 @@ class ClientDBMasterURLs( HydrusDBModule.HydrusDBModule ):
         return index_generation_tuples
         
     
-    def CreateTables( self ):
+    def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.url_domains ( domain_id INTEGER PRIMARY KEY, domain TEXT UNIQUE );' )
         

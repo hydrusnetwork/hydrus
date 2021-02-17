@@ -275,7 +275,7 @@ def DeletePath( path ):
     
     if os.path.exists( path ):
         
-        MakeFileWritable( path )
+        MakeFileWriteable( path )
         
         try:
             
@@ -304,18 +304,47 @@ def DeletePath( path ):
             
         
     
-def DirectoryIsWritable( path ):
+def DirectoryIsWriteable( path ):
     
-    if not os.path.exists( path ):
+    # testing access bits on directories to see if we can make new files is multiplatform hellmode
+    # so, just try it and see what happens
+    
+    while not os.path.exists( path ):
         
-        return False
+        try:
+            
+            path = os.path.dirname( path )
+            
+        except:
+            
+            return False
+            
+        
+    
+    temp_path = os.path.join( path, 'hydrus_temp_test_top_jej' )
+    
+    if os.path.exists( temp_path ):
+        
+        try:
+            
+            os.unlink( temp_path )
+            
+        except:
+            
+            return False
+            
         
     
     try:
         
-        t = tempfile.TemporaryFile( dir = path )
+        # using tempfile.TemporaryFile actually loops on PermissionError from Windows lmaaaooooo, thinking this is an already existing file
+        # so, just do it manually!
         
-        t.close()
+        f = open( temp_path, 'wb' )
+        
+        f.close()
+        
+        os.unlink( temp_path )
         
         return True
         
@@ -422,9 +451,9 @@ def SetEnvTempDir( path ):
         raise Exception( 'Could not create the temp dir: {}'.format( e ) )
         
     
-    if not DirectoryIsWritable( path ):
+    if not DirectoryIsWriteable( path ):
         
-        raise Exception( 'The given temp directory, "{}", does not seem to be writable-to!'.format( path ) )
+        raise Exception( 'The given temp directory, "{}", does not seem to be writeable-to!'.format( path ) )
         
     
     for tmp_name in ( 'TMPDIR', 'TEMP', 'TMP' ):
@@ -570,7 +599,7 @@ def MakeSureDirectoryExists( path ):
     
     os.makedirs( path, exist_ok = True )
     
-def MakeFileWritable( path ):
+def MakeFileWriteable( path ):
     
     if not os.path.exists( path ):
         
@@ -608,7 +637,7 @@ def MergeFile( source, dest ):
     
     if not os.path.isdir( source ):
         
-        MakeFileWritable( source )
+        MakeFileWriteable( source )
         
     
     if PathsHaveSameSizeAndDate( source, dest ):
@@ -665,7 +694,7 @@ def MergeTree( source, dest, text_update_hook = None ):
                 
                 if not os.path.isdir( source_path ):
                     
-                    MakeFileWritable( source_path )
+                    MakeFileWriteable( source_path )
                     
                 
                 shutil.move( source_path, dest_path )
@@ -730,7 +759,7 @@ def MirrorFile( source, dest ):
         
         try:
             
-            MakeFileWritable( dest )
+            MakeFileWriteable( dest )
             
             copy_metadata = True
             
@@ -935,7 +964,7 @@ def RecyclePath( path ):
     
     if os.path.exists( path ):
         
-        MakeFileWritable( path )
+        MakeFileWriteable( path )
         
         try:
             

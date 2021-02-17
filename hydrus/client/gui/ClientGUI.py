@@ -3047,6 +3047,22 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RegenerateLocalHashCache( self ):
+        
+        message = 'This will delete and then recreate the local hash cache, which keeps a small record of hashes for files on your hard drive. It isn\'t super important, but it speeds most operations up, and this routine fixes it when broken.'
+        message += os.linesep * 2
+        message += 'If you have a lot of files, it can take a long time, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'regenerate_local_hash_cache' )
+            
+        
+    
     def _RegenerateLocalTagCache( self ):
         
         message = 'This will delete and then recreate the local tag cache, which keeps a small record of tags for files on your hard drive. It isn\'t super important, but it speeds most operations up, and this routine fixes it when broken.'
@@ -4926,8 +4942,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
                 
-                ClientGUIMenus.AppendSeparator( menu )
+            else:
                 
+                message = 'Your database is stored across multiple locations, which disables my internal backup routine. To back up, please use a third-party program that will work better than anything I can write.'
+                message += os.linesep * 2
+                message += 'Please check the help for more info on how best to backup manually.'
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'database is complicated', 'Restore the database from an external location.', HydrusData.ShowText, message )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -4988,7 +5013,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache (subtags repopulation)', 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag search for local files.', self._RegenerateLocalTagCache )
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'local hash cache', 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -5415,6 +5443,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
             ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
+            ClientGUIMenus.AppendSeparator( data_actions )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'simulate program quit signal', 'Kill the program via a QApplication quit.', QW.QApplication.instance().quit )
             
             ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
             
@@ -6751,7 +6781,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def SaveAndClose( self ):
+    def SaveAndHide( self ):
         
         if self._done_save_and_close:
             
@@ -6822,8 +6852,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HydrusData.PrintException( e )
             
-        
-        self.deleteLater()
         
     
     def SetMediaFocus( self ):

@@ -193,7 +193,7 @@ class ClientFilesManager( object ):
         
         try:
             
-            HydrusPaths.MakeFileWritable( dest_path )
+            HydrusPaths.MakeFileWriteable( dest_path )
             
             with open( dest_path, 'wb' ) as f:
                 
@@ -736,7 +736,7 @@ class ClientFilesManager( object ):
             HydrusData.ShowText( 'Adding file from string: ' + str( ( len( file_bytes ), dest_path ) ) )
             
         
-        HydrusPaths.MakeFileWritable( dest_path )
+        HydrusPaths.MakeFileWriteable( dest_path )
         
         with open( dest_path, 'wb' ) as f:
             
@@ -1570,7 +1570,7 @@ class FilesMaintenanceManager( object ):
             
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
-            HydrusPaths.MakeFileWritable( path )
+            HydrusPaths.MakeFileWriteable( path )
             
         except HydrusExceptions.FileMissingException:
             
