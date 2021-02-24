@@ -39,6 +39,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingSessions
 
 class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
@@ -2930,6 +2931,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page = ClientGUICommon.BetterChoice( general_panel )
             
+            self._expand_parents_on_storage_taglists = QW.QCheckBox( general_panel )
+            self._expand_parents_on_storage_autocomplete_taglists = QW.QCheckBox( general_panel )
             self._ac_select_first_with_count = QW.QCheckBox( general_panel )
             
             #
@@ -2941,10 +2944,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
             favourites_st.setWordWrap( True )
             
-            expand_parents = False
-            
-            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, show_display_decorators = False )
-            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
+            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
+            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
             
@@ -2967,6 +2968,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page.SetValue( new_options.GetKey( 'default_tag_service_search_page' ) )
             
+            self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
+            
+            self._expand_parents_on_storage_taglists.setToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' )
+            
+            self._expand_parents_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
+            
+            self._expand_parents_on_storage_autocomplete_taglists.setToolTip( 'This affects the autocomplete results taglist.' )
+            
             self._ac_select_first_with_count.setChecked( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
             
             #
@@ -2982,6 +2991,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_repository ) )
             rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
+            rows.append( ( 'Show parents expanded by default on edit/write taglists: ', self._expand_parents_on_storage_taglists ) )
+            rows.append( ( 'Show parents expanded by default on edit/write autocomplete taglists: ', self._expand_parents_on_storage_autocomplete_taglists ) )
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
@@ -3008,6 +3019,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetValue()
             HC.options[ 'default_tag_sort' ] = QP.GetClientData( self._default_tag_sort, self._default_tag_sort.currentIndex() )
             
+            self._new_options.SetBoolean( 'expand_parents_on_storage_taglists', self._expand_parents_on_storage_taglists.isChecked() )
+            self._new_options.SetBoolean( 'expand_parents_on_storage_autocomplete_taglists', self._expand_parents_on_storage_autocomplete_taglists.isChecked() )
             self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
             
             self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetValue() )
@@ -3187,15 +3200,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._suggested_favourites_services.addItem( tag_service.GetName(), tag_service.GetServiceKey() )
                 
             
-            self._suggested_favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel )
+            self._suggested_favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
             
             self._current_suggested_favourites_service = None
             
             self._suggested_favourites_dict = {}
             
-            expand_parents = False
-            
-            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
             
@@ -3365,7 +3376,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites.SetTags( favourites )
             
-            self._suggested_favourites_input.SetTagService( self._current_suggested_favourites_service )
+            self._suggested_favourites_input.SetTagServiceKey( self._current_suggested_favourites_service )
             self._suggested_favourites_input.SetDisplayTagServiceKey( self._current_suggested_favourites_service )
             
         

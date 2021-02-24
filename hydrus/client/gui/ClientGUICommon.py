@@ -490,6 +490,13 @@ class BetterStaticText( QP.EllipsizedLabel ):
             
         
     
+    def clear( self ):
+        
+        self._last_set_text = ''
+        
+        QP.EllipsizedLabel.clear( self )
+        
+    
     def setText( self, text ):
         
         # this doesn't need mnemonic escape _unless_ a buddy is set, wew lad

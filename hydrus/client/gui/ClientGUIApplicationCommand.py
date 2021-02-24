@@ -402,9 +402,7 @@ class TagSubPanel( QW.QWidget ):
         self._tag_value = QW.QLineEdit( self )
         self._tag_value.setReadOnly( True )
         
-        expand_parents = False
-        
-        self._tag_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+        self._tag_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetTags, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
         
         #
         
@@ -417,6 +415,8 @@ class TagSubPanel( QW.QWidget ):
             
             self._service_keys.addItem( service_name, service_key )
             
+        
+        self._tag_input.SetTagServiceKey( self._service_keys.GetValue() )
         
         #
         
@@ -436,6 +436,15 @@ class TagSubPanel( QW.QWidget ):
         QP.AddToLayout( vbox, tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.setLayout( vbox )
+        
+        #
+        
+        self._service_keys.currentIndexChanged.connect( self._NewServiceKey )
+        
+    
+    def _NewServiceKey( self ):
+        
+        self._tag_input.SetTagServiceKey( self._service_keys.GetValue() )
         
     
     def GetValue( self ):

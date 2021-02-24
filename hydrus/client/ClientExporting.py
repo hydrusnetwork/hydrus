@@ -16,6 +16,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagSorting
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 
@@ -643,7 +644,7 @@ class SidecarExporter( HydrusSerialisable.SerialisableBase ):
             
             all_tags = list( all_tags )
             
-            ClientTags.SortTags( CC.SORT_BY_LEXICOGRAPHIC_DESC, all_tags )
+            ClientTagSorting.SortTags( CC.SORT_BY_LEXICOGRAPHIC_DESC, all_tags )
             
             txt_path = os.path.join( directory, filename + '.txt' )
             

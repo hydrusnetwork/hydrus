@@ -6,7 +6,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client.networking import ClientNetworkingDomain
@@ -578,6 +577,100 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
             
         
         return tag_ids_to_tags
+        
+    
+    def NamespaceExists( self, namespace ):
+        
+        if namespace == '':
+            
+            return True
+            
+        
+        result = self._c.execute( 'SELECT 1 FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
+        
+        if result is None:
+            
+            return False
+            
+        else:
+            
+            return True
+            
+        
+    
+    def SubtagExists( self, subtag ):
+        
+        try:
+            
+            HydrusTags.CheckTagNotEmpty( subtag )
+            
+        except HydrusExceptions.TagSizeException:
+            
+            return False
+            
+        
+        result = self._c.execute( 'SELECT 1 FROM subtags WHERE subtag = ?;', ( subtag, ) ).fetchone()
+        
+        if result is None:
+            
+            return False
+            
+        else:
+            
+            return True
+            
+        
+    
+    def TagExists( self, tag ):
+        
+        try:
+            
+            tag = HydrusTags.CleanTag( tag )
+            
+        except:
+            
+            return False
+            
+        
+        try:
+            
+            HydrusTags.CheckTagNotEmpty( tag )
+            
+        except HydrusExceptions.TagSizeException:
+            
+            return False
+            
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        if self.NamespaceExists( namespace ):
+            
+            namespace_id = self.GetNamespaceId( namespace )
+            
+        else:
+            
+            return False
+            
+        
+        if self.SubtagExists( subtag ):
+            
+            subtag_id = self.GetSubtagId( subtag )
+            
+            result = self._c.execute( 'SELECT 1 FROM tags WHERE namespace_id = ? AND subtag_id = ?;', ( namespace_id, subtag_id ) ).fetchone()
+            
+            if result is None:
+                
+                return False
+                
+            else:
+                
+                return True
+                
+            
+        else:
+            
+            return False
+            
         
     
     def UpdateTagId( self, tag_id, namespace_id, subtag_id ):

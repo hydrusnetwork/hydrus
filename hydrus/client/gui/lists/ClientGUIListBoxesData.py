@@ -56,12 +56,12 @@ class ListBoxItem( object ):
         raise NotImplementedError()
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
         
         raise NotImplementedError()
         
     
-    def GetRowCount( self ):
+    def GetRowCount( self, child_rows_allowed: bool ):
         
         return 1
         
@@ -95,7 +95,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return []
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         presentation_text = self.GetCopyableText()
         
@@ -167,7 +167,7 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         return []
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
         
         return [ [ ( self.GetCopyableText(), self._namespace ) ] ]
         
@@ -218,6 +218,16 @@ class ListBoxItemTextTag( ListBoxItem ):
             
         
     
+    def GetBestTag( self ) -> str:
+        
+        if self._ideal_tag is None:
+            
+            return self._tag
+            
+        
+        return self._ideal_tag
+        
+    
     def GetCopyableText( self, with_counts: bool = False ) -> str:
         
         return self._tag
@@ -228,9 +238,9 @@ class ListBoxItemTextTag( ListBoxItem ):
         return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, self._tag ) ]
         
     
-    def GetRowCount( self ):
+    def GetRowCount( self, child_rows_allowed: bool ):
         
-        if self._parent_tags is None:
+        if self._parent_tags is None or not child_rows_allowed:
             
             return 1
             
@@ -240,7 +250,7 @@ class ListBoxItemTextTag( ListBoxItem ):
             
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
         
         # this should be with counts or whatever, but we need to think about this more lad
         
@@ -250,14 +260,14 @@ class ListBoxItemTextTag( ListBoxItem ):
         
         texts_with_namespaces = [ ( tag_text, namespace ) ]
         
-        if self._ideal_tag is not None:
+        if sibling_decoration_allowed and self._ideal_tag is not None:
             
             self._AppendIdealTagTextWithNamespace( texts_with_namespaces, render_for_user )
             
         
         rows_of_texts_with_namespaces = [ texts_with_namespaces ]
         
-        if self._parent_tags is not None:
+        if child_rows_allowed and self._parent_tags is not None:
             
             self._AppendParentsTextWithNamespaces( rows_of_texts_with_namespaces, render_for_user )
             
@@ -314,7 +324,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         
         if with_counts:
             
-            return ''.join( ( text for ( text, namespace ) in self.GetRowsOfPresentationTextsWithNamespaces( False )[0] ) )
+            return ''.join( ( text for ( text, namespace ) in self.GetRowsOfPresentationTextsWithNamespaces( False, False, False )[0] ) )
             
         else:
             
@@ -329,7 +339,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, self._tag ) ]
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
         
         # this should be with counts or whatever, but we need to think about this more lad
         
@@ -379,14 +389,14 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         
         texts_with_namespaces = [ ( tag_text, namespace ) ]
         
-        if self._ideal_tag is not None:
+        if sibling_decoration_allowed and self._ideal_tag is not None:
             
             self._AppendIdealTagTextWithNamespace( texts_with_namespaces, render_for_user )
             
         
         rows_of_texts_with_namespaces = [ texts_with_namespaces ]
         
-        if self._parent_tags is not None:
+        if child_rows_allowed and self._parent_tags is not None:
             
             self._AppendParentsTextWithNamespaces( rows_of_texts_with_namespaces, render_for_user )
             
@@ -396,12 +406,11 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
     
 class ListBoxItemPredicate( ListBoxItem ):
     
-    def __init__( self, predicate: ClientSearch.Predicate, show_ideal_siblings: bool ):
+    def __init__( self, predicate: ClientSearch.Predicate ):
         
         ListBoxItem.__init__( self )
         
         self._predicate = predicate
-        self._show_ideal_siblings = show_ideal_siblings
         self._i_am_an_or_under_construction = False
         
     
@@ -443,18 +452,25 @@ class ListBoxItemPredicate( ListBoxItem ):
             
         
     
-    def GetRowCount( self ):
+    def GetRowCount( self, child_rows_allowed: bool ):
         
-        return 1 + len( self._predicate.GetParentPredicates() )
+        if child_rows_allowed:
+            
+            return 1 + len( self._predicate.GetParentPredicates() )
+            
+        else:
+            
+            return 1
+            
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:
         
         rows_of_texts_and_namespaces = []
         
         texts_and_namespaces = self._predicate.GetTextsAndNamespaces( render_for_user, or_under_construction = self._i_am_an_or_under_construction )
         
-        if self._show_ideal_siblings and self._predicate.HasIdealSibling():
+        if sibling_decoration_allowed and self._predicate.HasIdealSibling():
             
             ideal_sibling = self._predicate.GetIdealSibling()
             
@@ -467,9 +483,12 @@ class ListBoxItemPredicate( ListBoxItem ):
         
         rows_of_texts_and_namespaces.append( texts_and_namespaces )
         
-        for parent_pred in self._predicate.GetParentPredicates():
+        if child_rows_allowed:
             
-            rows_of_texts_and_namespaces.append( parent_pred.GetTextsAndNamespaces( render_for_user ) )
+            for parent_pred in self._predicate.GetParentPredicates():
+                
+                rows_of_texts_and_namespaces.append( parent_pred.GetTextsAndNamespaces( render_for_user ) )
+                
             
         
         return rows_of_texts_and_namespaces

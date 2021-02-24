@@ -338,9 +338,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             status_hook( 'downloading gallery page' )
             
-            if self._referral_url not in ( gallery_url, url_to_check ):
+            if self._referral_url is not None and self._referral_url != url_to_check:
                 
                 referral_url = self._referral_url
+                
+            elif gallery_url != url_to_check:
+                
+                referral_url = gallery_url
                 
             else:
                 

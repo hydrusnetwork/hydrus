@@ -3194,6 +3194,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RegenerateTagCacheSearchableSubtagsMaps( self ):
+        
+        message = 'This will regenerate the fast search cache\'s \'unusual character logic\' lookup map, for one or all tag services.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless. It fixes missing autocomplete search results.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'regenerate_searchable_subtag_maps', tag_service_key = tag_service_key )
+            
+        
+    
     def _RegenerateTagParentsLookupCache( self ):
         
         message = 'This will delete and then recreate the tag parents lookup cache, which is used for all basic tag parents operations. This is useful if it has become damaged or otherwise desynchronised.'
@@ -5012,6 +5037,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache (subtags repopulation)', 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache (searchable subtag maps)', 'Regenerate the searchable subtag maps.', self._RegenerateTagCacheSearchableSubtagsMaps )
             
             ClientGUIMenus.AppendSeparator( submenu )
             

@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_430"><a href="#version_430">version 430</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed 'unusual character' collapse logic for short text inputs in tag autocomplete lookups. in human, this means typing 'a' now correctly gives you the tag '/a/' and _vice versa_ (issue #799)</li>
+					<li>to make this work, an old database subtag map cache is revived this week in a more efficient form. if you sync with the PTR, it will take a couple minutes to update. the regen routine is also added to the database->regen menu, in case it ever desynchronises in future</li>
+					<li>absent an override referral url, api-linked url fetches now use the original url as referrer. previously they were sending no referrer. this fixes watching spicy boards on 8chan.moe</li>
+					<li>updated a 'get all this stuff' database routine to report more info, and a handful of supermassive jobs (mostly db maintenance regen) now report x/y progress with y, rather than just a nebulous increasing x</li>
+					<li>fixed an odd bug in a common UI text-clearing call that was causing real text not to show up for a while after the clear. this was most apparent in the downloader highlight panels, where status text on file/gallery/network status could sometimes stay blank until a change</li>
+					<li>the manage tags dialog's "there are several things you can do" button box when you enter tags in complicated situations is now clearer. there are several sorts of intro text on the dialog, the button labels are clearer, and button tooltips have more action information</li>
+					<li>fixed the tumblr downloader! sorry for the trouble here, I hadn't realised the situation from some reports. if you have tumblr subs, please go into them and set to 'try again' any recent urls that say 'Found 0 new URLs.'</li>
+					<li>.</li>
+					<li>taglists:</li>
+					<li>you can now right-click any edit/write taglist (like those across the manage tags dialog) and choose to hide/show the implied parents that now hang underneath tags</li>
+					<li>you can set whether this defaults to hide or show, separately for the regular taglists and the autocomplete results dropdown, under options->tags</li>
+					<li>the taglist now sorts lexicographically using sibling tag data where available. I had expected to make options here to use storage or ideal tag, but once I tried it out, using the ideal all the time felt proper to me, so let's see how it goes</li>
+					<li>fixed the routine that removes mutually exclusive predicates (e.g. system:inbox/archive) when adding to the active search predicates taglist. this fixes the 'exclude xxx from search' menu action and other add/swap actions (issue #815)</li>
+					<li>gave the taglist right-click menu another quick pass. since there are all sorts of actions that may or not appear, and menu items can get pretty wide with tag text, I am trying out an intentionally short and thin top-level menu of 'verbs' that is quick to navigate with your mouse, and then tuck longer and taller stuff in secondary menus</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>cleaned and unified a bunch of the new taglist sibling and parents display logic and other legacy variables. it now basically all derives from one storage/display state, so behaviour across the program should be more unified. this may cause confusion in some more advanced dialogs, so let me know anywhere it looks weird</li>
+					<li>the 'favourites' autocomplete tab in 'edit/write' a/c dropdowns now show siblings and parents for the current display service</li>
+					<li>the tag suggestions favourites dropdowns and taglists in the options now show siblings/parents according to the current service</li>
+					<li>the 'url class precedence' routine, which tests more 'specific' url classes first when trying to match an url, has a subtle logic change--now, url classes are first considered more 'specific' according to number of path components and parameters that have no default. this stops an url class with multiple optional parameters overriding another with a single fixed parameter (this is what affected the tumblr downloader above). the specific (descending) sort key is now (required components, total components, required parameters, total parameters, len normalised example url)</li>
+					<li>refactored client object serialisation access routines to a new db module</li>
+					<li>refactored database transaction code and status tracking to a separate object</li>
+					<li>refactored some more tag definition routines to the master tag module</li>
+				</ul>
 				<li><h3 id="version_429"><a href="#version_429">version 429</a></h3></li>
 				<ul>
 					<li>misc:</li>

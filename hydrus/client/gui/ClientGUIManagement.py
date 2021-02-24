@@ -667,7 +667,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
-    def __init__( self, parent, management_controller: ManagementController, page_key, tag_display_type, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
+    def __init__( self, parent, management_controller: ManagementController, page_key, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
         
         ClientGUIListBoxes.ListBoxTagsMedia.__init__( self, parent, tag_display_type, include_counts = True )
         
@@ -766,7 +766,6 @@ def managementScrollbarValueChanged( value ):
 class ManagementPanel( QW.QScrollArea ):
     
     SHOW_COLLECT = True
-    TAG_DISPLAY_TYPE = ClientTags.TAG_DISPLAY_SELECTION_LIST
     
     def __init__( self, parent, page, controller, management_controller ):
         
@@ -840,7 +839,7 @@ class ManagementPanel( QW.QScrollArea ):
         
         tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
+        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key )
         
         tags_box.SetTagsBox( self._current_selection_tags_list )
         
@@ -4668,7 +4667,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE, tag_autocomplete = self._tag_autocomplete )
+            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, tag_autocomplete = self._tag_autocomplete )
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
@@ -4682,7 +4681,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         else:
             
-            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, self.TAG_DISPLAY_TYPE )
+            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key )
             
         
         tags_box.SetTagsBox( self._current_selection_tags_list )

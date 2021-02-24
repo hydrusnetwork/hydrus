@@ -1187,7 +1187,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         destination_action_strings[ HC.CONTENT_UPDATE_DELETE ] = 'deleting them from'
         destination_action_strings[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clearing their deletion record from'
         destination_action_strings[ HC.CONTENT_UPDATE_PEND ] = 'pending them to'
-        destination_action_strings[ HC.CONTENT_UPDATE_PETITION ] = 'petitioning them from'
+        destination_action_strings[ HC.CONTENT_UPDATE_PETITION ] = 'petitioning them for removal from'
         
         content_type = self._migration_content_type.GetValue()
         content_statuses = self._migration_source_content_status_filter.GetValue()

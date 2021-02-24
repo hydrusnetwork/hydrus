@@ -2021,7 +2021,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             else:
                 
-                text = 'petition all/selected tags'
+                text = 'petition to remove all/selected tags'
                 
             
             self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
@@ -2063,9 +2063,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            expand_parents = True
-            
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
@@ -2202,7 +2200,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( choices ) == 1:
                 
-                [ ( choice_action, tag_counts ) ] = list(choices.items())
+                [ ( choice_action, tag_counts ) ] = list( choices.items() )
                 
                 tags = { tag for ( tag, count ) in tag_counts }
                 
@@ -2216,10 +2214,19 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 choice_text_lookup[ HC.CONTENT_UPDATE_ADD ] = 'add'
                 choice_text_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'delete'
-                choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend'
-                choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition'
-                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'rescind pend'
-                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'rescind petition'
+                choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend (add)'
+                choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition to remove'
+                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'undo pend'
+                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'undo petition to remove'
+                
+                choice_tooltip_lookup = {}
+                
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_ADD ] = 'this adds the tags to this local tag service'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'this deletes the tags from this local tag service'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_PEND ] = 'this pends the tags to be added to this tag repository when you upload'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'this petitions the tags for deletion from this tag repository when you upload'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'this rescinds the currently pending tags, so they will not be added'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'this rescinds the current tag petitions, so they will not be deleted'
                 
                 for choice_action in preferred_order:
                     
@@ -2232,42 +2239,56 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     tag_counts = choices[ choice_action ]
                     
-                    tags = { tag for ( tag, count ) in tag_counts }
+                    choice_tags = { tag for ( tag, count ) in tag_counts }
                     
-                    if len( tags ) == 1:
+                    if len( choice_tags ) == 1:
                         
                         [ ( tag, count ) ] = tag_counts
                         
-                        text = choice_text_prefix + ' "' + HydrusText.ElideText( tag, 64 ) + '" for ' + HydrusData.ToHumanInt( count ) + ' files'
+                        text = '{} "{}" for {} files'.format( choice_text_prefix, HydrusText.ElideText( tag, 64 ), HydrusData.ToHumanInt( count ) )
                         
                     else:
                         
-                        text = choice_text_prefix + ' ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags'
+                        text = '{} {} tags'.format( choice_text_prefix, HydrusData.ToHumanInt( len( choice_tags ) ) )
                         
                     
-                    data = ( choice_action, tags )
+                    data = ( choice_action, choice_tags )
+                    
+                    t_c_lines = [ choice_tooltip_lookup[ choice_action ] ]
                     
                     if len( tag_counts ) > 25:
                         
                         t_c = tag_counts[:25]
                         
-                        t_c_lines = [ tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in t_c ]
-                        
-                        t_c_lines.append( 'and ' + HydrusData.ToHumanInt( len( tag_counts ) - 25 ) + ' others' )
-                        
-                        tooltip = os.linesep.join( t_c_lines )
-                        
                     else:
                         
-                        tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in tag_counts ) )
+                        t_c = tag_counts
                         
+                    
+                    t_c_lines.extend( ( '{} - {} files'.format( tag, HydrusData.ToHumanInt( count ) ) for ( tag, count ) in t_c ) )
+                    
+                    if len( tag_counts ) > 25:
+                        
+                        t_c_lines.append( 'and {} others'.format( HydrusData.ToHumanInt( len( tag_counts ) - 25 ) ) )
+                        
+                    
+                    tooltip = os.linesep.join( t_c_lines )
                     
                     bdc_choices.append( ( text, data, tooltip ) )
                     
                 
                 try:
                     
-                    ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices )
+                    if len( tags ) > 1:
+                        
+                        message = 'The file{} some of those tags, but not all, so there are different things you can do.'.format( 's have' if len( self._media ) > 1 else ' has' )
+                        
+                    else:
+                        
+                        message = 'Of the {} files being managed, some that tag, but not all of them do, so there are different things you can do.'.format( HydrusData.ToHumanInt( len( self._media ) ) )
+                        
+                    
+                    ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message )
                     
                 except HydrusExceptions.CancelledException:
                     
@@ -2822,20 +2843,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
-            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_display_decorators = False )
-            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_display_decorators = False )
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
             self._children.setMinimumHeight( preview_height )
             self._parents.setMinimumHeight( preview_height )
             
-            expand_parents = True
-            
-            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             self._child_input.setEnabled( False )
             
-            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             self._parent_input.setEnabled( False )
             
             self._add = QW.QPushButton( 'add', self )
@@ -2955,7 +2974,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
                             
                         
-                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
+                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your request.'
                         
                         suggestions = []
                         
@@ -3014,7 +3033,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             message = 'The pair ' + pair_strings + ' already exists.'
                             
                         
-                        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' )
+                        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition to remove', no_label = 'do nothing' )
                         
                         if result == QW.QDialog.Accepted:
                             
@@ -3759,19 +3778,17 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
-            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_display_decorators = False )
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
             
             self._old_siblings.setMinimumHeight( preview_height )
             
-            expand_parents = False
-            
-            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             self._old_input.setEnabled( False )
             
-            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, CC.LOCAL_FILE_SERVICE_KEY, service_key )
             self._new_input.setEnabled( False )
             
             self._add = QW.QPushButton( 'add', self )

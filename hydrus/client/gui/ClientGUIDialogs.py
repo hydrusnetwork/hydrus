@@ -506,17 +506,15 @@ class DialogInputNamespaceRegex( Dialog ):
     
 class DialogInputTags( Dialog ):
     
-    def __init__( self, parent, service_key, tags, expand_parents = True, message = '', show_display_decorators = False ):
+    def __init__( self, parent, service_key, tag_display_type, tags, message = '' ):
         
         Dialog.__init__( self, parent, 'input tags' )
         
         self._service_key = service_key
         
-        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key, show_display_decorators = show_display_decorators )
+        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key, tag_display_type )
         
-        self._expand_parents = expand_parents
-        
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, self._expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )

@@ -2275,21 +2275,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     @staticmethod
     def STATICSortURLClassesDescendingComplexity( url_classes ):
         
-        # we sort them in descending complexity so that
-        # site.com/post/123456
-        # comes before
-        # site.com/search?query=blah
+        # sort reverse = true so most complex come first
         
-        # I used to do gallery first, then post, then file, but it ultimately was unhelpful in some situations and better handled by strict component/parameter matching
-        
-        def key( u_m ):
-            
-            u_e = u_m.GetExampleURL()
-            
-            return ( u_e.count( '/' ), u_e.count( '=' ), len( u_e ) )
-            
-        
-        url_classes.sort( key = key, reverse = True )
+        # ( num_path_components, num_required_parameters, num_total_parameters, len_example_url )
+        url_classes.sort( key = lambda u_c: u_c.GetSortingComplexityKey(), reverse = True )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
@@ -3451,6 +3440,24 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     def GetSafeSummary( self ):
         
         return 'URL Class "' + self._name + '" - ' + ConvertURLIntoDomain( self.GetExampleURL() )
+        
+    
+    def GetSortingComplexityKey( self ):
+        
+        # we sort url classes so that
+        # site.com/post/123456
+        # comes before
+        # site.com/search?query=blah
+        
+        # I used to do gallery first, then post, then file, but it ultimately was unhelpful in some situations and better handled by strict component/parameter matching
+        
+        num_required_path_components = len( [ 1 for ( string_match, default ) in self._path_components if default is None ] )
+        num_total_path_components = len( self._path_components )
+        num_required_parameters = len( [ 1 for ( key, ( string_match, default ) ) in self._parameters.items() if default is None ] )
+        num_total_parameters = len( self._parameters )
+        len_example_url = len( self.Normalise( self._example_url ) )
+        
+        return ( num_required_parameters, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
         
     
     def GetURLBooleans( self ):

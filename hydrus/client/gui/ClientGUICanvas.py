@@ -40,6 +40,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagSorting
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1
@@ -2000,7 +2001,7 @@ class CanvasWithDetails( Canvas ):
             
             tags_i_want_to_display = list( tags_i_want_to_display )
             
-            ClientTags.SortTags( HC.options[ 'default_tag_sort' ], tags_i_want_to_display )
+            ClientTagSorting.SortTags( HC.options[ 'default_tag_sort' ], tags_i_want_to_display )
             
             current_y = 3
             

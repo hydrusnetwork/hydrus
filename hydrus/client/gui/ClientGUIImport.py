@@ -485,11 +485,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
             
-            self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, self.TagsRemoved )
+            self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, self.TagsRemoved )
             
-            expand_parents = True
-            
-            self._tag_autocomplete_all = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._tag_autocomplete_all = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             
             self._tags_paste_button = ClientGUICommon.BetterButton( self._tags_panel, 'paste tags', self._PasteTags )
             
@@ -499,13 +497,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._paths_to_single_tags = collections.defaultdict( set )
             
-            self._single_tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, self.SingleTagsRemoved )
+            self._single_tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, self.SingleTagsRemoved )
             
             self._single_tags_paste_button = ClientGUICommon.BetterButton( self._single_tags_panel, 'paste tags', self._PasteSingleTags )
             
-            expand_parents = True
-            
-            self._tag_autocomplete_selection = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._tag_autocomplete_selection = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             
             self.SetSelectedPaths( [] )
             

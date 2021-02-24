@@ -81,7 +81,7 @@ class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'access_key', 'immediate_content_update', 'registration_keys' ]
     
-    TRANSACTION_COMMIT_TIME = 120
+    TRANSACTION_COMMIT_PERIOD = 120
     
     def __init__( self, controller, db_dir, db_name ):
         
@@ -3230,8 +3230,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if HydrusData.TimeHasPassed( next_commit ):
                         
-                        self._Commit()
-                        self._BeginImmediate()
+                        self._cursor_transaction_wrapper.CommitAndBegin()
                         
                         next_commit = HydrusData.GetNow() + 60
                         

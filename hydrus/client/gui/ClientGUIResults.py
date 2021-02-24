@@ -3514,12 +3514,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( disparate_petitioned_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned from' )
+                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned for removal from' )
                 
             
             if len( common_petitioned_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned from' )
+                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned for removal from' )
                 
             
             if len( disparate_deleted_file_service_keys ) > 0:

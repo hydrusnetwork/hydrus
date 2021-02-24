@@ -2294,7 +2294,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += os.linesep * 2
         message += 'This is usually easier and faster to do just by adding tags to the downloader query (e.g. "artistname desired_tag"), so reserve this for downloaders that do not work on tags or where you want to whitelist multiple tags.'
         
-        with ClientGUIDialogs.DialogInputTags( self, CC.COMBINED_TAG_SERVICE_KEY, list( self._tag_whitelist ), expand_parents = False, message = message ) as dlg:
+        with ClientGUIDialogs.DialogInputTags( self, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL, list( self._tag_whitelist ), message = message ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
@@ -2690,7 +2690,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = 'Any tags you enter here will be applied to every file that passes through this import context.'
         
-        with ClientGUIDialogs.DialogInputTags( self, self._service_key, list( self._additional_tags ), message = message, show_display_decorators = True ) as dlg:
+        with ClientGUIDialogs.DialogInputTags( self, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, list( self._additional_tags ), message = message ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 

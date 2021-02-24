@@ -1143,9 +1143,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     status_hook( 'downloading file page' )
                     
-                    if self._referral_url not in ( post_url, url_to_check ):
+                    if self._referral_url is not None and self._referral_url != url_to_check:
                         
                         referral_url = self._referral_url
+                        
+                    elif url_to_check != post_url:
+                        
+                        referral_url = post_url
                         
                     else:
                         

@@ -21,6 +21,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagSorting
 
 def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
     
@@ -58,7 +59,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, service_key, activate_callable, sort_tags = True ):
         
-        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = sort_tags, render_for_user = False )
+        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = sort_tags, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
         self._activate_callable = activate_callable
         
@@ -104,7 +105,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, service_key, activate_callable ):
         
-        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, render_for_user = False )
+        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
         self._activate_callable = activate_callable
         
@@ -131,13 +132,11 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         return False
         
     
-    def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ):
+    def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ) -> ClientGUIListBoxesData.ListBoxItemPredicate:
         
         predicate.ClearCounts()
         
-        show_ideal_siblings = True
-        
-        return ClientGUIListBoxesData.ListBoxItemPredicate( predicate, show_ideal_siblings )
+        return ClientGUIListBoxesData.ListBoxItemPredicate( predicate )
         
     
     def TakeFocusForUser( self ):
@@ -175,7 +174,7 @@ class FavouritesTagsPanel( QW.QWidget ):
         
         favourites = list( HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
         
-        ClientTags.SortTags( HC.options[ 'default_tag_sort' ], favourites )
+        ClientTagSorting.SortTags( HC.options[ 'default_tag_sort' ], favourites )
         
         tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
         

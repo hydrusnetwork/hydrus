@@ -229,6 +229,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'notify_client_api_cookies' ] = False
         
+        self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_taglists' ] = True
+        self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_autocomplete_taglists' ] = True
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
