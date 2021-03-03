@@ -213,7 +213,6 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._shortcuts.AddDatas( ( data, ) )
                 
-                
             
         
     
@@ -259,6 +258,25 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         shortcut_set = ClientGUIShortcuts.ShortcutSet( name )
         
         for ( shortcut, command ) in self._shortcuts.GetData():
+            
+            dupe_command = shortcut_set.GetCommand( shortcut )
+            
+            if dupe_command is not None:
+                
+                message = 'The shortcut:'
+                message += os.linesep * 2
+                message += shortcut.ToString()
+                message += os.linesep * 2
+                message += 'is mapped twice:'
+                message += os.linesep * 2
+                message += command.ToString()
+                message += os.linesep * 2
+                message += dupe_command.ToString()
+                message += os.linesep * 2
+                message += 'The system only supports one command per shortcut in a set for now, please remove one.'
+                
+                raise HydrusExceptions.VetoException( message )
+                
             
             shortcut_set.SetCommand( shortcut, command )
             

@@ -261,6 +261,11 @@ def ConvertQtKeyToShortcutKey( key_qt ):
             
             key_ord = int( key_qt )
             
+            if key_ord == 0:
+                
+                raise Exception( 'Shortcut caught a null key' ) # I think this is like 'release alt' or some weird code
+                
+            
             key_chr = chr( key_ord )
             
             # this is turbo lower() that converts Scharfes S (beta) to 'ss'

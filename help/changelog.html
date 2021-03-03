@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_431"><a href="#version_431">version 431</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>when parents are hidden in the edit/write taglists (e.g. in manage tags), there is now a '(n parents)' suffix</li>
+					<li>thread watchers that are DEAD or 404 but still have files downloading now report 'working' status until that is done</li>
+					<li>search terms with ';' like 'steins;gate' should now work in downloaders. sorry for the trouble!</li>
+					<li>fixed an issue where un-ideal tags were sometimes becoming non-searchable when they were entirely replaced in manage tags with their 'ideal' siblings (i.e. their autocomplete count went to 0). this was due to overzealous deletion in the new tag definitions cache not filtering out sibling/parent chain members. a small routine will run on update to resynchronise affected tags</li>
+					<li>fixed an issue when loading up files in the main 'import files' dialog where a critical error (as opposed to a nice 'couldn't figure it out, sorry') in mime detection would cause the whole job to hang</li>
+					<li>that main 'import files' dialog now counts 'missing' files separately in the error count</li>
+					<li>fixed tags not updating on the filename tagging dialog when double-clicking to remove from the simple taglists</li>
+					<li>fixed the sort on the manage tags dialog's suggestion taglists--they now preserve their original sort, rather than alphabetising once sibling/parent data is populated</li>
+					<li>the manage parser test panel now catches all network errors. error data back from the server is presented better, and the traceback is now viewable in a special new button on the network job control</li>
+					<li>the edit shortcut set dialog now gives a veto text popup if you try to ok with a shortcut set twice (previously, it would ok and merge down to one command randomly). support for multiple commands per shortcut will come in future</li>
+					<li>entering alt+number in the shortcut entry dialog on windows will no longer spam some errors about 'null character'</li>
+					<li>fixed a 'this object is too huge' check in the database, which mostly affects gui sessions with millions of objects, to check against 1 billion bytes max size rather than 1GB, as here https://sqlite.org/limits.html (issue #816)</li>
+					<li>fixed the 8chan.moe parser, which was pulling hash incorrectly. it should now save more bandwidth</li>
+					<li>updated the e621 parser to pull their (new?) 'lore' tags, which all end in _(lore) and refer to canonical gender and some spice. they come with the 'lore' namespace for now, we'll see how it works out. a user reports these are useful for blacklists</li>
+					<li>.</li>
+					<li>new string processing sort step (for advanced users):</li>
+					<li>string processing objects have a new processing step: String Sorter</li>
+					<li>this sorter can sort the whole list of strings, either strict lexicographic or 'human sort' that does numbers properly, asc/desc</li>
+					<li>it can also take a regex for the sort 'key', so you can sample just the number or name you want for sort purposes</li>
+					<li>content parsers no longer have the 'sort formulae results' controls. any content parser with existing sort has been converted so its string processing object has a String Sort step appended</li>
+					<li>the string processing UI is still built around single string processing, so the test UI here is essentially non-functional, but you can see the sort happen in the formula test parse panel</li>
+					<li>I will add a String Slicer in future to sample the list of strings, so you'll be able to grab the top item etc...</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>refactored the refresh call in filename tagging dialog to nicer Qt signals</li>
+					<li>the add/remove taglists on the simple panel are also moved to Qt signals</li>
+					<li>and so are 'filter' taglists</li>
+					<li>fixed some typos in new help text</li>
+					<li>removed a 'needs restart' string in 'gui pages' options that no longer does</li>
+					<li>.</li>
+					<li>here is a hieroglyph falcon:</li>
+					<li>𓅃</li>
+				</ul>
 				<li><h3 id="version_430"><a href="#version_430">version 430</a></h3></li>
 				<ul>
 					<li>misc:</li>

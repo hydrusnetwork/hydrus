@@ -19,6 +19,12 @@ class ResizingEventFilter( QC.QObject ):
             
             if isinstance( parent, ResizingScrolledPanel ):
                 
+                # weird hack fix for a guy who was getting QPaintEvents in here
+                if not hasattr( event, 'oldSize' ):
+                    
+                    return False
+                    
+                
                 old_size = event.oldSize()
                 size = event.size()
                 

@@ -218,6 +218,13 @@ class ListBoxItemTextTag( ListBoxItem ):
             
         
     
+    def _AppendParentSuffixTagTextWithNamespace( self, texts_with_namespaces ):
+        
+        parents_text = ' ({} parents)'.format( HydrusData.ToHumanInt( len( self._parent_tags ) ) )
+        
+        texts_with_namespaces.append( ( parents_text, '' ) )
+        
+    
     def GetBestTag( self ) -> str:
         
         if self._ideal_tag is None:
@@ -258,18 +265,25 @@ class ListBoxItemTextTag( ListBoxItem ):
         
         tag_text = ClientTags.RenderTag( self._tag, render_for_user )
         
-        texts_with_namespaces = [ ( tag_text, namespace ) ]
+        first_row_of_texts_with_namespaces = [ ( tag_text, namespace ) ]
         
         if sibling_decoration_allowed and self._ideal_tag is not None:
             
-            self._AppendIdealTagTextWithNamespace( texts_with_namespaces, render_for_user )
+            self._AppendIdealTagTextWithNamespace( first_row_of_texts_with_namespaces, render_for_user )
             
         
-        rows_of_texts_with_namespaces = [ texts_with_namespaces ]
+        rows_of_texts_with_namespaces = [ first_row_of_texts_with_namespaces ]
         
-        if child_rows_allowed and self._parent_tags is not None:
+        if self._parent_tags is not None:
             
-            self._AppendParentsTextWithNamespaces( rows_of_texts_with_namespaces, render_for_user )
+            if child_rows_allowed:
+                
+                self._AppendParentsTextWithNamespaces( rows_of_texts_with_namespaces, render_for_user )
+                
+            elif sibling_decoration_allowed:
+                
+                self._AppendParentSuffixTagTextWithNamespace( first_row_of_texts_with_namespaces )
+                
             
         
         return rows_of_texts_with_namespaces
@@ -387,18 +401,25 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
                 
             
         
-        texts_with_namespaces = [ ( tag_text, namespace ) ]
+        first_row_of_texts_with_namespaces = [ ( tag_text, namespace ) ]
         
         if sibling_decoration_allowed and self._ideal_tag is not None:
             
-            self._AppendIdealTagTextWithNamespace( texts_with_namespaces, render_for_user )
+            self._AppendIdealTagTextWithNamespace( first_row_of_texts_with_namespaces, render_for_user )
             
         
-        rows_of_texts_with_namespaces = [ texts_with_namespaces ]
+        rows_of_texts_with_namespaces = [ first_row_of_texts_with_namespaces ]
         
-        if child_rows_allowed and self._parent_tags is not None:
+        if self._parent_tags is not None:
             
-            self._AppendParentsTextWithNamespaces( rows_of_texts_with_namespaces, render_for_user )
+            if child_rows_allowed:
+                
+                self._AppendParentsTextWithNamespaces( rows_of_texts_with_namespaces, render_for_user )
+                
+            elif sibling_decoration_allowed:
+                
+                self._AppendParentSuffixTagTextWithNamespace( first_row_of_texts_with_namespaces )
+                
             
         
         return rows_of_texts_with_namespaces
@@ -468,7 +489,7 @@ class ListBoxItemPredicate( ListBoxItem ):
         
         rows_of_texts_and_namespaces = []
         
-        texts_and_namespaces = self._predicate.GetTextsAndNamespaces( render_for_user, or_under_construction = self._i_am_an_or_under_construction )
+        first_row_of_texts_and_namespaces = self._predicate.GetTextsAndNamespaces( render_for_user, or_under_construction = self._i_am_an_or_under_construction )
         
         if sibling_decoration_allowed and self._predicate.HasIdealSibling():
             
@@ -478,16 +499,27 @@ class ListBoxItemPredicate( ListBoxItem ):
             
             ideal_text = ' (displays as {})'.format( ClientTags.RenderTag( ideal_sibling, render_for_user ) )
             
-            texts_and_namespaces.append( ( ideal_text, ideal_namespace ) )
+            first_row_of_texts_and_namespaces.append( ( ideal_text, ideal_namespace ) )
             
         
-        rows_of_texts_and_namespaces.append( texts_and_namespaces )
+        rows_of_texts_and_namespaces.append( first_row_of_texts_and_namespaces )
         
-        if child_rows_allowed:
+        parent_preds = self._predicate.GetParentPredicates()
+        
+        if len( parent_preds ) > 0:
             
-            for parent_pred in self._predicate.GetParentPredicates():
+            if child_rows_allowed:
                 
-                rows_of_texts_and_namespaces.append( parent_pred.GetTextsAndNamespaces( render_for_user ) )
+                for parent_pred in self._predicate.GetParentPredicates():
+                    
+                    rows_of_texts_and_namespaces.append( parent_pred.GetTextsAndNamespaces( render_for_user ) )
+                    
+                
+            elif sibling_decoration_allowed:
+                
+                parents_text = ' ({} parents)'.format( HydrusData.ToHumanInt( len( parent_preds ) ) )
+                
+                first_row_of_texts_and_namespaces.append( ( parents_text, '' ) )
                 
             
         

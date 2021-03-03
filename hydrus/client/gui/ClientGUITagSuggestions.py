@@ -89,6 +89,11 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         return False
         
     
+    def _Sort( self ):
+        
+        self._RegenTermsToIndices()
+        
+    
     def ActivateAll( self ):
         
         self._activate_callable( self.GetTags(), only_add = True )
@@ -137,6 +142,11 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         predicate.ClearCounts()
         
         return ClientGUIListBoxesData.ListBoxItemPredicate( predicate )
+        
+    
+    def _Sort( self ):
+        
+        self._RegenTermsToIndices()
         
     
     def TakeFocusForUser( self ):

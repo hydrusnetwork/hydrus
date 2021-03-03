@@ -69,9 +69,9 @@ def GenerateBigSQLiteDumpBuffer( dump ):
         raise Exception( 'While trying to save data to the database, it could not be decoded from UTF-8 to bytes! This could indicate an encoding error, such as Shift JIS sneaking into a downloader page! Please let hydrus dev know about this! Full error was written to the log!' )
         
     
-    if len( dump_bytes ) >= 1073741824: # 1GB
+    if len( dump_bytes ) >= 1000000000: # 1 billion, not 1GB https://sqlite.org/limits.html
         
-        raise Exception( 'A data object could not save to the database because it was bigger than a buffer limit of 1GB! If your session has hundreds of thousands of files or URLs in it, close some pages NOW! Otherwise, please report this to hydrus dev!' )
+        raise Exception( 'A data object could not save to the database because it was bigger than a buffer limit of 1,000,000,000 bytes! If your session has millions of files/URLs, close some pages NOW or you will lose data! Otherwise, please report this to hydrus dev!' )
         
     
     try:
@@ -459,8 +459,24 @@ class ClientDBSerialisable( HydrusDBModule.HydrusDBModule ):
                 
             except:
                 
-                HydrusData.DebugPrint( dump )
-                HydrusData.ShowText( 'Had a problem saving a JSON object. The dump has been printed to the log.' )
+                if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION:
+                    
+                    HydrusData.ShowText( 'A gui session could not be saved! This could be because it is too large. If your session is big, please try to trim it down now, or you will lose changes!' )
+                    
+                else:
+                    
+                    HydrusData.DebugPrint( dump )
+                    HydrusData.ShowText( 'Had a problem saving a JSON object. The dump has been printed to the log.' )
+                    
+                
+                try:
+                    
+                    HydrusData.Print( 'Dump was {}!'.format( HydrusData.ToHumanBytes( len( dump_buffer ) ) ) )
+                    
+                except:
+                    
+                    pass
+                    
                 
                 raise
                 

@@ -698,17 +698,12 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
         
-        watcher_status = gallery_seed.note
-        watcher_status_should_stick = gallery_seed.status != CC.STATUS_SUCCESSFUL_AND_NEW
-        
         with self._lock:
             
             if self._check_now:
                 
                 self._check_now = False
                 
-            
-            self._watcher_status = watcher_status
             
             self._last_check_time = HydrusData.GetNow()
             
@@ -718,15 +713,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._Compact()
             
-        
-        if not watcher_status_should_stick:
-            
-            time.sleep( 5 )
-            
-            with self._lock:
-                
-                self._watcher_status = ''
-                
+            self._watcher_status = ''
             
         
     
@@ -1225,7 +1212,15 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             gallery_go = gallery_work_to_do and not self._checking_paused
             files_go = files_work_to_do and not self._files_paused
             
-            if self._checking_status == ClientImporting.CHECKER_STATUS_404:
+            if self._watcher_status != '' or self._file_status != '':
+                
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'working' )
+                
+            elif gallery_go or files_go:
+                
+                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PENDING, 'pending' )
+                
+            elif self._checking_status == ClientImporting.CHECKER_STATUS_404:
                 
                 return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DONE, '404' )
                 
@@ -1238,14 +1233,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
                 
                 return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, text )
-                
-            elif self._watcher_status != '' or self._file_status != '':
-                
-                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'working' )
-                
-            elif gallery_go or files_go:
-                
-                return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PENDING, 'pending' )
                 
             else:
                 

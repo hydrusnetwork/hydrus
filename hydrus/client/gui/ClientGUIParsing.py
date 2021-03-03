@@ -1862,20 +1862,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._temp_variable_name = QW.QLineEdit( self._temp_variable_panel )
         
-        self._sort_type = ClientGUICommon.BetterChoice( self._content_panel )
-        
-        self._sort_type.addItem( 'do not sort formula text results', ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE )
-        self._sort_type.addItem( 'sort by human-friendly lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT )
-        self._sort_type.addItem( 'sort by strict lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC )
-        
-        self._sort_type.currentIndexChanged.connect( self.EventSortTypeChange )
-        
-        self._sort_asc = ClientGUICommon.BetterChoice( self._content_panel )
-        
-        self._sort_asc.addItem( 'sort ascending', True )
-        self._sort_asc.addItem( 'sort descending', False )
-        
-        ( name, content_type, formula, sort_type, sort_asc, additional_info ) = content_parser.ToTuple()
+        ( name, content_type, formula, additional_info ) = content_parser.ToTuple()
         
         self._formula = EditFormulaPanel( self._edit_panel, formula, self._test_panel.GetTestDataForChild )
         
@@ -1930,9 +1917,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._temp_variable_name.setText( temp_variable_name )
             
-        
-        self._sort_type.SetValue( sort_type )
-        self._sort_asc.SetValue( sort_asc )
         
         #
         
@@ -2031,8 +2015,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_panel.Add( self._title_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._temp_variable_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._sort_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._content_panel.Add( self._sort_asc, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2067,7 +2049,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
         self.EventContentTypeChange( None )
-        self.EventSortTypeChange( None )
         
     
     def EventContentTypeChange( self, index ):
@@ -2112,20 +2093,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def EventSortTypeChange( self, event ):
-        
-        choice = self._sort_type.GetValue()
-        
-        if choice == ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE:
-            
-            self._sort_asc.setEnabled( False )            
-            
-        else:
-            
-            self._sort_asc.setEnabled( True )
-            
-        
-    
     def GetValue( self ):
         
         name = self._name.text()
@@ -2133,9 +2100,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         content_type = self._content_type.GetValue()
         
         formula = self._formula.GetValue()
-        
-        sort_type = self._sort_type.GetValue()
-        sort_asc = self._sort_asc.GetValue()
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
@@ -2183,7 +2147,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             additional_info = temp_variable_name
             
         
-        content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, sort_type = sort_type, sort_asc = sort_asc, additional_info = additional_info )
+        content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
         return content_parser
         
@@ -3186,7 +3150,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def wait_and_do_it( network_job ):
             
-            def qt_tidy_up( example_data, example_bytes ):
+            def qt_tidy_up( example_data, example_bytes, error ):
                 
                 if not self or not QP.isValid( self ):
                     
@@ -3204,8 +3168,14 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._test_network_job_control.ClearNetworkJob()
                 
+                if error is not None:
+                    
+                    self._test_network_job_control.SetError( error )
+                    
+                
             
             example_bytes = None
+            error = None
             
             try:
                 
@@ -3221,12 +3191,21 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except Exception as e:
                 
-                example_data = 'fetch failed:' + os.linesep * 2 + str( e )
+                error = traceback.format_exc()
                 
-                HydrusData.ShowException( e )
+                try:
+                    
+                    stuff_read = network_job.GetContentText()
+                    
+                except:
+                    
+                    stuff_read = 'no response'
+                    
+                
+                example_data = 'fetch failed: {}'.format( e ) + os.linesep * 2 + stuff_read
                 
             
-            QP.CallAfter( qt_tidy_up, example_data, example_bytes )
+            QP.CallAfter( qt_tidy_up, example_data, example_bytes, error )
             
         
         url = self._test_url.text()
@@ -3239,6 +3218,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         network_job = ClientNetworkingJobs.NetworkJob( 'GET', url, referral_url = referral_url )
         
+        network_job.OnlyTryConnectionOnce()
+        
+        self._test_network_job_control.ClearError()
         self._test_network_job_control.SetNetworkJob( network_job )
         
         network_job.OverrideBandwidth()

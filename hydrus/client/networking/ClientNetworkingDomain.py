@@ -148,7 +148,7 @@ def ConvertQueryTextToDict( query_text ):
     # so if there are a mix of encoded and non-encoded, we won't touch it here m8
     
     # except these chars, which screw with GET arg syntax when unquoted
-    bad_chars = [ '&', '=', '/', '?', '#', '+' ]
+    bad_chars = [ '&', '=', '/', '?', '#', ';', '+' ]
     
     param_order = []
     
@@ -2576,7 +2576,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 # when the tags separator is '+' but the tags include '6+girls', we run into fun internet land
                 
-                bad_chars = [ self._search_terms_separator, '&', '=', '/', '?', '#' ]
+                bad_chars = [ self._search_terms_separator, '&', '=', '/', '?', '#', ';' ]
                 
                 if True in ( bad_char in search_term for bad_char in bad_chars ):
                     

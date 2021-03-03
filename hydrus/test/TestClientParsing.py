@@ -1,3 +1,4 @@
+import random
 import unittest
 
 from hydrus.core import HydrusConstants as HC
@@ -280,6 +281,75 @@ class TestStringMatch( unittest.TestCase ):
         self.assertTrue( re_string_match.Matches( 'abc123' ) )
         
     
+class TestStringSorter( unittest.TestCase ):
+    
+    def test_basics( self ):
+        
+        a = 'a 5'
+        b = 'b 2'
+        c = 'c 10'
+        d = 'd 7'
+        e = 'e'
+        
+        def do_sort_test( sorter, correct ):
+            
+            test_list = [ a, b, c, d, e ]
+            
+            for i in range( 20 ):
+                
+                random.shuffle( test_list )
+                
+                self.assertTrue( sorter.Sort( test_list ), correct )
+                
+            
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC, asc = True, regex = None )
+        correct = [ a, b, c, d, e ]
+        
+        do_sort_test( sorter, correct )
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC, asc = False, regex = None )
+        correct = [ e, d, c, b, a ]
+        
+        do_sort_test( sorter, correct )
+        
+        #
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc = True, regex = None )
+        correct = [ a, b, c, d, e ]
+        
+        do_sort_test( sorter, correct )
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc = False, regex = None )
+        correct = [ e, d, c, b, a ]
+        
+        do_sort_test( sorter, correct )
+        
+        #
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC, asc = True, regex = '\\d+' )
+        correct = [ c, b, a, d, e ]
+        
+        do_sort_test( sorter, correct )
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC, asc = False, regex = '\\d+' )
+        correct = [ d, a, b, c, e ]
+        
+        do_sort_test( sorter, correct )
+        
+        #
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc = True, regex = '\\d+' )
+        correct = [ b, a, d, c, e ]
+        
+        do_sort_test( sorter, correct )
+        
+        sorter = ClientParsing.StringSorter( sort_type = ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc = False, regex = '\\d+' )
+        correct = [ c, d, a, b, e ]
+        
+        do_sort_test( sorter, correct )
+        
+    
 class TestStringSplitter( unittest.TestCase ):
     
     def test_basics( self ):
@@ -297,7 +367,6 @@ class TestStringSplitter( unittest.TestCase ):
         self.assertTrue( splitter.Split( '1, 2, 3, 4' ), [ '1', '2', '3,4' ] )
         
     
-
 class TestStringProcessor( unittest.TestCase ):
     
     def test_basics( self ):

@@ -2960,6 +2960,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         num_good_files = 0
         
         num_empty_files = 0
+        num_missing_files = 0
         num_unimportable_mime_files = 0
         num_occupied_files = 0
         
@@ -3001,7 +3002,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 message = HydrusData.ConvertValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
                 
             
-            if num_empty_files > 0 or num_unimportable_mime_files > 0 or num_occupied_files > 0:
+            if num_empty_files + num_missing_files + num_unimportable_mime_files + num_occupied_files > 0:
                 
                 if num_good_files == 0:
                     
@@ -3017,6 +3018,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 if num_empty_files > 0:
                     
                     bad_comments.append( HydrusData.ToHumanInt( num_empty_files ) + ' were empty' )
+                    
+                
+                if num_missing_files > 0:
+                    
+                    bad_comments.append( HydrusData.ToHumanInt( num_missing_files ) + ' were missing' )
                     
                 
                 if num_unimportable_mime_files > 0:
@@ -3119,12 +3125,25 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
                 
+                HydrusData.Print( 'In import parse, skipping thumbs.db: ' + path )
+                
                 num_unimportable_mime_files += 1
                 
                 continue
                 
             
+            if not os.path.exists( path ):
+                
+                HydrusData.Print( 'Missing file: ' + path )
+                
+                num_missing_files += 1
+                
+                continue
+                
+            
             if not HydrusPaths.PathIsFree( path ):
+                
+                HydrusData.Print( 'File currently in use: ' + path )
                 
                 num_occupied_files += 1
                 
@@ -3144,7 +3163,17 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             # looks good, let's burn some CPU
             
-            mime = HydrusFileHandling.GetMime( path )
+            try:
+                
+                mime = HydrusFileHandling.GetMime( path )
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Problem parsing mime for: ' + path )
+                HydrusData.PrintException( e )
+                
+                mime = HC.APPLICATION_UNKNOWN
+                
             
             if mime in HC.ALLOWED_MIMES:
                 

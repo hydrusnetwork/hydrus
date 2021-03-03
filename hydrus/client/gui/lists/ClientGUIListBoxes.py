@@ -3039,11 +3039,11 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
 class ListBoxTagsFilter( ListBoxTags ):
     
-    def __init__( self, parent, removed_callable = None ):
+    tagsRemoved = QC.Signal( list )
+    
+    def __init__( self, parent ):
         
         ListBoxTags.__init__( self, parent )
-        
-        self._removed_callable = removed_callable
         
     
     def _Activate( self, shift_down ) -> bool:
@@ -3054,10 +3054,7 @@ class ListBoxTagsFilter( ListBoxTags ):
             
             self._RemoveSelectedTerms()
             
-            if self._removed_callable is not None:
-                
-                self._removed_callable( tag_slices )
-                
+            self.tagsRemoved.emit( tag_slices )
             
             self._DataHasChanged()
             
@@ -3293,18 +3290,20 @@ class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
     
 class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
-    def __init__( self, parent, service_key, tag_display_type, removed_callable = None ):
-        
-        ListBoxTagsStrings.__init__( self, parent, service_key = service_key, tag_display_type = tag_display_type )
-        
-        self._removed_callable = removed_callable
-        
+    tagsAdded = QC.Signal()
+    tagsRemoved = QC.Signal()
     
     def _Activate( self, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
+            tags = self._GetTagsFromTerms( self._selected_terms )
+            
             self._RemoveSelectedTerms()
+            
+            self._DataHasChanged()
+            
+            self.tagsRemoved.emit()
             
             return True
             
@@ -3320,10 +3319,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         self._DataHasChanged()
         
-        if self._removed_callable is not None:
-            
-            self._removed_callable( tags )
-            
+        self.tagsRemoved.emit()
         
     
     def AddTags( self, tags ):
@@ -3339,6 +3335,8 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         self._DataHasChanged()
         
+        self.tagsAdded.emit()
+        
     
     def Clear( self ):
         
@@ -3346,10 +3344,13 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         self._DataHasChanged()
         
+        # doesn't do a removed tags call, this is a different lad
+        
     
     def EnterTags( self, tags ):
         
-        removed_tags = set()
+        tags_removed = False
+        tags_added = False
         
         for tag in tags:
             
@@ -3359,11 +3360,13 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
                 
                 self._RemoveTerms( ( term, ) )
                 
-                removed_tags.add( tag )
+                tags_removed = True
                 
             else:
                 
                 self._AppendTerms( ( term, ) )
+                
+                tags_added = True
                 
             
         
@@ -3374,9 +3377,14 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         self._DataHasChanged()
         
-        if len( removed_tags ) > 0 and self._removed_callable is not None:
+        if tags_added:
             
-            self._removed_callable( removed_tags )
+            self.tagsAdded.emit()
+            
+        
+        if tags_removed:
+            
+            self.tagsRemoved.emit()
             
         
     

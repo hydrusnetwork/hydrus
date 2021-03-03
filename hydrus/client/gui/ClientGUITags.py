@@ -1104,7 +1104,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_blacklist_namespace_checkboxes.Append( namespace, namespace + ':' )
             
         
-        self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel, removed_callable = self._SimpleBlacklistRemoved )
+        self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel )
         
         self._simple_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
         
@@ -1132,6 +1132,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         blacklist_panel.setLayout( vbox )
+        
+        self._simple_blacklist.tagsRemoved.connect( self._SimpleBlacklistRemoved )
         
         return blacklist_panel
         
@@ -1161,7 +1163,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_whitelist_namespace_checkboxes.Append( namespace, namespace + ':' )
             
         
-        self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel, removed_callable = self._SimpleWhitelistRemoved )
+        self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel )
         
         self._simple_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
         
@@ -1189,6 +1191,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         whitelist_panel.setLayout( vbox )
+        
+        self._simple_whitelist.tagsRemoved.connect( self._SimpleWhitelistRemoved )
         
         return whitelist_panel
         
@@ -2285,7 +2289,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     else:
                         
-                        message = 'Of the {} files being managed, some that tag, but not all of them do, so there are different things you can do.'.format( HydrusData.ToHumanInt( len( self._media ) ) )
+                        message = 'Of the {} files being managed, some have that tag, but not all of them do, so there are different things you can do.'.format( HydrusData.ToHumanInt( len( self._media ) ) )
                         
                     
                     ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message )

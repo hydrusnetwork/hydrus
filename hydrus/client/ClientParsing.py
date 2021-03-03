@@ -621,23 +621,9 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
         raw_texts = self._ParseRawTexts( parsing_context, parsing_text )
         
-        texts = []
+        raw_texts = [ HydrusText.RemoveNewlines( raw_text ) for raw_text in raw_texts ]
         
-        for raw_text in raw_texts:
-            
-            raw_text = HydrusText.RemoveNewlines( raw_text )
-            
-            try:
-                
-                processed_texts = self._string_processor.ProcessStrings( [ raw_text ] )
-                
-                texts.extend( processed_texts )
-                
-            except HydrusExceptions.ParseException:
-                
-                continue
-                
-            
+        texts = self._string_processor.ProcessStrings( raw_texts )
         
         return texts
         
@@ -1884,9 +1870,9 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
     SERIALISABLE_NAME = 'Content Parser'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
-    def __init__( self, name = None, content_type = None, formula = None, sort_type = CONTENT_PARSER_SORT_TYPE_NONE, sort_asc = False, additional_info = None ):
+    def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
         
         if name is None:
             
@@ -1914,8 +1900,6 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         self._name = name
         self._content_type = content_type
         self._formula = formula
-        self._sort_type = sort_type
-        self._sort_asc = sort_asc
         self._additional_info = additional_info
         
     
@@ -1934,12 +1918,12 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             serialisable_additional_info = self._additional_info
             
         
-        return ( self._name, self._content_type, serialisable_formula, self._sort_type, self._sort_asc, serialisable_additional_info )
+        return ( self._name, self._content_type, serialisable_formula, serialisable_additional_info )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, self._content_type, serialisable_formula, self._sort_type, self._sort_asc, serialisable_additional_info ) = serialisable_info
+        ( self._name, self._content_type, serialisable_formula, serialisable_additional_info ) = serialisable_info
         
         if self._content_type == HC.CONTENT_TYPE_VETO:
             
@@ -2070,6 +2054,30 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( name, content_type, serialisable_formula, sort_type, sort_asc, additional_info ) = old_serialisable_info
+            
+            if sort_type != CONTENT_PARSER_SORT_TYPE_NONE:
+                
+                formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
+                
+                string_processor = formula.GetStringProcessor()
+                
+                processing_steps = string_processor.GetProcessingSteps()
+                
+                processing_steps.append( StringSorter( sort_type = sort_type, asc = sort_asc ) )
+                
+                string_processor.SetProcessingSteps( processing_steps )
+                
+                serialisable_formula = formula.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( name, content_type, serialisable_formula, additional_info )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def GetName( self ):
         
@@ -2094,20 +2102,6 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             e = HydrusExceptions.ParseException( prefix + str( e ) )
             
             raise e
-            
-        
-        if self._sort_type == CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC:
-            
-            parsed_texts.sort( reverse = not self._sort_asc )
-            
-        elif self._sort_type == CONTENT_PARSER_SORT_TYPE_HUMAN_SORT:
-            
-            HydrusData.HumanTextSort( parsed_texts )
-            
-            if not self._sort_asc:
-                
-                parsed_texts.reverse()
-                
             
         
         if self._content_type == HC.CONTENT_TYPE_URLS:
@@ -2225,7 +2219,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._content_type, self._formula, self._sort_type, self._sort_asc, self._additional_info )
+        return ( self._name, self._content_type, self._formula, self._additional_info )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER ] = ContentParser
@@ -3716,6 +3710,139 @@ class StringMatch( StringProcessingStep ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH ] = StringMatch
 
+sort_str_enum = {
+    CONTENT_PARSER_SORT_TYPE_NONE : 'no sorting',
+    CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC : 'strict lexicographic',
+    CONTENT_PARSER_SORT_TYPE_HUMAN_SORT : 'human sort'
+}
+
+class StringSorter( StringProcessingStep ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_SORTER
+    SERIALISABLE_NAME = 'String Sorter'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, sort_type: int = CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc: bool = False, regex: typing.Optional[ str ] = None ):
+        
+        StringProcessingStep.__init__( self )
+        
+        self._sort_type = sort_type
+        self._asc = asc
+        self._regex = regex
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._sort_type, self._asc, self._regex )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._sort_type, self._asc, self._regex ) = serialisable_info
+        
+    
+    def GetAscending( self ) -> bool:
+        
+        return self._asc
+        
+    
+    def GetRegex( self ) -> typing.Optional[ str ]:
+        
+        return self._regex
+        
+    
+    def GetSortType( self ) -> int:
+        
+        return self._sort_type
+        
+    
+    def MakesChanges( self ) -> bool:
+        
+        return True
+        
+    
+    def Sort( self, texts: typing.Sequence[ str ] ) -> typing.List[ str ]:
+        
+        try:
+            
+            texts = list( texts )
+            
+            data_convert = lambda d_s: d_s
+            invalid_data_convert_texts = []
+            
+            if self._regex is not None:
+                
+                re_job = re.compile( self._regex )
+                
+                def d( d_s ):
+                    
+                    m = re_job.search( d_s )
+                    
+                    if m is None:
+                        
+                        return ''
+                        
+                    else:
+                        
+                        return m.group()
+                        
+                    
+                
+                data_convert = d
+                
+                invalid_data_convert_texts = [ text for text in texts if data_convert( text ) == '' ]
+                texts = [ text for text in texts if data_convert( text ) != '' ]
+                
+            
+            sort_convert = lambda s: s
+            
+            if self._sort_type == CONTENT_PARSER_SORT_TYPE_HUMAN_SORT:
+                
+                sort_convert = HydrusData.HumanTextSortKey
+                
+            
+            key = lambda k_s: sort_convert( data_convert( k_s ) )
+            
+            reverse = not self._asc
+            
+            texts.sort( key = key, reverse = reverse )
+            
+            invalid_data_convert_texts.sort( key = sort_convert, reverse = reverse )
+            
+            texts.extend( invalid_data_convert_texts )
+            
+            return texts
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.StringSortException( e )
+            
+        
+    
+    def ToString( self, simple = False, with_type = False ) -> str:
+        
+        if simple:
+            
+            return 'sorter'
+            
+        
+        result = 'sorting {} ({})'.format( sort_str_enum[ self._sort_type ], 'ascending' if self._asc else 'descending' )
+        
+        if self._regex is not None:
+            
+            result = '{} (with regex)'.format( result )
+            
+        
+        if with_type:
+            
+            result = 'SORT: {}'.format( result )
+            
+        
+        return result
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SORTER ] = StringSorter
+
 class StringSplitter( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER
@@ -3849,18 +3976,27 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
     
     def ProcessStrings( self, starting_strings: typing.Iterable[ str ], max_steps_allowed = None ) -> typing.List[ str ]:
         
-        final_strings = []
+        current_strings = list( starting_strings )
         
-        for starting_string in starting_strings:
+        for ( i, processing_step ) in enumerate( self._processing_steps ):
             
-            current_strings = [ starting_string ]
-            
-            for ( i, processing_step ) in enumerate( self._processing_steps ):
+            if max_steps_allowed is not None and i >= max_steps_allowed:
                 
-                if max_steps_allowed is not None and i >= max_steps_allowed:
+                break
+                
+            
+            if isinstance( processing_step, StringSorter ):
+                
+                try:
                     
-                    break
+                    next_strings = processing_step.Sort( current_strings )
                     
+                except HydrusExceptions.StringSortException:
+                    
+                    next_strings = current_strings
+                    
+                
+            else:
                 
                 next_strings = []
                 
@@ -3918,13 +4054,11 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                current_strings = next_strings
-                
             
-            final_strings.extend( current_strings )
+            current_strings = next_strings
             
         
-        return final_strings
+        return current_strings
         
     
     def SetProcessingSteps( self, processing_steps: typing.List[ StringProcessingStep ] ):
@@ -3955,6 +4089,11 @@ class StringProcessor( HydrusSerialisable.SerialisableBase ):
             if True in ( isinstance( ps, StringSplitter ) for ps in self._processing_steps ):
                 
                 components.append( 'splitting' )
+                
+            
+            if True in ( isinstance( ps, StringSorter ) for ps in self._processing_steps ):
+                
+                components.append( 'sorting' )
                 
             
             return 'some {}'.format( ', '.join( components ) )

@@ -1438,6 +1438,12 @@ class DB( HydrusDB.HydrusDB ):
             
             if not self._CacheTagsFileServiceIsCoveredByAllLocalFiles( file_service_id ):
                 
+                # we don't want to delete chained stuff from definitions cache, even if count goes to zero!
+                
+                chained_tag_ids = self._CacheTagDisplayFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, deleted_tag_ids )
+                
+                deleted_tag_ids.difference_update( chained_tag_ids )
+                
                 self._CacheTagsDeleteTags( file_service_id, tag_service_id, deleted_tag_ids )
                 
             
@@ -16807,364 +16813,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
         
-        if version == 361:
-            
-            service_id = self.modules_services.GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
-            
-            service_id = self.modules_services.GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
-            
-        
-        if version == 362:
-            
-            # complete job no longer does thumbs
-            
-            self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, time_can_start FROM file_maintenance_jobs WHERE job_type = ?;', ( ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA ) )
-            
-            #
-            
-            one_row = self._c.execute( 'SELECT * FROM files_info;' ).fetchone()
-            
-            if one_row is None or len( one_row ) == 8: # doesn't have has_audio yet
-                
-                self._controller.frame_splash_status.SetSubtext( 'adding \'has audio\' metadata column' )
-                
-                existing_files_info = self._c.execute( 'SELECT * FROM files_info;' ).fetchall()
-                
-                self._c.execute( 'DROP TABLE files_info;' )
-                
-                self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );' )
-                
-                insert_iterator = ( ( hash_id, size, mime, width, height, duration, num_frames, mime in HC.MIMES_THAT_DEFINITELY_HAVE_AUDIO, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in existing_files_info )
-                
-                self._c.executemany( 'INSERT INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', insert_iterator )
-                
-                self._CreateIndex( 'files_info', [ 'size' ] )
-                self._CreateIndex( 'files_info', [ 'mime' ] )
-                self._CreateIndex( 'files_info', [ 'width' ] )
-                self._CreateIndex( 'files_info', [ 'height' ] )
-                self._CreateIndex( 'files_info', [ 'duration' ] )
-                self._CreateIndex( 'files_info', [ 'num_frames' ] )
-                
-                self._c.execute( 'ANALYZE files_info;' )
-                
-                try:
-                    
-                    service_id = self.modules_services.GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                    self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, ? FROM files_info NATURAL JOIN current_files WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_THAT_MAY_HAVE_AUDIO ) + ';', ( ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA, 0, service_id ) )
-                    
-                except Exception as e:
-                    
-                    HydrusData.PrintException( e )
-                    
-                    message = 'Trying to schedule audio detection on videos failed! Please let hydrus dev know!'
-                    
-                    self.pub_initial_message( message )
-                    
-                
-            
-            #
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'deviant art file page parser', ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 364:
-            
-            try:
-                
-                ( options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                default_collect = options[ 'default_collect' ]
-                
-                if default_collect is None:
-                    
-                    default_collect = []
-                    
-                
-                namespaces = [ n for ( t, n ) in default_collect if t == 'namespace' ]
-                rating_service_keys = [ bytes.fromhex( r ) for ( t, r ) in default_collect if t == 'rating' ]
-                
-                default_media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys )
-                
-                new_options.SetDefaultCollect( default_media_collect )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update your default collection settings failed! Please check them in the options dialog.'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'deviant art file page parser', ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 365:
-            
-            self._controller.frame_splash_status.SetSubtext( 'doing some db optimisation' )
-            
-            self._c.execute( 'ANALYZE main;' )
-            
-        
-        if version == 367:
-            
-            try:
-                
-                result = self._c.execute( 'SELECT name FROM services WHERE service_key = ?;', ( sqlite3.Binary( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ), ) ).fetchone()
-                
-                if result is not None:
-                    
-                    ( service_name, ) = result
-                    
-                    if service_name == 'local tags':
-                        
-                        self._c.execute( 'UPDATE services SET name = ? WHERE service_key = ?;', ( 'my tags', sqlite3.Binary( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ), ) )
-                        
-                    
-                
-            except:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update default local tag service name failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            try:
-                
-                # increasing default limit, let's see how it goes
-                
-                bandwidth_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
-                
-                #
-                
-                hydrus_default_nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS )
-                
-                current_rules = bandwidth_manager.GetRules( hydrus_default_nc )
-                
-                old_defaults = HydrusNetworking.BandwidthRules()
-                
-                old_defaults.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1024 * 1024 )
-                
-                if current_rules.GetSerialisableTuple() == old_defaults.GetSerialisableTuple():
-                    
-                    new_rules = HydrusNetworking.BandwidthRules()
-                    
-                    new_rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 512 * 1024 * 1024 )
-                    
-                    bandwidth_manager.SetRules( hydrus_default_nc, new_rules )
-                    
-                    self.modules_serialisable.SetJSONDump( bandwidth_manager )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update default hydrus bandwidth rules failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                session_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
-                
-                #
-                
-                # late hackery, just clear all hydrus sessions due to ptr switch
-                
-                services = self.modules_services.GetServices( HC.REPOSITORIES )
-                
-                for service in services:
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, service_key )
-                    
-                    session_manager.ClearSession( nc )
-                    
-                
-                self.modules_serialisable.SetJSONDump( session_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to clear repository session info failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            try:
-                
-                services = self.modules_services.GetServices( HC.REPOSITORIES )
-                
-                for service in services:
-                    
-                    name = service.GetName()
-                    credentials = service.GetCredentials()
-                    
-                    ( host, port ) = credentials.GetAddress()
-                    
-                    do_transfer = False
-                    do_pause = False
-                    
-                    if host == 'hydrus.no-ip.org':
-                        
-                        if port == 45872:
-                            
-                            do_pause = True
-                            
-                        elif port == 45871:
-                            
-                            def ask_what_to_do():
-                                
-                                message = 'The PTR is no longer run by hydrus dev! A user on the discord has kindly offered to host it to relieve the bandwidth issues. A new janitorial team will also help deal with the piled-up petitions. Please see the v368 release post for more information, or check here:'
-                                message += os.linesep * 2
-                                message += 'https://hydrus.tumblr.com/post/187561442294'
-                                message += os.linesep * 2
-                                message += 'The PTR is at a new address, "https://ptr.hydrus.network:45871". Would you like to automatically redirect your client\'s PTR service, "{}", to that new location and keep using it?'.format( name )
-                                
-                                from hydrus.client.gui import ClientGUIDialogsQuick
-                                
-                                result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'PTR has moved!', yes_label = 'yes, move me to the new location', no_label = 'no, pause my ptr as it is' )
-                                
-                                return result == QW.QDialog.Accepted
-                                
-                            
-                            yes = self._controller.CallBlockingToQt( None, ask_what_to_do )
-                            
-                            if yes:
-                                
-                                do_transfer = True
-                                
-                            else:
-                                
-                                do_pause = True
-                                
-                            
-                        
-                    
-                    if do_pause:
-                        
-                        if not service.IsPaused():
-                            
-                            service.PausePlay()
-                            
-                        
-                    elif do_transfer:
-                        
-                        credentials.SetAddress( 'ptr.hydrus.network', port )
-                        
-                    
-                    if do_transfer or do_pause:
-                        
-                        ( service_key, service_type, name, dictionary ) = service.ToTuple()
-                        
-                        dictionary_string = dictionary.DumpToString()
-                        
-                        self._c.execute( 'UPDATE services SET dictionary_string = ? WHERE service_key = ?;', ( dictionary_string, sqlite3.Binary( service_key ) ) )
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to check or update PTR service(s) to the new location failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 368:
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS file_modified_timestamps ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp INTEGER );' )
-            self._CreateIndex( 'file_modified_timestamps', [ 'file_modified_timestamp' ] )
-            
-            try:
-                
-                self._controller.frame_splash_status.SetSubtext( 'queueing up modified timestamp jobs' )
-                
-                service_id = self.modules_services.GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                
-                self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, ? FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, 0, service_id ) )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to schedule file modified timestamp generation failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 369:
             
             try:
@@ -17206,7 +16854,7 @@ class DB( HydrusDB.HydrusDB ):
                     self._c.executemany( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( False, hash_id ) for hash_id in content_hash_ids_to_reset ) )
                     
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -19479,6 +19127,76 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 raise Exception( 'The v430 subtag searchable map generation routine failed! The error has been printed to the log, please let hydev know!' )
+                
+            
+        
+        if version == 430:
+            
+            try:
+                
+                # due to a bug in over-eager deletion from the tag definition cache, we'll need to resync chained tag ids
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+                for tag_service_id in tag_service_ids:
+                    
+                    message = 'fixing up some desynchronised tag definitions: {}'.format( tag_service_id )
+                    
+                    self._controller.frame_splash_status.SetSubtext( message )
+                    
+                    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
+                    ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
+                    
+                    tag_ids_in_dispute = set()
+                    
+                    tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT DISTINCT bad_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
+                    tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT ideal_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
+                    tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT DISTINCT child_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
+                    tag_ids_in_dispute.update( self._STS( self._c.execute( 'SELECT DISTINCT ancestor_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
+                    
+                    if len( tag_ids_in_dispute ) > 0:
+                        
+                        self._CacheTagsSyncTags( tag_service_id, tag_ids_in_dispute )
+                        
+                    
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to resync some tag definitions failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    '8chan.moe thread api parser',
+                    'e621 file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
                 
             
         

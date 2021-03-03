@@ -1,3 +1,4 @@
+import re
 import typing
 
 from qtpy import QtWidgets as QW
@@ -1010,6 +1011,165 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControlVisibility()
         
     
+class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, string_sorter: ClientParsing.StringSorter, test_data: typing.Sequence[ str ] = [] ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        #
+        
+        self._controls_panel = ClientGUICommon.StaticBox( self, 'splitter values' )
+        
+        self._sort_type = ClientGUICommon.BetterChoice( self._controls_panel )
+        
+        self._sort_type.addItem( ClientParsing.sort_str_enum[ ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT ], ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT )
+        self._sort_type.addItem( ClientParsing.sort_str_enum[ ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC ], ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC )
+        
+        self._asc = QW.QCheckBox( self._controls_panel )
+        
+        self._regex = ClientGUICommon.NoneableTextCtrl( self._controls_panel, none_phrase = 'use whole string' )
+        
+        tt = 'If you want to sort by a substring, for instance a number in a longer string, you can place a regex here like \'\\d+\' just to capture and sort by that number. It does not affect the final strings, just what it compared for sort.'
+        
+        self._regex.setToolTip( tt )
+        
+        #
+        
+        self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
+        
+        self._example_strings = QW.QListWidget( self._example_panel )
+        self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
+        
+        self._example_strings_sorted = QW.QListWidget( self._example_panel )
+        self._example_strings_sorted.setSelectionMode( QW.QListWidget.NoSelection )
+        
+        #
+        
+        for s in test_data:
+            
+            self._example_strings.addItem( s )
+            
+        
+        self.SetValue( string_sorter )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'sort type: ', self._sort_type ) )
+        rows.append( ( 'ascending: ', self._asc ) )
+        rows.append( ( 'regex for substring sorting: ', self._regex ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
+        
+        self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._example_strings, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._example_strings_sorted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._example_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        vbox = QP.VBoxLayout()
+        
+        woah = 'Because string processing UI is still built around a single \'example\' string, the test UI here is bad! The whole system will be eventually updated to handle newlines and multiple example strings.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = woah )
+        
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self._sort_type.currentIndexChanged.connect( self._UpdateControls )
+        self._asc.stateChanged.connect( self._UpdateControls )
+        self._regex.valueChanged.connect( self._UpdateControls )
+        
+    
+    def _GetValue( self ):
+        
+        sort_type = self._sort_type.GetValue()
+        asc = self._asc.isChecked()
+        regex = self._regex.GetValue()
+        
+        string_sorter = ClientParsing.StringSorter( sort_type = sort_type, asc = asc, regex = regex )
+        
+        return string_sorter
+        
+    
+    def _UpdateControls( self ):
+        
+        string_sorter = self._GetValue()
+        
+        texts = [ self._example_strings.item( i ).text() for i in range( self._example_strings.count() ) ]
+        
+        try:
+            
+            sorted_texts = string_sorter.Sort( texts )
+            
+        except Exception as e:
+            
+            sorted_texts = [ 'Error: {}'.format( e ) ]
+            
+        
+        self._example_strings_sorted.clear()
+        
+        regex = self._regex.GetValue()
+        
+        for s in sorted_texts:
+            
+            if regex is not None:
+                
+                try:
+                    
+                    m = re.search( regex, s )
+                    
+                    if m is None:
+                        
+                        s = '{} (no regex match)'.format( s )
+                        
+                    else:
+                        
+                        s = '{} (regex: {})'.format( s, m.group() )
+                        
+                    
+                except:
+                    
+                    pass
+                    
+                
+            
+            self._example_strings_sorted.addItem( s )
+            
+        
+    
+    def GetValue( self ):
+        
+        string_match = self._GetValue()
+        
+        return string_match
+        
+    
+    def SetValue( self, string_sorter: ClientParsing.StringSorter ):
+        
+        sort_type = string_sorter.GetSortType()
+        asc = string_sorter.GetAscending()
+        regex = string_sorter.GetRegex()
+        
+        self._sort_type.SetValue( sort_type )
+        self._asc.setChecked( asc )
+        self._regex.SetValue( regex )
+        
+        self._UpdateControls()
+        
+    
 class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_splitter: ClientParsing.StringSplitter, example_string: str = '' ):
@@ -1187,7 +1347,8 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         choice_tuples = [
             ( 'String Match', ClientParsing.StringMatch, 'An object that filters strings.' ),
             ( 'String Converter', ClientParsing.StringConverter, 'An object that converts strings from one thing to another.' ),
-            ( 'String Splitter', ClientParsing.StringSplitter, 'An object that breaks strings into smaller strings.' )
+            ( 'String Splitter', ClientParsing.StringSplitter, 'An object that breaks strings into smaller strings.' ),
+            ( 'String Sorter', ClientParsing.StringSorter, 'An object that sorts strings.' )
         ]
         
         try:
@@ -1234,6 +1395,12 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             elif isinstance( string_processing_step, ClientParsing.StringSplitter ):
                 
                 panel = EditStringSplitterPanel( dlg, string_processing_step, example_string = example_text )
+                
+            elif isinstance( string_processing_step, ClientParsing.StringSorter ):
+                
+                test_data = self._GetExampleTextsForStringSorter( string_processing_step )
+                
+                panel = EditStringSorterPanel( dlg, string_processing_step, test_data = test_data )
                 
             
             dlg.SetPanel( panel )
@@ -1293,6 +1460,47 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return example_text
+        
+    
+    def _GetExampleTextsForStringSorter( self, string_processing_step: ClientParsing.StringProcessingStep ):
+        
+        # ultimately rework this to multiline test_data m8
+        
+        current_string_processor = self._GetValue()
+        
+        current_string_processing_steps = current_string_processor.GetProcessingSteps()
+        
+        if string_processing_step in current_string_processing_steps:
+            
+            example_text_index = current_string_processing_steps.index( string_processing_step )
+            
+        else:
+            
+            example_text_index = len( current_string_processing_steps )
+            
+        
+        example_texts = [ self._example_string.text() ]
+        
+        if 0 < example_text_index < self._example_results.count() + 1:
+            
+            try:
+                
+                widget = self._example_results.widget( example_text_index - 1 )
+                
+                example_texts = [ widget.item( i ).text() for i in range( widget.count() ) ]
+                
+                if example_texts == [ self.NO_RESULTS_TEXT ]:
+                    
+                    example_texts = [ self._example_string.text() ]
+                    
+                
+            except:
+                
+                pass
+                
+            
+        
+        return example_texts
         
     
     def _GetValue( self ):

@@ -65,6 +65,7 @@ class ParseException( HydrusException ): pass
 class StringConvertException( ParseException ): pass
 class StringMatchException( ParseException ): pass
 class StringSplitterException( ParseException ): pass
+class StringSortException( ParseException ): pass
 class URLClassException( ParseException ): pass
 class GUGException( ParseException ): pass
 

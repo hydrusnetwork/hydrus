@@ -444,6 +444,13 @@ class NetworkJobControl( QW.QFrame ):
         
         self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
         self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.Cancel )
+        self._error_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().dump_fail, self._ShowErrorMenu )
+        
+        self._error_button.setToolTip( 'Click here to see the last job\'s error.' )
+        
+        self._error_button.hide()
+        
+        self._error_text = None
         
         #
         
@@ -466,6 +473,7 @@ class NetworkJobControl( QW.QFrame ):
         QP.AddToLayout( hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._error_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -500,6 +508,21 @@ class NetworkJobControl( QW.QFrame ):
             
         
         ClientGUIMenus.AppendMenuCheckItem( menu, 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', self._auto_override_bandwidth_rules, self.FlipAutoOverrideBandwidth )
+        
+        CGC.core().PopupMenu( self._cog_button, menu )
+        
+    
+    def _ShowErrorMenu( self ):
+        
+        if self._error_text is None:
+            
+            return
+            
+        
+        menu = QW.QMenu()
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'show error', 'Show the recent error in a messagebox.', self.ShowError )
+        ClientGUIMenus.AppendMenuItem( menu, 'copy error', 'Copy the recent error to the clipboard.', self.CopyError )
         
         CGC.core().PopupMenu( self._cog_button, menu )
         
@@ -605,6 +628,23 @@ class NetworkJobControl( QW.QFrame ):
             
         
     
+    def ClearError( self ):
+        
+        self._error_text = None
+        
+        self._error_button.hide()
+        
+    
+    def CopyError( self ):
+        
+        if self._error_text is None:
+            
+            return
+            
+        
+        HG.client_controller.pub( 'clipboard', 'text', self._error_text )
+        
+    
     def ClearNetworkJob( self ):
         
         self.SetNetworkJob( None )
@@ -639,6 +679,23 @@ class NetworkJobControl( QW.QFrame ):
                 HG.client_controller.gui.RegisterUIUpdateWindow( self )
                 
             
+        
+    
+    def SetError( self, error: str ):
+        
+        self._error_text = error
+        
+        self._error_button.show()
+        
+    
+    def ShowError( self ):
+        
+        if self._error_text is None:
+            
+            return
+            
+        
+        QW.QMessageBox.critical( self, 'network error', self._error_text )
         
     
     def TIMERUIUpdate( self ):
