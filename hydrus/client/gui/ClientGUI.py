@@ -324,6 +324,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._persistent_mpv_widgets = []
         
+        self._have_shown_session_size_warning = False
+        
         self._closed_pages = []
         
         self._lock = threading.Lock()
@@ -5643,6 +5645,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self.GetTotalPageCounts()
         
         self._last_total_page_weight = total_active_weight + total_closed_weight
+        
+        if total_active_weight > 500000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
+            
+            self._have_shown_session_size_warning = True
+            
+            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free and avoid potential session saving problems that occur around 2 million weight, please try to close some pages or clear some finished downloaders!'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+            
         
         ClientGUIMenus.AppendMenuLabel( menu, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ), 'You have this many pages open.' )
         ClientGUIMenus.AppendMenuLabel( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( self._last_total_page_weight ) ), 'Your session is this heavy.' )

@@ -4,9 +4,10 @@ import traceback
 
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
+from twisted.python.failure import Failure
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
-from twisted.web.static import File as FileResource, NoRangeStaticProducer
+from twisted.web.static import File as FileResource, NoRangeStaticProducer, SingleRangeStaticProducer, MultipleRangeStaticProducer
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -355,187 +356,6 @@ class HydrusResource( Resource ):
         return request
         
     
-    def _callbackEstablishAccountFromHeader( self, request ):
-        
-        return request
-        
-    
-    def _callbackEstablishAccountFromArgs( self, request ):
-        
-        return request
-        
-    
-    def _callbackParseGETArgs( self, request ):
-        
-        return request
-        
-    
-    def _callbackParsePOSTArgs( self, request ):
-        
-        return request
-        
-    
-    def _checkService( self, request ):
-        
-        return request
-        
-    
-    def _checkUserAgent( self, request ):
-        
-        request.is_hydrus_user_agent = False
-        
-        if request.requestHeaders.hasHeader( 'User-Agent' ):
-            
-            user_agent_texts = request.requestHeaders.getRawHeaders( 'User-Agent' )
-            
-            user_agent_text = user_agent_texts[0]
-            
-            try:
-                
-                user_agents = user_agent_text.split( ' ' )
-                
-            except:
-                
-                return # crazy user agent string, so just assume not a hydrus client
-                
-            
-            for user_agent in user_agents:
-                
-                if '/' in user_agent:
-                    
-                    ( client, network_version ) = user_agent.split( '/', 1 )
-                    
-                    if client == 'hydrus':
-                        
-                        request.is_hydrus_user_agent = True
-                        
-                        network_version = int( network_version )
-                        
-                        if network_version == HC.NETWORK_VERSION:
-                            
-                            return
-                            
-                        else:
-                            
-                            if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
-                            else: message = 'This server is out of date; please ask its admin to update to the latest release.'
-                            
-                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
-                            
-                        
-                    
-                
-            
-        
-    
-    def _callbackRenderResponseContext( self, request ):
-        
-        self._CleanUpTempFile( request )
-        
-        if request.channel is None:
-            
-            # Connection was lost, it seems.
-            # no need for request.finish
-            
-            return
-            
-        
-        if request.requestHeaders.hasHeader( 'Origin' ):
-            
-            if self._service.SupportsCORS():
-                
-                request.setHeader( 'Access-Control-Allow-Origin', '*' )
-                
-            
-        
-        response_context = request.hydrus_response_context
-        
-        status_code = response_context.GetStatusCode()
-        
-        request.setResponseCode( status_code )
-        
-        for ( k, v, kwargs ) in response_context.GetCookies():
-            
-            request.addCookie( k, v, **kwargs )
-            
-        
-        do_finish = True
-        
-        if response_context.HasPath():
-            
-            path = response_context.GetPath()
-            
-            size = os.path.getsize( path )
-            
-            mime = response_context.GetMime()
-            
-            content_type = HC.mime_mimetype_string_lookup[ mime ]
-            
-            content_length = size
-            
-            ( base, filename ) = os.path.split( path )
-            
-            content_disposition = 'inline; filename="' + filename + '"'
-            
-            request.setHeader( 'Content-Type', str( content_type ) )
-            request.setHeader( 'Content-Length', str( content_length ) )
-            request.setHeader( 'Content-Disposition', str( content_disposition ) )
-            
-            request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
-            request.setHeader( 'Cache-Control', 'max-age={}'.format( 86400 * 365 ) )
-            
-            fileObject = open( path, 'rb' )
-            
-            producer = NoRangeStaticProducer( request, fileObject )
-            
-            producer.start()
-            
-            do_finish = False
-            
-        elif response_context.HasBody():
-            
-            mime = response_context.GetMime()
-            
-            body_bytes = response_context.GetBodyBytes()
-            
-            content_type = HC.mime_mimetype_string_lookup[ mime ]
-            
-            content_length = len( body_bytes )
-            
-            content_disposition = 'inline'
-            
-            request.setHeader( 'Content-Type', content_type )
-            request.setHeader( 'Content-Length', str( content_length ) )
-            request.setHeader( 'Content-Disposition', content_disposition )
-            
-            request.write( body_bytes )
-            
-        else:
-            
-            content_length = 0
-            
-            if status_code != 204: # 204 is No Content
-                
-                request.setHeader( 'Content-Length', str( content_length ) )
-                
-            
-        
-        self._reportDataUsed( request, content_length )
-        self._reportRequestUsed( request )
-        
-        if do_finish:
-            
-            request.finish()
-            
-        
-    
-    def _profileJob( self, call, request ):
-        
-        HydrusData.Profile( 'client api {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = 3, show_summary = True )
-        
-        return request.result_lmao
-        
-    
     def _callbackDoGETJob( self, request ):
         
         def wrap_thread_result( response_context ):
@@ -605,6 +425,233 @@ class HydrusResource( Resource ):
         return d
         
     
+    def _callbackEstablishAccountFromHeader( self, request ):
+        
+        return request
+        
+    
+    def _callbackEstablishAccountFromArgs( self, request ):
+        
+        return request
+        
+    
+    def _callbackParseGETArgs( self, request ):
+        
+        return request
+        
+    
+    def _callbackParsePOSTArgs( self, request ):
+        
+        return request
+        
+    
+    def _callbackRenderResponseContext( self, request ):
+        
+        self._CleanUpTempFile( request )
+        
+        if request.channel is None:
+            
+            # Connection was lost, it seems.
+            # no need for request.finish
+            
+            return
+            
+        
+        if request.requestHeaders.hasHeader( 'Origin' ):
+            
+            if self._service.SupportsCORS():
+                
+                request.setHeader( 'Access-Control-Allow-Origin', '*' )
+                
+            
+        
+        response_context = request.hydrus_response_context
+        
+        if response_context.HasPath():
+            
+            path = response_context.GetPath()
+            
+            size = os.path.getsize( path )
+            
+            offset_and_block_size_pairs = self._parseRangeHeader( request, size )
+            
+        else:
+            
+            offset_and_block_size_pairs = []
+            
+        
+        status_code = response_context.GetStatusCode()
+        
+        if status_code == 200 and response_context.HasPath() and len( offset_and_block_size_pairs ) > 0:
+            
+            status_code = 206
+            
+        
+        request.setResponseCode( status_code )
+        
+        for ( k, v, kwargs ) in response_context.GetCookies():
+            
+            request.addCookie( k, v, **kwargs )
+            
+        
+        do_finish = True
+        
+        if response_context.HasPath():
+            
+            path = response_context.GetPath()
+            
+            size = os.path.getsize( path )
+            
+            mime = response_context.GetMime()
+            
+            content_type = HC.mime_mimetype_string_lookup[ mime ]
+            
+            ( base, filename ) = os.path.split( path )
+            
+            fileObject = open( path, 'rb' )
+            
+            content_disposition = 'inline; filename="' + filename + '"'
+            
+            request.setHeader( 'Content-Disposition', str( content_disposition ) )
+            
+            request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
+            request.setHeader( 'Cache-Control', 'max-age={}'.format( 86400 * 365 ) )
+            
+            if len( offset_and_block_size_pairs ) <= 1:
+                
+                request.setHeader( 'Content-Type', str( content_type ) )
+                
+                if len( offset_and_block_size_pairs ) == 0:
+                    
+                    content_length = size
+                    
+                    request.setHeader( 'Content-Length', str( content_length ) )
+                    
+                    producer = NoRangeStaticProducer( request, fileObject )
+                    
+                elif len( offset_and_block_size_pairs ) == 1:
+                    
+                    [ ( range_start, range_end, offset, block_size ) ] = offset_and_block_size_pairs
+                    
+                    content_length = block_size
+                    
+                    request.setHeader( 'Accept-Ranges', 'bytes' )
+                    request.setHeader( 'Content-Range', 'bytes {}-{}/{}'.format( offset, range_end, size ) )
+                    request.setHeader( 'Content-Length', str( content_length ) )
+                    
+                    producer = SingleRangeStaticProducer( request, fileObject, offset, block_size )
+                    
+                
+            else:
+                
+                # hey, what a surprise, an http data transmission standard turned out to be a massive PITA
+                # MultipleRangeStaticProducer is the lad to use, but you have to figure out your own separation bits, which have even more finicky rules. more than I can deal with with the current time I have
+                # if/when you want to do this, check out the FileResource, it does it in its internal gubbins
+                
+                raise HydrusExceptions.RangeNotSatisfiableException( 'Can only support Single Range requests at the moment!' )
+                
+            
+            producer.start()
+            
+            do_finish = False
+            
+        elif response_context.HasBody():
+            
+            mime = response_context.GetMime()
+            
+            body_bytes = response_context.GetBodyBytes()
+            
+            content_type = HC.mime_mimetype_string_lookup[ mime ]
+            
+            content_length = len( body_bytes )
+            
+            content_disposition = 'inline'
+            
+            request.setHeader( 'Content-Type', content_type )
+            request.setHeader( 'Content-Length', str( content_length ) )
+            request.setHeader( 'Content-Disposition', content_disposition )
+            
+            request.write( body_bytes )
+            
+        else:
+            
+            content_length = 0
+            
+            if status_code != 204: # 204 is No Content
+                
+                request.setHeader( 'Content-Length', str( content_length ) )
+                
+            
+        
+        self._reportDataUsed( request, content_length )
+        self._reportRequestUsed( request )
+        
+        if do_finish:
+            
+            request.finish()
+            
+        
+    
+    def _checkService( self, request ):
+        
+        return request
+        
+    
+    def _checkUserAgent( self, request ):
+        
+        request.is_hydrus_user_agent = False
+        
+        if request.requestHeaders.hasHeader( 'User-Agent' ):
+            
+            user_agent_texts = request.requestHeaders.getRawHeaders( 'User-Agent' )
+            
+            user_agent_text = user_agent_texts[0]
+            
+            try:
+                
+                user_agents = user_agent_text.split( ' ' )
+                
+            except:
+                
+                return # crazy user agent string, so just assume not a hydrus client
+                
+            
+            for user_agent in user_agents:
+                
+                if '/' in user_agent:
+                    
+                    ( client, network_version ) = user_agent.split( '/', 1 )
+                    
+                    if client == 'hydrus':
+                        
+                        request.is_hydrus_user_agent = True
+                        
+                        network_version = int( network_version )
+                        
+                        if network_version == HC.NETWORK_VERSION:
+                            
+                            return
+                            
+                        else:
+                            
+                            if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
+                            else: message = 'This server is out of date; please ask its admin to update to the latest release.'
+                            
+                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
+                            
+                        
+                    
+                
+            
+        
+    
+    def _profileJob( self, call, request ):
+        
+        HydrusData.Profile( 'client api {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = 3, show_summary = True )
+        
+        return request.result_lmao
+        
+    
     def _DecompressionBombsOK( self, request ):
         
         return False
@@ -615,85 +662,91 @@ class HydrusResource( Resource ):
         request_deferred.cancel()
         
     
-    def _errbackHandleEmergencyError( self, failure, request ):
-        
-        try: self._CleanUpTempFile( request )
-        except: pass
-        
-        try: HydrusData.DebugPrint( failure.getTraceback() )
-        except: pass
-        
-        if request.channel is not None:
-            
-            try: request.setResponseCode( 500 )
-            except: pass
-            
-            try: request.write( failure.getTraceback() )
-            except: pass
-            
-        
-        if not request.finished:
-            
-            try: request.finish()
-            except: pass
-            
-        
-    
     def _errbackHandleProcessingError( self, failure, request ):
         
-        self._CleanUpTempFile( request )
-        
-        default_mime = HC.TEXT_HTML
-        default_encoding = str
-        
-        if failure.type == HydrusExceptions.BadRequestException:
+        try:
             
-            response_context = ResponseContext( 400, mime = default_mime, body = default_encoding( failure.value ) )
+            try: self._CleanUpTempFile( request )
+            except: pass
             
-        elif failure.type in ( HydrusExceptions.MissingCredentialsException, HydrusExceptions.DoesNotSupportCORSException ):
+            default_mime = HC.TEXT_HTML
+            default_encoding = str
             
-            response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
+            if failure.type == HydrusExceptions.BadRequestException:
+                
+                response_context = ResponseContext( 400, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type in ( HydrusExceptions.MissingCredentialsException, HydrusExceptions.DoesNotSupportCORSException ):
+                
+                response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.InsufficientCredentialsException:
+                
+                response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type in ( HydrusExceptions.NotFoundException, HydrusExceptions.DataMissing, HydrusExceptions.FileMissingException ):
+                
+                response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.ConflictException:
+                
+                response_context = ResponseContext( 409, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.RangeNotSatisfiableException:
+                
+                response_context = ResponseContext( 416, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.SessionException:
+                
+                response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.NetworkVersionException:
+                
+                response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.ServerBusyException:
+                
+                response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.BandwidthException:
+                
+                response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            elif failure.type == HydrusExceptions.ServerException:
+                
+                response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( failure.value ) )
+                
+            else:
+                
+                HydrusData.DebugPrint( failure.getTraceback() )
+                
+                response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep * 2 + failure.getTraceback() ) )
+                
             
-        elif failure.type == HydrusExceptions.InsufficientCredentialsException:
+            request.hydrus_response_context = response_context
             
-            response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+            self._callbackRenderResponseContext( request )
             
-        elif failure.type in ( HydrusExceptions.NotFoundException, HydrusExceptions.DataMissing, HydrusExceptions.FileMissingException ):
+        except:
             
-            response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
+            try: HydrusData.DebugPrint( failure.getTraceback() )
+            except: pass
             
-        elif failure.type == HydrusExceptions.ConflictException:
+            if hasattr( request, 'channel' ) and request.channel is not None:
+                
+                try: request.setResponseCode( 500 )
+                except: pass
+                
+                try: request.write( failure.getTraceback() )
+                except: pass
+                
             
-            response_context = ResponseContext( 409, mime = default_mime, body = default_encoding( failure.value ) )
+            if not request.finished:
+                
+                try: request.finish()
+                except: pass
+                
             
-        elif failure.type == HydrusExceptions.SessionException:
-            
-            response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
-            
-        elif failure.type == HydrusExceptions.NetworkVersionException:
-            
-            response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
-            
-        elif failure.type == HydrusExceptions.ServerBusyException:
-            
-            response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( failure.value ) )
-            
-        elif failure.type == HydrusExceptions.BandwidthException:
-            
-            response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
-            
-        elif failure.type == HydrusExceptions.ServerException:
-            
-            response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( failure.value ) )
-            
-        else:
-            
-            HydrusData.DebugPrint( failure.getTraceback() )
-            
-            response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep * 2 + failure.getTraceback() ) )
-            
-        
-        request.hydrus_response_context = response_context
         
         return request
         
@@ -726,6 +779,104 @@ class HydrusResource( Resource ):
             
         
         return access_key
+        
+    
+    def _parseRangeHeader( self, request, size ):
+        
+        offset_and_block_size_pairs = []
+        
+        if request.requestHeaders.hasHeader( 'Range' ):
+            
+            range_headers = request.requestHeaders.getRawHeaders( 'Range' )
+            
+            range_header = range_headers[0]
+            
+            if '=' not in range_header:
+                
+                raise HydrusExceptions.BadRequestException( 'Did not understand range header!' )
+                
+            
+            ( unit_gumpf, range_pairs_string ) = range_header.split( '=', 1 )
+            
+            if unit_gumpf != 'bytes':
+                
+                raise HydrusExceptions.RangeNotSatisfiableException( 'Do not support anything other than bytes in Range header!' )
+                
+            
+            range_pair_strings = range_pairs_string.split( ',' )
+            
+            if True in ( '-' not in range_pair_string for range_pair_string in range_pair_strings ):
+                
+                raise HydrusExceptions.RangeNotSatisfiableException( 'Did not understand the Range header\'s range pair(s)!' )
+                
+            
+            range_pairs = [ range_pair_string.strip().split( '-' ) for range_pair_string in range_pair_strings ]
+            
+            offset_and_block_size_pairs = []
+            
+            for ( range_start, range_end ) in range_pairs:
+                
+                if range_start == '':
+                    
+                    if range_end == '':
+                        
+                        raise HydrusExceptions.RangeNotSatisfiableException( 'Undefined Range header pair given!' )
+                        
+                    
+                    range_start = None
+                    
+                else:
+                    
+                    range_start = abs( int( range_start ) )
+                    
+                
+                if range_end == '':
+                    
+                    range_end = None
+                    
+                else:
+                    
+                    range_end = abs( int( range_end ) )
+                    
+                
+                if range_start is not None and range_end is not None and range_start > range_end:
+                    
+                    raise HydrusExceptions.RangeNotSatisfiableException( 'The Range header had an invalid pair!' )
+                    
+                
+                if range_start is None:
+                    
+                    offset = size - range_end
+                    block_size = range_end
+                    
+                elif range_end is None:
+                    
+                    offset = range_start
+                    block_size = size - range_start
+                    
+                else:
+                    
+                    if range_start > size:
+                        
+                        offset_and_block_size_pairs = []
+                        
+                        break
+                        
+                    
+                    if range_end > size:
+                        
+                        range_end = size - 1
+                        
+                    
+                    offset = range_start
+                    block_size = ( range_end + 1 ) - range_start
+                    
+                
+                offset_and_block_size_pairs.append( ( range_start, range_end, offset, block_size ) )
+                
+            
+        
+        return offset_and_block_size_pairs
         
     
     def _reportDataUsed( self, request, num_bytes ):
@@ -827,11 +978,9 @@ class HydrusResource( Resource ):
         
         d.addCallback( self._callbackDoGETJob )
         
-        d.addErrback( self._errbackHandleProcessingError, request )
-        
         d.addCallback( self._callbackRenderResponseContext )
         
-        d.addErrback( self._errbackHandleEmergencyError, request )
+        d.addErrback( self._errbackHandleProcessingError, request )
         
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
         
@@ -850,11 +999,9 @@ class HydrusResource( Resource ):
         
         d.addCallback( self._callbackDoOPTIONSJob )
         
-        d.addErrback( self._errbackHandleProcessingError, request )
-        
         d.addCallback( self._callbackRenderResponseContext )
         
-        d.addErrback( self._errbackHandleEmergencyError, request )
+        d.addErrback( self._errbackHandleProcessingError, request )
         
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
         
@@ -881,11 +1028,9 @@ class HydrusResource( Resource ):
         
         d.addCallback( self._callbackDoPOSTJob )
         
-        d.addErrback( self._errbackHandleProcessingError, request )
-        
         d.addCallback( self._callbackRenderResponseContext )
         
-        d.addErrback( self._errbackHandleEmergencyError, request )
+        d.addErrback( self._errbackHandleProcessingError, request )
         
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
         

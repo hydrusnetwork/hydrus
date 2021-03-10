@@ -172,6 +172,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response, EXAMPLE_FILE )
         
+        #
+        
         try: os.remove( path )
         except: pass
         

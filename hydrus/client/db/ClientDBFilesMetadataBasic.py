@@ -129,6 +129,16 @@ class ClientDBFilesMetadataBasic( HydrusDBModule.HydrusDBModule ):
         return sum( ( 1 for mime in result if mime in HC.SEARCHABLE_MIMES ) )
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        if HC.CONTENT_TYPE_HASH:
+            
+            return [ ( 'files_info', 'hash_id' ) ]
+            
+        
+        return []
+        
+    
     def GetTotalSize( self, hash_ids: typing.Collection[ int ] ) -> int:
         
         if len( hash_ids ) == 1:

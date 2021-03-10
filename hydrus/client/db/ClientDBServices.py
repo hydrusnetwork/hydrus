@@ -178,6 +178,11 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
         return set( self._service_keys_to_service_ids.keys() )
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        return []
+        
+    
     def UpdateService( self, service: ClientServices.Service ):
         
         ( service_key, service_type, name, dictionary ) = service.ToTuple()

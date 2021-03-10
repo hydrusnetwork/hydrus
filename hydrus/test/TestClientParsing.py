@@ -1,3 +1,4 @@
+import os
 import random
 import unittest
 
@@ -281,6 +282,140 @@ class TestStringMatch( unittest.TestCase ):
         self.assertTrue( re_string_match.Matches( 'abc123' ) )
         
     
+class TestStringSlicer( unittest.TestCase ):
+    
+    def test_basics( self ):
+        
+        a = 'a ' + os.urandom( 8 ).hex()
+        b = 'b ' + os.urandom( 8 ).hex()
+        c = 'c ' + os.urandom( 8 ).hex()
+        d = 'd ' + os.urandom( 8 ).hex()
+        e = 'e ' + os.urandom( 8 ).hex()
+        f = 'f ' + os.urandom( 8 ).hex()
+        g = 'g ' + os.urandom( 8 ).hex()
+        h = 'h ' + os.urandom( 8 ).hex()
+        i = 'i ' + os.urandom( 8 ).hex()
+        j = 'j ' + os.urandom( 8 ).hex()
+        
+        test_list = [ a, b, c, d, e, f, g, h, i, j ]
+        
+        #
+        
+        slicer = ClientParsing.StringSlicer( index_start = 0, index_end = 1 )
+        self.assertEqual( slicer.Slice( test_list ), [ a ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 1st string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 3, index_end = 4 )
+        self.assertEqual( slicer.Slice( test_list ), [ d ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 4th string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -3, index_end = -2 )
+        self.assertEqual( slicer.Slice( test_list ), [ h ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 3rd from last string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -1 )
+        self.assertEqual( slicer.Slice( test_list ), [ j ] )
+        self.assertEqual( slicer.ToString(), 'selecting the last string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 15, index_end = 16 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting the 16th string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -15, index_end = -14 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting the 15th from last string' )
+        
+        #
+        
+        slicer = ClientParsing.StringSlicer( index_start = 0 )
+        self.assertEqual( slicer.Slice( test_list ), test_list )
+        self.assertEqual( slicer.ToString(), 'selecting the 1st string and onwards' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 3 )
+        self.assertEqual( slicer.Slice( test_list ), [ d, e, f, g, h, i, j ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 4th string and onwards' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -3 )
+        self.assertEqual( slicer.Slice( test_list ), [ h, i, j ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 3rd from last string and onwards' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 15 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting the 16th string and onwards' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -15 )
+        self.assertEqual( slicer.Slice( test_list ), test_list )
+        self.assertEqual( slicer.ToString(), 'selecting the 15th from last string and onwards' )
+        
+        #
+        
+        slicer = ClientParsing.StringSlicer( index_end = 0 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting nothing' )
+        
+        slicer = ClientParsing.StringSlicer( index_end = 3 )
+        self.assertEqual( slicer.Slice( test_list ), [ a, b, c ] )
+        self.assertEqual( slicer.ToString(), 'selecting up to and including the 3rd string' )
+        
+        slicer = ClientParsing.StringSlicer( index_end = -3 )
+        self.assertEqual( slicer.Slice( test_list ), [ a, b, c, d, e, f, g ] )
+        self.assertEqual( slicer.ToString(), 'selecting up to and including the 4th from last string' )
+        
+        slicer = ClientParsing.StringSlicer( index_end = 15 )
+        self.assertEqual( slicer.Slice( test_list ), test_list )
+        self.assertEqual( slicer.ToString(), 'selecting up to and including the 15th string' )
+        
+        slicer = ClientParsing.StringSlicer( index_end = -15 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting up to and including the 16th from last string' )
+        
+        #
+        
+        slicer = ClientParsing.StringSlicer( index_start = 0, index_end = 5 )
+        self.assertEqual( slicer.Slice( test_list ), [ a, b, c, d, e ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 1st string up to and including the 5th string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 3, index_end = 5 )
+        self.assertEqual( slicer.Slice( test_list ), [ d, e ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 4th string up to and including the 5th string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -5, index_end = -3 )
+        self.assertEqual( slicer.Slice( test_list ), [ f, g ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 5th from last string up to and including the 4th from last string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 3, index_end = -3 )
+        self.assertEqual( slicer.Slice( test_list ), [ d, e, f, g ] )
+        self.assertEqual( slicer.ToString(), 'selecting the 4th string up to and including the 4th from last string' )
+        
+        #
+        
+        slicer = ClientParsing.StringSlicer( index_start = 3, index_end = 3 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting nothing' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = 5, index_end = 3 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting nothing' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -3, index_end = -3 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting nothing' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -3, index_end = -5 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting nothing' )
+        
+        #
+        
+        slicer = ClientParsing.StringSlicer( index_start = 15, index_end = 20 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting the 16th string up to and including the 20th string' )
+        
+        slicer = ClientParsing.StringSlicer( index_start = -15, index_end = -12 )
+        self.assertEqual( slicer.Slice( test_list ), [] )
+        self.assertEqual( slicer.ToString(), 'selecting the 15th from last string up to and including the 13th from last string' )
+        
+    
 class TestStringSorter( unittest.TestCase ):
     
     def test_basics( self ):
@@ -299,7 +434,7 @@ class TestStringSorter( unittest.TestCase ):
                 
                 random.shuffle( test_list )
                 
-                self.assertTrue( sorter.Sort( test_list ), correct )
+                self.assertEqual( sorter.Sort( test_list ), correct )
                 
             
         
@@ -356,15 +491,15 @@ class TestStringSplitter( unittest.TestCase ):
         
         splitter = ClientParsing.StringSplitter( separator = ', ' )
         
-        self.assertTrue( splitter.Split( '123' ), [ '123' ] )
-        self.assertTrue( splitter.Split( '1,2,3' ), [ '1,2,3' ] )
-        self.assertTrue( splitter.Split( '1, 2, 3' ), [ '1', '2', '3' ] )
+        self.assertEqual( splitter.Split( '123' ), [ '123' ] )
+        self.assertEqual( splitter.Split( '1,2,3' ), [ '1,2,3' ] )
+        self.assertEqual( splitter.Split( '1, 2, 3' ), [ '1', '2', '3' ] )
         
         splitter = ClientParsing.StringSplitter( separator = ', ', max_splits = 2 )
         
-        self.assertTrue( splitter.Split( '123' ), [ '123' ] )
-        self.assertTrue( splitter.Split( '1,2,3' ), [ '1,2,3' ] )
-        self.assertTrue( splitter.Split( '1, 2, 3, 4' ), [ '1', '2', '3,4' ] )
+        self.assertEqual( splitter.Split( '123' ), [ '123' ] )
+        self.assertEqual( splitter.Split( '1,2,3' ), [ '1,2,3' ] )
+        self.assertEqual( splitter.Split( '1, 2, 3, 4' ), [ '1', '2', '3, 4' ] )
         
     
 class TestStringProcessor( unittest.TestCase ):

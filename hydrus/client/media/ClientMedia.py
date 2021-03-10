@@ -2945,7 +2945,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            return ( 'ascending', 'descending', CC.SORT_BY_INCIDENCE_DESC )
+            return ( 'ascending', 'descending', CC.SORT_DESC )
             
         
     

@@ -1230,7 +1230,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                if self._next_check_time is None:
+                    
+                    text = '{} - working again {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( self._no_work_until ) )
+                    
+                else:
+                    
+                    text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                    
                 
                 return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, text )
                 
@@ -1242,7 +1249,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    if HydrusData.TimeHasPassed( self._next_check_time ):
+                    if self._next_check_time is None or HydrusData.TimeHasPassed( self._next_check_time ):
                         
                         return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PENDING, 'pending' )
                         
@@ -1271,7 +1278,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                no_work_text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                if self._next_check_time is None:
+                    
+                    no_work_text = '{} - working again {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( self._no_work_until ) )
+                    
+                else:
+                    
+                    no_work_text = '{} - next check {}'.format( self._no_work_until_reason, ClientData.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                    
                 
                 file_status = no_work_text
                 watcher_status = no_work_text

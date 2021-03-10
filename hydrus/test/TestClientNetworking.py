@@ -641,8 +641,8 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 tracker = bm.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
                 
-                self.assertTrue( tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None ), 1 )
-                self.assertTrue( tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None ), 256 )
+                self.assertEqual( tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None ), 1 )
+                self.assertEqual( tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None ), 256 )
                 
             
         
@@ -682,7 +682,7 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 self.assertEqual( type( job.GetErrorException() ), HydrusExceptions.ServerException )
                 
-                self.assertTrue( job.GetErrorText(), BAD_RESPONSE )
+                self.assertEqual( job.GetErrorText(), BAD_RESPONSE.decode( 'ascii' ) )
                 
                 self.assertEqual( job.GetStatus(), ( '500 - Internal Server Error', 18, 18, None ) )
                 
@@ -837,7 +837,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
                 
                 self.assertEqual( type( job.GetErrorException() ), HydrusExceptions.ServerException )
                 
-                self.assertTrue( job.GetErrorText(), BAD_RESPONSE )
+                self.assertEqual( job.GetErrorText(), BAD_RESPONSE.decode( 'ascii' ) )
                 
                 self.assertEqual( job.GetStatus(), ( '500 - Internal Server Error', 18, 18, None ) )
                 

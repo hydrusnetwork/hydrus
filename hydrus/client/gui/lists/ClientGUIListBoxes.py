@@ -24,6 +24,7 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.lists import ClientGUIListBoxesData
@@ -2554,9 +2555,11 @@ class ListBoxTags( ListBox ):
                                 service_key_groups_to_tags[ tuple( s_ks ) ].append( t )
                                 
                             
+                            tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                            
                             for t_list in service_key_groups_to_tags.values():
                                 
-                                ClientTagSorting.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, t_list )
+                                ClientTagSorting.SortTags( tag_sort, t_list )
                                 
                             
                             service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
@@ -2582,10 +2585,12 @@ class ListBoxTags( ListBox ):
                                 service_key_groups_to_tags[ tuple( s_ks ) ][1].append( c )
                                 
                             
+                            tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                            
                             for ( t_list_1, t_list_2 ) in service_key_groups_to_tags.values():
                                 
-                                ClientTagSorting.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, t_list_1 )
-                                ClientTagSorting.SortTags( CC.SORT_BY_LEXICOGRAPHIC_ASC, t_list_2 )
+                                ClientTagSorting.SortTags( tag_sort, t_list_1 )
+                                ClientTagSorting.SortTags( tag_sort, t_list_2 )
                                 
                             
                             service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
@@ -3420,7 +3425,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, tag_display_type = tag_display_type, height_num_chars = 24 )
         
-        self._sort = HC.options[ 'default_tag_sort' ]
+        self._tag_sort = HG.client_controller.new_options.GetDefaultTagSort()
         
         self._last_media = set()
         
@@ -3521,7 +3526,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             ( self._show_petitioned, self._petitioned_tags_to_count )
         ]
         
-        counts_to_include = [ c for ( show, c ) in jobs ]
+        counts_to_include = [ c for ( show, c ) in jobs if show ]
         
         for term in self._ordered_terms:
             
@@ -3532,16 +3537,15 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             terms_to_count[ term ] = count
             
         
+        item_to_tag_key_wrapper = lambda term: term.GetTag()
+        item_to_sibling_key_wrapper = item_to_tag_key_wrapper
+        
         if self._sibling_decoration_allowed:
             
-            item_to_tag_key_wrapper = lambda term: term.GetBestTag()
-            
-        else:
-            
-            item_to_tag_key_wrapper = lambda term: term.GetTag()
+            item_to_sibling_key_wrapper = lambda term: term.GetBestTag()
             
         
-        ClientTagSorting.SortTags( self._sort, self._ordered_terms, tag_items_to_count = terms_to_count, item_to_tag_key_wrapper = item_to_tag_key_wrapper )
+        ClientTagSorting.SortTags( self._tag_sort, self._ordered_terms, tag_items_to_count = terms_to_count, item_to_tag_key_wrapper = item_to_tag_key_wrapper, item_to_sibling_key_wrapper = item_to_sibling_key_wrapper )
         
         self._RegenTermsToIndices()
         
@@ -3553,9 +3557,9 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self.SetTagsByMedia( self._last_media )
         
     
-    def SetSort( self, sort ):
+    def SetSort( self, tag_sort: ClientTagSorting.TagSort ):
         
-        self._sort = sort
+        self._tag_sort = tag_sort
         
         self._Sort()
         
@@ -3686,28 +3690,16 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
 class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent, title, show_siblings_sort = False ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, title )
         
-        self._sorter = ClientGUICommon.BetterChoice( self )
+        # make this its own panel
+        self._tag_sort = ClientGUITagSorting.TagSortControl( self, HG.client_controller.new_options.GetDefaultTagSort(), show_siblings = show_siblings_sort )
         
-        self._sorter.addItem( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-        self._sorter.addItem( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-        self._sorter.addItem( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
-        self._sorter.addItem( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
-        self._sorter.addItem( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
-        self._sorter.addItem( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
-        self._sorter.addItem( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-        self._sorter.addItem( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-        self._sorter.addItem( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
-        self._sorter.addItem( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
+        self._tag_sort.valueChanged.connect( self.EventSort )
         
-        self._sorter.SetValue( HC.options[ 'default_tag_sort' ] )
-        
-        self._sorter.currentIndexChanged.connect( self.EventSort )
-        
-        self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._tag_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def SetTagServiceKey( self, service_key ):
@@ -3715,16 +3707,11 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         self._tags_box.SetTagServiceKey( service_key )
         
     
-    def EventSort( self, index ):
+    def EventSort( self ):
         
-        selection = self._sorter.currentIndex()
+        sort = self._tag_sort.GetValue()
         
-        if selection != -1:
-            
-            sort = self._sorter.GetValue()
-            
-            self._tags_box.SetSort( sort )
-            
+        self._tags_box.SetSort( sort )
         
     
     def SetTagsBox( self, tags_box: ListBoxTagsMedia ):

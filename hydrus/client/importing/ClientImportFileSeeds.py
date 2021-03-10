@@ -90,23 +90,38 @@ class FileImportJob( object ):
             
             self.GenerateInfo()
             
-            self.CheckIsGoodToImport()
-            
-            mime = self.GetMime()
-            
-            if status_hook is not None:
+            try:
                 
-                status_hook( 'copying file' )
+                self.CheckIsGoodToImport()
                 
-            
-            HG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
-            
-            if status_hook is not None:
+                ok_to_go = True
                 
-                status_hook( 'updating database' )
+            except HydrusExceptions.FileSizeException as e:
+                
+                ok_to_go = False
+                
+                import_status = CC.STATUS_SKIPPED
+                note = str( e )
                 
             
-            ( import_status, note ) = HG.client_controller.WriteSynchronous( 'import_file', self )
+            if ok_to_go:
+                
+                mime = self.GetMime()
+                
+                if status_hook is not None:
+                    
+                    status_hook( 'copying file' )
+                    
+                
+                HG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
+                
+                if status_hook is not None:
+                    
+                    status_hook( 'updating database' )
+                    
+                
+                ( import_status, note ) = HG.client_controller.WriteSynchronous( 'import_file', self )
+                
             
         else:
             

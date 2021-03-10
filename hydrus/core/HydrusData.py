@@ -108,30 +108,46 @@ def ConvertIntToPrettyOrdinalString( num: int ):
         return 'unknown position'
         
     
-    remainder = abs( num ) % 10
+    tens = abs( num ) // 10
     
-    if remainder == 1:
+    if tens == 1:
         
-        ordinal = 'st'
-        
-    elif remainder == 2:
-        
-        ordinal = 'nd'
-        
-    elif remainder == 3:
-        
-        ordinal = 'rd'
+        ordinal = 'th'
         
     else:
         
-        ordinal = 'th'
+        remainder = abs( num ) % 10
+        
+        if remainder == 1:
+            
+            ordinal = 'st'
+            
+        elif remainder == 2:
+            
+            ordinal = 'nd'
+            
+        elif remainder == 3:
+            
+            ordinal = 'rd'
+            
+        else:
+            
+            ordinal = 'th'
+            
         
     
     s = '{}{}'.format( ToHumanInt( abs( num ) ), ordinal )
     
     if num < 0:
         
-        s = '{} from last'.format( s )
+        if num == -1:
+            
+            s = 'last'
+            
+        else:
+            
+            s = '{} from last'.format( s )
+            
         
     
     return s

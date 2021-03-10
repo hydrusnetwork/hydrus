@@ -644,7 +644,9 @@ class SidecarExporter( HydrusSerialisable.SerialisableBase ):
             
             all_tags = list( all_tags )
             
-            ClientTagSorting.SortTags( CC.SORT_BY_LEXICOGRAPHIC_DESC, all_tags )
+            tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+            
+            ClientTagSorting.SortTags( tag_sort, all_tags )
             
             txt_path = os.path.join( directory, filename + '.txt' )
             

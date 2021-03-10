@@ -74,7 +74,6 @@ def GetClientDefaultOptions():
     options[ 'confirm_client_exit' ] = False
     
     options[ 'default_tag_repository' ] = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
-    options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
     
     options[ 'pause_export_folders_sync' ] = False
     options[ 'pause_import_folders_sync' ] = False

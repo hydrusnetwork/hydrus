@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_432"><a href="#version_432">version 432</a></h3></li>
+				<ul>
+					<li>tag sorting:</li>
+					<li>the tag sort dropdown has been replaced with a dynamic control. rather than one big list with all possible permutations, you now work on each variable (sort type, asc/desc, group by) separately. what you are actually sorting is easier to understand and select</li>
+					<li>my stupid "lexicographic/incidence" labelling is replaced with the simpler and neater 'tag', 'subtag', and 'count'</li>
+					<li>when in the manage tags dialog and sorting by tag or subtag, you can now turn off the 'use sibling' sort.</li>
+					<li>I'd like to further neaten the workflow here, making the individual dropdowns flip back and forth with a mouse scroll in either directior rather than being just up/down allowed. let me know overall how you find this new control</li>
+					<li>the 'tag sort' object is updated behind the scenes as well. your old value should be converted automatically</li>
+					<li>fixed an issue with count tag sorting where deleted tag counts were being counted even when not displayed</li>
+					<li>if you try to search tags on a page of thumbnails that holds an invalid tag, this is now caught gracefully and you get a little popup saying 'please run the repair invalid tags routine'</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the client now gives a once-per-boot warning popup if your session size exceeds 500k. for those who cannot reduce session size conveniently, this popup can be turned off under _options->gui pages_</li>
+					<li>when the file import options prohibit a file due to filesize or resolution etc.., it should now always record that as an 'ignored' result rather than an 'error'</li>
+					<li>fixed an unusual error popup in thread watcher display that could occur during session load. this problem seems to have been around for a long time, but it required a watcher in a previously saved and still valid 'wait a bit' error state and was only vulnerable for a few milliseconds, so it hadn't come up before. in any case, it is fixed</li>
+					<li>subscriptions with small 'first run' file limits now work better: if you create a subscription with a fairly small 'first run' file limit (this typically matters when the number is smaller than one of the site's gallery page's worth of results), subsequent normal checks with larger file limits will be more aggressive about noticing that they 'caught up' to that small initial sync (previously, they would sometimes incorrectly think the site just got some files tagged out of order and bump right past that initial 'already in db' batch and keep going until they hit their own file limit)</li>
+					<li>.</li>
+					<li>advanced string processing:</li>
+					<li>added a String Selector/Slicer object to the parsing system. this object allows you to select the nth item in a list of parsed strings or the mth to nth items. m can be 'start' and n can be 'end', and negative indices are allowed for both. pair it with the new Sorter for some neat new tricks!</li>
+					<li>the string processing edit UI is now _more_ multi-string-aware. the test panel has had a code cleanup pass and now has a list of all the starting strings in the test data (e.g. all the urls parsed by the formula that launched the UI) rather than just the first, and a list of all results from that list. selecting any of the starting strings populates the 'single string' area, so you can now zoom in on one particular string to see what is happening to it</li>
+					<li>the String Sorter edit UI now gets all the strings at that stage of processing, so you can review the sort properly</li>
+					<li>the new String Slicer edit UI similarly gets all the strings at that stage of processing</li>
+					<li>future updates will expand multi-string presentation and testing. I'd like to show the whole list at each stage</li>
+					<li>.</li>
+					<li>server/client api core improvements:</li>
+					<li>I had a go at supporting the Range header for file (basically this means anything non-html/json) requests. I added tests and it seems to work. as I understand this mostly applies to browsers pulling video from the Client API. to start, I am supporting single range requests. if it is needed, I'll try to get Multi Range requests right, but for now they'll 416</li>
+					<li>the client now understands 416 ("can't do that requested range m8") errors</li>
+					<li>I reworked the serverside error handling chain. this has been borked for a long time due to my own lack of understanding of twisted's deferred system, and certain late-stage errors were just not being handled right. the server should no longer hang on these and now should print error info correctly, including a rough 500 in true late emergencies, and terminate the connection correctly</li>
+					<li>.</li>
+					<li>boring:</li>
+					<li>fixed up a handful of typo-borked unit tests</li>
+					<li>fixed my ordinal (xst, xnd, xrd, xth) text generator to deal with 11, 12, and 13 correctly lmao</li>
+					<li>started some db maintenance routines and logistics to recover definitions and remove orphans in future, I feel great about it so far, but it'll have to wait for more of my db 'modules' refactoring to be more useful</li>
+					<li>updated the mpv dll on the Windows release to 2021-02-28, it may improve some video support/performance</li>
+					<li>updated sqlite dll on the Windows release to 3.34.1</li>
+				</ul>
 				<li><h3 id="version_431"><a href="#version_431">version 431</a></h3></li>
 				<ul>
 					<li>misc:</li>

@@ -1,6 +1,7 @@
 import sqlite3
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
@@ -76,5 +77,47 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( petitioned_mappings_table_name ) )
         self._CreateIndex( petitioned_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
+        
+    
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        if HC.CONTENT_TYPE_HASH:
+            
+            tables_and_columns = []
+            
+            for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+                
+                tables_and_columns.extend( [
+                    ( current_mappings_table_name, 'hash_id' ),
+                    ( deleted_mappings_table_name, 'hash_id' ),
+                    ( pending_mappings_table_name, 'hash_id' ),
+                    ( petitioned_mappings_table_name, 'hash_id' )
+                ] )
+                
+            
+            return tables_and_columns
+            
+        elif HC.CONTENT_TYPE_TAG:
+            
+            tables_and_columns = []
+            
+            for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+                
+                tables_and_columns.extend( [
+                    ( current_mappings_table_name, 'tag_id' ),
+                    ( deleted_mappings_table_name, 'tag_id' ),
+                    ( pending_mappings_table_name, 'tag_id' ),
+                    ( petitioned_mappings_table_name, 'tag_id' )
+                ] )
+                
+            
+            return tables_and_columns
+            
+        
+        return []
         
     

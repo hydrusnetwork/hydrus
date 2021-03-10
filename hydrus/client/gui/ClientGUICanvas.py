@@ -2001,7 +2001,9 @@ class CanvasWithDetails( Canvas ):
             
             tags_i_want_to_display = list( tags_i_want_to_display )
             
-            ClientTagSorting.SortTags( HC.options[ 'default_tag_sort' ], tags_i_want_to_display )
+            tag_sort = HG.client_controller.new_options.GetDefaultTagSort()
+            
+            ClientTagSorting.SortTags( tag_sort, tags_i_want_to_display )
             
             current_y = 3
             

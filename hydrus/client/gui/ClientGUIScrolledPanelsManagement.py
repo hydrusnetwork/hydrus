@@ -30,6 +30,7 @@ from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIStyle
+from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -1389,6 +1390,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._number_of_gui_session_backups.setToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' )
             
+            self._show_session_size_warnings = QW.QCheckBox( self._sessions_panel )
+            
+            self._show_session_size_warnings.setToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 500k objects.' )
+            
             #
             
             self._pages_panel = ClientGUICommon.StaticBox( self, 'pages' )
@@ -1473,6 +1478,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._number_of_gui_session_backups.setValue( self._new_options.GetInteger( 'number_of_gui_session_backups' ) )
             
+            self._show_session_size_warnings.setChecked( self._new_options.GetBoolean( 'show_session_size_warnings' ) )
+            
             self._default_new_page_goes.SetValue( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
             self._notebook_tab_alignment.SetValue( self._new_options.GetInteger( 'notebook_tab_alignment' ) )
@@ -1507,6 +1514,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
             rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
             rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
+            rows.append( ( 'Show warning popup if session size exceeds 500k: ', self._show_session_size_warnings ) )
             
             sessions_gridbox = ClientGUICommon.WrapInGrid( self._sessions_panel, rows )
             
@@ -1581,6 +1589,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.value() )
             
             self._new_options.SetInteger( 'number_of_gui_session_backups', self._number_of_gui_session_backups.value() )
+            
+            self._new_options.SetBoolean( 'show_session_size_warnings', self._show_session_size_warnings.isChecked() )
             
             self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.isChecked() )
             
@@ -2914,18 +2924,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general_panel = ClientGUICommon.StaticBox( self, 'general tag options' )
             
-            self._default_tag_sort = ClientGUICommon.BetterChoice( general_panel )
-            
-            self._default_tag_sort.addItem( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-            self._default_tag_sort.addItem( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-            self._default_tag_sort.addItem( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
-            self._default_tag_sort.addItem( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
-            self._default_tag_sort.addItem( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
-            self._default_tag_sort.addItem( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
-            self._default_tag_sort.addItem( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-            self._default_tag_sort.addItem( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-            self._default_tag_sort.addItem( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
-            self._default_tag_sort.addItem( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
+            self._default_tag_sort = ClientGUITagSorting.TagSortControl( general_panel, self._new_options.GetDefaultTagSort(), show_siblings = True )
             
             self._default_tag_repository = ClientGUICommon.BetterChoice( general_panel )
             
@@ -2948,8 +2947,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
-            
-            self._default_tag_sort.SetValue( HC.options[ 'default_tag_sort' ] )
             
             self._default_tag_service_search_page.addItem( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
             
@@ -3017,7 +3014,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetValue()
-            HC.options[ 'default_tag_sort' ] = QP.GetClientData( self._default_tag_sort, self._default_tag_sort.currentIndex() )
+            self._new_options.SetDefaultTagSort( self._default_tag_sort.GetValue() )
             
             self._new_options.SetBoolean( 'expand_parents_on_storage_taglists', self._expand_parents_on_storage_taglists.isChecked() )
             self._new_options.SetBoolean( 'expand_parents_on_storage_autocomplete_taglists', self._expand_parents_on_storage_autocomplete_taglists.isChecked() )

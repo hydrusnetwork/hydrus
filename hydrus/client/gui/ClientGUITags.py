@@ -2009,7 +2009,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
-            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'tags' )
+            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'tags', show_siblings_sort = True )
             
             self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self.EnterTags, self.RemoveTags )
             

@@ -232,6 +232,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_taglists' ] = True
         self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_autocomplete_taglists' ] = True
         
+        self._dictionary[ 'booleans' ][ 'show_session_size_warnings' ] = True
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -612,6 +614,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_collect' ] = ClientMedia.MediaCollect()
         
+        #
+        
+        from hydrus.client.metadata import ClientTagSorting
+        
+        self._dictionary[ 'default_tag_sort' ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+        
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
@@ -894,6 +902,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ]
+            
+        
+    
+    def GetDefaultTagSort( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_tag_sort' ]
             
         
     
@@ -1282,6 +1298,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ] = checker_options
+            
+        
+    
+    def SetDefaultTagSort( self, tag_sort ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_tag_sort' ] = tag_sort
             
         
     

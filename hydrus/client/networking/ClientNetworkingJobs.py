@@ -76,6 +76,10 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.ConflictException
         
+    elif status_code == 416:
+        
+        eclass = HydrusExceptions.RangeNotSatisfiableException
+        
     elif status_code == 419:
         
         eclass = HydrusExceptions.SessionException

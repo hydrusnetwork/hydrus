@@ -10736,9 +10736,25 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_full_counts = {}
         
+        showed_bad_tag_error = False
+        
         for ( i, ( tag, ( current_count, pending_count ) ) ) in enumerate( tags_to_counts.items() ):
             
-            tag_id = self.modules_tags.GetTagId( tag )
+            try:
+                
+                tag_id = self.modules_tags.GetTagId( tag )
+                
+            except HydrusExceptions.TagSizeException:
+                
+                if not showed_bad_tag_error:
+                    
+                    showed_bad_tag_error = True
+                    
+                    HydrusData.ShowText( 'Hey, you seem to have an invalid tag in view right now! Please run the \'repair invalid tags\' routine under the \'database\' menu asap!' )
+                    
+                
+                continue
+                
             
             tag_ids_to_full_counts[ tag_id ] = ( current_count, max_current_count, pending_count, max_pending_count )
             
@@ -15108,6 +15124,97 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
+    def _RecoverFromMissingDefinitions( self, content_type ):
+        
+        # this is not finished, but basics are there
+        # remember this func uses a bunch of similar tech for the eventual orphan definition cleansing routine
+        # we just have to extend modules functionality to cover all content tables and we are good to go
+        
+        if content_type == HC.CONTENT_TYPE_HASH:
+            
+            definition_column_name = 'hash_id'
+            
+        
+        # eventually migrate this gubbins to cancellable async done in parts, which means generating, handling, and releasing the temp table name more cleverly
+        
+        # job presentation to UI
+        
+        all_tables_and_columns = []
+        
+        for module in self._modules:
+            
+            all_tables_and_columns.extend( module.GetTablesAndColumnsThatUseDefinitions( HC.CONTENT_TYPE_HASH ) )
+            
+        
+        temp_all_useful_definition_ids_table_name = 'durable_temp.all_useful_definition_ids_{}'.format( os.urandom( 8 ).hex() )
+        
+        self._c.execute( 'CREATE TABLE {} ( {} INTEGER PRIMARY KEY );'.format( temp_all_useful_definition_ids_table_name, definition_column_name ) )
+        
+        try:
+            
+            num_to_do = 0
+            
+            for ( table_name, column_name ) in all_tables_and_columns:
+                
+                query = 'INSERT OR IGNORE INTO {} ( {} ) SELECT DISTINCT {} FROM {};'.format(
+                    temp_all_useful_definition_ids_table_name,
+                    definition_column_name,
+                    column_name,
+                    table_name
+                )
+                
+                self._c.execute( query )
+                
+                num_to_do += self._GetRowCount()
+                
+            
+            num_missing = 0
+            num_recovered = 0
+            
+            batch_of_definition_ids = self._c.execute( 'SELECT {} FROM {} LIMIT 1024;'.format( definition_column_name, temp_all_useful_definition_ids_table_name ) )
+            
+            while len( batch_of_definition_ids ) > 1024:
+                
+                for definition_id in batch_of_definition_ids:
+                    
+                    if not self.modules_hashes.HasHashId( definition_id ):
+                        
+                        if content_type == HC.CONTENT_TYPE_HASH and self.modules_hashes_local_cache.HasHashId( definition_id ):
+                            
+                            hash = self.modules_hashes_local_cache.GetHash( definition_id )
+                            
+                            self._c.execute( 'INSERT OR IGNORE INTO hashes ( hash_id, hash ) VALUES ( ?, ? );', ( definition_id, sqlite3.Binary( hash ) ) )
+                            
+                            HydrusData.Print( '{} {} had no master definition, but I was able to recover from the local cache'.format( definition_column_name, definition_id ) )
+                            
+                            num_recovered += 1
+                            
+                        else:
+                            
+                            HydrusData.Print( '{} {} had no master definition, it has been purged from the database!'.format( definition_column_name, definition_id ) )
+                            
+                            for ( table_name, column_name ) in all_tables_and_columns:
+                                
+                                self._c.execute( 'DELETE FROM {} WHERE {} = ?;'.format( table_name, column_name ), ( definition_id, ) )
+                                
+                            
+                            # tell user they will want to run clear orphan files, reset service cache info, and may need to recalc some autocomplete counts depending on total missing definitions
+                            # I should clear service info based on content_type
+                            
+                            num_missing += 1
+                            
+                        
+                    
+                
+                batch_of_definition_ids = self._c.execute( 'SELECT {} FROM {} LIMIT 1024;'.format( definition_column_name, temp_all_useful_definition_ids_table_name ) )
+                
+            
+        finally:
+            
+            self._c.execute( 'DROP TABLE {};'.format( temp_all_useful_definition_ids_table_name ) )
+            
+        
+    
     def _RegenerateLocalHashCache( self ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
@@ -19195,6 +19302,85 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 431:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                old_options = self._GetOptions()
+                
+                SORT_BY_LEXICOGRAPHIC_ASC = 8
+                SORT_BY_LEXICOGRAPHIC_DESC = 9
+                SORT_BY_INCIDENCE_ASC = 10
+                SORT_BY_INCIDENCE_DESC = 11
+                SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC = 12
+                SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC = 13
+                SORT_BY_INCIDENCE_NAMESPACE_ASC = 14
+                SORT_BY_INCIDENCE_NAMESPACE_DESC = 15
+                SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC = 16
+                SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC = 17
+                
+                old_default_tag_sort = old_options[ 'default_tag_sort' ]
+                
+                from hydrus.client.metadata import ClientTagSorting
+                
+                sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG
+                
+                if old_default_tag_sort in ( SORT_BY_LEXICOGRAPHIC_ASC, SORT_BY_LEXICOGRAPHIC_DESC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
+                    
+                    sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG
+                    
+                elif old_default_tag_sort in ( SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC ):
+                    
+                    sort_type = ClientTagSorting.SORT_BY_HUMAN_SUBTAG
+                    
+                elif old_default_tag_sort in ( SORT_BY_INCIDENCE_ASC, SORT_BY_INCIDENCE_DESC, SORT_BY_INCIDENCE_NAMESPACE_ASC, SORT_BY_INCIDENCE_NAMESPACE_DESC ):
+                    
+                    sort_type = ClientTagSorting.SORT_BY_COUNT
+                    
+                
+                if old_default_tag_sort in ( SORT_BY_INCIDENCE_ASC, SORT_BY_INCIDENCE_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_ASC, SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
+                    
+                    sort_order = CC.SORT_ASC
+                    
+                else:
+                    
+                    sort_order = CC.SORT_DESC
+                    
+                
+                use_siblings = True
+                
+                if old_default_tag_sort in ( SORT_BY_INCIDENCE_NAMESPACE_ASC, SORT_BY_INCIDENCE_NAMESPACE_DESC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+                    
+                    group_by = ClientTagSorting.GROUP_BY_NAMESPACE
+                    
+                else:
+                    
+                    group_by = ClientTagSorting.GROUP_BY_NOTHING
+                    
+                
+                tag_sort = ClientTagSorting.TagSort(
+                    sort_type = sort_type,
+                    sort_order = sort_order,
+                    use_siblings = use_siblings,
+                    group_by = group_by
+                )
+                
+                new_options.SetDefaultTagSort( tag_sort )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to convert your old default tag sort to the new format failed! Please set it again in the options.'
                 
                 self.pub_initial_message( message )
                 

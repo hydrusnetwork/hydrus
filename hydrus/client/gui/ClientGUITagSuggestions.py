@@ -184,7 +184,7 @@ class FavouritesTagsPanel( QW.QWidget ):
         
         favourites = list( HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
         
-        ClientTagSorting.SortTags( HC.options[ 'default_tag_sort' ], favourites )
+        ClientTagSorting.SortTags( HG.client_controller.new_options.GetDefaultTagSort(), favourites )
         
         tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
         

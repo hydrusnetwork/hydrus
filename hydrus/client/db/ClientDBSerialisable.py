@@ -337,6 +337,11 @@ class ClientDBSerialisable( HydrusDBModule.HydrusDBModule ):
         return value
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        return []
+        
+    
     def GetYAMLDump( self, dump_type, dump_name = None ):
         
         if dump_name is None:

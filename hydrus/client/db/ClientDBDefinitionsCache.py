@@ -182,6 +182,20 @@ class ClientDBCacheLocalHashes( HydrusDBModule.HydrusDBModule ):
         return hash_ids_to_hashes
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        # we actually provide a backup, which we may want to automate later in mappings caches etc...
+        
+        return []
+        
+    
+    def HasHashId( self, hash_id: int ):
+        
+        result = self._c.execute( 'SELECT 1 FROM local_hashes_cache WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
 class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_tags: ClientDBMaster.ClientDBMasterTags ):
@@ -274,6 +288,13 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
         ]
         
         return expected_table_names
+        
+    
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        # we actually provide a backup, which we may want to automate later in mappings caches etc...
+        
+        return []
         
     
     def GetTag( self, tag_id ) -> str:

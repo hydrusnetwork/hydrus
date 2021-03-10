@@ -2106,6 +2106,106 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( hashlib.sha256( data ).digest(), hash )
         
+        # range request
+        
+        path = '/get_files/file?file_id={}'.format( 1 )
+        
+        partial_headers = dict( headers )
+        partial_headers[ 'Range' ] = 'bytes=100-199'
+        
+        connection.request( 'GET', path, headers = partial_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 206 )
+        
+        with open( file_path, 'rb' ) as f:
+            
+            f.seek( 100 )
+            
+            actual_data = f.read( 100 )
+            
+        
+        self.assertEqual( data, actual_data )
+        
+        # n onwards range request
+        
+        path = '/get_files/file?file_id={}'.format( 1 )
+        
+        partial_headers = dict( headers )
+        partial_headers[ 'Range' ] = 'bytes=100-'
+        
+        connection.request( 'GET', path, headers = partial_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 206 )
+        
+        with open( file_path, 'rb' ) as f:
+            
+            f.seek( 100 )
+            
+            actual_data = f.read()
+            
+        
+        self.assertEqual( data, actual_data )
+        
+        # last n onwards range request
+        
+        path = '/get_files/file?file_id={}'.format( 1 )
+        
+        partial_headers = dict( headers )
+        partial_headers[ 'Range' ] = 'bytes=-100'
+        
+        connection.request( 'GET', path, headers = partial_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 206 )
+        
+        with open( file_path, 'rb' ) as f:
+            
+            actual_data = f.read()[-100:]
+            
+        
+        self.assertEqual( data, actual_data )
+        
+        # invalid range request
+        
+        path = '/get_files/file?file_id={}'.format( 1 )
+        
+        partial_headers = dict( headers )
+        partial_headers[ 'Range' ] = 'bytes=200-199'
+        
+        connection.request( 'GET', path, headers = partial_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 416 )
+        
+        # multi range request, not currently supported
+        
+        path = '/get_files/file?file_id={}'.format( 1 )
+        
+        partial_headers = dict( headers )
+        partial_headers[ 'Range' ] = 'bytes=100-199,300-399'
+        
+        connection.request( 'GET', path, headers = partial_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 416 )
+        
         #
         
         path = '/get_files/thumbnail?file_id={}'.format( 1 )

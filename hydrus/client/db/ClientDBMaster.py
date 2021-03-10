@@ -2,6 +2,7 @@ import os
 import sqlite3
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
@@ -282,9 +283,26 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         return hash_ids_to_hashes
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        if HC.CONTENT_TYPE_HASH:
+            
+            return [ ( 'local_hashes', 'hash_id' ) ]
+            
+        
+        return []
+        
+    
     def HasExtraHashes( self, hash_id ):
         
         result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def HasHashId( self, hash_id: int ):
+        
+        result = self._c.execute( 'SELECT 1 FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
         return result is not None
         
@@ -344,6 +362,11 @@ class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
             
         
         return label_id
+        
+    
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        return []
         
     
     def GetText( self, text_id ):
@@ -522,6 +545,13 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
         return subtag_id
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        # maybe content type subtag/namespace, which would useful for bad subtags, although that's tricky because then the knock-on is killing tag definition rows
+        
+        return []
+        
+    
     def GetTag( self, tag_id ) -> str:
         
         self._PopulateTagIdsToTagsCache( ( tag_id, ) )
@@ -538,6 +568,8 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
             HydrusTags.CheckTagNotEmpty( clean_tag )
             
         except HydrusExceptions.TagSizeException:
+            
+            # update this to instead go 'hey, does the dirty tag exist?' if it does, run the fix invalid tags routine
             
             raise HydrusExceptions.TagSizeException( '"{}" tag seems not valid--when cleaned, it ends up with zero size!'.format( tag ) )
             
@@ -714,6 +746,13 @@ class ClientDBMasterURLs( HydrusDBModule.HydrusDBModule ):
         ]
         
         return expected_table_names
+        
+    
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        # if content type is a domain, then give urls? bleh
+        
+        return []
         
     
     def GetURLDomainId( self, domain ):

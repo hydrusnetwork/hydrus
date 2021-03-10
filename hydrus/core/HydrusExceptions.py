@@ -88,6 +88,7 @@ class NotFoundException( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
 class BadRequestException( NetworkException ): pass
 class ConflictException( NetworkException ): pass
+class RangeNotSatisfiableException( NetworkException ): pass
 class MissingCredentialsException( NetworkException ): pass
 class DoesNotSupportCORSException( NetworkException ): pass
 class InsufficientCredentialsException( NetworkException ): pass

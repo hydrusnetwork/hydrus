@@ -98,3 +98,10 @@ class HydrusDBModule( object ):
         raise NotImplementedError()
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        # could also do another one of these for orphan tables that have service id in the name.
+        
+        raise NotImplementedError()
+        
+    
