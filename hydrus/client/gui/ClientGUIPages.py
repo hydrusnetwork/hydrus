@@ -1007,6 +1007,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._UpdateOptions()
         
+        self.tabBar().installEventFilter( self )
+        self.installEventFilter( self )
+        
     
     def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
         
@@ -1908,20 +1911,73 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             else:
                 
                 self._ClosePage( selection, polite = polite )
+                
+            
         
     
-    def mouseReleaseEvent( self, event ):
+    def eventFilter( self, watched, event ):
         
-        if event.button() != QC.Qt.RightButton:
+        if event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
             
-            QP.TabWidgetWithDnD.mouseReleaseEvent( self, event )
+            screen_position = QG.QCursor.pos()
             
-            return
+            if watched == self.tabBar():
+                
+                tab_pos = self.tabBar().mapFromGlobal( screen_position )
+                
+                over_a_tab = tab_pos != -1
+                over_tab_greyspace = tab_pos == -1
+                
+            else:
+                
+                over_a_tab = False
+                
+                widget_under_mouse = QW.QApplication.instance().widgetAt( screen_position )
+                
+                if widget_under_mouse is None:
+                    
+                    over_tab_greyspace = None
+                    
+                else:
+                    
+                    if self.count() == 0 and isinstance( widget_under_mouse, QW.QStackedWidget ):
+                        
+                        over_tab_greyspace = True
+                        
+                    else:
+                        
+                        over_tab_greyspace = widget_under_mouse == self
+                        
+                    
+                
+            
+            if event.type() == QC.QEvent.MouseButtonDblClick:
+                
+                if event.button() == QC.Qt.LeftButton and over_tab_greyspace and not over_a_tab:
+                    
+                    self.EventNewPageFromScreenPosition( screen_position )
+                    
+                    return True
+                    
+                
+            elif event.type() == QC.QEvent.MouseButtonRelease:
+                
+                if event.button() == QC.Qt.RightButton and ( over_a_tab or over_tab_greyspace ):
+                    
+                    self.ShowMenuFromScreenPosition( screen_position )
+                    
+                    return True
+                    
+                elif event.button() == QC.Qt.MiddleButton and over_tab_greyspace and not over_a_tab:
+                    
+                    self.EventNewPageFromScreenPosition( screen_position )
+                    
+                    return True
+                    
+                
             
         
-        mouse_position = QG.QCursor.pos()
-        
-        self._ShowMenu( mouse_position )
+        return False
         
     
     def ShowMenuFromScreenPosition( self, position ):
@@ -2643,7 +2699,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         self._controller.pub( 'notify_new_pages' )
         
-        QP.CallAfter( page.Start )
+        page.Start()
         
         if select_page:
             

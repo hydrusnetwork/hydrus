@@ -50,11 +50,20 @@ DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
 
 if PLATFORM_MACOS:
     
-    USERPATH_DB_DIR = os.path.join( os.path.expanduser( '~' ), 'Library', 'Hydrus' )
+    desired_userpath_db_dir = os.path.join( '~', 'Library', 'Hydrus' )
     
 else:
     
-    USERPATH_DB_DIR = os.path.join( os.path.expanduser( '~' ), 'Hydrus' )
+    desired_userpath_db_dir = os.path.join( '~', 'Hydrus' )
+    
+
+USERPATH_DB_DIR = os.path.expanduser( desired_userpath_db_dir )
+
+if USERPATH_DB_DIR == desired_userpath_db_dir:
+    
+    # could not figure it out, probably a crazy user situation atm
+    
+    USERPATH_DB_DIR = None
     
 
 LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
@@ -70,7 +79,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 19
-SOFTWARE_VERSION = 432
+SOFTWARE_VERSION = 433
 CLIENT_API_VERSION = 15
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

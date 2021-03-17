@@ -4,9 +4,9 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
 
 class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
     

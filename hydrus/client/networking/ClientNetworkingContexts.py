@@ -109,6 +109,26 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefault( self ):
+        
+        return NetworkContext( context_type = self.context_type, context_data = None )
+        
+    
+    def GetSummary( self ):
+        
+        summary = self.ToString()
+        summary += os.linesep * 2
+        summary += CC.network_context_type_description_lookup[ self.context_type ]
+        
+        if self.IsDefault():
+            
+            summary += os.linesep * 2
+            summary += 'This is the \'default\' version of this context. It stands in when a domain or subscription has no specific rules set.'
+            
+        
+        return summary
+        
+    
     def IsDefault( self ):
         
         return self.context_data is None and self.context_type != CC.NETWORK_CONTEXT_GLOBAL
@@ -122,15 +142,6 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     def IsHydrus( self ):
         
         return self.context_type == CC.NETWORK_CONTEXT_HYDRUS
-        
-    
-    def GetSummary( self ):
-        
-        summary = self.ToString()
-        summary += os.linesep * 2
-        summary += CC.network_context_type_description_lookup[ self.context_type ]
-        
-        return summary
         
     
     def ToHumanString( self ):

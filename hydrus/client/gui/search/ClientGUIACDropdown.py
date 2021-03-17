@@ -18,7 +18,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -30,6 +29,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.search import ClientGUISearch
+from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientTags
 
 from hydrus.external import LogicExpressionQueryParser

@@ -843,7 +843,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             # if the user has initial file sync of 5 but then normal sync of 100, we don't want to keep stomping through to older files on any subsequent normal sync
                             # therefore, if we started this normal sync with fewer than normal sync files, we won't tolerate more than initial sync number of already in db
-                            if not this_is_initial_sync and num_file_seeds_at_start < self._periodic_file_limit and total_already_in_urls_for_this_sync >= self._initial_file_limit:
+                            if not this_is_initial_sync and num_file_seeds_at_start < self._periodic_file_limit and total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache >= self._initial_file_limit:
                                 
                                 stop_reason = 'believe I caught up with initial sync'
                                 
@@ -858,19 +858,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     WE_HIT_OLD_GROUND_THRESHOLD = 5
                     
-                    if current_contiguous_num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
+                    if can_search_for_more_files:
                         
-                        # this gallery page has caught up to before, so it should not spawn any more gallery pages
+                        if current_contiguous_num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
+                            
+                            # this gallery page has caught up to before, so it should not spawn any more gallery pages
+                            
+                            can_search_for_more_files = False
+                            
+                            stop_reason = 'saw ' + HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) + ' previously seen urls, so assuming we caught up'
+                            
                         
-                        can_search_for_more_files = False
-                        
-                        stop_reason = 'saw ' + HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) + ' previously seen urls, so assuming we caught up'
-                        
-                    
-                    if num_urls_added == 0:
-                        
-                        can_search_for_more_files = False
-                        stop_reason = 'no new urls found'
+                        if num_urls_added == 0:
+                            
+                            can_search_for_more_files = False
+                            stop_reason = 'no new urls found'
+                            
                         
                     
                     return ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason )

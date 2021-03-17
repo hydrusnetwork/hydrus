@@ -158,7 +158,16 @@ def GetExportPath():
     
     if portable_path is None:
         
-        path = os.path.join( os.path.expanduser( '~' ), 'hydrus_export' )
+        desired_path = os.path.join( '~', 'hydrus_export' )
+        
+        path = os.path.expanduser( desired_path )
+        
+        if path == desired_path:
+            
+            # could not figure it out, probably crazy user setup atm
+            
+            return None
+            
         
         HydrusPaths.MakeSureDirectoryExists( path )
         

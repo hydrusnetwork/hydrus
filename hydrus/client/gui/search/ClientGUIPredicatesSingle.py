@@ -13,12 +13,12 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
 
 class StaticSystemPredicateButton( QW.QPushButton ):
     

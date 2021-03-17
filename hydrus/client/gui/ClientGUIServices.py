@@ -15,8 +15,6 @@ from hydrus.core import HydrusTagArchive
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientServices
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIPanels
@@ -27,6 +25,9 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
@@ -459,7 +460,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             menu_items.append( ( 'normal', service_string, 'Add a new ' + service_string + '.', HydrusData.Call( self._Add, service_type ) ) )
             
         
-        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items = menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items = menu_items )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
         
@@ -1719,7 +1720,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         menu_items.append( ( 'normal', 'tag repository', 'Create a new tag repository.', self._AddTagRepository ) )
         menu_items.append( ( 'normal', 'file repository', 'Create a new file repository.', self._AddFileRepository ) )
         
-        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items )
         
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         

@@ -60,6 +60,11 @@ try:
         
         if not HydrusPaths.DirectoryIsWriteable( db_dir ) or HC.RUNNING_FROM_MACOS_APP:
             
+            if HC.USERPATH_DB_DIR is None:
+                
+                raise Exception( 'The default db path "{}" was not writeable, and the userpath could not be determined!'.format( HC.DEFAULT_DB_DIR ) )
+                
+            
             db_dir = HC.USERPATH_DB_DIR
             
         

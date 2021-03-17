@@ -16,8 +16,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICharts
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -26,13 +24,15 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingContexts
 
 class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, bandwidth_rules: HydrusNetworking.BandwidthRules, summary = '' ):
+    def __init__( self, parent: QW.QWidget, bandwidth_rules: HydrusNetworking.BandwidthRules, summary ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -40,13 +40,16 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        if summary != '':
-            
-            st = ClientGUICommon.BetterStaticText( self, summary )
-            st.setWordWrap( True )
-            
-            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
+        intro = 'A network job exists in several contexts. It must wait for all those contexts to have free bandwidth before it can work.'
+        intro += os.linesep * 2
+        intro += 'You are currently editing:'
+        intro += os.linesep * 2
+        intro += summary
+        
+        st = ClientGUICommon.BetterStaticText( self, intro )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._bandwidth_rules_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -666,7 +669,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_day_usage = HydrusData.ToHumanBytes( day_usage_data ) + ' in ' + HydrusData.ToHumanInt( day_usage_requests ) + ' requests'
         pretty_month_usage = HydrusData.ToHumanBytes( month_usage_data ) + ' in ' + HydrusData.ToHumanInt( month_usage_requests ) + ' requests'
         
-        if has_rules:
+        if network_context == ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT:
+            
+            pretty_has_rules = 'n/a'
+            
+        elif has_rules:
             
             pretty_has_rules = 'yes'
             

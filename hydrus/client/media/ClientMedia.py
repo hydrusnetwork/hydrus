@@ -2624,10 +2624,6 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
-        elif sort_metatype == 'namespaces':
-            
-            return False
-            
         
         return True
         
@@ -2942,6 +2938,10 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = ( 'ascending', 'descending', CC.SORT_DESC )
             
             return sort_string_lookup[ sort_data ]
+            
+        elif sort_metatype == 'namespaces':
+            
+            return ( 'a-z', 'z-a', CC.SORT_ASC )
             
         else:
             

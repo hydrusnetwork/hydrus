@@ -737,7 +737,10 @@ class TagsManager( object ):
                     
                     if len( source_tags ) != len( dest_tags ):
                         
-                        destination_statuses_to_tags[ status ] = dest_tags
+                        if len( dest_tags ) > 0:
+                            
+                            destination_statuses_to_tags[ status ] = dest_tags
+                            
                         
                     else:
                         
@@ -820,7 +823,10 @@ class TagsManager( object ):
             
             statuses_to_tags = HydrusData.default_dict_set()
             
-            for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
+            for ( status, tags ) in flattened_s_t_t:
+                
+                statuses_to_tags[ status ].update( tags )
+                
             
             merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
             

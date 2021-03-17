@@ -4,9 +4,9 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.metadata import ClientTagSorting
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 
 class TagSortControl( QW.QWidget ):
     
@@ -16,34 +16,39 @@ class TagSortControl( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._sort_type = ClientGUICommon.BetterChoice( self )
+        choice_tuples = [ ( ClientTagSorting.sort_type_str_lookup[ sort_type ], sort_type ) for sort_type in ( ClientTagSorting.SORT_BY_HUMAN_TAG, ClientTagSorting.SORT_BY_HUMAN_SUBTAG, ClientTagSorting.SORT_BY_COUNT ) ]
         
-        for sort_type in ( ClientTagSorting.SORT_BY_HUMAN_TAG, ClientTagSorting.SORT_BY_HUMAN_SUBTAG, ClientTagSorting.SORT_BY_COUNT ):
-            
-            self._sort_type.addItem( ClientTagSorting.sort_type_str_lookup[ sort_type ], sort_type )
-            
+        self._sort_type = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
-        self._sort_order_text = ClientGUICommon.BetterChoice( self )
+        choice_tuples = [
+            ( 'a-z', CC.SORT_ASC ),
+            ( 'z-a', CC.SORT_DESC )
+        ]
         
-        self._sort_order_text.addItem( 'a-z', CC.SORT_ASC )
-        self._sort_order_text.addItem( 'z-a', CC.SORT_DESC )
+        self._sort_order_text = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
-        self._sort_order_count = ClientGUICommon.BetterChoice( self )
+        choice_tuples = [
+            ( 'most first', CC.SORT_DESC ),
+            ( 'fewest first', CC.SORT_ASC )
+        ]
         
-        self._sort_order_count.addItem( 'most first', CC.SORT_DESC )
-        self._sort_order_count.addItem( 'fewest first', CC.SORT_ASC )
+        self._sort_order_count = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
         self._show_siblings = show_siblings
         
-        self._use_siblings = ClientGUICommon.BetterChoice( self )
+        choice_tuples = [
+            ( 'siblings', True ),
+            ( 'tags', False )
+        ]
         
-        self._use_siblings.addItem( 'siblings', True )
-        self._use_siblings.addItem( 'tags', False )
+        self._use_siblings = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
-        self._group_by = ClientGUICommon.BetterChoice( self )
+        choice_tuples = [
+            ( 'no grouping', ClientTagSorting.GROUP_BY_NOTHING ),
+            ( 'group namespace', ClientTagSorting.GROUP_BY_NAMESPACE )
+        ]
         
-        self._group_by.addItem( 'no grouping', ClientTagSorting.GROUP_BY_NOTHING )
-        self._group_by.addItem( 'group namespace', ClientTagSorting.GROUP_BY_NAMESPACE )
+        self._group_by = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
         #
         
@@ -63,13 +68,13 @@ class TagSortControl( QW.QWidget ):
         
         #
         
-        self._sort_type.currentIndexChanged.connect( self._UpdateControlsAfterSortTypeChanged )
+        self._sort_type.valueChanged.connect( self._UpdateControlsAfterSortTypeChanged )
         
-        self._sort_type.currentIndexChanged.connect( self._HandleValueChanged )
-        self._sort_order_text.currentIndexChanged.connect( self._HandleValueChanged )
-        self._sort_order_count.currentIndexChanged.connect( self._HandleValueChanged )
-        self._use_siblings.currentIndexChanged.connect( self._HandleValueChanged )
-        self._group_by.currentIndexChanged.connect( self._HandleValueChanged )
+        self._sort_type.valueChanged.connect( self._HandleValueChanged )
+        self._sort_order_text.valueChanged.connect( self._HandleValueChanged )
+        self._sort_order_count.valueChanged.connect( self._HandleValueChanged )
+        self._use_siblings.valueChanged.connect( self._HandleValueChanged )
+        self._group_by.valueChanged.connect( self._HandleValueChanged )
         
     
     def _UpdateControlsAfterSortTypeChanged( self ):
