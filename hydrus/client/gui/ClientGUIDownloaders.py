@@ -14,7 +14,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -25,6 +24,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.networking import ClientNetworkingDomain
 
 class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -552,7 +553,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1783,7 +1784,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         

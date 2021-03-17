@@ -12,11 +12,11 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientApplicationCommand as CAC
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
 
 mpv_failed_reason = 'MPV seems ok!'
 

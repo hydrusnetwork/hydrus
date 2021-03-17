@@ -19,8 +19,6 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -39,6 +37,8 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUISearch
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingSessions

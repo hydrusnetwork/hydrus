@@ -108,7 +108,7 @@ def ConvertIntToPrettyOrdinalString( num: int ):
         return 'unknown position'
         
     
-    tens = abs( num ) // 10
+    tens = ( abs( num ) % 100 ) // 10
     
     if tens == 1:
         

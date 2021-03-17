@@ -19,15 +19,16 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.lists import ClientGUIListBoxesData
+from hydrus.client.gui.search import ClientGUISearch
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
@@ -630,7 +631,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         import_menu_items.append( ( 'normal', 'add them all', 'Load all the defaults.', all_call ) )
         import_menu_items.append( ( 'normal', 'select from a list', 'Load some of the defaults.', some_call ) )
         
-        button = ClientGUICommon.MenuButton( self, 'add defaults', import_menu_items )
+        button = ClientGUIMenuButton.MenuButton( self, 'add defaults', import_menu_items )
         
         QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -656,11 +657,11 @@ class AddEditDeleteListBox( QW.QWidget ):
         import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
         import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPNG ) )
         
-        button = ClientGUICommon.MenuButton( self, 'export', export_menu_items )
+        button = ClientGUIMenuButton.MenuButton( self, 'export', export_menu_items )
         QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         self._enabled_only_on_selection_buttons.append( button )
         
-        button = ClientGUICommon.MenuButton( self, 'import', import_menu_items )
+        button = ClientGUIMenuButton.MenuButton( self, 'import', import_menu_items )
         QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         button = ClientGUICommon.BetterButton( self, 'duplicate', self._Duplicate )
@@ -3444,10 +3445,10 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
     def _GenerateTermFromTag( self, tag: str ) -> ClientGUIListBoxesData.ListBoxItemTextTag:
         
-        current_count = self._current_tags_to_count[ tag ] if self._show_current else 0
-        deleted_count = self._deleted_tags_to_count[ tag ] if self._show_deleted else 0
-        pending_count = self._pending_tags_to_count[ tag ] if self._show_pending else 0
-        petitioned_count = self._petitioned_tags_to_count[ tag ] if self._show_petitioned else 0
+        current_count = self._current_tags_to_count[ tag ] if self._show_current and tag in self._current_tags_to_count else 0
+        deleted_count = self._deleted_tags_to_count[ tag ] if self._show_deleted and tag in self._deleted_tags_to_count else 0
+        pending_count = self._pending_tags_to_count[ tag ] if self._show_pending and tag in self._pending_tags_to_count else 0
+        petitioned_count = self._petitioned_tags_to_count[ tag ] if self._show_petitioned and tag in self._petitioned_tags_to_count else 0
         
         return ClientGUIListBoxesData.ListBoxItemTextTagWithCounts(
             tag,

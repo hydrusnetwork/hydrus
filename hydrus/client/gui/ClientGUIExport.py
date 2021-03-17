@@ -14,7 +14,6 @@ from hydrus.core import HydrusPaths
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITags
@@ -24,8 +23,9 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
-from hydrus.client.metadata import ClientTags
 from hydrus.client.gui.search import ClientGUIACDropdown
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.metadata import ClientTags
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -578,7 +578,10 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         export_path = ClientExporting.GetExportPath()
         
-        self._directory_picker.SetPath( export_path )
+        if export_path is not None:
+            
+            self._directory_picker.SetPath( export_path )
+            
         
         phrase = new_options.GetString( 'export_phrase' )
         

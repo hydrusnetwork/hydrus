@@ -8,11 +8,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 
 class MediaCollectControl( QW.QWidget ):
@@ -38,14 +39,16 @@ class MediaCollectControl( QW.QWidget ):
         
         self._collect_comboctrl = QP.CollectComboCtrl( self, self._media_collect )
         
-        self._collect_unmatched = ClientGUICommon.BetterChoice( self )
+        choice_tuples = [
+            ( 'collect unmatched', True ),
+            ( 'leave unmatched', False )
+        ]
+        
+        self._collect_unmatched = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self._collect_unmatched, 19 )
         
         self._collect_unmatched.setMinimumWidth( width )
-        
-        self._collect_unmatched.addItem( 'collect unmatched', True )
-        self._collect_unmatched.addItem( 'leave unmatched', False )
         
         #
         
@@ -64,8 +67,10 @@ class MediaCollectControl( QW.QWidget ):
         
         self._UpdateLabel()
         
-        self._collect_unmatched.currentIndexChanged.connect( self.CollectValuesChanged )
+        self._collect_unmatched.valueChanged.connect( self.CollectValuesChanged )
         self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
+        
+        self._collect_comboctrl.installEventFilter( self )
         
         HG.client_controller.sub( self, 'SetCollectFromPage', 'set_page_collect' )
         
@@ -106,6 +111,21 @@ class MediaCollectControl( QW.QWidget ):
         self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = collect_unmatched )
         
         self._BroadcastCollect()
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if watched == self._collect_comboctrl:
+            
+            if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.MiddleButton:
+                
+                self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
+                
+                return True
+                
+            
+        
+        return False
         
     
     def SetCollect( self, media_collect ):
@@ -149,7 +169,7 @@ class MediaSortControl( QW.QWidget ):
         self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
         
         self._sort_type_button = ClientGUICommon.BetterButton( self, 'sort', self._SortTypeButtonClick )
-        self._sort_order_choice = ClientGUICommon.BetterChoice( self )
+        self._sort_order_choice = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         
         type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 14 )
         
@@ -158,8 +178,6 @@ class MediaSortControl( QW.QWidget ):
         asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_order_choice, 14 )
         
         self._sort_order_choice.setMinimumWidth( asc_width )
-        
-        self._sort_order_choice.addItem( '', CC.SORT_ASC )
         
         self._UpdateSortTypeLabel()
         self._UpdateAscLabels()
@@ -192,7 +210,7 @@ class MediaSortControl( QW.QWidget ):
                 
             
         
-        self._sort_order_choice.currentIndexChanged.connect( self.EventSortAscChoice )
+        self._sort_order_choice.valueChanged.connect( self.EventSortAscChoice )
         
     
     def _BroadcastSort( self ):
@@ -210,6 +228,11 @@ class MediaSortControl( QW.QWidget ):
     def _GetCurrentSort( self ) -> ClientMedia.MediaSort:
         
         sort_order = self._sort_order_choice.GetValue()
+        
+        if sort_order is None:
+            
+            sort_order = CC.SORT_ASC
+            
         
         media_sort = ClientMedia.MediaSort( self._sort_type, sort_order )
         
@@ -360,14 +383,16 @@ class MediaSortControl( QW.QWidget ):
         
         media_sort = self._GetCurrentSort()
         
-        self._sort_order_choice.clear()
-        
         if media_sort.CanAsc():
             
             ( asc_str, desc_str, default_sort_order ) = media_sort.GetSortOrderStrings()
             
-            self._sort_order_choice.addItem( asc_str, CC.SORT_ASC )
-            self._sort_order_choice.addItem( desc_str, CC.SORT_DESC )
+            choice_tuples = [
+                ( asc_str, CC.SORT_ASC ),
+                ( desc_str, CC.SORT_DESC )
+            ]
+            
+            self._sort_order_choice.SetChoiceTuples( choice_tuples )
             
             if set_default_asc:
                 
@@ -380,16 +405,9 @@ class MediaSortControl( QW.QWidget ):
             
             self._sort_order_choice.SetValue( sort_order_to_set )
             
-            self._sort_order_choice.setEnabled( True )
-            
         else:
             
-            self._sort_order_choice.addItem( '', CC.SORT_ASC )
-            self._sort_order_choice.addItem( '', CC.SORT_DESC )
-            
-            self._sort_order_choice.SetValue( CC.SORT_ASC )
-            
-            self._sort_order_choice.setEnabled( False )
+            self._sort_order_choice.SetChoiceTuples( [] )
             
         
     
@@ -433,7 +451,7 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def EventSortAscChoice( self, index ):
+    def EventSortAscChoice( self ):
         
         self._UserChoseASort()
         

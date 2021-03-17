@@ -41,7 +41,6 @@ from hydrus.client import ClientRendering
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
@@ -78,6 +77,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.gui.widgets import ClientGUICommon
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 
@@ -354,8 +354,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
-        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventFrameNewPage )
-        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventFrameNewPage )
         self._widget_event_filter.EVT_ICONIZE( self.EventIconize )
         
         self._widget_event_filter.EVT_MOVE( self.EventMove )
@@ -2919,7 +2917,14 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         export_path = ClientExporting.GetExportPath()
         
-        HydrusPaths.LaunchDirectory( export_path )
+        if export_path is None:
+            
+            HydrusData.ShowText( 'Unfortunately, your export path could not be determined!' )
+            
+        else:
+            
+            HydrusPaths.LaunchDirectory( export_path )
+            
         
     
     def _OpenInstallFolder( self ):
@@ -3316,7 +3321,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewBandwidth( self ):
         
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review bandwidth use and edit rules' )
         
         panel = ClientGUINetwork.ReviewAllBandwidthPanel( frame, self._controller )
         
@@ -4710,27 +4715,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._MigrateDatabase()
         
     
-    def EventFrameNewPage( self, event ):
-        
-        screen_position = QG.QCursor.pos()
-        
-        self._notebook.EventNewPageFromScreenPosition( screen_position )
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.RightButton:
-            
-            ClientGUITopLevelWindows.MainFrameThatResizes.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        screen_position = QG.QCursor.pos()
-        
-        self._notebook.ShowMenuFromScreenPosition( screen_position )
-        
-    
     def EventIconize( self, event: QG.QWindowStateChangeEvent ):
         
         if self.isMinimized():
@@ -5102,7 +5086,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
+            ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage and edit rules', 'See where you are consuming data.', self._ReviewBandwidth )
             ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
             ClientGUIMenus.AppendMenuItem( submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
             ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )

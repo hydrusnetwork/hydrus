@@ -13,7 +13,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
@@ -23,6 +22,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportGallerySeeds
 
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):

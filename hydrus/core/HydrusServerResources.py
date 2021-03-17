@@ -471,9 +471,9 @@ class HydrusResource( Resource ):
             
             path = response_context.GetPath()
             
-            size = os.path.getsize( path )
+            filesize = os.path.getsize( path )
             
-            offset_and_block_size_pairs = self._parseRangeHeader( request, size )
+            offset_and_block_size_pairs = self._parseRangeHeader( request, filesize )
             
         else:
             
@@ -500,7 +500,7 @@ class HydrusResource( Resource ):
             
             path = response_context.GetPath()
             
-            size = os.path.getsize( path )
+            filesize = os.path.getsize( path )
             
             mime = response_context.GetMime()
             
@@ -523,7 +523,7 @@ class HydrusResource( Resource ):
                 
                 if len( offset_and_block_size_pairs ) == 0:
                     
-                    content_length = size
+                    content_length = filesize
                     
                     request.setHeader( 'Content-Length', str( content_length ) )
                     
@@ -533,10 +533,12 @@ class HydrusResource( Resource ):
                     
                     [ ( range_start, range_end, offset, block_size ) ] = offset_and_block_size_pairs
                     
+                    header_range_end = filesize - 1 if range_end is None else range_end
+                    
                     content_length = block_size
                     
                     request.setHeader( 'Accept-Ranges', 'bytes' )
-                    request.setHeader( 'Content-Range', 'bytes {}-{}/{}'.format( offset, range_end, size ) )
+                    request.setHeader( 'Content-Range', 'bytes {}-{}/{}'.format( offset, header_range_end, filesize ) )
                     request.setHeader( 'Content-Length', str( content_length ) )
                     
                     producer = SingleRangeStaticProducer( request, fileObject, offset, block_size )
@@ -781,7 +783,7 @@ class HydrusResource( Resource ):
         return access_key
         
     
-    def _parseRangeHeader( self, request, size ):
+    def _parseRangeHeader( self, request, filesize ):
         
         offset_and_block_size_pairs = []
         
@@ -846,26 +848,26 @@ class HydrusResource( Resource ):
                 
                 if range_start is None:
                     
-                    offset = size - range_end
+                    offset = filesize - range_end
                     block_size = range_end
                     
                 elif range_end is None:
                     
                     offset = range_start
-                    block_size = size - range_start
+                    block_size = filesize - range_start
                     
                 else:
                     
-                    if range_start > size:
+                    if range_start > filesize:
                         
                         offset_and_block_size_pairs = []
                         
                         break
                         
                     
-                    if range_end > size:
+                    if range_end > filesize:
                         
-                        range_end = size - 1
+                        range_end = filesize - 1
                         
                     
                     offset = range_start

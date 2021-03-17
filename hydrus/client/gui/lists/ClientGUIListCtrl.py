@@ -12,13 +12,14 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDragDrop
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListStatus
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 
 def SafeNoneInt( value ):
     
@@ -1414,7 +1415,7 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):
         
-        button = ClientGUICommon.MenuButton( self, label, menu_items )
+        button = ClientGUIMenuButton.MenuButton( self, label, menu_items )
         
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
         

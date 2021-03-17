@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_433"><a href="#version_433">version 433</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>thanks to the effort of a user, this week reintroduces a native twitter downloader! it now gets video! (and 'gifs', which on twitter are just mp4s) please experiment with it and move your nitter subs back to this as you find success. it is called 'twitter syndication' and uses a different access method to get tweet info. it should get the highest resolution videos and images. the search has limited lookup distance, perhaps 500 tweets, but should work for most subscription purposes. this is a first version and may have future updates</li>
+					<li>on the main gui, middle-clicking and left-double-clicking to open the 'new page' dialog, and right-clicking to open the page menu, should now only work on the page tabs or page greyspace. middle-clicking on some random downloader page greyspace should no longer spawn these commands. also, tiny change--middle-clicking now activates here on click _release_ rather than _press_</li>
+					<li>on the file sort widget, the asc/desc sort dropdown is now a 'scrollable' menu button. since sorts are just one of two values, you can now scroll either direction to flip it</li>
+					<li>the 'collect/leave unmatched' in the collect control is also now a scrollable menu button</li>
+					<li>the new tag sort dropdowns are now all scrollable menu buttons. go ham with them</li>
+					<li>middle-clicking the collect-by dropdown now clears it</li>
+					<li>namespace file sort now supports a-z and z-a sorting. files with none of the matching namespaces still count as 'less than a' in a-z terms, but since I am updating all this code, perhaps this could get more attention. I don't use this much, so if you do, let me know what you would like</li>
+					<li>network job controls now show their jobs' current bandwidth limits on their cog menu, split up by network context. you can edit the bandwidth rules directly from this menu, and if it is using defaults, set a specific ruleset</li>
+					<li>userpath generation routines used for database location fallback and default export directory determination now recover from failure in the case of undefined user directory. the client will now not boot if the userpath is needed but undefined</li>
+					<li>the client api no longer prints empty lists for any tag statuses on file metadata calls, nor service entries that have no tags at all</li>
+					<li>fixed the new subscription 'caught up to small initial sync' calculation, which last week was only firing properly after one page of results</li>
+					<li>subscriptions are now better about saving interesting status notes on their gallery logs, rather than overwriting with boring 'no new urls found' messages</li>
+					<li>fixed a typo bug in the new range header implementation for unended ranges</li>
+					<li>.</li>
+					<li>boring cleanup:</li>
+					<li>refactored ClientGUICommon and ClientGUIControls to a new 'widgets' module</li>
+					<li>refactored the menu buttons from ClientGUICommon to a new ClientGUIMenuButtons</li>
+					<li>wrote a mixin for the basic menu button behaviour and simplified the classes</li>
+					<li>wrote a new 'choice' menu button that has a dropdown checkbox menu and allows mouse scrolling to navigate the list, with wrapping at boundaries</li>
+					<li>refactored the updated network job control to its own file ClientGUINetworkJobControl</li>
+					<li>misc db code cleanup and refactoring</li>
+					<li>misc tag logic cleanup</li>
+				</ul>
 				<li><h3 id="version_432"><a href="#version_432">version 432</a></h3></li>
 				<ul>
 					<li>tag sorting:</li>

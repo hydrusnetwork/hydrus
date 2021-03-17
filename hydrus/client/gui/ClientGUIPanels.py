@@ -15,7 +15,6 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAPI
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
@@ -23,6 +22,8 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 
 class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
@@ -977,7 +978,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
             self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account key', self._CopyAccountKey )
-            self._permissions_button = ClientGUICommon.MenuButton( self, 'see special permissions', [] )
+            self._permissions_button = ClientGUIMenuButton.MenuButton( self, 'see special permissions', [] )
             
             #
             
@@ -1200,7 +1201,7 @@ class ReviewServicePanel( QW.QWidget ):
             reset_menu_items.append( ( 'separator', None, None, None ) )
             reset_menu_items.append( ( 'normal', 'wipe database data and reprocess from update files', 'Reset entire repository.', self._Reset ) )
             
-            self._reset_button = ClientGUICommon.MenuButton( self, 'reset processing', reset_menu_items )
+            self._reset_button = ClientGUIMenuButton.MenuButton( self, 'reset processing', reset_menu_items )
             
             #
             
@@ -2064,7 +2065,7 @@ class ReviewServicePanel( QW.QWidget ):
             menu_items.append( ( 'separator', None, None, None ) )
             menu_items.append( ( 'normal', 'for all files', 'delete all set ratings for all files', HydrusData.Call( self._ClearRatings, 'delete_for_all_files', 'ALL FILES' ) ) )
             
-            self._clear_deleted = ClientGUICommon.MenuButton( self, 'clear ratings', menu_items )
+            self._clear_deleted = ClientGUIMenuButton.MenuButton( self, 'clear ratings', menu_items )
             
             #
             

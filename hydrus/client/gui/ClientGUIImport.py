@@ -16,8 +16,6 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -25,6 +23,7 @@ from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUINetworkJobControl
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -35,6 +34,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
+from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
@@ -1680,7 +1680,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         self._file_status = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
-        self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
+        self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
         self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
         self._files_pause_button.setToolTip( 'pause/play files' )
@@ -1694,7 +1694,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, page_key = self._page_key )
         
-        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
+        self._gallery_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._gallery_panel )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.valueChanged.connect( self.EventFileLimit )
@@ -2236,7 +2236,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._file_status = ClientGUICommon.BetterStaticText( imports_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
-        self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
+        self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( imports_panel )
         
         #
         
@@ -2258,7 +2258,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._checker_options_button = CheckerOptionsButton( checker_panel, checker_options, update_callable = self._SetCheckerOptions )
         
-        self._checker_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
+        self._checker_download_control = ClientGUINetworkJobControl.NetworkJobControl( checker_panel )
         
         file_import_options = ClientImportOptions.FileImportOptions()
         tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )

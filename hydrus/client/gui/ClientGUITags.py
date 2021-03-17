@@ -22,8 +22,6 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -39,6 +37,9 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
@@ -2063,7 +2064,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 menu_items.append( ( 'normal', 'modify users who added the selected tags', 'Modify the users who added the selected tags.', self._ModifyMappers ) )
                 
             
-            self._cog_button = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().cog, menu_items )
+            self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().cog, menu_items )
             
             #
             

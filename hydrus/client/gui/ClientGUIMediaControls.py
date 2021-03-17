@@ -5,9 +5,9 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
 
 AUDIO_GLOBAL = 0
 AUDIO_MEDIA_VIEWER = 1

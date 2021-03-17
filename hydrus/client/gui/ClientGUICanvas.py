@@ -19,7 +19,6 @@ from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICanvasMedia
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
@@ -41,6 +40,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
+from hydrus.client.gui.widgets import ClientGUICommon
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1

@@ -24,14 +24,13 @@ from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICanvas
 from hydrus.client.gui import ClientGUICanvasFrame
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUINetworkJobControl
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIResults
 from hydrus.client.gui import ClientGUIResultsSortCollect
@@ -46,6 +45,9 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUISearch
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
@@ -961,7 +963,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items.append( ( 'check', 'search for duplicate pairs at the current distance during normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
         
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().cog, menu_items )
+        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().cog, menu_items )
         
         menu_items = []
         
@@ -969,7 +971,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
-        self._help_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().help, menu_items )
+        self._help_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().help, menu_items )
         
         #
         
@@ -984,7 +986,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         menu_items.append( ( 'normal', 'similar', 'Search for similar files.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_SIMILAR ) ) )
         menu_items.append( ( 'normal', 'speculative', 'Search for files that are probably similar.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_SPECULATIVE ) ) )
         
-        self._search_distance_button = ClientGUICommon.MenuButton( self._searching_panel, 'similarity', menu_items )
+        self._search_distance_button = ClientGUIMenuButton.MenuButton( self._searching_panel, 'similarity', menu_items )
         
         self._search_distance_spinctrl = QP.MakeQSpinBox( self._searching_panel, min=0, max=64, width = 50 )
         
@@ -1004,7 +1006,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
             
         
-        self._edit_merge_options = ClientGUICommon.MenuButton( self._main_right_panel, 'edit default duplicate metadata merge options', menu_items )
+        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._main_right_panel, 'edit default duplicate metadata merge options', menu_items )
         
         #
         
@@ -3225,7 +3227,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
-        self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
+        self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
         #
         
@@ -3240,7 +3242,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._simple_parsing_jobs_panel, self._controller, True, False, self._page_key )
         
-        self._page_download_control = ClientGUIControls.NetworkJobControl( self._simple_parsing_jobs_panel )
+        self._page_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._simple_parsing_jobs_panel )
         
         self._pending_jobs_listbox = ClientGUIListBoxes.BetterQListWidget( self._simple_parsing_jobs_panel )
         
@@ -3269,7 +3271,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         menu_items.append( ( 'normal', 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
         
-        self._formula_cog = ClientGUICommon.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().cog, menu_items )
+        self._formula_cog = ClientGUIMenuButton.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().cog, menu_items )
         
         self._RefreshFormulae()
         
@@ -3672,13 +3674,13 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play files' )
         
-        self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
+        self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._url_panel )
         
         self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._url_panel, self._controller, page_key = self._page_key )
         
-        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
+        self._gallery_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._url_panel )
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._url_panel, self._controller, False, False, page_key = self._page_key )
         

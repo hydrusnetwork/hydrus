@@ -10,7 +10,6 @@ from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -19,6 +18,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
 
 NO_RESULTS_TEXT = 'no results'
 

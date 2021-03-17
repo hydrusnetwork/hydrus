@@ -1396,7 +1396,7 @@ class Controller( HydrusController.HydrusController ):
         
         services = [ service for service in services if service.GetPort() is not None ]
         
-        self.CallToThread( self.SetRunningTwistedServices, services )
+        self.CallToThreadLongRunning( self.SetRunningTwistedServices, services )
         
     
     def RestoreDatabase( self ):
@@ -1764,7 +1764,7 @@ class Controller( HydrusController.HydrusController ):
             
             upnp_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) ]
             
-            self.CallToThread( self.services_upnp_manager.SetServices, upnp_services )
+            self.CallToThreadLongRunning( self.services_upnp_manager.SetServices, upnp_services )
             
             self.WriteSynchronous( 'update_services', services )
             
@@ -2086,7 +2086,7 @@ class Controller( HydrusController.HydrusController ):
                 QP.CallAfter( CopyToClipboard )
                 
             
-            self.CallToThread( THREADWait )
+            self.CallToThreadLongRunning( THREADWait )
             
         
     

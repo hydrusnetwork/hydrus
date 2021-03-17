@@ -17,8 +17,6 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDuplicates
-from hydrus.client.gui import ClientGUICommon
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -32,6 +30,9 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -2622,7 +2623,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = self._GetCogIconMenuItems()
         
-        cog_button = ClientGUICommon.MenuBitmapButton( main_box, CC.global_pixmaps().cog, menu_items )
+        cog_button = ClientGUIMenuButton.MenuBitmapButton( main_box, CC.global_pixmaps().cog, menu_items )
         
         #
         

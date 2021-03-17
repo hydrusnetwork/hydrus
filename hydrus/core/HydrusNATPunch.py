@@ -14,7 +14,7 @@ from hydrus.core import HydrusThreading
 
 if HC.PLATFORM_WINDOWS:
     
-    possible_bin_filenames = [ 'upnpc-static.exe', 'upnpc-static.exe', 'miniupnpc.exe', 'upnpc_win32.exe' ]
+    possible_bin_filenames = [ 'upnpc.exe', 'upnpc-static.exe', 'miniupnpc.exe', 'upnpc_win32.exe' ]
     
 else:
     

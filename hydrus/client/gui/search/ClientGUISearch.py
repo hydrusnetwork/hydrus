@@ -10,7 +10,6 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -19,6 +18,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIPredicatesMultiple
 from hydrus.client.gui.search import ClientGUIPredicatesSingle
 from hydrus.client.gui.search import ClientGUIPredicatesOR
+from hydrus.client.gui.widgets import ClientGUICommon
 
 EDIT_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,

@@ -334,13 +334,16 @@ class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.texts ( text_id INTEGER PRIMARY KEY, text TEXT UNIQUE );' )
         
+        self._c.execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.notes_fts4 USING fts4( note );' )
+        
     
     def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
         
         expected_table_names = [
             'external_master.labels',
             'external_master.notes',
-            'external_master.texts'
+            'external_master.texts',
+            'external_caches.notes_fts4'
         ]
         
         return expected_table_names
@@ -362,6 +365,26 @@ class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
             
         
         return label_id
+        
+    
+    def GetNoteId( self, note: str ) -> int:
+        
+        result = self._c.execute( 'SELECT note_id FROM notes WHERE note = ?;', ( note, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO notes ( note ) VALUES ( ? );', ( note, ) )
+            
+            note_id = self._c.lastrowid
+            
+            self._c.execute( 'REPLACE INTO notes_fts4 ( docid, note ) VALUES ( ?, ? );', ( note_id, note ) )
+            
+        else:
+            
+            ( note_id, ) = result
+            
+        
+        return note_id
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

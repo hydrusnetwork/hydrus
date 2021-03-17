@@ -25,13 +25,12 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientThreading
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUINetworkJobControl
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
@@ -41,6 +40,9 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
@@ -60,7 +62,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the downloader sharing help', 'Open the help page for sharing downloaders in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -502,7 +504,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -734,7 +736,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the context variable formula help', 'Open the help page for context variable formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1181,7 +1183,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the html formula help', 'Open the help page for html formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1538,7 +1540,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the json formula help', 'Open the help page for json formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1773,7 +1775,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the content parsers help', 'Open the help page for content parsers in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -2320,7 +2322,7 @@ class EditNodes( QW.QWidget ):
         menu_items.append( ( 'normal', 'content node', 'A node that parses the given data for content.', self.AddContentNode ) )
         menu_items.append( ( 'normal', 'link node', 'A node that parses the given data for a link, which it then pursues.', self.AddLinkNode ) )
         
-        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items )
         
         self._copy_button = ClientGUICommon.BetterButton( self, 'copy', self.Copy )
         
@@ -2831,7 +2833,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -2864,7 +2866,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._test_url = QW.QLineEdit( test_url_fetch_panel )
         self._test_referral_url = QW.QLineEdit( test_url_fetch_panel )
         self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
-        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_url_fetch_panel )
+        self._test_network_job_control = ClientGUINetworkJobControl.NetworkJobControl( test_url_fetch_panel )
         
         if formula is None:
             
@@ -3734,21 +3736,21 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         menu_items.append( ( 'normal', 'file lookup script', 'A script that fetches content for a known file.', self.AddFileLookupScript ) )
         
-        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
         menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPNG ) )
         
-        self._export_button = ClientGUICommon.MenuButton( self, 'export', menu_items )
+        self._export_button = ClientGUIMenuButton.MenuButton( self, 'export', menu_items )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
         menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPNG ) )
         
-        self._import_button = ClientGUICommon.MenuButton( self, 'import', menu_items )
+        self._import_button = ClientGUIMenuButton.MenuButton( self, 'import', menu_items )
         
         self._duplicate_button = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
         

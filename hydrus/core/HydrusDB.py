@@ -49,6 +49,13 @@ def CheckCanVacuumCursor( db_path, c, stop_time = None ):
     
     HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, vacuum_estimate )
     
+def GetRowCount( c: sqlite3.Cursor ):
+    
+    row_count = c.rowcount
+    
+    if row_count == -1: return 0
+    else: return row_count
+    
 def ReadFromCancellableCursor( cursor, largest_group_size, cancelled_hook = None ):
     
     if cancelled_hook is None:
@@ -545,14 +552,6 @@ class HydrusDB( object ):
     def _GetPossibleAdditionalDBFilenames( self ):
         
         return [ self._ssl_cert_filename, self._ssl_key_filename ]
-        
-    
-    def _GetRowCount( self ):
-        
-        row_count = self._c.rowcount
-        
-        if row_count == -1: return 0
-        else: return row_count
         
     
     def _InitCaches( self ):

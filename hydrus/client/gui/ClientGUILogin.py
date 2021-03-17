@@ -14,11 +14,10 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
-from hydrus.client.gui import ClientGUICommon
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIControls
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUINetworkJobControl
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
@@ -27,6 +26,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -1270,7 +1271,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the login scripts help', 'Open the help page for login scripts in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
@@ -1324,7 +1325,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._test_button = ClientGUICommon.BetterButton( test_panel, 'run test', self._DoTest )
         
-        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_panel )
+        self._test_network_job_control = ClientGUINetworkJobControl.NetworkJobControl( test_panel )
         
         test_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( test_panel )
         
