@@ -2492,7 +2492,7 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
         
         regular_parts_of_s = s.split( '*' )
         
-        escaped_parts_of_s = list(map( re.escape, regular_parts_of_s ))
+        escaped_parts_of_s = [ re.escape( rpos ) for rpos in regular_parts_of_s ]
         
         s = '.*'.join( escaped_parts_of_s )
         

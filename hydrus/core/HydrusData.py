@@ -1113,21 +1113,30 @@ ShowText = Print
 
 def PrintException( e, do_wait = True ):
     
-    if isinstance( e, HydrusExceptions.ShutdownException ):
+    ( etype, value, tb ) = sys.exc_info()
+    
+    PrintExceptionTuple( etype, value, tb, do_wait = do_wait )
+    
+def PrintExceptionTuple( etype, value, tb, do_wait = True ):
+    
+    if etype is None:
+        
+        etype = HydrusExceptions.UnknownException
+        
+    
+    if etype == HydrusExceptions.ShutdownException:
         
         return
         
     
-    etype = type( e )
-    
-    ( etype, value, tb ) = sys.exc_info()
-    
-    if etype is None:
+    if value is None:
         
-        etype = type( e )
-        value = str( e )
+        value = 'Unknown error'
         
-        trace = 'No error trace'
+    
+    if tb is None:
+        
+        trace = 'No error trace--here is the stack:' + os.linesep + ''.join( traceback.format_stack() )
         
     else:
         
@@ -1151,6 +1160,7 @@ def PrintException( e, do_wait = True ):
         
     
 ShowException = PrintException
+ShowExceptionTuple = PrintExceptionTuple
 
 def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
     
@@ -1550,75 +1560,6 @@ class HydrusYAMLBase( yaml.YAMLObject ):
     yaml_loader = yaml.SafeLoader
     yaml_dumper = yaml.SafeDumper
     
-class AccountType( HydrusYAMLBase ):
-    
-    yaml_tag = '!AccountType'
-    
-    def __init__( self, title, permissions, max_monthly_data ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._title = title
-        self._permissions = permissions
-        self._max_monthly_data = max_monthly_data
-        
-    
-    def __repr__( self ): return self.ConvertToString()
-    
-    def GetPermissions( self ): return self._permissions
-    
-    def GetTitle( self ): return self._title
-    
-    def GetMaxBytes( self ):
-        
-        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
-        
-        return max_num_bytes
-        
-    
-    def GetMaxRequests( self ):
-        
-        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
-        
-        return max_num_requests
-        
-    
-    def GetMaxBytesString( self ):
-        
-        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
-        
-        if max_num_bytes is None: max_num_bytes_string = 'No limit'
-        else: max_num_bytes_string = ToHumanBytes( max_num_bytes )
-        
-        return max_num_bytes_string
-        
-    
-    def GetMaxRequestsString( self ):
-        
-        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
-        
-        if max_num_requests is None: max_num_requests_string = 'No limit'
-        else: max_num_requests_string = ToHumanInt( max_num_requests )
-        
-        return max_num_requests_string
-        
-    
-    def ConvertToString( self ):
-        
-        result_string = self._title + ' with '
-        
-        if self._permissions == [ HC.UNKNOWN_PERMISSION ]: result_string += 'no permissions'
-        else: result_string += ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in self._permissions ] ) + ' permissions'
-        
-        return result_string
-        
-    
-    def IsUnknownAccountType( self ): return self._permissions == [ HC.UNKNOWN_PERMISSION ]
-    
-    def HasPermission( self, permission ): return permission in self._permissions
-    
-sqlite3.register_adapter( AccountType, yaml.safe_dump )
-
 class BigJobPauser( object ):
     
     def __init__( self, period = 10, wait_time = 0.1 ):

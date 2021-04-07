@@ -1140,7 +1140,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if tag_blacklist is None:
             
-            tag_blacklist = ClientTags.TagFilter()
+            tag_blacklist = HydrusTags.TagFilter()
             
         
         if tag_whitelist is None:
@@ -1221,7 +1221,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             ( fetch_tags_even_if_url_recognised_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = old_serialisable_info
             
-            tag_blacklist = ClientTags.TagFilter()
+            tag_blacklist = HydrusTags.TagFilter()
             
             serialisable_tag_blacklist = tag_blacklist.GetSerialisableTuple()
             
@@ -1547,7 +1547,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if get_tags_filter is None:
             
-            get_tags_filter = ClientTags.TagFilter()
+            get_tags_filter = HydrusTags.TagFilter()
             
         
         if additional_tags is None:
@@ -1557,7 +1557,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if only_add_existing_tags_filter is None:
             
-            only_add_existing_tags_filter = ClientTags.TagFilter()
+            only_add_existing_tags_filter = HydrusTags.TagFilter()
             
         
         HydrusSerialisable.SerialisableBase.__init__( self )
@@ -1596,8 +1596,8 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             ( get_tags, namespaces, additional_tags, to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags ) = old_serialisable_info
             
-            get_tags_filter = ClientTags.TagFilter()
-            only_add_existing_tags_filter = ClientTags.TagFilter()
+            get_tags_filter = HydrusTags.TagFilter()
+            only_add_existing_tags_filter = HydrusTags.TagFilter()
             
             serialisable_get_tags_filter = get_tags_filter.GetSerialisableTuple()
             serialisable_only_add_existing_tags_filter = only_add_existing_tags_filter.GetSerialisableTuple()
@@ -1614,11 +1614,11 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             if not get_tags and len( namespaces ) > 0:
                 
                 get_tags = True
-                get_tags_filter = ClientTags.TagFilter()
+                get_tags_filter = HydrusTags.TagFilter()
                 
                 namespaces = list( namespaces )
                 
-                get_tags_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+                get_tags_filter.SetRule( ':', HC.FILTER_BLACKLIST )
                 
                 if '' in namespaces: # if unnamespaced in original checkboxes, then leave it unblocked
                     
@@ -1626,12 +1626,12 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
                     
                 else: # else block it
                     
-                    get_tags_filter.SetRule( '', CC.FILTER_BLACKLIST )
+                    get_tags_filter.SetRule( '', HC.FILTER_BLACKLIST )
                     
                 
                 for namespace in namespaces:
                     
-                    get_tags_filter.SetRule( namespace + ':', CC.FILTER_WHITELIST )
+                    get_tags_filter.SetRule( namespace + ':', HC.FILTER_WHITELIST )
                     
                 
                 serialisable_get_tags_filter = get_tags_filter.GetSerialisableTuple()

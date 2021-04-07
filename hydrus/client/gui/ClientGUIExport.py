@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
@@ -468,7 +469,7 @@ class EditSidecarExporterPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSidecarExporterTagDataPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_filter: ClientTags.TagFilter, tag_display_type: int ):
+    def __init__( self, parent, tag_filter: HydrusTags.TagFilter, tag_display_type: int ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         

@@ -17,11 +17,11 @@ from hydrus.core import HydrusController
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusVideoHandling
+from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientCaches
@@ -1635,7 +1635,7 @@ class Controller( HydrusController.HydrusController ):
                             context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
                             
                         
-                        from hydrus.client import ClientLocalServer
+                        from hydrus.client.networking import ClientLocalServer
                         
                         if service_type == HC.LOCAL_BOORU:
                             
@@ -1689,7 +1689,11 @@ class Controller( HydrusController.HydrusController ):
                         
                         self._service_keys_to_connected_ports[ service_key ] = ( ipv4_port, ipv6_port )
                         
-                        if not HydrusNetworking.LocalPortInUse( port ):
+                        if HydrusNetworking.LocalPortInUse( port ):
+                            
+                            HydrusData.Print( 'Running "{}" on port {}.'.format( name, port ) )
+                            
+                        else:
                             
                             HydrusData.ShowText( 'Tried to bind port {} for "{}" but it failed.'.format( port, name ) )
                             

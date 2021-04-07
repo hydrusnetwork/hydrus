@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTags
 from hydrus.test import TestController
 
 from hydrus.client import ClientConstants as CC
@@ -324,7 +325,7 @@ class TestMigration( unittest.TestCase ):
         
         # test file filter
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
         source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'md5', None, tag_filter )
         
@@ -390,10 +391,10 @@ class TestMigration( unittest.TestCase ):
         
         # tag filter
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( '', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
         source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'md5', None, tag_filter )
         
@@ -471,7 +472,7 @@ class TestMigration( unittest.TestCase ):
         
         tag_repo_service_key = self._test_tag_repo_service_keys[0]
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
         source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
@@ -527,10 +528,10 @@ class TestMigration( unittest.TestCase ):
         
         # tag filter
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( '', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
         source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
@@ -548,7 +549,7 @@ class TestMigration( unittest.TestCase ):
         
         # test statuses
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
         source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
         
@@ -798,12 +799,12 @@ class TestMigration( unittest.TestCase ):
         
         # test tag filter, left, right, both
         
-        free_filter = ClientTags.TagFilter()
+        free_filter = HydrusTags.TagFilter()
         
-        namespace_filter = ClientTags.TagFilter()
+        namespace_filter = HydrusTags.TagFilter()
         
-        namespace_filter.SetRule( ':', CC.FILTER_WHITELIST )
-        namespace_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        namespace_filter.SetRule( ':', HC.FILTER_WHITELIST )
+        namespace_filter.SetRule( '', HC.FILTER_BLACKLIST )
         
         test_filters = []
         
@@ -887,12 +888,12 @@ class TestMigration( unittest.TestCase ):
         content_source_tests.append( ( tag_repo_service_key, ( current, pending ), ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ) )
         content_source_tests.append( ( tag_repo_service_key, ( deleted, ), ( HC.CONTENT_STATUS_DELETED, ) ) )
         
-        free_filter = ClientTags.TagFilter()
+        free_filter = HydrusTags.TagFilter()
         
-        namespace_filter = ClientTags.TagFilter()
+        namespace_filter = HydrusTags.TagFilter()
         
-        namespace_filter.SetRule( ':', CC.FILTER_WHITELIST )
-        namespace_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        namespace_filter.SetRule( ':', HC.FILTER_WHITELIST )
+        namespace_filter.SetRule( '', HC.FILTER_BLACKLIST )
         
         test_filters = []
         

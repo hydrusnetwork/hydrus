@@ -493,9 +493,11 @@ class MediaSortControl( QW.QWidget ):
     def SetSort( self, media_sort: ClientMedia.MediaSort ):
         
         self._sort_type = media_sort.sort_type
-        self._sort_order_choice.SetValue( media_sort.sort_order )
         
         self._UpdateSortTypeLabel()
         self._UpdateAscLabels()
+        
+        # put this after 'asclabels', since we may transition from one-state to two-state
+        self._sort_order_choice.SetValue( media_sort.sort_order )
         
     

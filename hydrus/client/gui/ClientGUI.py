@@ -26,11 +26,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
+from hydrus.core.networking import HydrusNetwork
+from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -56,11 +57,9 @@ from hydrus.client.gui import ClientGUIManagement
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
-from hydrus.client.gui import ClientGUINetwork
 from hydrus.client.gui import ClientGUIPages
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIPopupMessages
-from hydrus.client.gui import ClientGUIServices
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
@@ -74,10 +73,13 @@ from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.networking import ClientGUIHydrusNetwork
+from hydrus.client.gui.networking import ClientGUINetwork
+from hydrus.client.gui.services import ClientGUIClientsideServices
+from hydrus.client.gui.services import ClientGUIServersideServices
+from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
-from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.gui.widgets import ClientGUICommon
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 
@@ -569,25 +571,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         aboutinfo.SetWebSite( 'https://hydrusnetwork.github.io/hydrus/' )
         
         QP.AboutBox( self, aboutinfo )
-        
-    
-    def _AccountInfo( self, service_key ):
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account\'s account key.' ) as dlg:
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                subject_account_key = bytes.fromhex( dlg.GetValue() )
-                
-                service = self._controller.services_manager.GetService( service_key )
-                
-                response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key } )
-                
-                account_info = response[ 'account_info' ]
-                
-                QW.QMessageBox.information( self, 'Information', str(account_info) )
-                
-            
         
     
     def _AnalyzeDatabase( self ):
@@ -2024,23 +2007,74 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.CallToThread( do_it, service, lock )
         
     
-    def _ManageAccountTypes( self, service_key ):
+    def _STARTManageAccountTypes( self, service_key ):
         
-        title = 'manage account types'
+        admin_service = HG.client_controller.services_manager.GetService( service_key )
         
-        with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', 'loading account types\u2026' )
+        
+        self._controller.pub( job_key )
+        
+        def work_callable():
             
-            panel = ClientGUIServices.ManageAccountTypesPanel( dlg, service_key )
+            response = admin_service.Request( HC.GET, 'account_types' )
+            
+            account_types = response[ 'account_types' ]
+            
+            return account_types
+            
+        
+        def publish_callable( account_types ):
+            
+            job_key.Delete()
+            
+            self._ManageAccountTypes( service_key, account_types )
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            HydrusData.ShowText( 'Sorry, unable to load account types:' )
+            HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        
+        job.start()
+        
+    
+    def _ManageAccountTypes( self, service_key, account_types ):
+        
+        admin_service = HG.client_controller.services_manager.GetService( service_key )
+        
+        title = 'edit account types'
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+            
+            panel = ClientGUIHydrusNetwork.EditAccountTypesPanel( dlg, admin_service.GetServiceType(), account_types )
             
             dlg.SetPanel( panel )
             
-            dlg.exec()
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                ( account_types, deletee_account_type_keys_to_new_account_type_keys ) = panel.GetValue()
+                
+                serialisable_deletee_account_type_keys_to_new_account_type_keys = HydrusSerialisable.SerialisableBytesDictionary( deletee_account_type_keys_to_new_account_type_keys )
+                
+                def do_it():
+                    
+                    admin_service.Request( HC.POST, 'account_types', { 'account_types' : account_types, 'deletee_account_type_keys_to_new_account_type_keys' : serialisable_deletee_account_type_keys_to_new_account_type_keys } )
+                    
+                
+                self._controller.CallToThread( do_it )
+                
             
         
     
     def _ManageDefaultTagImportOptions( self ):
         
-        title = 'manage default tag import options'
+        title = 'edit default tag import options'
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
@@ -2495,7 +2529,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
-            panel = ClientGUIServices.ManageServerServicesPanel( dlg, service_key )
+            panel = ClientGUIServersideServices.ManageServerServicesPanel( dlg, service_key )
             
             dlg.SetPanel( panel )
             
@@ -2515,7 +2549,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
-                panel = ClientGUIServices.ManageClientServicesPanel( dlg )
+                panel = ClientGUIClientsideServices.ManageClientServicesPanel( dlg )
                 
                 dlg.SetPanel( panel )
                 
@@ -2877,10 +2911,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ModifyAccount( self, service_key ):
         
-        QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
-        
-        return
-        '''
         service = self._controller.services_manager.GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
@@ -2898,15 +2928,16 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     return
                     
                 
-                subject_account = 'blah' # fetch account from service
+                subject_account_identifiers = [ HydrusNetwork.AccountIdentifier( account_key = account_key ) ]
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, service_key, [ subject_account ] ) as dlg2:
-                    
-                    dlg2.exec()
-                    
+                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'manage accounts' )
+                
+                panel = ClientGUIHydrusNetwork.ModifyAccountsPanel( frame, service_key, subject_account_identifiers )
+                
+                frame.SetPanel( panel )
                 
             
-        '''
+        
     
     def _OpenDBFolder( self ):
         
@@ -3319,6 +3350,52 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.pub( 'set_splitter_positions', HC.options[ 'hpos' ], HC.options[ 'vpos' ] )
         
     
+    def _STARTReviewAllAccounts( self, service_key ):
+        
+        admin_service = HG.client_controller.services_manager.GetService( service_key )
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', 'loading accounts\u2026' )
+        
+        self._controller.pub( job_key )
+        
+        def work_callable():
+            
+            response = admin_service.Request( HC.GET, 'all_accounts' )
+            
+            accounts = response[ 'accounts' ]
+            
+            return accounts
+            
+        
+        def publish_callable( accounts ):
+            
+            job_key.Delete()
+            
+            self._ReviewAllAccounts( service_key, accounts )
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            HydrusData.ShowText( 'Sorry, unable to load accounts:' )
+            HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        
+        job.start()
+        
+    
+    def _ReviewAllAccounts( self, service_key, accounts ):
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'all accounts' )
+        
+        panel = ClientGUIHydrusNetwork.ListAccountsPanel( frame, service_key, accounts )
+        
+        frame.SetPanel( panel )
+        
+    
     def _ReviewBandwidth( self ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review bandwidth use and edit rules' )
@@ -3359,7 +3436,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
         
-        panel = ClientGUIServices.ReviewServicesPanel( frame, self._controller )
+        panel = ClientGUIClientsideServices.ReviewServicesPanel( frame, self._controller )
         
         frame.SetPanel( panel )
         
@@ -3439,7 +3516,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            api_permissions = ClientAPI.APIPermissions( name = 'hydrus test access', basic_permissions = list( ClientAPI.ALLOWED_PERMISSIONS ), search_tag_filter = ClientTags.TagFilter() )
+            api_permissions = ClientAPI.APIPermissions( name = 'hydrus test access', basic_permissions = list( ClientAPI.ALLOWED_PERMISSIONS ), search_tag_filter = HydrusTags.TagFilter() )
             
             access_key = api_permissions.GetAccessKey()
             
@@ -5179,7 +5256,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PausePlaySync, 'repo' )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'all repository synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PausePlaySync, 'repo' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
@@ -5196,11 +5273,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             servers_admin = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
             server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE ) ]
             
-            if len( admin_repositories ) > 0 or len( server_admins ) > 0:
+            admin_services = admin_repositories + server_admins
+            
+            if len( admin_services ) > 0:
                 
                 admin_menu = QW.QMenu( menu )
                 
-                for service in admin_repositories:
+                for service in admin_services:
                     
                     submenu = QW.QMenu( admin_menu )
                     
@@ -5209,16 +5288,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
                     can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
                     can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE )
-                    
-                    if can_create_accounts:
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
-                        
+                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
                     
                     if can_overrule_accounts:
                         
+                        ClientGUIMenus.AppendMenuItem( submenu, 'review all accounts', 'See all accounts.', self._STARTReviewAllAccounts, service_key )
                         ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
                         
                     
                     if can_overrule_accounts and service.GetServiceType() == HC.FILE_REPOSITORY:
@@ -5226,46 +5301,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
                         
                     
-                    if can_overrule_account_types:
+                    if can_create_accounts:
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
-                    
-                
-                for service in server_admins:
-                    
-                    submenu = QW.QMenu( admin_menu )
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
-                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
-                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE )
-                    
-                    if can_create_accounts:
                         ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
                         
                     
-                    if can_overrule_accounts:
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
-                        
-                    
                     if can_overrule_account_types:
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._STARTManageAccountTypes, service_key )
                         
                     
-                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
-                    
-                    if can_overrule_services:
+                    if can_overrule_services and service.GetServiceType() == HC.SERVER_ADMIN:
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
@@ -5348,6 +5398,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'latest build', 'Open the latest build on the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/releases/latest' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan.moe /t/ (Hydrus Network General)', 'Open the 8chan.moe /t/ board, where a Hydrus Network General should exist with release posts and other status updates.', CC.global_pixmaps().eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8chan.moe/t/catalog.html' )
             site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for the case when 8chan.moe is unavailable. Try .org if .net is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )

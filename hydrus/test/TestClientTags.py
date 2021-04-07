@@ -4,6 +4,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
@@ -418,9 +419,9 @@ class TestTagDisplayManager( unittest.TestCase ):
     
     def test_tag_filtering( self ):
         
-        filter_pages = ClientTags.TagFilter()
+        filter_pages = HydrusTags.TagFilter()
         
-        filter_pages.SetRule( 'page:', CC.FILTER_BLACKLIST )
+        filter_pages.SetRule( 'page:', HC.FILTER_BLACKLIST )
         
         tag_display_manager = ClientTagsHandling.TagDisplayManager()
         

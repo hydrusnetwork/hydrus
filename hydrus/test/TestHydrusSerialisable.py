@@ -3,6 +3,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -158,9 +159,9 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( obj.ToTuple(), dupe_obj.ToTuple() )
             
         
-        duplicate_action_options_delete_and_move = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ] )
-        duplicate_action_options_copy = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY, ClientTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ] )
-        duplicate_action_options_merge = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ] )
+        duplicate_action_options_delete_and_move = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ] )
+        duplicate_action_options_copy = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY, HydrusTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ] )
+        duplicate_action_options_merge = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ] )
         
         inbox = True
         size = 40960
@@ -552,7 +553,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -560,10 +561,10 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -571,11 +572,11 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -583,11 +584,11 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:kill la kill', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:kill la kill', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -595,11 +596,11 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'smile', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'smile', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -607,9 +608,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -617,10 +618,10 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -628,10 +629,10 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:kill la kill', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:kill la kill', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -639,9 +640,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'series:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -649,10 +650,10 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'series:', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:neon genesis evangelion', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:neon genesis evangelion', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -660,9 +661,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -670,10 +671,10 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'blue eyes', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'blue eyes', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -685,9 +686,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'nintendo', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'nintendo', HC.FILTER_BLACKLIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -695,9 +696,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'nintendo', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'nintendo', HC.FILTER_BLACKLIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         
@@ -705,10 +706,10 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'nintendo', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'studio:nintendo', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'nintendo', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'studio:nintendo', HC.FILTER_WHITELIST )
         
         self._dump_and_load_and_test( tag_filter, test )
         

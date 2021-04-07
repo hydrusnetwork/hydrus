@@ -1848,7 +1848,7 @@ class SubscriptionsManager( object ):
             
             cannot_run = sorted( self._names_that_cannot_run )
             
-            next_times = sorted( self._names_to_next_work_time.items(), key = lambda n, nwt: nwt )
+            next_times = sorted( self._names_to_next_work_time.items(), key = lambda n_nwt_tuple: n_nwt_tuple[1] )
             
             message = '{} subs: {}'.format( HydrusData.ToHumanInt( len( self._names_to_subscriptions ) ), ', '.join( sub_names ) )
             message += os.linesep * 2

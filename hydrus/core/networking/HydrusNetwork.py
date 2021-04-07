@@ -1,20 +1,14 @@
 import collections
 import threading
 import typing
-import urllib
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSerialisable
-
-INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
-BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'update_hash' }
-STRING_PARAMS = { 'subject_tag' }
-JSON_PARAMS = set()
-JSON_BYTE_LIST_PARAMS = set()
+from hydrus.core import HydrusTags
+from hydrus.core.networking import HydrusNetworking
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -26,8 +20,15 @@ def GenerateDefaultServiceDictionary( service_type ):
     if service_type in HC.RESTRICTED_SERVICES:
         
         dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
+        dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        dictionary[ 'service_options' ][ 'server_message' ] = 'Welcome to the server!'
         
         if service_type in HC.REPOSITORIES:
+            
+            update_period = 100000
+            
+            dictionary[ 'service_options' ][ 'update_period' ] = update_period
             
             metadata = Metadata()
             
@@ -36,7 +37,7 @@ def GenerateDefaultServiceDictionary( service_type ):
             update_hashes = []
             begin = 0
             end = now
-            next_update_due = now + HC.UPDATE_DURATION
+            next_update_due = now + update_period
             
             metadata.AppendUpdate( update_hashes, begin, end, next_update_due )
             
@@ -46,6 +47,11 @@ def GenerateDefaultServiceDictionary( service_type ):
                 
                 dictionary[ 'log_uploader_ips' ] = False
                 dictionary[ 'max_storage' ] = None
+                
+            
+            if service_type == HC.TAG_REPOSITORY:
+                
+                dictionary[ 'service_options' ][ 'tag_filter' ] = HydrusTags.TagFilter()
                 
             
         
@@ -121,219 +127,9 @@ def GetPossiblePermissions( service_type ):
     
     return permissions
     
-def DumpHydrusArgsToNetworkBytes( args ):
-    
-    if not isinstance( args, HydrusSerialisable.SerialisableBase ):
-        
-        args = HydrusSerialisable.SerialisableDictionary( args )
-        
-    
-    if 'access_key' in args:
-        
-        args[ 'access_key' ] = args[ 'access_key' ].hex()
-        
-    
-    if 'account' in args:
-        
-        args[ 'account' ] = Account.GenerateSerialisableTupleFromAccount( args[ 'account' ] )
-        
-    
-    if 'accounts' in args:
-        
-        args[ 'accounts' ] = list(map( Account.GenerateSerialisableTupleFromAccount, args[ 'accounts' ] ))
-        
-    
-    if 'account_types' in args:
-        
-        args[ 'account_types' ] = [ account_type.ToSerialisableTuple() for account_type in args[ 'account_types' ] ]
-        
-    
-    if 'registration_keys' in args:
-        
-        args[ 'registration_keys' ] = [ registration_key.hex() for registration_key in args[ 'registration_keys' ] ]
-        
-    
-    if 'service_keys_to_access_keys' in args:
-        
-        args[ 'service_keys_to_access_keys' ] = [ ( service_key.hex(), access_key.hex() ) for ( service_key, access_key ) in list(args[ 'service_keys_to_access_keys' ].items()) ]
-        
-    
-    if 'services' in args:
-        
-        args[ 'services' ] = [ service.ToSerialisableTuple() for service in args[ 'services' ] ]
-        
-    
-    network_bytes = args.DumpToNetworkBytes()
-    
-    return network_bytes
-    
-def DumpToGETQuery( args ):
-    
-    args = dict( args )
-    
-    if 'subject_identifier' in args:
-        
-        subject_identifier = args[ 'subject_identifier' ]
-        
-        del args[ 'subject_identifier' ]
-        
-        if subject_identifier.HasAccountKey():
-            
-            account_key = subject_identifier.GetData()
-            
-            args[ 'subject_account_key' ] = account_key
-            
-        elif subject_identifier.HasContent():
-            
-            content = subject_identifier.GetData()
-            
-            content_type = content.GetContentType()
-            content_data = content.GetContentData()
-            
-            if content_type == HC.CONTENT_TYPE_FILES:
-                
-                hash = content_data[0]
-                
-                args[ 'subject_hash' ] = hash
-                
-            elif content_type == HC.CONTENT_TYPE_MAPPING:
-                
-                ( tag, hash ) = content_data
-                
-                args[ 'subject_hash' ] = hash
-                args[ 'subject_tag' ] = tag
-                
-            
-        
-    
-    for name in INT_PARAMS:
-        
-        if name in args:
-            
-            args[ name ] = str( args[ name ] )
-            
-        
-    
-    for name in BYTE_PARAMS:
-        
-        if name in args:
-            
-            args[ name ] = args[ name ].hex()
-            
-        
-    
-    for name in STRING_PARAMS:
-        
-        if name in args:
-            
-            args[ name ] = urllib.parse.quote( args[ name ] )
-            
-        
-    
-    query = '&'.join( [ key + '=' + value for ( key, value ) in args.items() ] )
-    
-    return query
-    
-def ParseNetworkBytesToParsedHydrusArgs( network_bytes ):
-    
-    if len( network_bytes ) == 0:
-        
-        return HydrusSerialisable.SerialisableDictionary()
-        
-    
-    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes )
-    
-    if not isinstance( args, dict ):
-        
-        raise HydrusExceptions.BadRequestException( 'The given parameter did not seem to be a JSON Object!' )
-        
-    
-    args = HydrusNetworking.ParsedRequestArguments( args )
-    
-    if 'access_key' in args:
-        
-        args[ 'access_key' ] = bytes.fromhex( args[ 'access_key' ] )
-        
-    
-    if 'account' in args:
-        
-        args[ 'account' ] = Account.GenerateAccountFromSerialisableTuple( args[ 'account' ] )
-        
-    
-    if 'accounts' in args:
-        
-        account_tuples = args[ 'accounts' ]
-        
-        args[ 'accounts' ] = list(map( Account.GenerateAccountFromSerialisableTuple, account_tuples ))
-        
-    
-    if 'account_types' in args:
-        
-        account_type_tuples = args[ 'account_types' ]
-        
-        args[ 'account_types' ] = list(map( AccountType.GenerateAccountTypeFromSerialisableTuple, account_type_tuples ))
-        
-    
-    if 'registration_keys' in args:
-        
-        args[ 'registration_keys' ] = [ bytes.fromhex( encoded_registration_key ) for encoded_registration_key in args[ 'registration_keys' ] ]
-        
-    
-    if 'service_keys_to_access_keys' in args:
-        
-        args[ 'service_keys_to_access_keys' ] = { bytes.fromhex( encoded_service_key ) : bytes.fromhex( encoded_access_key ) for ( encoded_service_key, encoded_access_key ) in args[ 'service_keys_to_access_keys' ] }
-        
-    
-    if 'services' in args:
-        
-        service_tuples = args[ 'services' ]
-        
-        args[ 'services' ] = list(map( GenerateServiceFromSerialisableTuple, service_tuples ))
-        
-    
-    return args
-    
-def ParseHydrusNetworkGETArgs( requests_args ):
-    
-    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, INT_PARAMS, BYTE_PARAMS, STRING_PARAMS, JSON_PARAMS, JSON_BYTE_LIST_PARAMS )
-    
-    if 'subject_account_key' in args:
-        
-        args[ 'subject_identifier' ] = AccountIdentifier( account_key = args[ 'subject_account_key' ] )
-        
-    elif 'subject_hash' in args:
-        
-        hash = args[ 'subject_hash' ]
-        
-        if 'subject_tag' in args:
-            
-            tag = args[ 'subject_tag' ]
-            
-            content = Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) )
-            
-        else:
-            
-            content = Content( HC.CONTENT_TYPE_FILES, [ hash ] )
-            
-        
-        args[ 'subject_identifier' ] = AccountIdentifier( content = content )
-        
-    
-    return args
-    
 class Account( object ):
     
-    def __init__( self, account_key, account_type, created, expires, banned_info = None, bandwidth_tracker = None ):
-        
-        if banned_info is None:
-            
-            banned_info = None # stupid, but keep it in case we change this
-            
-        
-        if bandwidth_tracker is None:
-            
-            bandwidth_tracker = HydrusNetworking.BandwidthTracker()
-            
+    def __init__( self, account_key, account_type, created, expires ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -343,8 +139,12 @@ class Account( object ):
         self._account_type = account_type
         self._created = created
         self._expires = expires
-        self._banned_info = banned_info
-        self._bandwidth_tracker = bandwidth_tracker
+        
+        self._message = ''
+        self._message_created = 0
+        
+        self._banned_info = None
+        self._bandwidth_tracker = HydrusNetworking.BandwidthTracker()
         
         self._dirty = False
         
@@ -425,6 +225,8 @@ class Account( object ):
                 if HydrusData.TimeHasPassed( expires ):
                     
                     self._banned_info = None
+                    
+                    return False
                     
                 else:
                     
@@ -523,6 +325,38 @@ class Account( object ):
             
         
     
+    def GetBandwidthTracker( self ):
+        
+        with self._lock:
+            
+            return self._bandwidth_tracker
+            
+        
+    
+    def GetBannedInfo( self ):
+        
+        with self._lock:
+            
+            return self._banned_info
+            
+        
+    
+    def GetCreated( self ):
+        
+        with self._lock:
+            
+            return self._created
+            
+        
+    
+    def GetExpires( self ):
+        
+        with self._lock:
+            
+            return self._expires
+            
+        
+    
     def GetExpiresString( self ):
         
         with self._lock:
@@ -535,6 +369,36 @@ class Account( object ):
                 
                 return self._GetExpiresString()
                 
+            
+        
+    
+    def GetMessageAndTimestamp( self ):
+        
+        with self._lock:
+            
+            return ( self._message, self._message_created )
+            
+        
+    
+    def GetSingleLineTitle( self ):
+        
+        with self._lock:
+            
+            text = self._account_key.hex()
+            
+            text = '{}: {}'.format( self._account_type.GetTitle(), text )
+            
+            if self._IsExpired():
+                
+                text = 'Expired: {}'.format( text )
+                
+            
+            if self._IsBanned():
+                
+                text = 'Banned: {}'.format( text )
+                
+            
+            return text
             
         
     
@@ -563,11 +427,27 @@ class Account( object ):
             
         
     
+    def IsBanned( self ):
+        
+        with self._lock:
+            
+            return self._IsBanned()
+            
+        
+    
     def IsDirty( self ):
         
         with self._lock:
             
             return self._dirty
+            
+        
+    
+    def IsExpired( self ):
+        
+        with self._lock:
+            
+            return self._IsExpired()
             
         
     
@@ -608,6 +488,16 @@ class Account( object ):
             
         
     
+    def SetBandwidthTracker( self, bandwidth_tracker: HydrusNetworking.BandwidthTracker ):
+        
+        with self._lock:
+            
+            self._bandwidth_tracker = bandwidth_tracker
+            
+            self._SetDirty()
+            
+        
+    
     def SetClean( self ):
         
         with self._lock:
@@ -616,11 +506,22 @@ class Account( object ):
             
         
     
-    def SetExpires( self, expires ):
+    def SetExpires( self, expires: typing.Optional[ int ] ):
         
         with self._lock:
             
             self._expires = expires
+            
+            self._SetDirty()
+            
+        
+    
+    def SetMessage( self, message, created ):
+        
+        with self._lock:
+            
+            self._message = message
+            self._message_created = created
             
             self._SetDirty()
             
@@ -631,14 +532,6 @@ class Account( object ):
         with self._lock:
             
             return self._account_type.GetTitle() + ' -- created ' + HydrusData.TimestampToPrettyTimeDelta( self._created )
-            
-        
-    
-    def ToTuple( self ):
-        
-        with self._lock:
-            
-            return ( self._account_key, self._account_type, self._created, self._expires, self._banned_info, self._bandwidth_tracker )
             
         
     
@@ -655,10 +548,27 @@ class Account( object ):
     @staticmethod
     def GenerateAccountFromSerialisableTuple( serialisable_info ):
         
-        ( account_key_encoded, account_type_serialisable_tuple, created, expires, dictionary_string ) = serialisable_info
+        ( account_key_encoded, serialisable_account_type, created, expires, dictionary_string ) = serialisable_info
         
         account_key = bytes.fromhex( account_key_encoded )
-        account_type = AccountType.GenerateAccountTypeFromSerialisableTuple( account_type_serialisable_tuple )
+        
+        if isinstance( serialisable_account_type, list ) and isinstance( serialisable_account_type[0], str ):
+            
+            # this is a legacy account
+            
+            ( encoded_account_type_key, title, account_type_dictionary_string ) = serialisable_account_type
+            
+            account_type_key = bytes.fromhex( encoded_account_type_key )
+            
+            from hydrus.core.networking import HydrusNetworkLegacy
+            
+            account_type = HydrusNetworkLegacy.ConvertToNewAccountType( account_type_key, title, account_type_dictionary_string )
+            
+        else:
+            
+            account_type = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_account_type )
+            
+        
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
         
         return Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
@@ -669,10 +579,34 @@ class Account( object ):
         
         ( account_key, account_type, created, expires, dictionary ) = serialisable_info
         
+        if 'message' not in dictionary:
+            
+            dictionary[ 'message' ] = ''
+            dictionary[ 'message_created' ] = 0
+            
+        
         banned_info = dictionary[ 'banned_info' ]
         bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         
-        return Account( account_key, account_type, created, expires, banned_info, bandwidth_tracker )
+        account = Account( account_key, account_type, created, expires )
+        
+        account.SetBandwidthTracker( bandwidth_tracker )
+        
+        if banned_info is not None:
+            
+            ( reason, created, expires ) = banned_info
+            
+            account.Ban( reason, created, expires )
+            
+        
+        message = dictionary[ 'message' ]
+        message_created = dictionary[ 'message_created' ]
+        
+        account.SetMessage( message, message_created )
+        
+        account.SetClean()
+        
+        return account
         
     
     @staticmethod
@@ -682,7 +616,7 @@ class Account( object ):
         
         account_key_encoded = account_key.hex()
         
-        serialisable_account_type = account_type.ToSerialisableTuple()
+        serialisable_account_type = account_type.GetSerialisableTuple()
         
         dictionary_string = dictionary.DumpToString()
         
@@ -690,15 +624,26 @@ class Account( object ):
         
     
     @staticmethod
-    def GenerateTupleFromAccount( account ):
+    def GenerateTupleFromAccount( account: "Account" ):
         
-        ( account_key, account_type, created, expires, banned_info, bandwidth_tracker ) = account.ToTuple()
+        account_key = account.GetAccountKey()
+        account_type = account.GetAccountType()
+        created = account.GetCreated()
+        expires = account.GetExpires()
+        
+        banned_info = account.GetBannedInfo()
+        bandwidth_tracker = account.GetBandwidthTracker()
+        
+        ( message, message_created ) = account.GetMessageAndTimestamp()
         
         dictionary = HydrusSerialisable.SerialisableDictionary()
         
         dictionary[ 'banned_info' ] = banned_info
         
         dictionary[ 'bandwidth_tracker' ] = bandwidth_tracker
+        
+        dictionary[ 'message' ] = message
+        dictionary[ 'message_created' ] = message_created
         
         dictionary = dictionary.Duplicate()
         
@@ -784,24 +729,97 @@ class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetData( self ): return self._data
+    def GetAccountKey( self ) -> bytes:
+        
+        if not self.HasAccountKey():
+            
+            raise Exception( 'This Account Identifier does not have an account key!' )
+            
+        
+        return self._data
+        
     
-    def HasAccountKey( self ): return self._type == self.TYPE_ACCOUNT_KEY
+    def GetContent( self ) -> "Content":
+        
+        if not self.HasContent():
+            
+            raise Exception( 'This Account Identifier does not have content!' )
+            
+        
+        return self._data
+        
     
-    def HasContent( self ): return self._type == self.TYPE_CONTENT
+    def GetData( self ):
+        
+        return self._data
+        
+    
+    def HasAccountKey( self ):
+        
+        return self._type == self.TYPE_ACCOUNT_KEY
+        
+    
+    def HasContent( self ):
+        
+        return self._type == self.TYPE_CONTENT
+        
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER ] = AccountIdentifier
 
-class AccountType( object ):
+class AccountType( HydrusSerialisable.SerialisableBase ):
     
-    def __init__( self, account_type_key, title, dictionary ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE
+    SERIALISABLE_NAME = 'Account Type'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__(
+        self,
+        account_type_key = None,
+        title = None,
+        permissions = None,
+        bandwidth_rules = None,
+        auto_creation_velocity = None,
+        auto_creation_history = None
+        ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
+        if account_type_key is None:
+            
+            account_type_key = HydrusData.GenerateKey()
+            
+        
+        if title is None:
+            
+            title = 'standard user'
+            
+        
+        if permissions is None:
+            
+            permissions = {}
+            
+        
+        if bandwidth_rules is None:
+            
+            bandwidth_rules = HydrusNetworking.BandwidthRules()
+            
+        
+        if auto_creation_velocity is None:
+            
+            auto_creation_velocity = ( 0, 86400 )
+            
+        
+        if auto_creation_history is None:
+            
+            auto_creation_history = HydrusNetworking.BandwidthTracker()
+            
+        
         self._account_type_key = account_type_key
         self._title = title
-        
-        self._LoadFromDictionary( dictionary )
+        self._permissions = permissions
+        self._bandwidth_rules = bandwidth_rules
+        self._auto_creation_velocity = auto_creation_velocity
+        self._auto_creation_history = auto_creation_history
         
     
     def __repr__( self ):
@@ -814,27 +832,43 @@ class AccountType( object ):
         return self.__repr__()
         
     
-    def _GetSerialisableDictionary( self ):
+    def _GetSerialisableInfo( self ):
         
-        dictionary = HydrusSerialisable.SerialisableDictionary()
+        serialisable_account_type_key = self._account_type_key.hex()
+        serialisable_permissions = list( self._permissions.items() )
+        serialisable_bandwidth_rules = self._bandwidth_rules.GetSerialisableTuple()
+        serialisable_auto_creation_history = self._auto_creation_history.GetSerialisableTuple()
         
-        dictionary[ 'permissions' ] = list( self._permissions.items() )
-        
-        dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
-        
-        return dictionary
+        return ( serialisable_account_type_key, self._title, serialisable_permissions, serialisable_bandwidth_rules, self._auto_creation_velocity, serialisable_auto_creation_history )
         
     
-    def _LoadFromDictionary( self, dictionary ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        self._permissions = dict( dictionary[ 'permissions' ] )
+        ( serialisable_account_type_key, self._title, serialisable_permissions, serialisable_bandwidth_rules, self._auto_creation_velocity, serialisable_auto_creation_history ) = serialisable_info
         
-        self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
+        self._account_type_key = bytes.fromhex( serialisable_account_type_key )
+        self._permissions = dict( serialisable_permissions )
+        self._bandwidth_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_rules )
+        self._auto_creation_history = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_auto_creation_history )
         
     
     def BandwidthOK( self, bandwidth_tracker ):
         
         return self._bandwidth_rules.CanStartRequest( bandwidth_tracker )
+        
+    
+    def CanAutoCreateAccountNow( self ):
+        
+        if not self.SupportsAutoCreateAccount():
+            
+            return False
+            
+        
+        ( num_accounts_per_time_delta, time_delta ) = self._auto_creation_velocity
+        
+        num_created = self._auto_creation_history.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_delta )
+        
+        return num_created < num_accounts_per_time_delta
         
     
     def HasPermission( self, content_type, permission ):
@@ -862,6 +896,21 @@ class AccountType( object ):
         return False
         
     
+    def GetAutoCreateAccountHistory( self ) -> HydrusNetworking.BandwidthTracker:
+        
+        return self._auto_creation_history
+        
+    
+    def GetAutoCreateAccountVelocity( self ):
+        
+        return self._auto_creation_velocity
+        
+    
+    def GetBandwidthRules( self ):
+        
+        return self._bandwidth_rules
+        
+    
     def GetBandwidthStringsAndGaugeTuples( self, bandwidth_tracker ):
         
         return self._bandwidth_rules.GetBandwidthStringsAndGaugeTuples( bandwidth_tracker )
@@ -872,11 +921,16 @@ class AccountType( object ):
         return self._account_type_key
         
     
+    def GetPermissions( self ):
+        
+        return self._permissions
+        
+    
     def GetPermissionStrings( self ):
         
         s = []
         
-        for ( content_type, action ) in list(self._permissions.items()):
+        for ( content_type, action ) in self._permissions.items():
             
             s.append( HC.permission_pair_string_lookup[ ( content_type, action ) ] )
             
@@ -889,55 +943,16 @@ class AccountType( object ):
         return self._title
         
     
-    def ToDictionaryTuple( self ):
+    def ReportAutoCreateAccount( self ):
         
-        dictionary = self._GetSerialisableDictionary()
-        
-        return ( self._account_type_key, self._title, dictionary )
+        self._auto_creation_history.ReportRequestUsed()
         
     
-    def ToSerialisableTuple( self ):
+    def SupportsAutoCreateAccount( self ):
         
-        dictionary = self._GetSerialisableDictionary()
+        ( num_accounts_per_time_delta, time_delta ) = self._auto_creation_velocity
         
-        dictionary_string = dictionary.DumpToString()
-        
-        return ( self._account_type_key.hex(), self._title, dictionary_string )
-        
-    
-    def ToTuple( self ):
-        
-        return ( self._account_type_key, self._title, self._permissions, self._bandwidth_rules )
-        
-    
-    @staticmethod
-    def GenerateAccountTypeFromParameters( account_type_key, title, permissions, bandwidth_rules ):
-        
-        dictionary = HydrusSerialisable.SerialisableDictionary()
-        
-        dictionary[ 'permissions' ] = list(permissions.items())
-        dictionary[ 'bandwidth_rules' ] = bandwidth_rules
-        
-        return AccountType( account_type_key, title, dictionary )
-        
-    
-    @staticmethod
-    def GenerateAccountTypeFromSerialisableTuple( serialisable_info ):
-        
-        ( account_type_key_encoded, title, dictionary_string ) = serialisable_info
-        
-        try:
-            
-            account_type_key = bytes.fromhex( account_type_key_encoded )
-            
-        except TypeError:
-            
-            raise HydrusExceptions.BadRequestException( 'Could not decode that account type key!' )
-            
-        
-        dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
-        
-        return AccountType( account_type_key, title, dictionary )
+        return num_accounts_per_time_delta > 0
         
     
     @staticmethod
@@ -966,33 +981,36 @@ class AccountType( object ):
             raise NotImplementedError( 'Do not have a default admin account type set up for this service yet!' )
             
         
-        account_type = AccountType.GenerateNewAccountTypeFromParameters( 'administrator', permissions, bandwidth_rules )
+        account_type = AccountType.GenerateNewAccountType( 'administrator', permissions, bandwidth_rules )
         
         return account_type
         
     
     @staticmethod
-    def GenerateNewAccountTypeFromParameters( title, permissions, bandwidth_rules ):
+    def GenerateNewAccountType( title, permissions, bandwidth_rules ):
         
         account_type_key = HydrusData.GenerateKey()
         
-        return AccountType.GenerateAccountTypeFromParameters( account_type_key, title, permissions, bandwidth_rules )
+        return AccountType( account_type_key = account_type_key, title = title, permissions = permissions, bandwidth_rules = bandwidth_rules )
         
     
     @staticmethod
     def GenerateUnknownAccountType():
         
         title = 'unknown account'
+        
         permissions = {}
         
         bandwidth_rules = HydrusNetworking.BandwidthRules()
         bandwidth_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, None, 0 )
         
-        unknown_account_type = AccountType.GenerateNewAccountTypeFromParameters( title, permissions, bandwidth_rules )
+        unknown_account_type = AccountType.GenerateNewAccountType( title, permissions, bandwidth_rules )
         
         return unknown_account_type
         
     
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE ] = AccountType
+
 class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_TO_SERVER_UPDATE
@@ -1904,7 +1922,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            metadata = { update_index : row for ( update_index, row ) in list(self._metadata.items()) if update_index >= from_update_index }
+            metadata = { update_index : row for ( update_index, row ) in self._metadata.items() if update_index >= from_update_index }
             
             return Metadata( metadata, self._next_update_due )
             
@@ -2362,12 +2380,28 @@ class ServerServiceRestricted( ServerService ):
         
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         
+        dictionary[ 'server_message' ] = self._server_message
+        
         return dictionary
         
     
     def _LoadFromDictionary( self, dictionary ):
         
         ServerService._LoadFromDictionary( self, dictionary )
+        
+        if 'service_options' not in dictionary:
+            
+            dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary()
+            
+        
+        self._service_options = dictionary[ 'service_options' ]
+        
+        if 'server_message' not in self._service_options:
+            
+            self._service_options[ 'server_message' ] = ''
+            
+        
+        self._server_message = self._service_options[ 'server_message' ]
         
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         
@@ -2377,6 +2411,22 @@ class ServerServiceRestricted( ServerService ):
         with self._lock:
             
             return self._bandwidth_rules.CanStartRequest( self._bandwidth_tracker )
+            
+        
+    
+    def GetServiceOptions( self ):
+        
+        with self._lock:
+            
+            return self._service_options
+            
+        
+    
+    def SetServiceOptions( self, service_options: HydrusSerialisable.SerialisableDictionary ):
+        
+        with self._lock:
+            
+            self._service_options = service_options
             
         
     
@@ -2394,6 +2444,11 @@ class ServerServiceRepository( ServerServiceRestricted ):
     def _LoadFromDictionary( self, dictionary ):
         
         ServerServiceRestricted._LoadFromDictionary( self, dictionary )
+        
+        if 'update_period' not in self._service_options:
+            
+            self._service_options[ 'update_period' ] = 100000
+            
         
         self._metadata = dictionary[ 'metadata' ]
         
@@ -2449,11 +2504,13 @@ class ServerServiceRepository( ServerServiceRestricted ):
                         begin = self._metadata.GetNextUpdateBegin()
                         
                     
-                    end = begin + HC.UPDATE_DURATION
+                    update_period = self._service_options[ 'update_period' ]
+                    
+                    end = begin + update_period
                     
                     update_hashes = HG.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
                     
-                    next_update_due = end + HC.UPDATE_DURATION + 1
+                    next_update_due = end + update_period
                     
                     with self._lock:
                         
@@ -2478,7 +2535,15 @@ class ServerServiceRepository( ServerServiceRestricted ):
     
 class ServerServiceRepositoryTag( ServerServiceRepository ):
     
-    pass
+    def _LoadFromDictionary( self, dictionary ):
+        
+        ServerServiceRepository._LoadFromDictionary( self, dictionary )
+        
+        if 'tag_filter' not in self._service_options:
+            
+            self._service_options[ 'tag_filter' ] = HydrusTags.TagFilter()
+            
+        
     
 class ServerServiceRepositoryFile( ServerServiceRepository ):
     

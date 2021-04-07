@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
@@ -260,7 +261,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
                 service_key = bytes.fromhex( service_key_encoded )
                 
-                tag_filter = ClientTags.TagFilter()
+                tag_filter = HydrusTags.TagFilter()
                 
                 tag_service_actions.append( ( service_key, action, tag_filter ) )
                 

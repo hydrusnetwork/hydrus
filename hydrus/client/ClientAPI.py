@@ -4,8 +4,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-
-from hydrus.client.metadata import ClientTags
+from hydrus.core import HydrusTags
 
 CLIENT_API_PERMISSION_ADD_URLS = 0
 CLIENT_API_PERMISSION_ADD_FILES = 1
@@ -218,7 +217,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         if search_tag_filter is None:
             
-            search_tag_filter = ClientTags.TagFilter()
+            search_tag_filter = HydrusTags.TagFilter()
             
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )

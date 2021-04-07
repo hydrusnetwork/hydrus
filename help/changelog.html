@@ -8,6 +8,92 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_434"><a href="#version_434">version 434</a></h3></li>
+				<ul>
+					<li>network updates:</li>
+					<li>the hydrus network version is now 20. update your clients if you want to keep syncing with the PTR! no rush, but if you try to talk to a new server on an older client, or _vice versa_, you will get a polite error message</li>
+					<li>most of the updates this week are for server administrators and jannies. I have reactivated old functions that were broken long ago and added some new features. the rest is mostly code cleanup and refactoring, improved error handling, preparation for the future, and other unexciting (but still important) work that had piled up</li>
+					<li>.</li>
+					<li>clientside network/repo stuff for regular users:</li>
+					<li>repositories now have separate pause/play for account sync, update download, and update processing. the confusing old 'working' button is replaced with separate pause/play bitmap buttons</li>
+					<li>admins can now attach a message to individual accounts. if you get a message attached, you will see it as a popup message, and on review services, after the next account sync (within a couple of days)</li>
+					<li>a hydrus server may now allow automatic account creation. a button to check for creatable account types and then create a new account is added to 'manage services'. the PTR is likely to move to this sort of system for upload siblings/parents permissions, where getting away from my shared blob mega-account will make it easier to group petitions in the janitor workflow</li>
+					<li>a logical bug in repository update processing order is fixed. I believe this was the source of some bad siblings for new users who did a lot of syncing in one go. there is no efficient re-processing fix available atm (you'll want 'reprocess content' atm), but I plan to split processing into more pause/play for mappings/siblings/parents, which should add more 'reprocessing' tools</li>
+					<li>I cleaned a bunch of the UI code related to networking--in manage services and elsewhere, so there should be fewer bugs, confusion, and UI lag when using these controls. a whole load is still a mess though!</li>
+					<li>fixed the 'see special permissions' button in review services</li>
+					<li>repositories have a new maintenance function, accessed through the new 'reset downloading' button on review services, that force-resyncs all update hashes. this _should_ fix the unusual issue a handful of users had with an extra (invalid/404ing) update hash on the PTR. this function will also auto-trigger on various error states. the reason some users had an extra update hash in storage is still under investigation</li>
+					<li>.</li>
+					<li>other stuff, mostly boring:</li>
+					<li>fixed an issue with the new file sort asc/desc button where a transition from 'random' to another sort type using a favourite search would always reset the sort order to the top value</li>
+					<li>my asynchronous job object now has a default errback to catch errors more gracefully by default and with special handling in future. clicking an async button in a dialog will now show you the error there and then, rather than just the hidden error popup on the main window</li>
+					<li>added convenience links to the latest build on github to the help menu and html help</li>
+					<li>fixed another place in local file importing where a file that did not pass file import options checks would set 'skipped' status. in now sets 'ignored' like everything else</li>
+					<li>fixed a bug when an 'undelete' call is sent to the media viewer when no media is set (usually during startup/shutdown)</li>
+					<li>I disabled progress gauge 'pulsing' across the program. the way this was first implemented applied too often--I will bring it back to only apply when a job is both indeterminate and currently working</li>
+					<li>my custom button class can now launch its own yes/no confirmation dialogs on click</li>
+					<li>removed a subtag regen routine in the 425->426 update step that was bugging out due to bitrot--it now makes a popup message on boot asking for the routine to be run manually</li>
+					<li>fixed a typo bug in the 'subscription snapshot' debug command</li>
+					<li>misc ancient python 2-to-3 code cleanup</li>
+					<li>updaned cloudscraper to 1.2.58</li>
+					<li>.</li>
+					<li>admin stuff:</li>
+					<li>.</li>
+					<li>account modification:</li>
+					<li>after a very very long delay, account modification is back. if you have permission to manage accounts, you can directly modify accounts using an account key from the services->admin menu, or for tag repositories you can do it from 'manage tags' from the cog menu on a selection of tags, or for file repositories you can do it from the file right-click menu on an uploaded file, or any petition processing page if you have modify accounts permission</li>
+					<li>the available account modification routines are: change account type, set/extend/clear expiration, ban, unban, set message (new!)</li>
+					<li>the modification routines now print summaries to the server log when they fire, including janny and subject account key</li>
+					<li>the server admin menu now lets you see a list of all the accounts on the service, and also launch the new modification window from it for a selection of accounts</li>
+					<li>the account modification window is also no longer a dialog, but a normal panel that lets you interact with the rest of the program while open</li>
+					<li>the modify UI is now completely async. it loads account information in the background, and all server modification commands and subsequent account refreshing are the same</li>
+					<li>the modify UI now lists separate row summaries, including account type and banned info, for all the accounts it is loaded with. accounts can be checked to apply actions only to a subset. you can also copy the checked account keys</li>
+					<li>the modify UI also highlights if you are one of the accounts being modified, kek</li>
+					<li>the modify UI now shows ban, expiration, and message info, and the 'account info' dict (which is still not great, but can be extended in future), for any listed account when it is clicked</li>
+					<li>I have dropped 'superban' (which deleted all the account's previous content contributions along with the ban) for now. it'll likely return in one form or another in a future account permissions overhaul</li>
+					<li>fixed some dedupe and de-surplus bugs in the 'modify accounts' logic</li>
+					<li>fixed some account ban status presentation logic</li>
+					<li>the UI code has been cleaned up generally</li>
+					<li>retired the old 'get an account's info' admin menu item, since modify accounts dialog now fetches this better</li>
+					<li>hydrus accounts now synchronise twice as fast, every 250,000 seconds</li>
+					<li>.</li>
+					<li>account types:</li>
+					<li>account types now support optional automatic account creation, default off. it works like a subscription file velocity--'x new accounts per y time delta'.</li>
+					<li>modifying account types now prints summaries, with janny account key, to the log</li>
+					<li>account types now use a newer data serialisation format. the way they are tracked behind the scenes is neater</li>
+					<li>.</li>
+					<li>petitions:</li>
+					<li>I did not have time to do the petition overhaul. however, I have prepared the network for it, and I have a plan, so I hope to be able in the coming weeks to improve fetch time for petition counts, make a summary list of all petitions, and implement background petition fetching to improve turnaround time</li>
+					<li>the petition UI now has a button to copy the petitioner's account key (e.g if the janny wants to send it to an admin with account modification permission)</li>
+					<li>.</li>
+					<li>service options:</li>
+					<li>hydrus services now have a separate 'options' object that is synced to all clients alongside account sync. this will be expandable in future without network version hassle</li>
+					<li>the options object now contains stub values for 'server message', 'update period', and 'tag filter'. these values are not yet editable, but I will add them and plug them in in the coming weeks</li>
+					<li>.</li>
+					<li>boring network/repo update stuff:</li>
+					<li>services now print to log when they host on a port. this applies to the server and the client (for client api and local booru)</li>
+					<li>the repository update routine is now careful to process updates in index order--previously they were unintentionally processed in pseudorandom order, meaning if the processing backlog was long enough, certain add/delete updates of bad content could occur in reverse order. I believe this was the source of some odd persistent bad siblings some users saw after doing a lot of first-time 'catch-up' processing when first syncing with the client</li>
+					<li>the server tracks account_type_keys and account_type_ids in a more careful, service-specific way. all access and modification of account type is cleaned up</li>
+					<li>the AccountType object is graduated to the new serialisation format. the server db stores them in a new table and will convert all legacy objects on update</li>
+					<li>deleted the double-ancient YAML AccountType</li>
+					<li>critical network errors during repository download are now handled a little cleaner and trigger a metadata full resync</li>
+					<li>the server is better about exiting cleanly--last-minute repository metadata changes and very recent session keys are saved</li>
+					<li>wrote a new account account type change routine for the server. it prints a summary, including janny account key, to the log</li>
+					<li>wrote a new account expiration set/extend modification routines for the server. they prints a summary, including janny account key, to the log</li>
+					<li>wrote a new ban routine for the server. it prints a summary, including janny account key, to the log</li>
+					<li>wrote a new unban routine for the server. it prints a summary, including janny account key, to the log</li>
+					<li>wrote a message-set routine for the server. it prints a summary, including janny account key, to the log</li>
+					<li>restored and expanded old server db tests for service creation, account initialisation, account type addition and deletion, registration key/access key/account generation, basic mappings addition, account identification by mapping content, and account modifications: account type, ban, unban, set expires, set message</li>
+					<li>fleshed out and fixed old server unit tests</li>
+					<li>refactored a bunch of server and network code, including to new 'networking' modules, and added a heap of type hints</li>
+					<li>refactored all the server-client variable de/serialisation code, and a bunch of network object code</li>
+					<li>refactored clientside service ui to a new file</li>
+					<li>refactored client network and service panel gui code to new modules</li>
+					<li>refactored the client manage services edit panels to their own, less confusing and coupled, classes</li>
+					<li>refactored the client review services panels to their own, less confusing and coupled, classes</li>
+					<li>cleaned up the clientside service ui, added and migrated to nicer new async functions for server calls</li>
+					<li>cleaned a ton of server and network code in general</li>
+					<li>cleaned up some json/POST variable parsing</li>
+					<li>cleaned admin service menu code</li>
+				</ul>
 				<li><h3 id="version_433"><a href="#version_433">version 433</a></h3></li>
 				<ul>
 					<li>misc:</li>

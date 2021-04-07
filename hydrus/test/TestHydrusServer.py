@@ -12,19 +12,21 @@ import twisted.internet.ssl
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
+from hydrus.core.networking import HydrusNetwork
+from hydrus.core.networking import HydrusNetworking
+from hydrus.core.networking import HydrusServerRequest
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientLocalServer
 from hydrus.client import ClientServices
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.networking import ClientLocalServer
 
 from hydrus.server import ServerFiles
-from hydrus.server import ServerServer
+from hydrus.server.networking import ServerServer
 
 from hydrus.test import TestController
 
@@ -152,7 +154,7 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( data, favicon )
         
-        time.sleep( 3 )
+        connection.close()
         
     
     def _test_file_repo( self, service ):
@@ -194,7 +196,9 @@ class TestServer( unittest.TestCase ):
         
         ( written_service_key, written_account, written_file_dict ) = args
         
-        self.assertEqual( written_file_dict[ 'hash' ], b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3' )
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        self.assertEqual( written_file_dict[ 'hash' ], hash )
         self.assertEqual( written_file_dict[ 'ip' ], '127.0.0.1' )
         self.assertEqual( written_file_dict[ 'height' ], 200 )
         self.assertEqual( written_file_dict[ 'width' ], 200 )
@@ -211,6 +215,18 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response[ 'ip' ], ip )
         self.assertEqual( response[ 'timestamp' ], timestamp )
+        
+        # account from hash
+        
+        subject_content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = hash )
+        
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = subject_content )
+        
+        HG.test_controller.SetRead( 'account', self._account )
+        
+        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        
+        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
         
         # thumbnail
         
@@ -499,26 +515,73 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
         
+        # account from access key
+        
+        HG.test_controller.SetRead( 'account', self._account )
+        
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( account_key = self._account.GetAccountKey() )
+        
+        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        
+        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
+        
+        # account from file
+        
+        HG.test_controller.SetRead( 'account_from_content', self._account )
+        
+        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = ( HydrusData.GenerateKey(), ) )
+        
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
+        
+        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        
+        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
+        
+        # account from mapping
+        
+        HG.test_controller.SetRead( 'account_from_content', self._account )
+        
+        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( 'hello', HydrusData.GenerateKey() ) )
+        
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
+        
+        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        
+        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
+        
         # account_info
         
         account_info = { 'message' : 'hello' }
         
         HG.test_controller.SetRead( 'account_info', account_info )
-        HG.test_controller.SetRead( 'account_key_from_identifier', HydrusData.GenerateKey() )
         
-        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : HydrusData.GenerateKey() } )
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( account_key = HydrusData.GenerateKey() )
+        
+        response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
-        # this not working for now, screw it m8
+        #
         
-        #response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey() } )
+        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = ( HydrusData.GenerateKey(), ) )
         
-        #self.assertEqual( response[ 'account_info' ], account_info )
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
         
-        #response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey(), 'subject_tag' : 'hello' } )
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            # can only do it with an account key
+            response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
+            
         
-        #self.assertEqual( response[ 'account_info' ], account_info )
+        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( 'hello', HydrusData.GenerateKey() ) )
+        
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
+        
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            # can only do it with an account key
+            response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
+            
         
         # account_types
         
@@ -532,7 +595,7 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response[ 'account_types' ][0].GetAccountTypeKey(), account_types[0].GetAccountTypeKey() )
         
-        empty_account_type = HydrusNetwork.AccountType.GenerateNewAccountTypeFromParameters( 'empty account', {}, HydrusNetworking.BandwidthRules() )
+        empty_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'empty account', {}, HydrusNetworking.BandwidthRules() )
         
         account_types.append( empty_account_type )
         
@@ -600,7 +663,20 @@ class TestServer( unittest.TestCase ):
     
     def _test_tag_repo( self, service ):
         
-        pass
+        # account from tag
+        
+        test_tag = 'character:samus aran'
+        test_hash = HydrusData.GenerateKey()
+        
+        subject_content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( test_tag, test_hash ) )
+        
+        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = subject_content )
+        
+        HG.test_controller.SetRead( 'account', self._account )
+        
+        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        
+        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
         
     
     def test_repository_file( self ):

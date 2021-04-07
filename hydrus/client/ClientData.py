@@ -297,6 +297,23 @@ def ShowExceptionClient( e, do_wait = True ):
         etype = type( e )
         value = str( e )
         
+    
+    ShowExceptionTupleClient( etype, value, tb, do_wait = do_wait )
+    
+def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
+    
+    if etype is None:
+        
+        etype = HydrusExceptions.UnknownException
+        
+    
+    if value is None:
+        
+        value = 'Unknown error'
+        
+    
+    if tb is None:
+        
         trace = 'No error trace--here is the stack:' + os.linesep + ''.join( traceback.format_stack() )
         
     else:
@@ -319,7 +336,7 @@ def ShowExceptionClient( e, do_wait = True ):
     
     job_key = ClientThreading.JobKey()
     
-    if isinstance( e, HydrusExceptions.ShutdownException ):
+    if etype == HydrusExceptions.ShutdownException:
         
         return
         

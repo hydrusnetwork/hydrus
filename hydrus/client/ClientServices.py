@@ -13,11 +13,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNATPunch
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core.networking import HydrusNATPunch
+from hydrus.core.networking import HydrusNetwork
+from hydrus.core.networking import HydrusNetworkVariableHandling
+from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -28,6 +29,9 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
+
+SHORT_DELAY_PERIOD = 50000
+ACCOUNT_SYNC_PERIOD = 250000
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -43,11 +47,16 @@ def GenerateDefaultServiceDictionary( service_type ):
             
             dictionary[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( HydrusNetwork.Account.GenerateUnknownAccount() )
             dictionary[ 'next_account_sync' ] = 0
+            dictionary[ 'network_sync_paused' ] = False
+            dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary()
             
             if service_type in HC.REPOSITORIES:
                 
                 dictionary[ 'metadata' ] = HydrusNetwork.Metadata()
-                dictionary[ 'paused' ] = False
+                dictionary[ 'do_a_full_metadata_resync' ] = False
+                
+                dictionary[ 'update_downloading_paused' ] = False
+                dictionary[ 'update_processing_paused' ] = False
                 
             
         
@@ -858,7 +867,7 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateUnknownAccount( account_key )
         
-        self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION * 10
+        self._next_account_sync = HydrusData.GetNow() + ACCOUNT_SYNC_PERIOD
         
         self._SetDirty()
         
@@ -873,7 +882,7 @@ class ServiceRestricted( ServiceRemote ):
             
         else:
             
-            return HC.UPDATE_DURATION
+            return SHORT_DELAY_PERIOD
             
         
     
@@ -893,6 +902,11 @@ class ServiceRestricted( ServiceRemote ):
     
     def _CheckFunctional( self, including_external_communication = True, including_bandwidth = True, including_account = True ):
         
+        if self._network_sync_paused:
+            
+            raise HydrusExceptions.ConflictException( 'Repository is paused!' )
+            
+        
         if including_account:
             
             self._account.CheckFunctional()
@@ -910,7 +924,6 @@ class ServiceRestricted( ServiceRemote ):
         
         ServiceRemote._CheckCanCommunicateExternally( self, including_bandwidth = including_bandwidth )
         
-        
     
     def _GetSerialisableDictionary( self ):
         
@@ -918,6 +931,8 @@ class ServiceRestricted( ServiceRemote ):
         
         dictionary[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( self._account )
         dictionary[ 'next_account_sync' ] = self._next_account_sync
+        dictionary[ 'network_sync_paused' ] = self._network_sync_paused
+        dictionary[ 'service_options' ] = self._service_options
         
         return dictionary
         
@@ -928,6 +943,27 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ] )
         self._next_account_sync = dictionary[ 'next_account_sync' ]
+        
+        if 'network_sync_paused' not in dictionary:
+            
+            network_sync_paused = False
+            
+            if 'paused' in dictionary:
+                
+                network_sync_paused = dictionary[ 'paused' ]
+                
+            
+            dictionary[ 'network_sync_paused' ] = network_sync_paused
+            
+        
+        self._network_sync_paused = dictionary[ 'network_sync_paused' ]
+        
+        if 'service_options' not in dictionary:
+            
+            dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary()
+            
+        
+        self._service_options = dictionary[ 'service_options' ]
         
     
     def CanSyncAccount( self, including_external_communication = True ):
@@ -1023,6 +1059,32 @@ class ServiceRestricted( ServiceRemote ):
             
         
     
+    def IsPausedNetworkSync( self ):
+        
+        with self._lock:
+            
+            return self._network_sync_paused
+            
+        
+    
+    def PausePlayNetworkSync( self ):
+        
+        with self._lock:
+            
+            self._network_sync_paused = not self._network_sync_paused
+            
+            self._SetDirty()
+            
+            paused = self._network_sync_paused
+            
+        
+        HG.client_controller.pub( 'important_dirt_to_clean' )
+        
+        if not paused:
+            
+            HG.client_controller.pub( 'notify_new_permissions' )
+            
+        
     
     def Request( self, method, command, request_args = None, request_headers = None, report_hooks = None, temp_path = None ):
         
@@ -1034,7 +1096,7 @@ class ServiceRestricted( ServiceRemote ):
             
             if method == HC.GET:
                 
-                query = HydrusNetwork.DumpToGETQuery( request_args )
+                query = HydrusNetworkVariableHandling.DumpToGETQuery( request_args )
                 
                 body = ''
                 
@@ -1056,7 +1118,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     content_type = HC.APPLICATION_JSON
                     
-                    body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( request_args )
+                    body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( request_args )
                     
                 
             
@@ -1114,7 +1176,7 @@ class ServiceRestricted( ServiceRemote ):
             
             if content_type == 'application/json':
                 
-                parsed_args = HydrusNetwork.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
+                parsed_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
                 
                 if command == 'account' and 'account' in parsed_args:
                     
@@ -1158,11 +1220,11 @@ class ServiceRestricted( ServiceRemote ):
                     
                 elif isinstance( e, HydrusExceptions.NotFoundException ):
                     
-                    self._DelayFutureRequests( 'got an unexpected 404', HC.UPDATE_DURATION )
+                    self._DelayFutureRequests( 'got an unexpected 404', SHORT_DELAY_PERIOD )
                     
                 elif isinstance( e, HydrusExceptions.BandwidthException ):
                     
-                    self._DelayFutureRequests( 'service has exceeded bandwidth', HC.UPDATE_DURATION * 5 )
+                    self._DelayFutureRequests( 'service has exceeded bandwidth', ACCOUNT_SYNC_PERIOD )
                     
                 else:
                     
@@ -1185,6 +1247,8 @@ class ServiceRestricted( ServiceRemote ):
         
         with self._lock:
             
+            ( original_message, original_message_created ) = self._account.GetMessageAndTimestamp()
+            
             name = self._name
             
             if force:
@@ -1201,7 +1265,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     do_it = False
                     
-                    self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION
+                    self._next_account_sync = HydrusData.GetNow() + SHORT_DELAY_PERIOD
                     
                     self._SetDirty()
                     
@@ -1216,11 +1280,22 @@ class ServiceRestricted( ServiceRemote ):
             
             try:
                 
-                response = self.Request( HC.GET, 'account' )
+                account_response = self.Request( HC.GET, 'account' )
                 
                 with self._lock:
                     
-                    self._account = response[ 'account' ]
+                    self._account = account_response[ 'account' ]
+                    
+                    ( message, message_created ) = self._account.GetMessageAndTimestamp()
+                    
+                    if message_created != original_message_created and not HydrusData.TimeHasPassed( message_created + ( 86400 * 5 ) ):
+                        
+                        m = 'New message for your account on {}:'.format( self._name )
+                        m += os.linesep * 2
+                        m += message
+                        
+                        HydrusData.ShowText( m )
+                        
                     
                     if force:
                         
@@ -1228,11 +1303,25 @@ class ServiceRestricted( ServiceRemote ):
                         
                     
                 
+                try:
+                    
+                    options_response = self.Request( HC.GET, 'options' )
+                    
+                    with self._lock:
+                        
+                        self._service_options = options_response[ 'service_options' ]
+                        
+                    
+                except HydrusExceptions.SerialisationException:
+                    
+                    pass
+                    
+                
                 HG.client_controller.pub( 'notify_new_permissions' )
                 
             except ( HydrusExceptions.CancelledException, HydrusExceptions.NetworkException ) as e:
                 
-                HydrusData.Print( 'Failed to refresh account for ' + name + ':' )
+                HydrusData.Print( 'Failed to refresh account for {}:'.format( name ) )
                 
                 HydrusData.Print( e )
                 
@@ -1247,7 +1336,7 @@ class ServiceRestricted( ServiceRemote ):
                 
             except Exception:
                 
-                HydrusData.Print( 'Failed to refresh account for ' + name + ':' )
+                HydrusData.Print( 'Failed to refresh account for {}:'.format( name ) )
                 
                 HydrusData.Print( traceback.format_exc() )
                 
@@ -1260,7 +1349,7 @@ class ServiceRestricted( ServiceRemote ):
                 
                 with self._lock:
                     
-                    self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION * 5
+                    self._next_account_sync = HydrusData.GetNow() + ACCOUNT_SYNC_PERIOD
                     
                     self._SetDirty()
                     
@@ -1288,7 +1377,7 @@ class ServiceRepository( ServiceRestricted ):
             
             self._CheckFunctional()
             
-            return True
+            return not self._update_downloading_paused
             
         except:
             
@@ -1298,24 +1387,10 @@ class ServiceRepository( ServiceRestricted ):
     
     def _CanSyncProcess( self ):
         
-        try:
-            
-            self._CheckFunctional( including_external_communication = False, including_bandwidth = False, including_account = False )
-            
-            return True
-            
-        except:
-            
-            return False
-            
+        return not ( self._update_processing_paused or HC.options[ 'pause_repo_sync' ] )
         
     
     def _CheckFunctional( self, including_external_communication = True, including_bandwidth = True, including_account = True ):
-        
-        if self._paused:
-            
-            raise HydrusExceptions.ConflictException( 'Repository is paused!' )
-            
         
         if HG.client_controller.options[ 'pause_repo_sync' ]:
             
@@ -1325,12 +1400,22 @@ class ServiceRepository( ServiceRestricted ):
         ServiceRestricted._CheckFunctional( self, including_external_communication = including_external_communication, including_bandwidth = including_bandwidth, including_account = including_account )
         
     
+    def _DealWithFundamentalNetworkError( self ):
+        
+        self._update_downloading_paused = True
+        self._do_a_full_metadata_resync = True
+        
+        ServiceRestricted._DealWithFundamentalNetworkError( self )
+        
+    
     def _GetSerialisableDictionary( self ):
         
         dictionary = ServiceRestricted._GetSerialisableDictionary( self )
         
         dictionary[ 'metadata' ] = self._metadata
-        dictionary[ 'paused' ] = self._paused
+        dictionary[ 'do_a_full_metadata_resync' ] = self._do_a_full_metadata_resync
+        dictionary[ 'update_downloading_paused' ] = self._update_downloading_paused
+        dictionary[ 'update_processing_paused' ] = self._update_processing_paused
         
         return dictionary
         
@@ -1340,7 +1425,36 @@ class ServiceRepository( ServiceRestricted ):
         ServiceRestricted._LoadFromDictionary( self, dictionary )
         
         self._metadata = dictionary[ 'metadata' ]
-        self._paused = dictionary[ 'paused' ]
+        
+        if 'do_a_full_metadata_resync' not in dictionary:
+            
+            dictionary[ 'do_a_full_metadata_resync' ] = False
+            
+        
+        self._do_a_full_metadata_resync = dictionary[ 'do_a_full_metadata_resync' ]
+        
+        if 'paused' in dictionary:
+            
+            paused = dictionary[ 'paused' ]
+            
+            del dictionary[ 'paused' ]
+            
+            dictionary[ 'update_downloading_paused' ] = paused
+            dictionary[ 'update_processing_paused' ] = paused
+            
+        
+        if 'update_downloading_paused' not in dictionary:
+            
+            dictionary[ 'update_downloading_paused' ] = False
+            
+        
+        if 'update_processing_paused' not in dictionary:
+            
+            dictionary[ 'update_processing_paused' ] = False
+            
+        
+        self._update_downloading_paused = dictionary[ 'update_downloading_paused' ]
+        self._update_processing_paused = dictionary[ 'update_processing_paused' ]
         
     
     def _LogFinalRowSpeed( self, precise_timestamp, total_rows, row_name ):
@@ -1380,9 +1494,20 @@ class ServiceRepository( ServiceRestricted ):
                 return
                 
             
-            do_it = self._metadata.UpdateDue( from_client = True )
+            do_a_full_metadata_resync = self._do_a_full_metadata_resync
             
-            next_update_index = self._metadata.GetNextUpdateIndex()
+            if self._do_a_full_metadata_resync:
+                
+                do_it = True
+                
+                next_update_index = 0
+                
+            else:
+                
+                do_it = self._metadata.UpdateDue( from_client = True )
+                
+                next_update_index = self._metadata.GetNextUpdateIndex()
+                
             
             service_key = self._service_key
             
@@ -1412,9 +1537,23 @@ class ServiceRepository( ServiceRestricted ):
                 return
                 
             
-            HG.client_controller.WriteSynchronous( 'associate_repository_update_hashes', service_key, metadata_slice )
+            if do_a_full_metadata_resync:
+                
+                HG.client_controller.WriteSynchronous( 'set_repository_update_hashes', service_key, metadata_slice )
+                
+            else:
+                
+                HG.client_controller.WriteSynchronous( 'associate_repository_update_hashes', service_key, metadata_slice )
+                
             
             with self._lock:
+                
+                if do_a_full_metadata_resync:
+                    
+                    self._metadata = HydrusNetwork.Metadata()
+                    
+                    self._do_a_full_metadata_resync = False
+                    
                 
                 self._metadata.UpdateFromSlice( metadata_slice )
                 
@@ -1520,8 +1659,6 @@ class ServiceRepository( ServiceRestricted ):
                         
                         with self._lock:
                             
-                            self._paused = True
-                            
                             self._DealWithFundamentalNetworkError()
                             
                         
@@ -1548,8 +1685,6 @@ class ServiceRepository( ServiceRestricted ):
                         
                         with self._lock:
                             
-                            self._paused = True
-                            
                             self._DealWithFundamentalNetworkError()
                             
                         
@@ -1569,8 +1704,6 @@ class ServiceRepository( ServiceRestricted ):
                     except Exception as e:
                         
                         with self._lock:
-                            
-                            self._paused = True
                             
                             self._DealWithFundamentalNetworkError()
                             
@@ -1667,6 +1800,8 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
                         
+                        self._do_a_full_metadata_resync = True
+                        
                         raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
                         
                     
@@ -1683,12 +1818,16 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
                         
+                        self._do_a_full_metadata_resync = True
+                        
                         raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
                         
                     
                     if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                        
+                        self._do_a_full_metadata_resync = True
                         
                         raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
                         
@@ -1795,6 +1934,8 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
                         
+                        self._do_a_full_metadata_resync = True
+                        
                         raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
                         
                     
@@ -1811,12 +1952,16 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
                         
+                        self._do_a_full_metadata_resync = True
+                        
                         raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
                         
                     
                     if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                        
+                        self._do_a_full_metadata_resync = True
                         
                         raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
                         
@@ -1913,7 +2058,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 HydrusData.ShowException( e )
                 
-                self._paused = True
+                self._update_processing_paused = True
                 
                 self._SetDirty()
                 
@@ -1975,6 +2120,20 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
+    def DoAFullMetadataResync( self ):
+        
+        with self._lock:
+            
+            self._do_a_full_metadata_resync = True
+            
+            self._SetDirty()
+            
+        
+        HG.client_controller.pub( 'important_dirt_to_clean' )
+        
+        HG.client_controller.pub( 'notify_new_permissions' )
+        
+    
     def GetMetadata( self ):
         
         with self._lock:
@@ -2004,6 +2163,14 @@ class ServiceRepository( ServiceRestricted ):
         with self._lock:
             
             return self._metadata.GetUpdateInfo()
+            
+        
+    
+    def IsDueAFullMetadataResync( self ):
+        
+        with self._lock:
+            
+            return self._do_a_full_metadata_resync
             
         
     
@@ -2064,23 +2231,50 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def IsPaused( self ):
+    def IsPausedUpdateDownloading( self ):
         
         with self._lock:
             
-            return self._paused
+            return self._update_downloading_paused
             
         
     
-    def PausePlay( self ):
+    def IsPausedUpdateProcessing( self ):
         
         with self._lock:
             
-            self._paused = not self._paused
+            return self._update_processing_paused
+            
+        
+    
+    def PausePlayUpdateDownloading( self ):
+        
+        with self._lock:
+            
+            self._update_downloading_paused = not self._update_downloading_paused
             
             self._SetDirty()
             
-            paused = self._paused
+            paused = self._update_downloading_paused
+            
+        
+        HG.client_controller.pub( 'important_dirt_to_clean' )
+        
+        if not paused:
+            
+            HG.client_controller.pub( 'notify_new_permissions' )
+            
+        
+    
+    def PausePlayUpdateProcessing( self ):
+        
+        with self._lock:
+            
+            self._update_processing_paused = not self._update_processing_paused
+            
+            self._SetDirty()
+            
+            paused = self._update_processing_paused
             
         
         HG.client_controller.pub( 'important_dirt_to_clean' )

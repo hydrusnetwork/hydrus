@@ -10,9 +10,6 @@ BLANK_PHASH = b'\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything e
 
 CAN_HIDE_MOUSE = True
 
-FILTER_WHITELIST = 0
-FILTER_BLACKLIST = 1
-
 # Hue is generally 200, Sat and Lum changes based on need
 COLOUR_LIGHT_SELECTED = QG.QColor( 235, 248, 255 )
 COLOUR_SELECTED = QG.QColor( 217, 242, 255 )

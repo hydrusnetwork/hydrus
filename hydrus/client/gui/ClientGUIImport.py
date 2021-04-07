@@ -23,7 +23,6 @@ from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUINetworkJobControl
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -33,6 +32,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImporting

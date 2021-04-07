@@ -11,13 +11,12 @@ from hydrus.core import HydrusController
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
+from hydrus.core.networking import HydrusNetworking
 
 from hydrus.server import ServerDB
-from hydrus.server import ServerServer
-
+from hydrus.server.networking import ServerServer
 
 def ProcessStartingAction( db_dir, action ):
     
@@ -205,6 +204,8 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
+        self.SaveDirtyObjects()
+        
         HydrusData.Print( 'Shutting down daemons\u2026' )
         
         self.ShutdownView()
@@ -360,6 +361,8 @@ class Controller( HydrusController.HydrusController ):
                     service_key = service.GetServiceKey()
                     service_type = service.GetServiceType()
                     
+                    name = service.GetName()
+                    
                     try:
                         
                         port = service.GetPort()
@@ -416,9 +419,13 @@ class Controller( HydrusController.HydrusController ):
                         
                         self._service_keys_to_connected_ports[ service_key ] = ( ipv4_port, ipv6_port )
                         
-                        if not HydrusNetworking.LocalPortInUse( port ):
+                        if HydrusNetworking.LocalPortInUse( port ):
                             
-                            raise Exception( 'Tried to bind port {} for "{}" but it failed.'.format( port, service.GetName() ) )
+                            HydrusData.Print( 'Running "{}" on port {}.'.format( name, port ) )
+                            
+                        else:
+                            
+                            raise Exception( 'Tried to bind port {} for "{}" but it failed.'.format( port, name ) )
                             
                         
                     except Exception as e:

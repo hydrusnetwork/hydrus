@@ -439,7 +439,7 @@ def ParseFFMPEGDuration( lines ):
             
         
         match = re.search("[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
-        hms = list(map(float, line[match.start()+1:match.end()].split(':')))
+        hms = [ float( float_string ) for float_string in line[match.start()+1:match.end()].split(':') ]
         
         if len( hms ) == 1:
             
@@ -669,7 +669,12 @@ def ParseFFMPEGVideoResolution( lines ):
         # get the size, of the form 460x320 (w x h)
         match = re.search(" [0-9]*x[0-9]*(,| )", line)
         
-        resolution = list(map(int, line[match.start():match.end()-1].split('x')))
+        resolution_string = line[match.start():match.end()-1]
+        
+        ( width_string, height_string ) = resolution_string.split( 'x' )
+        
+        width = int( width_string )
+        height = int( height_string )
         
         sar_match = re.search( "[\\[\\s]SAR [0-9]*:[0-9]* ", line )
         
@@ -681,19 +686,16 @@ def ParseFFMPEGVideoResolution( lines ):
             # '2:3'
             sar_string = sar_string[5:-1]
             
-            ( sar_w, sar_h ) = sar_string.split( ':' )
+            ( sar_width_string, sar_height_string ) = sar_string.split( ':' )
             
-            ( sar_w, sar_h ) = ( int( sar_w ), int( sar_h ) )
+            sar_width = int( sar_width_string )
+            sar_height = int( sar_height_string )
             
-            ( x, y ) = resolution
-            
-            x *= sar_w
-            x //= sar_h
-            
-            resolution = ( x, y )
+            width *= sar_width
+            width //= sar_height
             
         
-        return resolution
+        return ( width, height )
         
     except:
         
