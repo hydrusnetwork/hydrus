@@ -87,7 +87,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
     
     def GetCopyableText( self, with_counts: bool = False ) -> str:
         
-        return ClientTags.ConvertTagSliceToString( self._tag_slice )
+        return HydrusTags.ConvertTagSliceToString( self._tag_slice )
         
     
     def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
@@ -140,15 +140,15 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         
         if self._namespace is None:
             
-            return ClientTags.ConvertTagSliceToString( ':' )
+            return HydrusTags.ConvertTagSliceToString( ':' )
             
         elif self._namespace == '':
             
-            return ClientTags.ConvertTagSliceToString( '' )
+            return HydrusTags.ConvertTagSliceToString( '' )
             
         else:
             
-            return ClientTags.ConvertTagSliceToString( '{}:'.format( self._namespace ) )
+            return HydrusTags.ConvertTagSliceToString( '{}:'.format( self._namespace ) )
             
         
     

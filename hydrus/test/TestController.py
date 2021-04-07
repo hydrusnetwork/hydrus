@@ -747,6 +747,14 @@ class Controller( object ):
             TestClientDBTags
         ]
         
+        module_lookup[ 'client_db' ] = [
+            TestClientDB
+        ]
+        
+        module_lookup[ 'server_db' ] = [
+            TestServerDB
+        ]
+        
         module_lookup[ 'db' ] = [
             TestClientDB,
             TestServerDB

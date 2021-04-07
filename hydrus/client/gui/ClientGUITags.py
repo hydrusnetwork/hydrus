@@ -13,10 +13,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -36,6 +36,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
@@ -716,7 +717,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._CurrentlyBlocked( tag_slice ):
                 
-                self._ShowRedundantError( ClientTags.ConvertTagSliceToString( tag_slice ) + ' is already blocked by a broader rule!' )
+                self._ShowRedundantError( HydrusTags.ConvertTagSliceToString( tag_slice ) + ' is already blocked by a broader rule!' )
                 
             
             self._advanced_blacklist.AddTagSlices( ( tag_slice, ) )
@@ -756,7 +757,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not self._CurrentlyBlocked( tag_slice ) and tag_slice not in ( '', ':' ):
                 
-                self._ShowRedundantError( ClientTags.ConvertTagSliceToString( tag_slice ) + ' is already permitted by a broader rule!' )
+                self._ShowRedundantError( HydrusTags.ConvertTagSliceToString( tag_slice ) + ' is already permitted by a broader rule!' )
                 
             
             self._advanced_whitelist.AddTagSlices( ( tag_slice, ) )
@@ -980,7 +981,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        if not isinstance( obj, ClientTags.TagFilter ):
+        if not isinstance( obj, HydrusTags.TagFilter ):
             
             QW.QMessageBox.critical( self, 'Error', 'That object was not a Tag Filter! It seemed to be a "{}".'.format(type(obj)) )
             
@@ -1684,25 +1685,25 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
         for tag_slice in self._advanced_blacklist.GetTagSlices():
             
-            tag_filter.SetRule( tag_slice, CC.FILTER_BLACKLIST )
+            tag_filter.SetRule( tag_slice, HC.FILTER_BLACKLIST )
             
         
         for tag_slice in self._advanced_whitelist.GetTagSlices():
             
-            tag_filter.SetRule( tag_slice, CC.FILTER_WHITELIST )
+            tag_filter.SetRule( tag_slice, HC.FILTER_WHITELIST )
             
         
         return tag_filter
         
     
-    def SetValue( self, tag_filter: ClientTags.TagFilter ):
+    def SetValue( self, tag_filter: HydrusTags.TagFilter ):
         
-        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_BLACKLIST ]
-        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_WHITELIST ]
+        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == HC.FILTER_BLACKLIST ]
+        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == HC.FILTER_WHITELIST ]
         
         self._advanced_blacklist.SetTagSlices( blacklist_tag_slices )
         self._advanced_whitelist.SetTagSlices( whitelist_tag_slices )
@@ -2488,31 +2489,37 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ModifyMappers( self ):
             
-            QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
-            
-            return
-            '''
             contents = []
             
             tags = self._tags_box.GetSelectedTags()
             
-            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in self._media ) ) )
+            if len( tags ) == 0:
+                
+                QW.QMessageBox.information( self, 'No tags selected!', 'Please select some tags first!' )
+                
+                return
+                
+            
+            hashes_and_current_tags = [ ( m.GetHashes(), m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ) for m in self._media ]
             
             for tag in tags:
                 
-                contents.extend( [ HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in hashes ] )
+                hashes_iter = itertools.chain.from_iterable( ( hashes for ( hashes, current_tags ) in hashes_and_current_tags if tag in current_tags ) )
+                
+                contents.extend( [ HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in hashes_iter ] )
                 
             
             if len( contents ) > 0:
                 
-                subject_accounts = 'blah' # fetch subjects from the server using the contents
+                subject_account_identifiers = [ HydrusNetwork.AccountIdentifier( content = content ) for content in contents ]
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_accounts ) as dlg:
-                    
-                    dlg.exec()
-                    
+                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self.window().parentWidget(), 'manage accounts' )
                 
-            '''
+                panel = ClientGUIHydrusNetwork.ModifyAccountsPanel( frame, self._tag_service_key, subject_account_identifiers )
+                
+                frame.SetPanel( panel )
+                
+            
         
         def _Paste( self ):
             
@@ -5173,3 +5180,220 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR ] = TagSummaryGenerator
+
+class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, tag_summary_generator: TagSummaryGenerator ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        show_panel = ClientGUICommon.StaticBox( self, 'shows' )
+        
+        self._show = QW.QCheckBox( show_panel )
+        
+        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        self._background_colour = ClientGUICommon.AlphaColourControl( edit_panel )
+        self._text_colour = ClientGUICommon.AlphaColourControl( edit_panel )
+        
+        self._namespaces_listbox = ClientGUIListBoxes.QueueListBox( edit_panel, 8, self._ConvertNamespaceToListBoxString, self._AddNamespaceInfo, self._EditNamespaceInfo )
+        
+        self._separator = QW.QLineEdit( edit_panel )
+        
+        example_panel = ClientGUICommon.StaticBox( self, 'example' )
+        
+        self._example_tags = QW.QPlainTextEdit( example_panel )
+        
+        self._test_result = QW.QLineEdit( example_panel )
+        self._test_result.setReadOnly( True )
+        
+        #
+        
+        ( background_colour, text_colour, namespace_info, separator, example_tags, show ) = tag_summary_generator.ToTuple()
+        
+        self._show.setChecked( show )
+        
+        self._background_colour.SetValue( background_colour )
+        self._text_colour.SetValue( text_colour )
+        self._namespaces_listbox.AddDatas( namespace_info )
+        self._separator.setText( separator )
+        self._example_tags.setPlainText( os.linesep.join( example_tags ) )
+        
+        self._UpdateTest()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'currently shows (turn off to hide): ', self._show ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( show_panel, rows )
+        
+        show_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'background colour: ', self._background_colour ) )
+        rows.append( ( 'text colour: ', self._text_colour ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'The colours only work for the thumbnails right now!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( self._namespaces_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        edit_panel.Add( ClientGUICommon.WrapInText( self._separator, edit_panel, 'separator' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        example_panel.Add( ClientGUICommon.BetterStaticText( example_panel, 'Enter some newline-separated tags here to see what your current object would generate.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        example_panel.Add( self._example_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        example_panel.Add( self._test_result, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, show_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self._show.clicked.connect( self._UpdateTest )
+        self._separator.textChanged.connect( self._UpdateTest )
+        self._example_tags.textChanged.connect( self._UpdateTest )
+        self._namespaces_listbox.listBoxChanged.connect( self._UpdateTest )
+        
+    
+    def _AddNamespaceInfo( self ):
+        
+        namespace = ''
+        prefix = ''
+        separator = ', '
+        
+        namespace_info = ( namespace, prefix, separator )
+        
+        return self._EditNamespaceInfo( namespace_info )
+        
+    
+    def _ConvertNamespaceToListBoxString( self, namespace_info ):
+        
+        ( namespace, prefix, separator ) = namespace_info
+        
+        if namespace == '':
+            
+            pretty_namespace = 'unnamespaced'
+            
+        else:
+            
+            pretty_namespace = namespace
+            
+        
+        pretty_prefix = prefix
+        pretty_separator = separator
+        
+        return pretty_namespace + ' | prefix: "' + pretty_prefix + '" | separator: "' + pretty_separator + '"'
+        
+    
+    def _EditNamespaceInfo( self, namespace_info ):
+        
+        ( namespace, prefix, separator ) = namespace_info
+        
+        message = 'Edit namespace.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, namespace, allow_blank = True ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                namespace = dlg.GetValue()
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+        message = 'Edit prefix.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, prefix, allow_blank = True ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                prefix = dlg.GetValue()
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+        message = 'Edit separator.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, separator, allow_blank = True ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                separator = dlg.GetValue()
+                
+                namespace_info = ( namespace, prefix, separator )
+                
+                return namespace_info
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def _UpdateTest( self ):
+        
+        tag_summary_generator = self.GetValue()
+        
+        self._test_result.setText( tag_summary_generator.GenerateExampleSummary() )
+        
+    
+    def GetValue( self ) -> TagSummaryGenerator:
+        
+        show = self._show.isChecked()
+        
+        background_colour = self._background_colour.GetValue()
+        text_colour = self._text_colour.GetValue()
+        namespace_info = self._namespaces_listbox.GetData()
+        separator = self._separator.text()
+        example_tags = HydrusTags.CleanTags( HydrusText.DeserialiseNewlinedTexts( self._example_tags.toPlainText() ) )
+        
+        return TagSummaryGenerator( background_colour, text_colour, namespace_info, separator, example_tags, show )
+        
+    
+class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent: QW.QWidget, tag_summary_generator: TagSummaryGenerator ):
+        
+        label = tag_summary_generator.GenerateExampleSummary()
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, label, self._Edit )
+        
+        self._tag_summary_generator = tag_summary_generator
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag summary' ) as dlg:
+            
+            panel = EditTagSummaryGeneratorPanel( dlg, self._tag_summary_generator )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                self._tag_summary_generator = panel.GetValue()
+                
+                self.setText( self._tag_summary_generator.GenerateExampleSummary() )
+                
+            
+        
+    
+    def GetValue( self ) -> TagSummaryGenerator:
+        
+        return self._tag_summary_generator
+        
+    

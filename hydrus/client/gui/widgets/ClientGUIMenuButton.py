@@ -53,6 +53,10 @@ class MenuMixin( object ):
                 
                 ClientGUIMenus.AppendMenu( menu, submenu, title )
                 
+            elif item_type == 'label':
+                
+                ClientGUIMenus.AppendMenuLabel( menu, title, description = description )
+                
             
         
     

@@ -13,8 +13,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusPaths
+from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -42,6 +42,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.metadata import ClientTags
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
@@ -969,23 +970,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _ModifyUploaders( self, file_service_key ):
         
-        QW.QMessageBox.information( self, 'Information', 'this does not work yet!' )
-        
-        return
-        '''
         hashes = self._GetSelectedHashes()
         
-        if hashes is not None and len( hashes ) > 0:   
+        contents = [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, ( hash, ) ) for hash in hashes ]
+        
+        if len( contents ) > 0:
             
-            contents = [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ hash ] ) for hash in hashes ]
+            subject_account_identifiers = [ HydrusNetwork.AccountIdentifier( content = content ) for content in contents ]
             
-            subject_accounts = 'blah' # fetch subjects from server with the contents
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'manage accounts' )
             
-            with ClientGUIDialogs.DialogModifyAccounts( self, file_service_key, subject_accounts ) as dlg: dlg.exec()
+            panel = ClientGUIHydrusNetwork.ModifyAccountsPanel( frame, file_service_key, subject_account_identifiers )
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            frame.SetPanel( panel )
             
-        '''
+        
     
     def _OpenExternally( self ):
         

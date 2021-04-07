@@ -100,7 +100,7 @@ class FileImportJob( object ):
                 
                 ok_to_go = False
                 
-                import_status = CC.STATUS_SKIPPED
+                import_status = CC.STATUS_VETOED
                 note = str( e )
                 
             

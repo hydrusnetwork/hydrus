@@ -1,6 +1,6 @@
-from hydrus.core import HydrusServer
+from hydrus.core.networking import HydrusServer
 
-from hydrus.server import ServerServerResources
+from hydrus.server.networking import ServerServerResources
 
 class HydrusServiceRestricted( HydrusServer.HydrusService ):
     
@@ -10,12 +10,26 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         
         root.putChild( b'access_key', ServerServerResources.HydrusResourceAccessKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'access_key_verification', ServerServerResources.HydrusResourceAccessKeyVerification( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'auto_create_account_types', ServerServerResources.HydrusResourceAutoCreateAccountTypes( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'auto_create_registration_key', ServerServerResources.HydrusResourceRestrictedAutoCreateRegistrationKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'session_key', ServerServerResources.HydrusResourceSessionKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         root.putChild( b'account', ServerServerResources.HydrusResourceRestrictedAccount( self._service, HydrusServer.REMOTE_DOMAIN ) )
-        #root.putChild( b'other_account', ServerServerResources.HydrusResourceRestrictedAccountOtherAccount( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'options', ServerServerResources.HydrusResourceRestrictedOptions( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
+        root.putChild( b'all_accounts', ServerServerResources.HydrusResourceRestrictedAllAccounts( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'other_account', ServerServerResources.HydrusResourceRestrictedAccountOtherAccount( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
+        root.putChild( b'modify_account_account_type', ServerServerResources.HydrusResourceRestrictedAccountModifyAccountType( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'modify_account_ban', ServerServerResources.HydrusResourceRestrictedAccountModifyBan( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'modify_account_expires', ServerServerResources.HydrusResourceRestrictedAccountModifyExpires( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'modify_account_set_message', ServerServerResources.HydrusResourceRestrictedAccountModifySetMessage( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'modify_account_unban', ServerServerResources.HydrusResourceRestrictedAccountModifyUnban( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
         root.putChild( b'account_info', ServerServerResources.HydrusResourceRestrictedAccountInfo( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
         root.putChild( b'account_types', ServerServerResources.HydrusResourceRestrictedAccountTypes( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
         root.putChild( b'registration_keys', ServerServerResources.HydrusResourceRestrictedRegistrationKeys( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         return root
@@ -46,6 +60,7 @@ class HydrusServiceRepository( HydrusServiceRestricted ):
         
         root.putChild( b'num_petitions', ServerServerResources.HydrusResourceRestrictedNumPetitions( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'petition', ServerServerResources.HydrusResourceRestrictedPetition( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'petition_summary_list', ServerServerResources.HydrusResourceRestrictedPetitionSummaryList( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'update', ServerServerResources.HydrusResourceRestrictedUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
         #root.putChild( b'immediate_update', ServerServerResources.HydrusResourceRestrictedImmediateUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'metadata', ServerServerResources.HydrusResourceRestrictedMetadataUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )

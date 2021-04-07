@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientServices
@@ -543,7 +544,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( ClientTags.TagFilter )
+        service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( HydrusTags.TagFilter )
         
         self._tag_display_types_to_service_keys_to_tag_filters = collections.defaultdict( service_keys_to_tag_filters_defaultdict )
         
@@ -659,7 +660,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( ClientTags.TagFilter )
+            service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( HydrusTags.TagFilter )
             
             self._tag_display_types_to_service_keys_to_tag_filters = collections.defaultdict( service_keys_to_tag_filters_defaultdict )
             
@@ -752,7 +753,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             
             tag_filter = self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ]
             
-            tag_filter.SetRule( tag, CC.FILTER_BLACKLIST )
+            tag_filter.SetRule( tag, HC.FILTER_BLACKLIST )
             
             self._dirty = True
             

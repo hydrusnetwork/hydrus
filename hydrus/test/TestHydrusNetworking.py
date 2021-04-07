@@ -5,7 +5,7 @@ from mock import patch
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusNetworking
+from hydrus.core.networking import HydrusNetworking
 
 now = HydrusData.GetNow()
 

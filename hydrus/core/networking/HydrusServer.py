@@ -1,0 +1,51 @@
+from twisted.web.http import _GenericHTTPChannelProtocol, HTTPChannel
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+
+from hydrus.core.networking import HydrusServerRequest
+from hydrus.core.networking import HydrusServerResources
+
+LOCAL_DOMAIN = HydrusServerResources.HydrusDomain( True )
+REMOTE_DOMAIN = HydrusServerResources.HydrusDomain( False )
+
+class FatHTTPChannel( HTTPChannel ):
+    
+    totalHeadersSize = 1048576 # :^)
+    
+class HydrusService( Site ):
+    
+    def __init__( self, service ):
+        
+        self._service = service
+        
+        root = self._InitRoot()
+        
+        Site.__init__( self, root )
+        
+        self.protocol = self._ProtocolFactory
+        
+        if service.LogsRequests():
+            
+            self.requestFactory = HydrusServerRequest.HydrusRequestLogging
+            
+        else:
+            
+            self.requestFactory = HydrusServerRequest.HydrusRequest
+            
+        
+    
+    def _InitRoot( self ):
+        
+        root = Resource()
+        
+        root.putChild( b'', HydrusServerResources.HydrusResourceWelcome( self._service, REMOTE_DOMAIN ) )
+        root.putChild( b'favicon.ico', HydrusServerResources.hydrus_favicon )
+        root.putChild( b'robots.txt', HydrusServerResources.HydrusResourceRobotsTXT( self._service, REMOTE_DOMAIN ) )
+        
+        return root
+        
+    
+    def _ProtocolFactory( self ):
+        
+        return _GenericHTTPChannelProtocol( FatHTTPChannel() )
+        

@@ -1,20 +1,46 @@
+import os
+import sys
 import threading
 
+from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientData
 from hydrus.client.gui import QtPorting as QP
 
 # this does one thing neatly
 class AsyncQtJob( object ):
     
-    def __init__( self, win, work_callable, publish_callable ):
+    def __init__( self, win, work_callable, publish_callable, errback_callable = None, errback_ui_cleanup_callable = None ):
         
         # ultimate improvement here is to move to QObject/QThread and do the notifications through signals and slots (which will disconnect on object deletion)
         
         self._win = win
         self._work_callable = work_callable
         self._publish_callable = publish_callable
+        self._errback_callable = errback_callable
+        self._errback_ui_cleanup_callable = errback_ui_cleanup_callable
+        
+    
+    def _DefaultErrback( self, etype, value, tb ):
+        
+        HydrusData.ShowExceptionTuple( etype, value, tb )
+        
+        message = 'An error occured in a background task. If you had UI waiting on a fetch job, the dialog/panel may need to be closed and re-opened.'
+        message += os.linesep * 2
+        message += 'The error info will show as a popup and also be printed to log. Hydev may want to know about this error, at least to improve error handling.'
+        message += os.linesep * 2
+        message += 'Error summary: {}'.format( value )
+        
+        QW.QMessageBox.warning( self._win, 'Error', message )
+        
+        if self._errback_ui_cleanup_callable is not None:
+            
+            self._errback_ui_cleanup_callable()
+            
         
     
     def _doWork( self ):
@@ -29,7 +55,27 @@ class AsyncQtJob( object ):
             self._publish_callable( result )
             
         
-        result = self._work_callable()
+        try:
+            
+            result = self._work_callable()
+            
+        except Exception as e:
+            
+            ( etype, value, tb ) = sys.exc_info()
+            
+            if self._errback_callable is None:
+                
+                c = self._DefaultErrback
+                
+            else:
+                
+                c = self._errback_callable
+                
+            
+            HG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
+            
+            return
+            
         
         try:
             
@@ -38,6 +84,21 @@ class AsyncQtJob( object ):
         except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
             
             return
+            
+        except Exception as e:
+            
+            ( etype, value, tb ) = sys.exc_info()
+            
+            if self._errback_callable is None:
+                
+                c = self._DefaultErrback
+                
+            else:
+                
+                c = self._errback_callable
+                
+            
+            HG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
             
         
     

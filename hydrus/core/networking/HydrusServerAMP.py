@@ -15,7 +15,7 @@ from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
-from hydrus.core import HydrusServerResources
+from hydrus.core.networking import HydrusServerResources
 
 # this is all just some old experiment for non-http network comms, never used
 '''

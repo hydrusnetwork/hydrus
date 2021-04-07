@@ -20,14 +20,14 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
-from hydrus.client import ClientLocalServer
-from hydrus.client import ClientLocalServerResources
 from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
+from hydrus.client.networking import ClientLocalServer
+from hydrus.client.networking import ClientLocalServerResources
 
 class TestClientAPI( unittest.TestCase ):
     
@@ -179,11 +179,11 @@ class TestClientAPI( unittest.TestCase ):
             
             if 'green' in name:
                 
-                search_tag_filter = ClientTags.TagFilter()
+                search_tag_filter = HydrusTags.TagFilter()
                 
-                search_tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-                search_tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-                search_tag_filter.SetRule( 'green', CC.FILTER_WHITELIST )
+                search_tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+                search_tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+                search_tag_filter.SetRule( 'green', HC.FILTER_WHITELIST )
                 
                 api_permissions.SetSearchTagFilter( search_tag_filter )
                 

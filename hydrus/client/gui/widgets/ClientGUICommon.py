@@ -220,12 +220,34 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         self._func = func
         self._args = args
         self._kwargs = kwargs
+        
+        self._yes_no_text = None
+        
         self.clicked.connect( self.EventButton )
         
     
     def EventButton( self ):
         
+        if self._yes_no_text is not None:
+            
+            from hydrus.client.gui import ClientGUIDialogsQuick
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message = self._yes_no_text )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+        
         self._func( *self._args,  **self._kwargs )
+        
+    
+    def SetYesNoText( self, text: str ):
+        
+        # this should probably be setyesnotextfactory, but WHATEVER for now
+        
+        self._yes_no_text = text
         
     
     def setText( self, label ):
@@ -866,9 +888,15 @@ class Gauge( QW.QProgressBar ):
     
     def Pulse( self ):
         
-        self.setMaximum( 0 )
+        # pulse looked stupid, was turning on too much, should improve it later
         
-        self.setMinimum( 0 )
+        #self.setMaximum( 0 )
+        
+        #self.setMinimum( 0 )
+        
+        self.SetRange( 1 )
+        self.SetValue( 1 )
+        self.SetValue( 0 )
         
         self._is_pulsing = True
         

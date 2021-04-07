@@ -4,6 +4,7 @@ import json
 import os
 import time
 import traceback
+import typing
 
 from twisted.web.static import File as FileResource
 
@@ -11,10 +12,11 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusServerResources
 from hydrus.core import HydrusTags
+from hydrus.core.networking import HydrusNetworkVariableHandling
+from hydrus.core.networking import HydrusServerRequest
+from hydrus.core.networking import HydrusServerResources
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
@@ -41,13 +43,13 @@ CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
 def ParseLocalBooruGETArgs( requests_args ):
     
-    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, LOCAL_BOORU_INT_PARAMS, LOCAL_BOORU_BYTE_PARAMS, LOCAL_BOORU_STRING_PARAMS, LOCAL_BOORU_JSON_PARAMS, LOCAL_BOORU_JSON_BYTE_LIST_PARAMS )
+    args = HydrusNetworkVariableHandling.ParseTwistedRequestGETArgs( requests_args, LOCAL_BOORU_INT_PARAMS, LOCAL_BOORU_BYTE_PARAMS, LOCAL_BOORU_STRING_PARAMS, LOCAL_BOORU_JSON_PARAMS, LOCAL_BOORU_JSON_BYTE_LIST_PARAMS )
     
     return args
     
 def ParseClientAPIGETArgs( requests_args ):
     
-    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, CLIENT_API_INT_PARAMS, CLIENT_API_BYTE_PARAMS, CLIENT_API_STRING_PARAMS, CLIENT_API_JSON_PARAMS, CLIENT_API_JSON_BYTE_LIST_PARAMS )
+    args = HydrusNetworkVariableHandling.ParseTwistedRequestGETArgs( requests_args, CLIENT_API_INT_PARAMS, CLIENT_API_BYTE_PARAMS, CLIENT_API_STRING_PARAMS, CLIENT_API_JSON_PARAMS, CLIENT_API_JSON_BYTE_LIST_PARAMS )
     
     return args
     
@@ -58,7 +60,7 @@ def ParseClientAPIPOSTByteArgs( args ):
         raise HydrusExceptions.BadRequestException( 'The given parameter did not seem to be a JSON Object!' )
         
     
-    parsed_request_args = HydrusNetworking.ParsedRequestArguments( args )
+    parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments( args )
     
     for var_name in CLIENT_API_BYTE_PARAMS:
         
@@ -118,7 +120,7 @@ def ParseClientAPIPOSTArgs( request ):
     
     if not request.requestHeaders.hasHeader( 'Content-Type' ):
         
-        parsed_request_args = HydrusNetworking.ParsedRequestArguments()
+        parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
         
         total_bytes_read = 0
         
@@ -153,7 +155,7 @@ def ParseClientAPIPOSTArgs( request ):
             
         else:
             
-            parsed_request_args = HydrusNetworking.ParsedRequestArguments()
+            parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
             
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
@@ -226,7 +228,7 @@ def ParseClientAPISearchPredicates( request ):
     
 class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
     
-    def _callbackParseGETArgs( self, request ):
+    def _callbackParseGETArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
         parsed_request_args = ParseLocalBooruGETArgs( request.args )
         
@@ -235,7 +237,7 @@ class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
         return request
         
     
-    def _callbackParsePOSTArgs( self, request ):
+    def _callbackParsePOSTArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
         return request
         
@@ -245,12 +247,12 @@ class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
         self._service.ReportDataUsed( num_bytes )
         
     
-    def _reportRequestUsed( self, request ):
+    def _reportRequestUsed( self, request: HydrusServerRequest.HydrusRequest ):
         
         self._service.ReportRequestUsed()
         
     
-    def _checkService( self, request ):
+    def _checkService( self, request: HydrusServerRequest.HydrusRequest ):
         
         HydrusServerResources.HydrusResource._checkService( self, request )
         
@@ -262,7 +264,7 @@ class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
     
 class HydrusResourceBooruFile( HydrusResourceBooru ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         share_key = request.parsed_request_args[ 'share_key' ]
         hash = request.parsed_request_args[ 'hash' ]
@@ -289,7 +291,7 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
     
 class HydrusResourceBooruGallery( HydrusResourceBooru ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         # in future, make this a standard frame with a search key that'll load xml or yaml AJAX stuff
         # with file info included, so the page can sort and whatever
@@ -373,7 +375,7 @@ class HydrusResourceBooruGallery( HydrusResourceBooru ):
     
 class HydrusResourceBooruPage( HydrusResourceBooru ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         share_key = request.parsed_request_args.GetValue( 'share_key', bytes )
         hash = request.parsed_request_args.GetValue( 'hash', bytes )
@@ -462,7 +464,7 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
     
 class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         share_key = request.parsed_request_args.GetValue( 'share_key', bytes )
         hash = request.parsed_request_args.GetValue( 'hash', bytes )
@@ -518,7 +520,7 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
     
 class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
     
-    def _callbackParseGETArgs( self, request ):
+    def _callbackParseGETArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
         parsed_request_args = ParseClientAPIGETArgs( request.args )
         
@@ -527,7 +529,7 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         return request
         
     
-    def _callbackParsePOSTArgs( self, request ):
+    def _callbackParsePOSTArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
         ( parsed_request_args, total_bytes_read ) = ParseClientAPIPOSTArgs( request )
         
@@ -543,12 +545,12 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         self._service.ReportDataUsed( num_bytes )
         
     
-    def _reportRequestUsed( self, request ):
+    def _reportRequestUsed( self, request: HydrusServerRequest.HydrusRequest ):
         
         self._service.ReportRequestUsed()
         
     
-    def _checkService( self, request ):
+    def _checkService( self, request: HydrusServerRequest.HydrusRequest ):
         
         HydrusServerResources.HydrusResource._checkService( self, request )
         
@@ -560,7 +562,7 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
     
 class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         if not ClientAPI.api_request_dialog_open:
             
@@ -592,7 +594,7 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
     
 class HydrusResourceClientAPIVersion( HydrusResourceClientAPI ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         body_dict = {}
         
@@ -607,7 +609,7 @@ class HydrusResourceClientAPIVersion( HydrusResourceClientAPI ):
     
 class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
     
-    def _callbackCheckAccountRestrictions( self, request ):
+    def _callbackCheckAccountRestrictions( self, request: HydrusServerRequest.HydrusRequest ):
         
         HydrusResourceClientAPI._callbackCheckAccountRestrictions( self, request )
         
@@ -616,7 +618,7 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         return request
         
     
-    def _callbackEstablishAccountFromHeader( self, request ):
+    def _callbackEstablishAccountFromHeader( self, request: HydrusServerRequest.HydrusRequest ):
         
         access_key = self._ParseClientAPIAccessKey( request, 'header' )
         
@@ -628,7 +630,7 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         return request
         
     
-    def _callbackEstablishAccountFromArgs( self, request ):
+    def _callbackEstablishAccountFromArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
         if request.client_api_permissions is None:
             
@@ -648,7 +650,7 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         return request
         
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         raise NotImplementedError()
         
@@ -728,14 +730,14 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
     
 class HydrusResourceClientAPIRestrictedAccount( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         pass
         
     
 class HydrusResourceClientAPIRestrictedAccountSessionKey( HydrusResourceClientAPIRestrictedAccount ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         new_session_key = HG.client_controller.client_api_manager.GenerateSessionKey( request.client_api_permissions.GetAccessKey() )
         
@@ -752,7 +754,7 @@ class HydrusResourceClientAPIRestrictedAccountSessionKey( HydrusResourceClientAP
     
 class HydrusResourceClientAPIRestrictedAccountVerify( HydrusResourceClientAPIRestrictedAccount ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         api_permissions = request.client_api_permissions
         
@@ -773,14 +775,14 @@ class HydrusResourceClientAPIRestrictedAccountVerify( HydrusResourceClientAPIRes
     
 class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_FILES )
         
     
 class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIRestrictedAddFiles ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         if not hasattr( request, 'temp_file_info' ):
             
@@ -830,7 +832,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
     
 class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         hashes = set()
         
@@ -864,7 +866,7 @@ class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClien
     
 class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         hashes = set()
         
@@ -900,7 +902,7 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
     
 class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         hashes = set()
         
@@ -934,7 +936,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceCli
     
 class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         hashes = set()
         
@@ -970,14 +972,14 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
     
 class HydrusResourceClientAPIRestrictedAddTags( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
         
     
 class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRestrictedAddTags ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         hashes = set()
         
@@ -1151,7 +1153,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
     
 class HydrusResourceClientAPIRestrictedAddTagsGetTagServices( HydrusResourceClientAPIRestrictedAddTags ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         local_tags = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
         tag_repos = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
@@ -1170,7 +1172,7 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagServices( HydrusResourceClie
     
 class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPIRestrictedAddTags ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         tags = request.parsed_request_args.GetValue( 'tags', list )
         
@@ -1191,14 +1193,14 @@ class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPI
     
 class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_URLS )
         
     
 class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClientAPIRestrictedAddURLs ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         urls_to_add = []
         
@@ -1310,7 +1312,7 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
     
 class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientAPIRestrictedAddURLs ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         url = request.parsed_request_args.GetValue( 'url', str )
         
@@ -1354,7 +1356,7 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
     
 class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAPIRestrictedAddURLs ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         url = request.parsed_request_args.GetValue( 'url', str )
         
@@ -1385,7 +1387,7 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
     
 class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPIRestrictedAddURLs ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         url = request.parsed_request_args.GetValue( 'url', str )
         
@@ -1485,14 +1487,14 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
     
 class HydrusResourceClientAPIRestrictedGetFiles( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES )
         
     
 class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClientAPIRestrictedGetFiles ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
         predicates = ParseClientAPISearchPredicates( request )
@@ -1517,7 +1519,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
     
 class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIRestrictedGetFiles ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         try:
             
@@ -1566,7 +1568,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIR
     
 class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClientAPIRestrictedGetFiles ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
@@ -1751,7 +1753,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
     
 class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClientAPIRestrictedGetFiles ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         try:
             
@@ -1797,14 +1799,14 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
     
 class HydrusResourceClientAPIRestrictedManageCookies( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_COOKIES )
         
     
 class HydrusResourceClientAPIRestrictedManageCookiesGetCookies( HydrusResourceClientAPIRestrictedManageCookies ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         domain = request.parsed_request_args.GetValue( 'domain', str )
         
@@ -1843,7 +1845,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesGetCookies( HydrusResourceCl
     
 class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceClientAPIRestrictedManageCookies ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         cookie_rows = request.parsed_request_args.GetValue( 'cookies', list )
         
@@ -1923,14 +1925,14 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
     
 class HydrusResourceClientAPIRestrictedManagePages( HydrusResourceClientAPIRestricted ):
     
-    def _CheckAPIPermissions( self, request ):
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES )
         
     
 class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClientAPIRestrictedManagePages ):
     
-    def _threadDoPOSTJob( self, request ):
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         def do_it( page_key ):
             
@@ -1955,7 +1957,7 @@ class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClien
     
 class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClientAPIRestrictedManagePages ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         def do_it():
             
@@ -1975,7 +1977,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClient
     
 class HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( HydrusResourceClientAPIRestrictedManagePages ):
     
-    def _threadDoGETJob( self, request ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         def do_it( page_key, simple ):
             

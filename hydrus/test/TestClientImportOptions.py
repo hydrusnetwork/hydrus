@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.importing import ClientImportFileSeeds
@@ -609,9 +610,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         example_service_key = HG.test_controller.example_tag_repo_service_key
         
-        tag_blacklist = ClientTags.TagFilter()
+        tag_blacklist = HydrusTags.TagFilter()
         
-        tag_blacklist.SetRule( 'series:', CC.FILTER_BLACKLIST )
+        tag_blacklist.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
         service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
         
@@ -681,9 +682,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        get_tags_filter = ClientTags.TagFilter()
+        get_tags_filter = HydrusTags.TagFilter()
         
-        get_tags_filter.SetRule( 'series:', CC.FILTER_BLACKLIST )
+        get_tags_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
         service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = get_tags_filter ) }
         
@@ -868,9 +869,9 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        only_namespaced = ClientTags.TagFilter()
+        only_namespaced = HydrusTags.TagFilter()
         
-        only_namespaced.SetRule( '', CC.FILTER_BLACKLIST )
+        only_namespaced.SetRule( '', HC.FILTER_BLACKLIST )
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
         
@@ -878,11 +879,11 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        only_samus = ClientTags.TagFilter()
+        only_samus = HydrusTags.TagFilter()
         
-        only_samus.SetRule( '', CC.FILTER_BLACKLIST )
-        only_samus.SetRule( ':', CC.FILTER_BLACKLIST )
-        only_samus.SetRule( 'character:samus aran', CC.FILTER_WHITELIST )
+        only_samus.SetRule( '', HC.FILTER_BLACKLIST )
+        only_samus.SetRule( ':', HC.FILTER_BLACKLIST )
+        only_samus.SetRule( 'character:samus aran', HC.FILTER_WHITELIST )
         
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
         
@@ -1014,9 +1015,9 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         some_tags = { 'explicit', 'bodysuit', 'character:samus aran', 'series:metroid' }
         existing_tags = { 'bodysuit' }
         
-        only_unnamespaced = ClientTags.TagFilter()
+        only_unnamespaced = HydrusTags.TagFilter()
         
-        only_unnamespaced.SetRule( ':', CC.FILTER_BLACKLIST )
+        only_unnamespaced.SetRule( ':', HC.FILTER_BLACKLIST )
         
         HG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         

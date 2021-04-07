@@ -8,11 +8,11 @@ from hydrus.core import HydrusDocumentHandling
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusImageHandling
-from hydrus.core import HydrusNetwork
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
+from hydrus.core.networking import HydrusNetwork
 
 # Mime
 

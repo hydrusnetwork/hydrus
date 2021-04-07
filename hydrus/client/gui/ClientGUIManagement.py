@@ -13,6 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
+from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -30,7 +31,6 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUINetworkJobControl
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIResults
 from hydrus.client.gui import ClientGUIResultsSortCollect
@@ -43,6 +43,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.networking import ClientGUIHydrusNetwork
+from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -3911,7 +3913,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._process = QW.QPushButton( 'process', self._petition_panel )
         self._process.clicked.connect( self.EventProcess )
         self._process.setObjectName( 'HydrusAccept' )
-        self._process.setEnabled( False )
+        
+        self._copy_account_key_button = ClientGUICommon.BetterButton( self._petition_panel, 'copy petitioner account key', self._CopyAccountKey )
         
         self._modify_petitioner = QW.QPushButton( 'modify petitioner', self._petition_panel )
         self._modify_petitioner.clicked.connect( self.EventModifyPetitioner )
@@ -3946,6 +3949,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._petition_panel.Add( sort_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( self._copy_account_key_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
@@ -3961,6 +3965,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self.widget().setLayout( vbox )
         
         self._contents.rightClicked.connect( self.EventRowRightClick )
+        
+        self._DrawCurrentPetition()
         
     
     def _CheckAll( self ):
@@ -3979,6 +3985,18 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
     
+    def _CopyAccountKey( self ):
+        
+        if self._current_petition is None:
+            
+            return
+            
+        
+        account_key = self._current_petition.GetPetitionerAccount().GetAccountKey()
+        
+        HG.client_controller.pub( 'clipboard', 'text', account_key.hex() )
+        
+    
     def _DrawCurrentPetition( self ):
         
         if self._current_petition is None:
@@ -3991,6 +4009,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._contents.clear()
             self._process.setEnabled( False )
+            self._copy_account_key_button.setEnabled( False )
             
             self._sort_by_left.setEnabled( False )
             self._sort_by_right.setEnabled( False )
@@ -4039,6 +4058,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             self._SetContentsAndChecks( contents_and_checks, 'right' )
             
             self._process.setEnabled( True )
+            self._copy_account_key_button.setEnabled( True )
             
             if self._can_ban:
                 
@@ -4048,8 +4068,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._action_text.style().polish( self._action_text )
         self._reason_text.style().polish( self._reason_text )
-        
-        self._ShowHashes( [] )
         
     
     def _DrawNumPetitions( self ):
@@ -4177,6 +4195,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._DrawCurrentPetition()
             
+            self._ShowHashes( [ ])
+            
         
         def qt_done():
             
@@ -4208,6 +4228,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             self._current_petition = None
             
             self._DrawCurrentPetition()
+            
+            self._ShowHashes( [] )
             
         
         button.setEnabled( False )
@@ -4497,17 +4519,20 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._DrawCurrentPetition()
         
+        self._ShowHashes( [] )
+        
     
     def EventModifyPetitioner( self ):
         
-        QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
+        subject_account_key = self._current_petition.GetPetitionerAccount().GetAccountKey()
         
-        return
+        subject_account_identifiers = [ HydrusNetwork.AccountIdentifier( account_key = subject_account_key ) ]
         
-        #with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerAccount(), ) ) as dlg:
-        #    
-        #    dlg.exec()
-        #    
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'manage accounts' )
+        
+        panel = ClientGUIHydrusNetwork.ModifyAccountsPanel( frame, self._petition_service_key, subject_account_identifiers )
+        
+        frame.SetPanel( panel )
         
     
     def EventRowRightClick( self ):

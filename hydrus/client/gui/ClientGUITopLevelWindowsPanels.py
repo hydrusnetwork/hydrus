@@ -250,7 +250,7 @@ class FrameThatTakesScrollablePanel( ClientGUITopLevelWindows.FrameThatResizes )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._panel )
+        QP.AddToLayout( vbox, self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._ok, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )

@@ -1118,6 +1118,11 @@ class Canvas( QW.QWidget ):
     
     def _Undelete( self ):
         
+        if self._current_media is None:
+            
+            return
+            
+        
         locations_manager = self._current_media.GetLocationsManager()
         
         if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
@@ -4153,7 +4158,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             new_options = HG.client_controller.new_options
             
             advanced_mode = new_options.GetBoolean( 'advanced_mode' )
-        
+            
             services = HG.client_controller.services_manager.GetServices()
             
             local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]

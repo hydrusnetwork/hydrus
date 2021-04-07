@@ -5,6 +5,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core.networking import HydrusNetwork
+from hydrus.core.networking import HydrusNetworking
 
 from hydrus.server import ServerDB
 
@@ -36,58 +38,65 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_account_creation( self ):
         
-        result = self._read( 'account_types', self._tag_service_key )
+        result = self._read( 'account_types', self._tag_service_key, self._tag_service_account )
         
-        ( service_admin_at, ) = result
+        ( self._tag_service_admin_account_type, ) = result
         
-        self.assertEqual( service_admin_at.GetTitle(), 'service admin' )
-        self.assertEqual( service_admin_at.GetPermissions(), [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ] )
-        self.assertEqual( service_admin_at.GetMaxBytes(), None )
-        self.assertEqual( service_admin_at.GetMaxRequests(), None )
+        self.assertEqual( self._tag_service_admin_account_type.GetTitle(), 'administrator' )
         
         #
         
-        user_at = HydrusData.AccountType( 'user', [ HC.GET_DATA, HC.POST_DATA ], ( 50000, 500 ) )
+        self._regular_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'regular user', { HC.CONTENT_TYPE_MAPPINGS : HC.PERMISSION_ACTION_CREATE }, HydrusNetworking.BandwidthRules() )
+        self._deletee_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'deletee user', {}, HydrusNetworking.BandwidthRules() )
         
-        edit_log = [ ( HC.ADD, user_at ) ]
-        
-        self._write( 'account_types', self._tag_service_key, edit_log )
-        
-        result = self._read( 'account_types', self._tag_service_key )
-        
-        ( at_1, at_2 ) = result
-        
-        d = { at_1.GetTitle() : at_1, at_2.GetTitle() : at_2 }
-        
-        at = d[ 'user' ]
-        
-        self.assertEqual( at.GetPermissions(), [ HC.GET_DATA, HC.POST_DATA ] )
-        self.assertEqual( at.GetMaxBytes(), 50000 )
-        self.assertEqual( at.GetMaxRequests(), 500 )
+        new_account_types = [ self._tag_service_admin_account_type, self._regular_user_account_type, self._deletee_user_account_type ]
         
         #
         
-        user_at_diff = HydrusData.AccountType( 'user different', [ HC.GET_DATA ], ( 40000, None ) )
+        self._write( 'account_types', self._tag_service_key, self._tag_service_account, new_account_types, {} )
         
-        edit_log = [ ( HC.EDIT, ( 'user', user_at_diff ) ) ]
+        edited_account_types = self._read( 'account_types', self._tag_service_key, self._tag_service_account )
         
-        self._write( 'account_types', self._tag_service_key, edit_log )
-        
-        result = self._read( 'account_types', self._tag_service_key )
-        
-        ( at_1, at_2 ) = result
-        
-        d = { at_1.GetTitle() : at_1, at_2.GetTitle() : at_2 }
-        
-        at = d[ 'user different' ]
-        
-        self.assertEqual( at.GetPermissions(), [ HC.GET_DATA ] )
-        self.assertEqual( at.GetMaxBytes(), 40000 )
-        self.assertEqual( at.GetMaxRequests(), None )
+        self.assertEqual(
+            { at.GetAccountTypeKey() for at in edited_account_types },
+            { at.GetAccountTypeKey() for at in ( self._tag_service_admin_account_type, self._regular_user_account_type, self._deletee_user_account_type ) }
+        )
         
         #
         
-        r_keys = self._read( 'registration_keys', self._tag_service_key, 5, 'user different', 86400 * 365 )
+        r_keys = self._read( 'registration_keys', self._tag_service_key, self._tag_service_account, 5, self._deletee_user_account_type.GetAccountTypeKey(), 86400 * 365 )
+        
+        access_keys = [ self._read( 'access_key', self._tag_service_key, r_key ) for r_key in r_keys ]
+        
+        account_keys = [ self._read( 'account_key_from_access_key', self._tag_service_key, access_key ) for access_key in access_keys ] 
+        
+        accounts = [ self._read( 'account', self._tag_service_key, account_key ) for account_key in account_keys ] 
+        
+        for account in accounts:
+            
+            self.assertEqual( account.GetAccountType().GetAccountTypeKey(), self._deletee_user_account_type.GetAccountTypeKey() )
+            
+        
+        #
+        
+        deletee_account_type_keys_to_replacement_account_type_keys = { self._deletee_user_account_type.GetAccountTypeKey() : self._regular_user_account_type.GetAccountTypeKey() }
+        
+        new_account_types = [ self._tag_service_admin_account_type, self._regular_user_account_type ]
+        
+        self._write( 'account_types', self._tag_service_key, self._tag_service_account, new_account_types, deletee_account_type_keys_to_replacement_account_type_keys )
+        
+        accounts = [ self._read( 'account', self._tag_service_key, account_key ) for account_key in account_keys ] 
+        
+        self._tag_service_regular_account = accounts[0]
+        
+        for account in accounts:
+            
+            self.assertEqual( account.GetAccountType().GetAccountTypeKey(), self._regular_user_account_type.GetAccountTypeKey() )
+            
+        
+        #
+        
+        r_keys = self._read( 'registration_keys', self._tag_service_key, self._tag_service_account, 5, self._regular_user_account_type.GetAccountTypeKey(), 86400 * 365 )
         
         self.assertEqual( len( r_keys ), 5 )
         
@@ -100,20 +109,158 @@ class TestServerDB( unittest.TestCase ):
         
         self.assertNotEqual( access_key, access_key_2 )
         
-        self.assertRaises( HydrusExceptions.InsufficientCredentialsException, self._read, 'account_key_from_access_key', self._tag_service_key, access_key )
+        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
+            
+            # this access key has been replaced
+            self._read( 'account_key_from_access_key', self._tag_service_key, access_key )
+            
         
         account_key = self._read( 'account_key_from_access_key', self._tag_service_key, access_key_2 )
         
-        self.assertRaises( HydrusExceptions.InsufficientCredentialsException, self._read, 'access_key', r_key )
+        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
+            
+            # this registration key has been deleted
+            self._read( 'access_key', self._tag_service_key, r_key )
+            
+        
+    
+    def _test_account_modification( self ):
+        
+        regular_account_key = self._tag_service_regular_account.GetAccountKey()
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertEqual( account.GetAccountType().GetAccountTypeKey(), self._regular_user_account_type.GetAccountTypeKey() )
+        
+        self._write( 'modify_account_account_type', self._tag_service_key, self._tag_service_account, regular_account_key, self._tag_service_admin_account_type.GetAccountTypeKey() )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertEqual( account.GetAccountType().GetAccountTypeKey(), self._tag_service_admin_account_type.GetAccountTypeKey() )
+        
+        self._write( 'modify_account_account_type', self._tag_service_key, self._tag_service_account, regular_account_key, self._regular_user_account_type.GetAccountTypeKey() )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertEqual( account.GetAccountType().GetAccountTypeKey(), self._regular_user_account_type.GetAccountTypeKey() )
+        
+        #
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertFalse( account.IsBanned() )
+        
+        ban_reason = 'oh no no no'
+        
+        self._write( 'modify_account_ban', self._tag_service_key, self._tag_service_account, regular_account_key, ban_reason, None )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertTrue( account.IsBanned() )
+        
+        ( reason, created, expires ) = account.GetBannedInfo()
+        
+        self.assertEqual( reason, ban_reason )
+        self.assertTrue( HydrusData.GetNow() - 5 < created < HydrusData.GetNow() + 5 )
+        self.assertEqual( expires, None )
+        
+        ban_reason = 'just having a giggle m8'
+        ban_expires = HydrusData.GetNow() + 86400
+        
+        self._write( 'modify_account_ban', self._tag_service_key, self._tag_service_account, regular_account_key, ban_reason, ban_expires )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertTrue( account.IsBanned() )
+        
+        ( reason, created, expires ) = account.GetBannedInfo()
+        
+        self.assertEqual( reason, ban_reason )
+        self.assertTrue( HydrusData.GetNow() - 5 < created < HydrusData.GetNow() + 5 )
+        self.assertEqual( expires, ban_expires )
+        
+        self._write( 'modify_account_unban', self._tag_service_key, self._tag_service_account, regular_account_key )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertFalse( account.IsBanned() )
+        
+        #
+        
+        set_expires = HydrusData.GetNow() - 5
+        
+        self._write( 'modify_account_expires', self._tag_service_key, self._tag_service_account, regular_account_key, set_expires )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertTrue( account.IsExpired() )
+        
+        self.assertEqual( set_expires, account.GetExpires() )
+        
+        set_expires = HydrusData.GetNow() + 86400
+        
+        self._write( 'modify_account_expires', self._tag_service_key, self._tag_service_account, regular_account_key, set_expires )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertFalse( account.IsExpired() )
+        
+        self.assertEqual( set_expires, account.GetExpires() )
+        
+        set_expires = None
+        
+        self._write( 'modify_account_expires', self._tag_service_key, self._tag_service_account, regular_account_key, set_expires )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        self.assertFalse( account.IsExpired() )
+        
+        self.assertEqual( set_expires, account.GetExpires() )
+        
+        #
+        
+        set_message = 'hello'
+        
+        self._write( 'modify_account_set_message', self._tag_service_key, self._tag_service_account, regular_account_key, set_message )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        ( message, created ) = account.GetMessageAndTimestamp()
+        
+        self.assertEqual( message, set_message )
+        
+        set_message = ''
+        
+        self._write( 'modify_account_set_message', self._tag_service_key, self._tag_service_account, regular_account_key, set_message )
+        
+        account = self._read( 'account', self._tag_service_key, regular_account_key )
+        
+        ( message, created ) = account.GetMessageAndTimestamp()
+        
+        self.assertEqual( message, set_message )
         
     
     def _test_content_creation( self ):
         
-        # create some tag and hashes business, try uploading a file, and test that
+        tag = 'character:samus aran'
+        hash = HydrusData.GenerateKey()
         
-        # fetch content update, test it. I think that works
+        mappings_content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, ( hash, ) ) )
+        mapping_content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) )
         
-        pass
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, mappings_content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
+        
+        # can extend this to generate and fetch an actual update given a timespan
+        
+        #
+        
+        result = self._read( 'account_from_content', self._tag_service_key, mapping_content )
+        
+        self.assertEqual( result.GetAccountKey(), self._tag_service_regular_account.GetAccountKey() )
         
     
     def _test_init_server_admin( self ):
@@ -125,6 +272,8 @@ class TestServerDB( unittest.TestCase ):
         
         self._admin_access_key = result
         
+        #
+        
         result = self._read( 'account_key_from_access_key', HC.SERVER_ADMIN_KEY, self._admin_access_key )
         
         self.assertEqual( type( result ), bytes )
@@ -132,52 +281,57 @@ class TestServerDB( unittest.TestCase ):
         
         self._admin_account_key = result
         
+        #
+        
+        result = self._read( 'account', HC.SERVER_ADMIN_KEY, self._admin_account_key )
+        
+        self.assertEqual( type( result ), HydrusNetwork.Account )
+        self.assertEqual( result.GetAccountKey(), self._admin_account_key )
+        
+        self._admin_account = result
+        
     
     def _test_service_creation( self ):
         
         self._tag_service_key = HydrusData.GenerateKey()
         self._file_service_key = HydrusData.GenerateKey()
         
-        edit_log = []
+        current_services = self._read( 'services' )
         
-        t_options = { 'max_monthly_data' : None, 'message' : 'tag repo message', 'port' : 100, 'upnp' : None }
-        f_options = { 'max_monthly_data' : None, 'message' : 'file repo message', 'port' : 101, 'upnp' : None }
+        self._tag_service = HydrusNetwork.GenerateService( self._tag_service_key, HC.TAG_REPOSITORY, 'tag repo', 100 )
+        self._file_service = HydrusNetwork.GenerateService( self._file_service_key, HC.FILE_REPOSITORY, 'file repo', 101 )
         
-        edit_log.append( ( HC.ADD, ( self._tag_service_key, HC.TAG_REPOSITORY, t_options ) ) )
-        edit_log.append( ( HC.ADD, ( self._file_service_key, HC.FILE_REPOSITORY, f_options ) ) )
+        new_services = list( current_services )
+        new_services.append( self._tag_service )
+        new_services.append( self._file_service )
         
-        result = self._write( 'services', self._admin_account_key, edit_log )
+        service_keys_to_access_keys = self._write( 'services', self._admin_account, new_services )
         
-        self.assertIn( self._tag_service_key, result )
+        self.assertEqual( set( service_keys_to_access_keys.keys() ), { self._tag_service_key, self._file_service_key } )
         
-        self._tag_service_admin_access_key = result[ self._tag_service_key ]
+        self._tag_service_access_key = service_keys_to_access_keys[ self._tag_service_key ]
+        self._file_service_access_key = service_keys_to_access_keys[ self._file_service_key ]
         
-        self.assertEqual( type( self._tag_service_admin_access_key ), bytes )
-        self.assertEqual( len( self._tag_service_admin_access_key ), 32 )
+        self._tag_service_account_key = self._read( 'account_key_from_access_key', self._tag_service_key, self._tag_service_access_key )
+        self._file_service_account_key = self._read( 'account_key_from_access_key', self._file_service_key, self._file_service_access_key )
         
-        self.assertIn( self._file_service_key, result )
+        self._tag_service_account = self._read( 'account', self._tag_service_key, self._tag_service_account_key )
+        self._file_service_account = self._read( 'account', self._file_service_key, self._file_service_account_key )
         
-        self._file_service_admin_access_key = result[ self._file_service_key ]
-        
-        self.assertEqual( type( self._tag_service_admin_access_key ), bytes )
-        self.assertEqual( len( self._tag_service_admin_access_key ), 32 )
-        
-        #
-        
-        result = self._read( 'service_keys', HC.REPOSITORIES )
-        
-        self.assertEqual( set( result ), { self._tag_service_key, self._file_service_key } )
+        self.assertEqual( self._tag_service_account.GetAccountKey(), self._tag_service_account_key )
+        self.assertEqual( self._file_service_account.GetAccountKey(), self._file_service_account_key )
         
     
     def test_server( self ):
         
         self._test_init_server_admin()
         
-        # broke since service rewrite
-        #self._test_service_creation()
+        self._test_service_creation()
         
-        #self._test_account_creation()
+        self._test_account_creation()
         
-        #self._test_content_creation()
+        self._test_content_creation()
+        
+        self._test_account_modification()
         
 

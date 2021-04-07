@@ -28,6 +28,7 @@ from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIStyle
+from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -3040,15 +3041,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
-            self._thumbnail_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            self._thumbnail_top = ClientGUITags.TagSummaryGeneratorButton( self, tag_summary_generator )
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
             
-            self._thumbnail_bottom_right = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            self._thumbnail_bottom_right = ClientGUITags.TagSummaryGeneratorButton( self, tag_summary_generator )
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
             
-            self._media_viewer_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            self._media_viewer_top = ClientGUITags.TagSummaryGeneratorButton( self, tag_summary_generator )
             
             #
             

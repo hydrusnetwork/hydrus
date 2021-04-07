@@ -17,11 +17,11 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusNetwork
-from hydrus.core import HydrusNetworking
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core.networking import HydrusNetwork
+from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientApplicationCommand as CAC
@@ -5095,44 +5095,44 @@ class DB( HydrusDB.HydrusDB ):
         
         names_to_tag_filters = {}
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'diaper', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'gore', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'guro', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'scat', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'vore', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'diaper', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'gore', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'guro', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'scat', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'vore', HC.FILTER_BLACKLIST )
         
         names_to_tag_filters[ 'example blacklist' ] = tag_filter
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'creator:', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'studio:', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'character:', HC.FILTER_WHITELIST )
         
         names_to_tag_filters[ 'basic namespaces only' ] = tag_filter
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
-        tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'creator:', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'studio:', HC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'character:', HC.FILTER_WHITELIST )
         
         names_to_tag_filters[ 'basic booru tags only' ] = tag_filter
         
-        tag_filter = ClientTags.TagFilter()
+        tag_filter = HydrusTags.TagFilter()
         
-        tag_filter.SetRule( 'title:', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'filename:', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'source:', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'booru:', CC.FILTER_BLACKLIST )
-        tag_filter.SetRule( 'url:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'title:', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'filename:', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'source:', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'booru:', HC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'url:', HC.FILTER_BLACKLIST )
         
         names_to_tag_filters[ 'exclude long/spammy namespaces' ] = tag_filter
         
@@ -11389,6 +11389,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetRepositoryUpdateHashesICanProcess( self, service_key ):
         
+        # it is important that we use lists and sort by update index!
+        # otherwise add/delete actions can occur in the wrong order
+        
         service_id = self.modules_services.GetServiceId( service_key )
         
         repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
@@ -11403,43 +11406,60 @@ class DB( HydrusDB.HydrusDB ):
         
         update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( self._c.execute( 'SELECT update_index, hash_id FROM {} WHERE processed = ?;'.format( repository_updates_table_name ), ( False, ) ) )
         
-        hash_ids_i_can_process = set()
+        unprocessed_hash_ids = list( itertools.chain.from_iterable( update_indices_to_unprocessed_hash_ids.values() ) )
         
-        update_indices = sorted( update_indices_to_unprocessed_hash_ids.keys() )
+        definition_hashes = []
+        content_hashes = []
         
-        for update_index in update_indices:
+        if len( unprocessed_hash_ids ) > 0:
             
-            unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
-            
-            select_statement = 'SELECT hash_id FROM current_files WHERE service_id = ? and hash_id = ?;'
-            select_args_iterator = ( ( self.modules_services.local_update_service_id, hash_id ) for hash_id in unprocessed_hash_ids )
-            
-            local_hash_ids = self._STS( self._ExecuteManySelect( select_statement, select_args_iterator ) )
-            
-            if unprocessed_hash_ids == local_hash_ids:
+            with HydrusDB.TemporaryIntegerTable( self._c, unprocessed_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                 
-                hash_ids_i_can_process.update( unprocessed_hash_ids )
-                
-            else:
-                
-                break
+                local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN current_files USING ( hash_id ) WHERE service_id = ?;'.format( temp_hash_ids_table_name ), ( self.modules_services.local_update_service_id, ) ) )
                 
             
-        
-        select_statement = 'SELECT hash, mime FROM files_info NATURAL JOIN hashes WHERE hash_id = ?;'
-        
-        definition_hashes = set()
-        content_hashes = set()
-        
-        for ( hash, mime ) in self._ExecuteManySelectSingleParam( select_statement, hash_ids_i_can_process ):
+            hash_ids_i_can_process = []
             
-            if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+            update_indices = sorted( update_indices_to_unprocessed_hash_ids.keys() )
+            
+            for update_index in update_indices:
                 
-                definition_hashes.add( hash )
+                this_update_unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
                 
-            elif mime == HC.APPLICATION_HYDRUS_UPDATE_CONTENT:
+                if local_hash_ids.issuperset( this_update_unprocessed_hash_ids ):
+                    
+                    # if we have all the updates, we can process this index
+                    
+                    hash_ids_i_can_process.extend( this_update_unprocessed_hash_ids )
+                    
+                else:
+                    
+                    # if we don't have them all, we shouldn't do any more
+                    
+                    break
+                    
                 
-                content_hashes.add( hash )
+            
+            if len( hash_ids_i_can_process ) > 0:
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, hash_ids_i_can_process, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids_to_hashes_and_mimes = { hash_id : ( hash, mime ) for ( hash_id, hash, mime ) in self._c.execute( 'SELECT hash_id, hash, mime FROM {} CROSS JOIN hashes USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
+                    
+                
+                for hash_id in hash_ids_i_can_process:
+                    
+                    ( hash, mime ) = hash_ids_to_hashes_and_mimes[ hash_id ]
+                    
+                    if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+                        
+                        definition_hashes.append( hash )
+                        
+                    elif mime == HC.APPLICATION_HYDRUS_UPDATE_CONTENT:
+                        
+                        content_hashes.append( hash )
+                        
+                    
                 
             
         
@@ -15917,6 +15937,48 @@ class DB( HydrusDB.HydrusDB ):
         self._SaveOptions( self._controller.options )
         
     
+    def _SetRepositoryUpdateHashes( self, service_key, metadata: HydrusNetwork.Metadata ):
+        
+        service_id = self.modules_services.GetServiceId( service_key )
+        
+        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        
+        current_update_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
+        
+        all_future_update_hash_ids = self.modules_hashes_local_cache.GetHashIds( metadata.GetUpdateHashes() )
+        
+        deletee_hash_ids = current_update_hash_ids.difference( all_future_update_hash_ids )
+        
+        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        
+        inserts = []
+        
+        for ( update_index, update_hashes ) in metadata.GetUpdateIndicesAndHashes():
+            
+            for update_hash in update_hashes:
+                
+                hash_id = self.modules_hashes_local_cache.GetHashId( update_hash )
+                
+                result = self._c.execute( 'SELECT processed FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( hash_id, ) ).fetchone()
+                
+                if result is None:
+                    
+                    processed = False
+                    
+                    inserts.append( ( update_index, hash_id, processed ) )
+                    
+                else:
+                    
+                    ( processed, ) = result
+                    
+                    self._c.execute( 'UPDATE {} SET update_index = ?, processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( update_index, processed, hash_id ) )
+                    
+                
+            
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO ' + repository_updates_table_name + ' ( update_index, hash_id, processed ) VALUES ( ?, ?, ? );', inserts )
+        
+    
     def _SetServiceFilename( self, service_id, hash_id, filename ):
         
         self._c.execute( 'REPLACE INTO service_filenames ( service_id, hash_id, filename ) VALUES ( ?, ?, ? );', ( service_id, hash_id, filename ) )
@@ -16271,15 +16333,15 @@ class DB( HydrusDB.HydrusDB ):
                         
                         service_key = service.GetServiceKey()
                         
-                        tag_filter = ClientTags.TagFilter()
+                        tag_filter = HydrusTags.TagFilter()
                         
                         if blacklist:
                             
-                            rule_type = CC.FILTER_BLACKLIST
+                            rule_type = HC.FILTER_BLACKLIST
                             
                         else:
                             
-                            rule_type = CC.FILTER_WHITELIST
+                            rule_type = HC.FILTER_WHITELIST
                             
                         
                         for tag in tags:
@@ -16342,45 +16404,45 @@ class DB( HydrusDB.HydrusDB ):
                 
                 names_to_tag_filters = {}
                 
-                tag_filter = ClientTags.TagFilter()
+                tag_filter = HydrusTags.TagFilter()
                 
-                tag_filter.SetRule( 'diaper', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'gore', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'guro', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'scat', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'vore', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'diaper', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'gore', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'guro', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'scat', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'vore', HC.FILTER_BLACKLIST )
                 
                 names_to_tag_filters[ 'example blacklist' ] = tag_filter
                 
-                tag_filter = ClientTags.TagFilter()
+                tag_filter = HydrusTags.TagFilter()
                 
-                tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'creator:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'studio:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'character:', HC.FILTER_WHITELIST )
                 
                 names_to_tag_filters[ 'basic namespaces only' ] = tag_filter
                 
-                tag_filter = ClientTags.TagFilter()
+                tag_filter = HydrusTags.TagFilter()
                 
-                tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
-                tag_filter.SetRule( '', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'creator:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'studio:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'character:', HC.FILTER_WHITELIST )
+                tag_filter.SetRule( '', HC.FILTER_WHITELIST )
                 
                 names_to_tag_filters[ 'basic booru tags only' ] = tag_filter
                 
-                tag_filter = ClientTags.TagFilter()
+                tag_filter = HydrusTags.TagFilter()
                 
-                tag_filter.SetRule( 'title:', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'filename:', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'source:', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'booru:', CC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'url:', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'title:', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'filename:', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'source:', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'booru:', HC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'url:', HC.FILTER_BLACKLIST )
                 
                 names_to_tag_filters[ 'exclude long/spammy namespaces' ] = tag_filter
                 
@@ -18291,18 +18353,9 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
-            try:
-                
-                self._RepopulateTagCacheMissingSubtags()
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'The v426 subtag repopulation routine failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
+            message = 'You updated from an older version, so some automatic maintenance could not be run. Please run _database->regenerate->tag text search cache (subtags repopulation)_ for all services when you have some time.'
+            
+            self.pub_initial_message( message )
             
         
         if version == 426:
@@ -19286,6 +19339,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisable_simple': self.modules_serialisable.SetJSONSimple( *args, **kwargs )
         elif action == 'serialisables_overwrite': self.modules_serialisable.OverwriteJSONDumps( *args, **kwargs )
         elif action == 'set_password': self._SetPassword( *args, **kwargs )
+        elif action == 'set_repository_update_hashes': self._SetRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'schedule_repository_update_file_maintenance': self._ScheduleRepositoryUpdateFileMaintenanceFromServiceKey( *args, **kwargs )
         elif action == 'sync_tag_display_maintenance': result = self._CacheTagDisplaySync( *args, **kwargs )
         elif action == 'tag_display_application': self._CacheTagDisplaySetApplication( *args, **kwargs )

@@ -2,7 +2,7 @@ import random
 import unittest
 
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusNATPunch
+from hydrus.core.networking import HydrusNATPunch
 
 TEST_EXTERNAL_IP = '1.2.3.4'
 TEST_ROUTER_ADDRESS = '192.168.0.1'
