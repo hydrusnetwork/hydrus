@@ -21,6 +21,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusVideoHandling
+from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientAPI
@@ -1184,9 +1185,10 @@ class Controller( HydrusController.HydrusController ):
         job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
         job.ShouldDelayOnWakeup( True )
         job.WakeOnPubSub( 'notify_unknown_accounts' )
+        job.WakeOnPubSub( 'notify_new_permissions' )
         self._daemon_jobs[ 'synchronise_accounts' ] = job
         
-        job = self.CallRepeating( 5.0, 3600.0 * 4, self.SynchroniseRepositories )
+        job = self.CallRepeating( 5.0, HydrusNetwork.UPDATE_CHECKING_PERIOD, self.SynchroniseRepositories )
         job.ShouldDelayOnWakeup( True )
         job.WakeOnPubSub( 'notify_restart_repo_sync' )
         job.WakeOnPubSub( 'notify_new_permissions' )

@@ -382,6 +382,36 @@ class HydrusResourceRestrictedOptions( HydrusResourceRestricted ):
         return response_context
         
     
+class HydrusResourceRestrictedOptionsModify( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestrictedOptionsModify ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        update_period = request.parsed_request_args[ 'update_period' ]
+        
+        if update_period < HydrusNetwork.MIN_UPDATE_PERIOD:
+            
+            raise HydrusExceptions.BadRequestException( 'The update period was too low. It needs to be at least {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MIN_UPDATE_PERIOD ) ) )
+            
+        
+        if update_period > HydrusNetwork.MAX_UPDATE_PERIOD:
+            
+            raise HydrusExceptions.BadRequestException( 'The update period was too high. It needs to be lower than {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
+            
+        
+        self._service.SetUpdatePeriod( update_period )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
 class HydrusResourceRestrictedAccountModify( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):

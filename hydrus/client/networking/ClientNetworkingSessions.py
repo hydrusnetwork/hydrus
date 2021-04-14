@@ -296,6 +296,11 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
                 session.verify = False
                 
             
+            if not HG.client_controller.new_options.GetBoolean( 'verify_regular_https' ):
+                
+                session.verify = False
+                
+            
             return session
             
         

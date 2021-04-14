@@ -2254,7 +2254,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         self._rule_widgets = []
         
-        self._network_sync_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().file_pause, self._PausePlayNetworkSync )
+        self._network_sync_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayNetworkSync )
         self._network_sync_paused_button.setToolTip( 'pause/play account sync' )
         
         self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
@@ -2350,11 +2350,11 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         if self._service.IsPausedNetworkSync():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._network_sync_paused_button, CC.global_pixmaps().file_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._network_sync_paused_button, CC.global_pixmaps().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._network_sync_paused_button, CC.global_pixmaps().file_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._network_sync_paused_button, CC.global_pixmaps().pause )
             
         
         #
@@ -2494,10 +2494,10 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         self._download_progress = ClientGUICommon.TextAndGauge( self )
         
-        self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().file_pause, self._PausePlayUpdateDownloading )
+        self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
         self._update_downloading_paused_button.setToolTip( 'pause/play update downloading' )
         
-        self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().file_pause, self._PausePlayUpdateProcessing )
+        self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing )
         self._update_processing_paused_button.setToolTip( 'pause/play update processing' )
         
         self._processing_progress = ClientGUICommon.TextAndGauge( self )
@@ -2702,22 +2702,22 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         if self._service.IsPausedUpdateDownloading():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().file_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().file_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().pause )
             
         
         #
         
         if self._service.IsPausedUpdateProcessing():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().file_play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().file_pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().pause )
             
         
         #

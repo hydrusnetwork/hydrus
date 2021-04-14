@@ -60,6 +60,7 @@ from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUIPages
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIPopupMessages
+from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
@@ -70,6 +71,7 @@ from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUISystemTray
 from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -1154,6 +1156,20 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _DebugResetColumnListManager( self ):
+        
+        message = 'This will reset all saved column widths for all multi-column lists across the program. You may need to restart the client to see changes.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
+        
+        self._controller.column_list_manager.ResetToDefaults()
+        
+    
     def _DebugShowGarbageDifferences( self ):
         
         count = collections.Counter()
@@ -1428,6 +1444,29 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
         return -1
+        
+    
+    def _FixLogicallyInconsistentMappings( self ):
+        
+        message = 'This will check for tags that are occupying mutually exclusive states--either current & pending or deleted & petitioned.'
+        message += os.linesep * 2
+        message += 'Please run this if you attempt to upload some tags and get a related error. You may need some follow-up regeneration work to correct autocomplete or \'num pending\' counts.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'fix_logically_inconsistent_mappings', tag_service_key = tag_service_key )
+            
         
     
     def _FlipClipboardWatcher( self, option_name ):
@@ -2559,6 +2598,74 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         finally:
             
             HC.options[ 'pause_repo_sync' ] = original_pause_status
+            
+        
+    
+    def _ManageServiceOptionsUpdatePeriod( self, service_key ):
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        update_period = service.GetUpdatePeriod()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit update period' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            height_num_chars = 20
+            
+            control = ClientGUITime.TimeDeltaCtrl( panel, min = HydrusNetwork.MIN_UPDATE_PERIOD, days = True, hours = True, minutes = True, seconds=True )
+            
+            control.SetValue( update_period )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                update_period = control.GetValue()
+                
+                if update_period > HydrusNetwork.MAX_UPDATE_PERIOD:
+                    
+                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
+                    
+                    return
+                    
+                
+                job_key = ClientThreading.JobKey()
+                
+                job_key.SetVariable( 'popup_title', 'setting update period' )
+                job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
+                
+                self._controller.pub( 'message', job_key )
+                
+                def work_callable():
+                    
+                    service.Request( HC.POST, 'options_update_period', { 'update_period' : update_period } )
+                    
+                    return 1
+                    
+                
+                def publish_callable( gumpf ):
+                    
+                    job_key.SetVariable( 'popup_text_1', 'done!' )
+                    
+                    job_key.Finish()
+                    
+                    service.DoAFullMetadataResync()
+                    
+                
+                def errback_ui_cleanup_callable():
+                    
+                    job_key.SetVariable( 'popup_text_1', 'error!' )
+                    
+                    job_key.Finish()
+                    
+                
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                
+                job.start()
+                
             
         
     
@@ -5087,6 +5194,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
             ClientGUIMenus.AppendMenuItem( submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
+            ClientGUIMenus.AppendMenuItem( submenu, 'fix logically inconsistent mappings', 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
             ClientGUIMenus.AppendMenuItem( submenu, 'fix invalid tags', 'Scan the database for invalid tags.', self._RepairInvalidTags )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check and repair' )
@@ -5265,7 +5373,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
             ClientGUIMenus.AppendMenuItem( menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
             
-            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE ) ]
+            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE ), ( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE ) ]
             
             repositories = self._controller.services_manager.GetServices( HC.REPOSITORIES )
             admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
@@ -5285,10 +5393,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     service_key = service.GetServiceKey()
                     
+                    service_type = service.GetServiceType()
+                    
                     can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
                     can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
                     can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE )
                     can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+                    can_overrule_options = service.HasPermission( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE )
                     
                     if can_overrule_accounts:
                         
@@ -5296,7 +5407,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
                         
                     
-                    if can_overrule_accounts and service.GetServiceType() == HC.FILE_REPOSITORY:
+                    if can_overrule_accounts and service_type == HC.FILE_REPOSITORY:
                         
                         ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
                         
@@ -5315,7 +5426,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._STARTManageAccountTypes, service_key )
                         
                     
-                    if can_overrule_services and service.GetServiceType() == HC.SERVER_ADMIN:
+                    if can_overrule_options and service_type in HC.REPOSITORIES:
+                        
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'change update period', 'Change the update period for this service.', self._ManageServiceOptionsUpdatePeriod, service_key )
+                        
+                    
+                    if can_overrule_services and service_type == HC.SERVER_ADMIN:
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
@@ -5493,6 +5611,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: HG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'reset multi-column list settings to default', 'Reset all multi-column list widths and other display settings to default.', self._DebugResetColumnListManager )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, 'last session' )
             

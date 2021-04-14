@@ -1498,6 +1498,7 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._sort_type.addItem( ClientParsing.sort_str_enum[ ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT ], ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT )
         self._sort_type.addItem( ClientParsing.sort_str_enum[ ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC ], ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC )
+        self._sort_type.addItem( ClientParsing.sort_str_enum[ ClientParsing.CONTENT_PARSER_SORT_TYPE_REVERSE ], ClientParsing.CONTENT_PARSER_SORT_TYPE_REVERSE )
         
         tt = 'Human sort sorts numbers as you understand them. "image 2" comes before "image 10". Lexicographic compares each character in turn. "image 02" comes before "image 10", which comes before "image 2".'
         

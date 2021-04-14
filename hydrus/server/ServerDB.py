@@ -1574,12 +1574,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'INSERT OR IGNORE INTO ' + current_tag_parents_table_name + ' ( child_service_tag_id, parent_service_tag_id, account_id, parent_timestamp ) VALUES ( ?, ?, ?, ? );', ( child_service_tag_id, parent_service_tag_id, account_id, timestamp ) )
         
-        child_master_hash_ids = self._RepositoryGetCurrentMappingsMasterHashIds( service_id, child_service_tag_id )
-        
-        overwrite_deleted = False
-        
-        self._RepositoryAddMappings( service_id, account_id, parent_master_tag_id, child_master_hash_ids, overwrite_deleted, timestamp )
-        
     
     def _RepositoryAddTagSibling( self, service_id, account_id, bad_master_tag_id, good_master_tag_id, overwrite_deleted, timestamp ):
         
@@ -2068,17 +2062,6 @@ class DB( HydrusDB.HydrusDB ):
         ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ?;', ( service_tag_id, ) ).fetchone()
         
         return count
-        
-    
-    def _RepositoryGetCurrentMappingsMasterHashIds( self, service_id, service_tag_id ):
-        
-        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
-        
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
-        
-        master_hash_ids = [ master_hash_id for ( master_hash_id, ) in self._c.execute( 'SELECT master_hash_id FROM ' + hash_id_map_table_name + ' NATURAL JOIN ' + current_mappings_table_name + ' WHERE service_tag_id = ?;', ( service_tag_id, ) ) ]
-        
-        return master_hash_ids
         
     
     def _RepositoryGetFilesInfoFilesTableJoin( self, service_id, content_status ):

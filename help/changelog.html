@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_435"><a href="#version_435">version 435</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>a new macOS build that should run on Big Sur is now ready, it should be attached to this release. it is built on github automatically, and is thanks to hard work from Suika and ReAnzu. I am attaching my old release as well, just in case I messed up somewhere on my end. if you are a macOS user, please try the new App! it will not work on very old macOS like 10.12, but if this works out today for the majority of macOS users, I will be moving to just putting this new build out going forward. I'll add some polish like the readme.rtf and harmonise the filename etc.. too. I'd love to cut the filesize down, but this may not be possible (it is apparently some modern macOS thing where it bundles old and new versions of libraries in the same App so you basically get it twice)</li>
+					<li>the bottom-right corner of the regular media viewer canvas now also shows media zoom</li>
+					<li>the StringSorter object now has a simple 'reverse' sort type</li>
+					<li>the infamous multi-column list 'last column' width calculations are improved: first, dialogs with multi-column lists should no longer judder back and forth a single character's width as you expand the parent window. also, the last column saved size (which is used in dialog relaunch width initialisation) is now snapped to rounded 5-character intervals, which should mitigate various 'fuzzy' reasons for some dialogs to remember a larger or smaller size and grow or shrink one or more characters' width on the next launch</li>
+					<li>the _help->debug->gui actions_ menu has a new entry to reset all multi-column list saved widths back to default</li>
+					<li>the 'edit OR predicate' panel when you shift+double-click an OR predicate now expands horizontally and vertically with the window</li>
+					<li>the 'edit search predicates' list in the 'edit favourite search' panel now expands vertically with the window</li>
+					<li>the client now detects some invalid tag mapping states on tag upload--when a mapping is both current & pending or when it is both deleted and petitioned. these pair-states are mutually exclusive, normally impossible to get to, but one user who nonetheless ended up in this situation encountered an infinite uploading loop to a tag repository (since the tag was already current/deleted, the pending/petitioned status was not clearing correctly on upload commit). now, the upload will be abandoned and an info message put up with the fix</li>
+					<li>added a new maintenance routine to _database->check and repair_ that fixes logically inconsistent mappings. it has a popup dialog when it works and forces a pending count refresh and shows a summary afterwards</li>
+					<li>the routine that counts up total current or pending mappings on a service when the cached number has been reset is now massively faster (from a 30-60s down to less than a second in my dev tests). it now sums the tag autocomplete cache, rather than counting raw tables</li>
+					<li>fixed the BUGFIX option in 'connections' that allows you to disable ssl verification. this will also be extended at a later date to be domain-specific</li>
+					<li>.</li>
+					<li>new server stuff:</li>
+					<li>a new permission is added to hydrus service accounts--'manage options'. any account with 'manage account types' will get this by default on update</li>
+					<li>any account on a repository with 'manage options' permission will now see 'change update period' in the admin services menu! it launches a time delta control with the current update period and will send the new one up to the server. the client will resync account, options, and metadata immediately, and the server will generate any now-due updates immediately, so you should be able to watch changes occur in 'review services' and the server terminal live. other users will catch up to the new time when they next hit an update. various hardcoded check periods (like how often due updates are checked for and delay-buffered clientside and serverside) are shrunk significantly. the whole system should react to changes better</li>
+					<li>the minimum settable update time is now 10 minutes (the default value remains 100,000 seconds), but I recommend you try larger, say an hour minimum, at least to start. the network generally works more efficiently with higher numbers, and be warned, if you are adding 144 updates a day, there may be bloat problems after a year</li>
+					<li>let me know how this goes, whether you are running a server on a LAN or just a regular user running on one who gets a new update time!</li>
+					<li>the new 'full metadata resync' routine now triggers an immediate metadata update sync and wakes the daemon involved, so it should now happen as you watch</li>
+					<li>fixed the new pause/play buttons on review services to use neutral pause/play icons, not the downloader pause/play</li>
+					<li>brushed up metadata sync status string on review services</li>
+					<li>cleaned misc server and network code</li>
+					<li>cleaned up some old clientside service code</li>
+					<li>the client api now supports wildcard and namespace tags in the file search call</li>
+					<li>client api version is now 16</li>
+					<li>added https://ififfy.github.io/flipflip/#/ , a slideshow engine that now supports hydrus as a source, to the client api page</li>
+				</ul>
 				<li><h3 id="version_434"><a href="#version_434">version 434</a></h3></li>
 				<ul>
 					<li>network updates:</li>
@@ -27,14 +56,14 @@
 					<li>fixed an issue with the new file sort asc/desc button where a transition from 'random' to another sort type using a favourite search would always reset the sort order to the top value</li>
 					<li>my asynchronous job object now has a default errback to catch errors more gracefully by default and with special handling in future. clicking an async button in a dialog will now show you the error there and then, rather than just the hidden error popup on the main window</li>
 					<li>added convenience links to the latest build on github to the help menu and html help</li>
-					<li>fixed another place in local file importing where a file that did not pass file import options checks would set 'skipped' status. in now sets 'ignored' like everything else</li>
+					<li>fixed another place in local file importing where a file that did not pass file import options checks would set 'skipped' status. it now sets 'ignored' like everything else</li>
 					<li>fixed a bug when an 'undelete' call is sent to the media viewer when no media is set (usually during startup/shutdown)</li>
 					<li>I disabled progress gauge 'pulsing' across the program. the way this was first implemented applied too often--I will bring it back to only apply when a job is both indeterminate and currently working</li>
 					<li>my custom button class can now launch its own yes/no confirmation dialogs on click</li>
 					<li>removed a subtag regen routine in the 425->426 update step that was bugging out due to bitrot--it now makes a popup message on boot asking for the routine to be run manually</li>
 					<li>fixed a typo bug in the 'subscription snapshot' debug command</li>
 					<li>misc ancient python 2-to-3 code cleanup</li>
-					<li>updaned cloudscraper to 1.2.58</li>
+					<li>updated cloudscraper to 1.2.58</li>
 					<li>.</li>
 					<li>admin stuff:</li>
 					<li>.</li>

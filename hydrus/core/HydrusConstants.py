@@ -79,8 +79,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 434
-CLIENT_API_VERSION = 15
+SOFTWARE_VERSION = 435
+CLIENT_API_VERSION = 16
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -321,6 +321,9 @@ permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_MODERA
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, None ) ] = 'cannot change account types'
 permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, PERMISSION_ACTION_MODERATE ) ] = 'can manage account types completely'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_OPTIONS, None ) ] = 'cannot change service options'
+permission_pair_string_lookup[ ( CONTENT_TYPE_OPTIONS, PERMISSION_ACTION_MODERATE ) ] = 'can manage service options completely'
 
 permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, None ) ] = 'cannot change services'
 permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, PERMISSION_ACTION_MODERATE ) ] = 'can manage services completely'

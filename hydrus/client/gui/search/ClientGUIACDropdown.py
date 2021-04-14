@@ -1991,7 +1991,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key )
         
-        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def _StartSearchResultsFetchJob( self, job_key ):

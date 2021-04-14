@@ -7617,6 +7617,92 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _FixLogicallyInconsistentMappings( self, tag_service_key = None ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        total_fixed = 0
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'fixing logically inconsistent mappings' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self.modules_services.GetServiceId( tag_service_key ), )
+                
+            
+            for tag_service_id in tag_service_ids:
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'fixing {}'.format( tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                
+                time.sleep( 0.01 )
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+                
+                #
+                
+                both_current_and_pending_mappings = list(
+                    HydrusData.BuildKeyToSetDict(
+                        self._c.execute( 'SELECT tag_id, hash_id FROM {} CROSS JOIN {} USING ( tag_id, hash_id );'.format( pending_mappings_table_name, current_mappings_table_name ) )
+                    ).items()
+                )
+                
+                total_fixed += sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in both_current_and_pending_mappings ) )
+                
+                self._UpdateMappings( tag_service_id, pending_rescinded_mappings_ids = both_current_and_pending_mappings )
+                
+                #
+                
+                both_deleted_and_petitioned_mappings = list(
+                    HydrusData.BuildKeyToSetDict(
+                        self._c.execute( 'SELECT tag_id, hash_id FROM {} CROSS JOIN {} USING ( tag_id, hash_id );'.format( petitioned_mappings_table_name, deleted_mappings_table_name ) )
+                    ).items()
+                )
+                
+                total_fixed += sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in both_deleted_and_petitioned_mappings ) )
+                
+                self._UpdateMappings( tag_service_id, petitioned_rescinded_mappings_ids = both_deleted_and_petitioned_mappings )
+                
+            
+        finally:
+            
+            if total_fixed == 0:
+                
+                HydrusData.ShowText( 'No inconsistent mappings found!' )
+                
+            else:
+                
+                self._c.execute( 'DELETE FROM service_info where info_type IN ( ?, ? );', ( HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ) )
+                
+                self._controller.pub( 'notify_new_pending' )
+                
+                HydrusData.ShowText( 'Found {} bad mappings! They _should_ be deleted, and your pending counts should be updated.'.format( HydrusData.ToHumanInt( total_fixed ) ) )
+                
+            
+            job_key.DeleteVariable( 'popup_text_2' )
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
     def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
         
         return JobDatabaseClient( job_type, synchronous, action, *args, **kwargs )
@@ -11030,7 +11116,26 @@ class DB( HydrusDB.HydrusDB ):
                 
                 pending_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' ORDER BY tag_id LIMIT 100;' ) )
                 
-                for ( tag_id, hash_ids ) in list(pending_dict.items()):
+                pending_mapping_ids = list( pending_dict.items() )
+                
+                # dealing with a scary situation when (due to some bug) mappings are current and pending. they get uploaded, but the content update makes no changes, so we cycle infitely!
+                addable_pending_mapping_ids = self._FilterExistingUpdateMappings( service_id, pending_mapping_ids, HC.CONTENT_UPDATE_ADD )
+                
+                pending_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in pending_mapping_ids ) )
+                addable_pending_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in addable_pending_mapping_ids ) )
+                
+                if pending_mapping_weight != addable_pending_mapping_weight:
+                    
+                    message = 'Hey, while going through the pending tags to upload, it seemed some were simultaneously already in the \'current\' state. This looks like a bug.'
+                    message += os.linesep * 2
+                    message += 'Please run _database->check and repair->fix logically inconsistent mappings_. If everything seems good after that and you do not get this message again, you should be all fixed. If not, you may need to regenerate your mappings storage cache under the \'database\' menu. If that does not work, hydev would like to know about it!'
+                    
+                    HydrusData.ShowText( message )
+                    
+                    raise HydrusExceptions.VetoException( 'Logically inconsistent mappings detected!' )
+                    
+                
+                for ( tag_id, hash_ids ) in pending_mapping_ids:
                     
                     tag = self.modules_tags_local_cache.GetTag( tag_id )
                     hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
@@ -11042,7 +11147,30 @@ class DB( HydrusDB.HydrusDB ):
                 
                 petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( tag_id, reason_id ), hash_id ) for ( tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT tag_id, hash_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY reason_id LIMIT 100;' ) ] )
                 
-                for ( ( tag_id, reason_id ), hash_ids ) in list(petitioned_dict.items()):
+                petitioned_mapping_ids = list( petitioned_dict.items() )
+                
+                # dealing with a scary situation when (due to some bug) mappings are deleted and petitioned. they get uploaded, but the content update makes no changes, so we cycle infitely!
+                deletable_and_petitioned_mappings = self._FilterExistingUpdateMappings(
+                    service_id,
+                    [ ( tag_id, hash_ids ) for ( ( tag_id, reason_id ), hash_ids ) in petitioned_mapping_ids ],
+                    HC.CONTENT_UPDATE_DELETE
+                )
+                
+                petitioned_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in petitioned_mapping_ids ) )
+                deletable_petitioned_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in deletable_and_petitioned_mappings ) )
+                
+                if petitioned_mapping_weight != deletable_petitioned_mapping_weight:
+                    
+                    message = 'Hey, while going through the petitioned tags to upload, it seemed some were simultaneously already in the \'deleted\' state. This looks like a bug.'
+                    message += os.linesep * 2
+                    message += 'Please run _database->check and repair->fix logically inconsistent mappings_. If everything seems good after that and you do not get this message again, you should be all fixed. If not, you may need to regenerate your mappings storage cache under the \'database\' menu. If that does not work, hydev would like to know about it!'
+                    
+                    HydrusData.ShowText( message )
+                    
+                    raise HydrusExceptions.VetoException( 'Logically inconsistent mappings detected!' )
+                    
+                
+                for ( ( tag_id, reason_id ), hash_ids ) in petitioned_mapping_ids:
                     
                     tag = self.modules_tags_local_cache.GetTag( tag_id )
                     hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
@@ -11127,7 +11255,7 @@ class DB( HydrusDB.HydrusDB ):
                     return media_result
                     
                 
-                petitioned = list(HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items())
+                petitioned = list( HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items() )
                 
                 for ( reason_id, hash_ids ) in petitioned:
                     
@@ -11640,9 +11768,27 @@ class DB( HydrusDB.HydrusDB ):
                         
                         result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( tags_table_name ) ).fetchone()
                         
-                    elif info_type == HC.SERVICE_INFO_NUM_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM ' + current_mappings_table_name + ';' ).fetchone()
+                    elif info_type in ( HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ):
+                        
+                        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, service_id )
+                        
+                        if info_type == HC.SERVICE_INFO_NUM_MAPPINGS:
+                            
+                            column_name = 'current_count'
+                            
+                        elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS:
+                            
+                            column_name = 'pending_count'
+                            
+                        
+                        result = self._c.execute( 'SELECT SUM( {} ) FROM {};'.format( column_name, ac_cache_table_name ) ).fetchone()
+                        
+                        if result is None or result[0] is None:
+                            
+                            result = ( 0, )
+                            
+                        
                     elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM ' + deleted_mappings_table_name + ';' ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_mappings_table_name + ';' ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_mappings_table_name + ';' ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchone()
@@ -19298,6 +19444,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_maintenance_add_jobs_hashes': self._FileMaintenanceAddJobsHashes( *args, **kwargs )
         elif action == 'file_maintenance_cancel_jobs': self._FileMaintenanceCancelJobs( *args, **kwargs )
         elif action == 'file_maintenance_clear_jobs': self._FileMaintenanceClearJobs( *args, **kwargs )
+        elif action == 'fix_logically_inconsistent_mappings': self._FixLogicallyInconsistentMappings( *args, **kwargs )
         elif action == 'imageboard': self.modules_serialisable.SetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'ideal_client_files_locations': self._SetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )

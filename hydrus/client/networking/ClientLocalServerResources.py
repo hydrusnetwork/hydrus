@@ -203,16 +203,33 @@ def ParseClientAPISearchPredicates( request ):
     
     request.client_api_permissions.CheckCanSearchTags( tags )
     
+    search_tags = [ ( True, tag ) for tag in tags ]
+    search_tags.extend( ( ( False, tag ) for tag in negated_tags ) )
+    
     predicates = []
     
-    for tag in negated_tags:
+    for ( inclusive, tag ) in search_tags:
         
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = False ) )
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
         
-    
-    for tag in tags:
+        if '*' in tag:
+            
+            if subtag == '*':
+                
+                tag = namespace
+                predicate_type = ClientSearch.PREDICATE_TYPE_NAMESPACE
+                
+            else:
+                
+                predicate_type = ClientSearch.PREDICATE_TYPE_WILDCARD
+                
+            
+        else:
+            
+            predicate_type = ClientSearch.PREDICATE_TYPE_TAG
+            
         
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = tag ) )
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive ) )
         
     
     if system_inbox:

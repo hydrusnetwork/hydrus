@@ -373,7 +373,16 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for panel in self._editable_pred_panels:
             
-            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            if isinstance( panel, ClientGUIPredicatesOR.ORPredicateControl ):
+                
+                flags = CC.FLAGS_EXPAND_BOTH_WAYS
+                
+            else:
+                
+                flags = CC.FLAGS_EXPAND_PERPENDICULAR
+                
+            
+            QP.AddToLayout( vbox, panel, flags )
             
         
         self.widget().setLayout( vbox )

@@ -1865,6 +1865,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 CONTENT_PARSER_SORT_TYPE_NONE = 0
 CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC = 1
 CONTENT_PARSER_SORT_TYPE_HUMAN_SORT = 2
+CONTENT_PARSER_SORT_TYPE_REVERSE = 3
 
 class ContentParser( HydrusSerialisable.SerialisableBase ):
     
@@ -3872,7 +3873,8 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 sort_str_enum = {
     CONTENT_PARSER_SORT_TYPE_NONE : 'no sorting',
     CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC : 'strict lexicographic',
-    CONTENT_PARSER_SORT_TYPE_HUMAN_SORT : 'human sort'
+    CONTENT_PARSER_SORT_TYPE_HUMAN_SORT : 'human sort',
+    CONTENT_PARSER_SORT_TYPE_REVERSE : 'reverse'
 }
 
 class StringSorter( StringProcessingStep ):
@@ -3926,49 +3928,56 @@ class StringSorter( StringProcessingStep ):
             
             texts = list( texts )
             
-            data_convert = lambda d_s: d_s
-            invalid_data_convert_texts = []
-            
-            if self._regex is not None:
+            if self._sort_type == CONTENT_PARSER_SORT_TYPE_REVERSE:
                 
-                re_job = re.compile( self._regex )
+                texts.reverse()
                 
-                def d( d_s ):
+            else:
+                
+                data_convert = lambda d_s: d_s
+                invalid_data_convert_texts = []
+                
+                if self._regex is not None:
                     
-                    m = re_job.search( d_s )
+                    re_job = re.compile( self._regex )
                     
-                    if m is None:
+                    def d( d_s ):
                         
-                        return ''
+                        m = re_job.search( d_s )
                         
-                    else:
-                        
-                        return m.group()
+                        if m is None:
+                            
+                            return ''
+                            
+                        else:
+                            
+                            return m.group()
+                            
                         
                     
+                    data_convert = d
+                    
+                    invalid_data_convert_texts = [ text for text in texts if data_convert( text ) == '' ]
+                    texts = [ text for text in texts if data_convert( text ) != '' ]
+                    
                 
-                data_convert = d
+                sort_convert = lambda s: s
                 
-                invalid_data_convert_texts = [ text for text in texts if data_convert( text ) == '' ]
-                texts = [ text for text in texts if data_convert( text ) != '' ]
+                if self._sort_type == CONTENT_PARSER_SORT_TYPE_HUMAN_SORT:
+                    
+                    sort_convert = HydrusData.HumanTextSortKey
+                    
                 
-            
-            sort_convert = lambda s: s
-            
-            if self._sort_type == CONTENT_PARSER_SORT_TYPE_HUMAN_SORT:
+                key = lambda k_s: sort_convert( data_convert( k_s ) )
                 
-                sort_convert = HydrusData.HumanTextSortKey
+                reverse = not self._asc
                 
-            
-            key = lambda k_s: sort_convert( data_convert( k_s ) )
-            
-            reverse = not self._asc
-            
-            texts.sort( key = key, reverse = reverse )
-            
-            invalid_data_convert_texts.sort( key = sort_convert, reverse = reverse )
-            
-            texts.extend( invalid_data_convert_texts )
+                texts.sort( key = key, reverse = reverse )
+                
+                invalid_data_convert_texts.sort( key = sort_convert, reverse = reverse )
+                
+                texts.extend( invalid_data_convert_texts )
+                
             
             return texts
             

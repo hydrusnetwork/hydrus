@@ -18,7 +18,8 @@
 			<ul>
 				<li><a href="https://gitgud.io/prkc/hydrus-companion">https://gitgud.io/prkc/hydrus-companion</a> - Hydrus Companion, a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support</li>
 				<li><a href="https://github.com/floogulinc/hydrus-web">https://github.com/floogulinc/hydrus-web</a> - Hydrus Web, a web client for hydrus (allows phone browsing of hydrus)</li>
-				<li><a href="https://www.animebox.es/">https://www.animebox.es/</a> - Anime Boxes now supports adding your client as a Hydrus Server</li>
+				<li><a href="https://www.animebox.es/">https://www.animebox.es/</a> - Anime Boxes, a booru browser, now supports adding your client as a Hydrus Server</li>
+                                <li><a href="https://ififfy.github.io/flipflip/#/">https://ififfy.github.io/flipflip/#/</p> - FlipFlip, an advanced slideshow interface, now supports hydrus as a source</li>
 				<li><a href="https://gitgud.io/koto/hydrus-archive-delete">https://gitgud.io/koto/hydrus-archive-delete</a> - Archive/Delete filter in your web browser</li>
 				<li><a href="https://gitgud.io/koto/hydrus-dd">https://gitgud.io/koto/hydrus-dd</a> - DeepDanbooru neural network tagging for Hydrus</li>
 				<li><a href="https://gitgud.io/prkc/dolphin-hydrus-actions">https://gitgud.io/prkc/dolphin-hydrus-actions</a> - Adds Hydrus right-click context menu actions to Dolphin file manager.</li>
@@ -42,7 +43,7 @@
 			</ul>
 			<p>There is now a simple 'session' system, where you can get a temporary key that gives the same access without having to include the permanent access key in every request. You can fetch a session key with the <a href="#session_key">/session_key</a> command and thereafter use it just as you would an access key, just with <i>Hydrus-Client-API-Session-Key</i> instead.</p>
 			<p>Session keys will expire if they are not used within 24 hours, or if the client is restarted, or if the underlying access key is deleted. An invalid/expired session key will give a <b>419</b> result with an appropriate error text.</p>
-			<p>Bear in mind the Client API is still under construction and is http-only for the moment--be careful about transmitting sensitive content outside of localhost. The access key will be unencrypted across any connection, and if it is included as a GET parameter, as simple and convenient as that is, it could be cached in all sorts of places.</p>
+			<p>Bear in mind the Client API is still under construction. Setting up the Client API accessible across the internet requires technical experience to be convenient. HTTPS is available for encrypted comms, but the default certificate is self-signed (which basically means an eavesdropper can't see through it, but your ISP/government could if they decided to target you). If you have your own domain and SSL cert, you can replace them though (check the db directory for client.crt and client.key). Otherwise, be careful about transmitting sensitive content outside of your localhost/network.</p>
 			<h3 id="contents"><a href="#contents">Contents</a></h3>
 			<ul>
 				<li>
@@ -983,7 +984,8 @@
 							<li><p>/get_files/search_files?system_inbox=true&tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%5D</p></li>
 						</ul>
 					</li>
-					<p>If the access key's permissions only permit search for certain tags, at least one whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be eligible for the permissions whitelist check.</p>
+					<p>If the access key's permissions only permit search for certain tags, at least one whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.</p>
+                                        <p>Wildcards and namespace searches are now supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.</p>
 					<p>Response description: The full list of numerical file ids that match the search.</p>
 					<li>
 						<p>Example response:</p>

@@ -46,6 +46,13 @@ class ColumnListManager( HydrusSerialisable.SerialisableBase ):
         return self._column_list_types_to_statuses[ column_list_type ]
         
     
+    def ResetToDefaults( self ):
+        
+        self._column_list_types_to_statuses = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dirty = True
+        
+    
     def SaveStatus( self, column_list_status: ClientGUIListStatus.ColumnListStatus ):
         
         self._column_list_types_to_statuses[ column_list_status.GetColumnListType() ] = column_list_status

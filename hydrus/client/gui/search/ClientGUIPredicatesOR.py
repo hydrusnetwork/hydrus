@@ -37,7 +37,7 @@ class ORPredicateControl( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._search_control, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._search_control, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
         

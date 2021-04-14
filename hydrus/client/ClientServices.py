@@ -2124,7 +2124,10 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
+            self._next_account_sync = 1
             self._do_a_full_metadata_resync = True
+            
+            self._metadata.UpdateASAP()
             
             self._SetDirty()
             
@@ -2158,11 +2161,18 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def GetUpdateInfo( self ):
+    def GetUpdatePeriod( self ):
         
         with self._lock:
             
-            return self._metadata.GetUpdateInfo()
+            if 'update_period' in self._service_options:
+                
+                return self._service_options[ 'update_period' ]
+                
+            else:
+                
+                raise HydrusExceptions.DataMissing( 'This service does not seem to have an update period! Try refreshing your account!' )
+                
             
         
     

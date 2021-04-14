@@ -2183,14 +2183,18 @@ class CanvasWithDetails( Canvas ):
             
             # bottom-right index
             
+            bottom_right_string = ClientData.ConvertZoomToPercentage( self._current_zoom )
+            
             index_string = self._GetIndexString()
             
             if len( index_string ) > 0:
                 
-                ( text_size, index_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, index_string )
+                bottom_right_string = '{} - {}'.format( bottom_right_string, index_string )
                 
-                ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, index_string )
-                
+            
+            ( text_size, bottom_right_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, bottom_right_string )
+            
+            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, bottom_right_string )
             
         
     

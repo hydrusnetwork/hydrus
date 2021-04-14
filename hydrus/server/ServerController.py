@@ -13,6 +13,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
+from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.server import ServerDB
@@ -257,7 +258,8 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        job = self.CallRepeating( 5.0, 600.0, self.SyncRepositories )
+        job = self.CallRepeating( 5.0, HydrusNetwork.UPDATE_CHECKING_PERIOD, self.SyncRepositories )
+        job.WakeOnPubSub( 'notify_new_repo_sync' )
         
         self._daemon_jobs[ 'sync_repositories' ] = job
         

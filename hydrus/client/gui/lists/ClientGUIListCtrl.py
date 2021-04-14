@@ -236,6 +236,12 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         last_column_index = num_columns - 1
         
+        # ok, the big pain in the ass situation here is getting a precise last column size that is reproduced on next dialog launch
+        # ultimately, with fuzzy sizing, style padding, scrollbars appearing, and other weirdness, the more precisely we try to define it, the more we will get dialogs that grow/shrink by a pixel each time
+        # *therefore*, the actual solution here is to move to snapping with a decent snap distance. the user loses size setting precision, but we'll snap back to a decent size every time, compensating for fuzz
+        
+        LAST_COLUMN_SNAP_DISTANCE_CHARS = 5
+        
         for visual_index in range( num_columns ):
             
             logical_index = header.logicalIndex( visual_index )
@@ -244,14 +250,21 @@ class BetterListCtrl( QW.QTreeWidget ):
             width_pixels = header.sectionSize( logical_index )
             shown = not header.isSectionHidden( logical_index )
             
-            # if the scrollbar is in place, then when we initialise, next time, we will want to include that extra space in our final column recommended size
-            # might need to update this to be 'last non-hidden section', rather than 'last 'visual' section'
-            if visual_index == last_column_index and self.verticalScrollBar().isVisible():
+            if visual_index == last_column_index:
                 
-                width_pixels += self.verticalScrollBar().width()
+                if self.verticalScrollBar().isVisible():
+                    
+                    width_pixels += max( 0, min( self.verticalScrollBar().width(), 20 ) )
+                    
                 
             
             width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
+            
+            if visual_index == last_column_index:
+                
+                # here's the snap magic
+                width_chars = round( width_chars // LAST_COLUMN_SNAP_DISTANCE_CHARS ) * LAST_COLUMN_SNAP_DISTANCE_CHARS
+                
             
             columns.append( ( column_type, width_chars, shown ) )
             
@@ -307,7 +320,11 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         for i in range( self.topLevelItemCount() ):
             
-            if self.topLevelItem( i ).isSelected(): indices.append( i )
+            if self.topLevelItem( i ).isSelected():
+                
+                indices.append( i )
+                
+            
         
         return indices
         
@@ -747,21 +764,22 @@ class BetterListCtrl( QW.QTreeWidget ):
         # the issue is: when we first boot up, we want to give a 'hey, it would be nice' size of the last actual recorded final column
         # HOWEVER, after that: we want to use the current size of the last column
         # so, if it is the first couple of seconds, lmao. after that, oaml
+        # I later updated this to use the columnWidth, rather than hickery dickery text-to-pixel-width, since it was juddering resize around text width phase
         
         last_column_type = self._column_list_status.GetColumnTypes()[-1]
         
         if HydrusData.TimeHasPassed( self._creation_time + 2 ):
             
-            last_column_chars = self._column_list_status.GetColumnWidth( last_column_type )
+            width += self.columnWidth( self.columnCount() - 1 )
             
         else:
             
             last_column_chars = self._original_column_list_status.GetColumnWidth( last_column_type )
             
-        
-        main_tlw = HG.client_controller.GetMainTLW()
-        
-        width += ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, last_column_chars )
+            main_tlw = HG.client_controller.GetMainTLW()
+            
+            width += ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, last_column_chars )
+            
         
         #
         
