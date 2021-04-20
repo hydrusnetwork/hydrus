@@ -900,8 +900,6 @@ class HydrusResource( Resource ):
     
     def render_GET( self, request: HydrusServerRequest.HydrusRequest ):
         
-        request.setHeader( 'Server', self._server_version_string )
-        
         d = defer.Deferred()
         
         d.addCallback( self._callbackCheckServiceRestrictions )
@@ -929,8 +927,6 @@ class HydrusResource( Resource ):
     
     def render_OPTIONS( self, request: HydrusServerRequest.HydrusRequest ):
         
-        request.setHeader( 'Server', self._server_version_string )
-        
         d = defer.Deferred()
         
         d.addCallback( self._callbackCheckServiceRestrictions )
@@ -949,8 +945,6 @@ class HydrusResource( Resource ):
         
     
     def render_POST( self, request: HydrusServerRequest.HydrusRequest ):
-        
-        request.setHeader( 'Server', self._server_version_string )
         
         d = defer.Deferred()
         

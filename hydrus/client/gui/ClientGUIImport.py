@@ -482,7 +482,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
             
-            self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             
             self._tag_autocomplete_all = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             
@@ -494,7 +494,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._paths_to_single_tags = collections.defaultdict( set )
             
-            self._single_tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            self._single_tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             
             self._single_tags_paste_button = ClientGUICommon.BetterButton( self._single_tags_panel, 'paste tags', self._PasteSingleTags )
             
@@ -1980,7 +1980,23 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         
         if len( non_functional_gugs ) > 0:
             
-            non_functional_choice_tuples = [ ( gug.GetName(), gug ) for gug in non_functional_gugs ]
+            non_functional_choice_tuples = []
+            
+            for gug in non_functional_gugs:
+                
+                s = gug.GetName()
+                
+                try:
+                    
+                    gug.CheckFunctional()
+                    
+                except HydrusExceptions.ParseException as e:
+                    
+                    s = '{} ({})'.format( gug.GetName(), e )
+                    
+                
+                non_functional_choice_tuples.append( ( s, gug ) )
+                
             
             choice_tuples.append( ( '--non-functional galleries', -2 ) )
             

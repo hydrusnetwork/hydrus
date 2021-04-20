@@ -83,8 +83,6 @@ class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'access_key', 'immediate_content_update', 'registration_keys' ]
     
-    TRANSACTION_COMMIT_PERIOD = 120
-    
     def __init__( self, controller, db_dir, db_name ):
         
         self._files_dir = os.path.join( db_dir, 'server_files' )

@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_436"><a href="#version_436">version 436</a></h3></li>
+				<ul>
+					<li>macOS:</li>
+					<li>I fixed an issue with last week's Big Sur compatible release where it wasn't finding your old database correctly--it was defaulting to a different location, so without a specific launch command otherwise, it started a fresh db and said 'hey, looks like first time you ran the program'. if you are a long-time user of hydrus, please install and run 436 as usual, it should figure out your old db location correctly as ~/Library/Hydrus without any launch command override needed</li>
+					<li>If you never ran any of the old macOS builds, and you started using hydrus for the first time on macOS last week with the experimental Big Sur compatible build, your brand new database is in a funky location! don't update yet, or you will delete it! You will want to copy your .db files and the client_files folder from inside_the_435_app/Contents/MacOS/db to ~/Library/Hydrus, which should for most people be /Users/(YOU)/Library/Hydrus. feel free to ask for help if you can't figure this out</li>
+					<li>fixed a 'this is macOS' platform check for newer macOS releases, which ensures the 'userpath' fallback is correctly initialised to ~/Library/Hydrus</li>
+					<li>fixed the new macOS github workflow build script to tell hydrus that it is running from inside an App, so it knows to default to the userpath fallback correctly</li>
+					<li>the macOS build now has the old filename</li>
+					<li>it also has the ReadMeFirst.rtf file and Applications shortcut</li>
+					<li>collected the new build-related files in static/build_files, which will likely see more files in future</li>
+					<li>.</li>
+					<li>pending tag cache regen:</li>
+					<li>two new maintenance tasks are added to the database->regenerate menu--one that forces a recalc of your total 'pending' count as used in the pending menu, and one that recalculates the cached pending tag mappings for storage tags (just like the display one added some time ago, but one layer deeper). the menu entries are relabelled appropriately</li>
+					<li>these routines will be run on database update, and should correct the bad pending menu counts many users discovered last week (the new efficient way that the pending count is calculated exposed some legacy bad cached pending storage mappings entries. we'll see if they come back, or if this is just clearing up bad counts hanging around from ages ago)</li>
+					<li>the quick pending mapping cache regen routines take a little longer to initialise now, but they now clear out surplus tag data, rather than just regenerating the 'correct' tags</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>added an experimental setting to _options->tag presentation_ to replace all underscores in tags with spaces. this is just a render rule, so it will only apply in front-facing 'display' contexts (a bit like how siblings work in search pages, but you see the truth in _manage tags_), will consume a little more CPU with big lists, and may result in some duplicate rows, but let's see how it goes. this is basically a quick hardcoded hack until there is a more beautiful solution here</li>
+					<li>in the two 'Duck' dark QSS styles, removed fixed font size on button labels that wasn't scaling on high DPI screens</li>
+					<li>the filename tagging panel now shows parents and siblings correctly on the 'tags for all' and 'tags for selected' taglists. I'd like to show siblings and parents in the file list above in future, but it'll be a bit more tricky to do neatly and without megalag</li>
+					<li>GUGs and NGUGs now report their reasons for not being functional in the downloader selector list and subscription errors. typically this will be a missing url class or an url class missing a matching parser, but more complicated example-url-parsing errors will also be outlined</li>
+					<li>fixed a bug in the client api in the set-cookies call when no cookies are set, and ensured all cookies added this way are saved permanently (before, some could be lost if that domain was not used in network traffic before the next client shutdown)</li>
+					<li>the 'refresh account' button in _review services_ now works on the new async system. it presents errors nicely</li>
+					<li>a repository's current update period is now stated in its review services panel</li>
+					<li>review services now says 'checking for updates in...' rather than 'next update due...', which is more accurate and will matter more with small update times</li>
+					<li>fixed some false positive instances of 'this server was not a tag repo' error in the network engine.</li>
+					<li>the hydrus server now also outputs hydrus specific 'Server' header (rather than some twisted default) on 'unsupported request' 404s and any other unusual 'infrastructure' 4XX or 5XX</li>
+					<li>if the repository updates in the filesystem are lacking some required file information when calculating what to process, the client now queues those files for a metadata regen maintenance job and raises a cleaner error</li>
+					<li>just as a safety measure, if a repository ever happens to deliver a metadata update slice with a 'next update due' time that has already passed, the client now adds a buffer and checks tomorrow instead</li>
+					<li>a new program launch argument, db_transaction_commit_time, lets you change how often the database's changes are committed to disk. default is 30 (seconds) for client, 120 for server</li>
+					<li>altering the repository update period now prints a summary of the change to the log</li>
+					<li>updated the ipfs links in the help</li>
+					<li>updated the main help index.html and the github readme.md with the user-run repo and wiki at https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts</li>
+				</ul>
 				<li><h3 id="version_435"><a href="#version_435">version 435</a></h3></li>
 				<ul>
 					<li>misc:</li>

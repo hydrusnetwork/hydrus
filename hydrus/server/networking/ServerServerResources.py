@@ -17,18 +17,9 @@ from hydrus.server import ServerFiles
 
 class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
     
-    def __init__( self ):
-        
-        HydrusServerResources.Resource.__init__( self )
-        
-        self._server_version_string = HC.service_string_lookup[ HC.SERVER_ADMIN ] + '/' + str( HC.NETWORK_VERSION )
-        
-    
     def render_GET( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.setResponseCode( 200 )
-        
-        request.setHeader( 'Server', self._server_version_string )
         
         if HG.server_busy.locked():
             
@@ -405,7 +396,20 @@ class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestricte
             raise HydrusExceptions.BadRequestException( 'The update period was too high. It needs to be lower than {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
             
         
-        self._service.SetUpdatePeriod( update_period )
+        old_update_period = self._service.GetUpdatePeriod()
+        
+        if old_update_period != update_period:
+            
+            self._service.SetUpdatePeriod( update_period )
+            
+            HydrusData.Print(
+                'Account {} changed the update period to from "{}" to "{}".'.format(
+                    request.hydrus_account.GetAccountKey().hex(),
+                    HydrusData.TimeDeltaToPrettyTimeDelta( old_update_period ),
+                    HydrusData.TimeDeltaToPrettyTimeDelta( update_period )
+                )
+            )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

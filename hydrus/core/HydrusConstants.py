@@ -33,10 +33,12 @@ else:
         BASE_DIR = os.getcwd()
         
 
-PLATFORM_WINDOWS = sys.platform == 'win32'
-PLATFORM_MACOS  = sys.platform == 'darwin'
-PLATFORM_LINUX = sys.platform == 'linux'
-PLATFORM_HAIKU = sys.platform == 'haiku1'
+muh_platform = sys.platform.lower()
+
+PLATFORM_WINDOWS = muh_platform == 'win32'
+PLATFORM_MACOS = muh_platform == 'darwin'
+PLATFORM_LINUX = muh_platform == 'linux'
+PLATFORM_HAIKU = muh_platform == 'haiku1'
 
 RUNNING_FROM_SOURCE = sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
 RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
@@ -79,7 +81,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 435
+SOFTWARE_VERSION = 436
 CLIENT_API_VERSION = 16
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

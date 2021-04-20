@@ -264,8 +264,6 @@ class DBCursorTransactionWrapper( object ):
     
 class HydrusDB( object ):
     
-    TRANSACTION_COMMIT_PERIOD = 30
-    
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 2
     
@@ -614,7 +612,7 @@ class HydrusDB( object ):
             
             self._c = self._db.cursor()
             
-            self._cursor_transaction_wrapper = DBCursorTransactionWrapper( self._c, self.TRANSACTION_COMMIT_PERIOD )
+            self._cursor_transaction_wrapper = DBCursorTransactionWrapper( self._c, HG.db_transaction_commit_period )
             
             self._LoadModules()
             

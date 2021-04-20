@@ -1904,6 +1904,8 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
                 ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires )
                 
             
+            HG.client_controller.network_engine.session_manager.SetSessionDirty( network_context )
+            
         
         if HG.client_controller.new_options.GetBoolean( 'notify_client_api_cookies' ) and len( domains_cleared ) + len( domains_set ) > 0:
             
@@ -1932,8 +1934,6 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
             
             HG.client_controller.pub( 'message', job_key )
             
-        
-        HG.client_controller.network_engine.session_manager.SetSessionDirty( network_context )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

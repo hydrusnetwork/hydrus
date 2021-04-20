@@ -1,7 +1,9 @@
 from twisted.web.http import _GenericHTTPChannelProtocol, HTTPChannel
 from twisted.web.server import Site
+from twisted.web.server import Request
 from twisted.web.resource import Resource
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 
@@ -17,6 +19,10 @@ class HydrusService( Site ):
     def __init__( self, service ):
         
         self._service = service
+        
+        service_type = self._service.GetServiceType()
+        
+        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
         root = self._InitRoot()
         
@@ -48,4 +54,11 @@ class HydrusService( Site ):
     def _ProtocolFactory( self ):
         
         return _GenericHTTPChannelProtocol( FatHTTPChannel() )
+        
+    
+    def getResourceFor( self, request: Request ):
+        
+        request.setHeader( 'Server', self._server_version_string )
+        
+        return Site.getResourceFor( self, request )
         

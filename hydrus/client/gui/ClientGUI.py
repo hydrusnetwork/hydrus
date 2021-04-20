@@ -272,7 +272,7 @@ def THREADUploadPending( service_key ):
         
         if service_type == HC.TAG_REPOSITORY:
             
-            types_to_clear = (
+            types_to_delete = (
                 HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
                 HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
                 HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
@@ -283,13 +283,13 @@ def THREADUploadPending( service_key ):
             
         elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
             
-            types_to_clear = (
+            types_to_delete = (
                 HC.SERVICE_INFO_NUM_PENDING_FILES,
                 HC.SERVICE_INFO_NUM_PETITIONED_FILES
             )
             
         
-        HG.client_controller.Write( 'delete_service_info', service_key, types_to_clear )
+        HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
         
         HG.currently_uploading_pending = False
         HG.client_controller.pub( 'notify_new_pending' )
@@ -539,6 +539,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'temp dir', HydrusPaths.GetCurrentTempDir() ) )
         library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
         library_versions.append( ( 'db cache size per file', '{}MB'.format( HG.db_cache_size ) ) )
+        library_versions.append( ( 'db transaction commit period', '{}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) ) )
         library_versions.append( ( 'db synchronous value', str( HG.db_synchronous ) ) )
         library_versions.append( ( 'db using memory for temp?', str( HG.no_db_temp_files ) ) )
         
@@ -1343,17 +1344,37 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _DeleteServiceInfo( self ):
+    def _DeleteServiceInfo( self, only_pending = False ):
         
-        message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
-        message += os.linesep * 2
-        message += 'Some GUI elements (review services, mainly) may be slow the next time they launch.'
+        if only_pending:
+            
+            types_to_delete = (
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS,
+                HC.SERVICE_INFO_NUM_PENDING_FILES,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES
+            )
+            
+            message = 'This will clear and regen the number for the pending menu up top. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. It should not take long at all, and will update instantly if changed.'
+            
+        else:
+            
+            types_to_delete = None
+            
+            message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
+            message += os.linesep * 2
+            message += 'Some GUI elements (review services, mainly) may be slow the next time they launch.'
+            
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
         if result == QW.QDialog.Accepted:
             
-            self._controller.Write( 'delete_service_info' )
+            self._controller.Write( 'delete_service_info', types_to_delete = types_to_delete )
             
         
     
@@ -3253,7 +3274,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         message = 'This will delete and then recreate the pending tags on the tag \'display\' mappings cache, which is used for user-presented tag searching, loading, and autocomplete counts. This is useful if you have \'ghost\' pending tags or counts hanging around.'
         message += os.linesep * 2
-        message += 'If you have a millions of pending tags, it can take a long time, during which the gui may hang.'
+        message += 'If you have a millions of tags, pending or current, it can take a long time, during which the gui may hang.'
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
@@ -3298,6 +3319,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
             
             self._controller.Write( 'regenerate_tag_mappings_cache', tag_service_key = tag_service_key )
+            
+        
+    
+    def _RegenerateTagPendingMappingsCache( self ):
+        
+        message = 'This will delete and then recreate the pending tags on the whole tag mappings cache, which is used for multiple kinds of tag searching, loading, and autocomplete counts. This is useful if you have \'ghost\' pending tags or counts hanging around.'
+        message += os.linesep * 2
+        message += 'If you have a millions of tags, pending or current, it can take a long time, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'regenerate_tag_pending_mappings_cache', tag_service_key = tag_service_key )
             
         
     
@@ -5201,9 +5247,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache', 'Delete and recreate the tag mappings cache, fixing any miscounts.', self._RegenerateTagMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing any miscounts.', self._RegenerateTagDisplayMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing any miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'total pending count, in the pending menu', 'Regenerate the pending count up top.', self._DeleteServiceInfo, only_pending = True )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache (all, with deferred siblings & parents calculation)', 'Delete and recreate the tag mappings cache, fixing bad tags or miscounts.', self._RegenerateTagMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagPendingMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )

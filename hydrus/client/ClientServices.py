@@ -2161,13 +2161,20 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def GetUpdatePeriod( self ):
+    def GetUpdatePeriod( self ) -> int:
         
         with self._lock:
             
             if 'update_period' in self._service_options:
                 
-                return self._service_options[ 'update_period' ]
+                update_period = self._service_options[ 'update_period' ]
+                
+                if not isinstance( update_period, int ):
+                    
+                    raise HydrusExceptions.DataMissing( 'This service has a bad update period! Try refreshing your account!' )
+                    
+                
+                return update_period
                 
             else:
                 

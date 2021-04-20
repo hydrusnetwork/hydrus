@@ -16,6 +16,7 @@ no_db_temp_files = False
 boot_debug = False
 
 db_cache_size = 200
+db_transaction_commit_period = 30
 
 # if this is set to 1, transactions are not immediately synced to the journal so multiple can be undone following a power-loss
 # if set to 2, all transactions are synced, so once a new one starts you know the last one is on disk

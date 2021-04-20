@@ -1160,16 +1160,24 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._paused = True
             
-            HydrusData.ShowText( 'The subscription "' + self._name + '" could not find a Gallery URL Generator for "' + self._gug_key_and_name[1] + '"! The sub has paused!' )
+            HydrusData.ShowText( 'The subscription "{}" could not find a Gallery URL Generator for "{}"! The sub has paused!'.format( self._name, self._gug_key_and_name[1] ) )
             
             return
             
         
-        if not gug.IsFunctional():
+        try:
+            
+            gug.CheckFunctional()
+            
+        except HydrusExceptions.ParseException as e:
             
             self._paused = True
             
-            HydrusData.ShowText( 'The subscription "' + self._name + '"\'s Gallery URL Generator, "' + self._gug_key_and_name[1] + '" seems not to be functional! Maybe it needs a gallery url class or a gallery parser? The sub has paused!' )
+            message = 'The subscription "{}"\'s Gallery URL Generator, "{}" seems not to be functional! The sub has paused! The given reason was:'.format( self._name, self._gug_key_and_name[1] )
+            message += os.linesep * 2
+            message += str( e )
+            
+            HydrusData.ShowText( message )
             
             return
             

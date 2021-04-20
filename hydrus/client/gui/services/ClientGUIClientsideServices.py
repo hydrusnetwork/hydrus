@@ -2432,20 +2432,30 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
     def _RefreshAccount( self ):
         
-        def do_it( service, my_updater ):
+        service = self._service
+        
+        def work_callable():
             
-            try:
+            service.SyncAccount( force = True )
+            
+            return 1
+            
+        
+        def publish_callable( result ):
+            
+            self._my_updater.Update()
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            if not isinstance( etype, HydrusExceptions.ServerBusyException ):
                 
-                service.SyncAccount( force = True )
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', str(e) )
+                HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
                 
             
-            my_updater.Update()
+            QW.QMessageBox.critical( self, 'Error', str( value ) )
+            
+            self._my_updater.Update()
             
         
         if HG.client_controller.options[ 'pause_repo_sync' ]:
@@ -2455,7 +2465,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             return
             
         
-        if self._service.GetServiceType() in HC.REPOSITORIES and self._service.IsPausedNetworkSync():
+        if self._service.IsPausedNetworkSync():
             
             QW.QMessageBox.warning( self, 'Warning', 'Account sync is paused for this service! Please unpause it to refresh its account.' )
             
@@ -2465,7 +2475,9 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         self._refresh_account_button.setEnabled( False )
         self._refresh_account_button.setText( 'fetching\u2026' )
         
-        HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        
+        job.start()
         
     
     def ServiceUpdated( self, service ):
@@ -2490,6 +2502,7 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         self._content_panel = QW.QWidget( self )
         
+        self._update_period_st = ClientGUICommon.BetterStaticText( self )
         self._metadata_st = ClientGUICommon.BetterStaticText( self )
         
         self._download_progress = ClientGUICommon.TextAndGauge( self )
@@ -2544,6 +2557,7 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         QP.AddToLayout( hbox, self._reset_downloading_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._reset_processing_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
+        self.Add( self._update_period_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._update_downloading_paused_button, CC.FLAGS_ON_RIGHT )
@@ -2721,6 +2735,17 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
             
         
         #
+        
+        try:
+            
+            update_period = self._service.GetUpdatePeriod()
+            
+            self._update_period_st.setText( 'update period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( update_period ) ) )
+            
+        except HydrusExceptions.DataMissing:
+            
+            self._update_period_st.setText( 'Unknown update period.' )
+            
         
         self._metadata_st.setText( self._service.GetNextUpdateDueString() )
         

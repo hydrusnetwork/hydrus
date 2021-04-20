@@ -271,7 +271,7 @@ class NetworkJob( object ):
         return ( connect_timeout, read_timeout )
         
     
-    def _SendRequestAndGetResponse( self ):
+    def _SendRequestAndGetResponse( self ) -> requests.Response:
         
         with self._lock:
             
@@ -1659,7 +1659,7 @@ class NetworkJobHydrus( NetworkJob ):
         NetworkJob._ReportDataUsed( self, num_bytes )
         
     
-    def _SendRequestAndGetResponse( self ):
+    def _SendRequestAndGetResponse( self ) -> requests.Response:
         
         service = self.engine.controller.services_manager.GetService( self._service_key )
         
@@ -1674,7 +1674,7 @@ class NetworkJobHydrus( NetworkJob ):
         
         response = NetworkJob._SendRequestAndGetResponse( self )
         
-        if service_type in HC.RESTRICTED_SERVICES:
+        if response.ok and service_type in HC.RESTRICTED_SERVICES:
             
             self._CheckHydrusVersion( service_type, response )
             

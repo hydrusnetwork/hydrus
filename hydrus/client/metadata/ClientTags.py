@@ -28,6 +28,16 @@ def RenderNamespaceForUser( namespace ):
     
 def RenderTag( tag, render_for_user: bool ):
     
+    if render_for_user:
+        
+        new_options = HG.client_controller.new_options
+        
+        if new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ):
+            
+            tag = tag.replace( '_', ' ' )
+            
+        
+    
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
     if namespace == '':
@@ -37,8 +47,6 @@ def RenderTag( tag, render_for_user: bool ):
     else:
         
         if render_for_user:
-            
-            new_options = HG.client_controller.new_options
             
             if new_options.GetBoolean( 'show_namespaces' ):
                 

@@ -1109,7 +1109,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if status_hook is not None:
             
-            message = 'clearing old data'
+            message = 'clearing old combined display data'
             
             status_hook( message )
             
@@ -1123,8 +1123,8 @@ class DB( HydrusDB.HydrusDB ):
         del all_pending_storage_tag_ids
         del storage_tag_ids_to_display_tag_ids
         
-        self._c.executemany( 'UPDATE {} SET pending_count = 0 WHERE tag_id = ?;'.format( ac_cache_table_name ), ( ( tag_id, ) for tag_id in all_pending_display_tag_ids ) )
-        self._c.executemany( 'DELETE FROM {} WHERE tag_id = ? AND current_count = 0 AND pending_count = 0;'.format( ac_cache_table_name ), ( ( tag_id, ) for tag_id in all_pending_display_tag_ids ) )
+        self._c.execute( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0;'.format( ac_cache_table_name ) )
+        self._c.execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( ac_cache_table_name ) )
         
         all_pending_display_tag_ids_to_implied_by_storage_tag_ids = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, all_pending_display_tag_ids, tags_are_ideal = True )
         
@@ -1260,6 +1260,47 @@ class DB( HydrusDB.HydrusDB ):
         self._AnalyzeTable( combined_ac_cache_table_name )
         
         self._CacheCombinedFilesDisplayMappingsGenerate( tag_service_id )
+        
+    
+    def _CacheCombinedFilesMappingsRegeneratePending( self, tag_service_id, status_hook = None ):
+        
+        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, tag_service_id )
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+        
+        if status_hook is not None:
+            
+            message = 'clearing old combined display data'
+            
+            status_hook( message )
+            
+        
+        all_pending_storage_tag_ids = self._STS( self._c.execute( 'SELECT DISTINCT tag_id FROM {};'.format( pending_mappings_table_name ) ) )
+        
+        self._c.execute( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0;'.format( ac_cache_table_name ) )
+        self._c.execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( ac_cache_table_name ) )
+        
+        ac_cache_changes = []
+        
+        num_to_do = len( all_pending_storage_tag_ids )
+        
+        for ( i, storage_tag_id ) in enumerate( all_pending_storage_tag_ids ):
+            
+            if i % 100 == 0 and status_hook is not None:
+                
+                message = 'regenerating pending tags {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                
+                status_hook( message )
+                
+            
+            ( pending_delta, ) = self._c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM {} WHERE tag_id = ?;'.format( pending_mappings_table_name ), ( storage_tag_id, ) ).fetchone()
+            
+            ac_cache_changes.append( ( storage_tag_id, 0, pending_delta ) )
+            
+        
+        self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, tag_service_id, ac_cache_changes )
+        
+        self._CacheCombinedFilesDisplayMappingsRegeneratePending( tag_service_id, status_hook = status_hook )
         
     
     def _CacheLocalHashIdsGenerate( self ):
@@ -2047,7 +2088,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if status_hook is not None:
             
-            message = 'clearing old data'
+            message = 'clearing old specific display data'
             
             status_hook( message )
             
@@ -2061,8 +2102,8 @@ class DB( HydrusDB.HydrusDB ):
         del all_pending_storage_tag_ids
         del storage_tag_ids_to_display_tag_ids
         
-        self._c.executemany( 'UPDATE {} SET pending_count = 0 WHERE tag_id = ?;'.format( ac_cache_table_name ), ( ( tag_id, ) for tag_id in all_pending_display_tag_ids ) )
-        self._c.executemany( 'DELETE FROM {} WHERE tag_id = ? AND current_count = 0 AND pending_count = 0;'.format( ac_cache_table_name ), ( ( tag_id, ) for tag_id in all_pending_display_tag_ids ) )
+        self._c.execute( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0;'.format( ac_cache_table_name ) )
+        self._c.execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( ac_cache_table_name ) )
         
         self._c.execute( 'DELETE FROM {};'.format( cache_display_pending_mappings_table_name ) )
         
@@ -2519,6 +2560,53 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CacheSpecificDisplayMappingsPendMappings( file_service_id, tag_service_id, tag_id, filtered_hash_ids )
             
+        
+    
+    def _CacheSpecificMappingsRegeneratePending( self, file_service_id, tag_service_id, status_hook = None ):
+        
+        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+        ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        cache_files_table_name = GenerateSpecificFilesTableName( file_service_id, tag_service_id )
+        
+        if status_hook is not None:
+            
+            message = 'clearing old specific data'
+            
+            status_hook( message )
+            
+        
+        all_pending_storage_tag_ids = self._STS( self._c.execute( 'SELECT DISTINCT tag_id FROM {};'.format( pending_mappings_table_name ) ) )
+        
+        self._c.execute( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0;'.format( ac_cache_table_name ) )
+        self._c.execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( ac_cache_table_name ) )
+        
+        self._c.execute( 'DELETE FROM {};'.format( cache_pending_mappings_table_name ) )
+        
+        ac_cache_changes = []
+        
+        num_to_do = len( all_pending_storage_tag_ids )
+        
+        for ( i, storage_tag_id ) in enumerate( all_pending_storage_tag_ids ):
+            
+            if i % 100 == 0 and status_hook is not None:
+                
+                message = 'regenerating pending tags {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                
+                status_hook( message )
+                
+            
+            self._c.execute( 'INSERT OR IGNORE INTO {} ( tag_id, hash_id ) SELECT tag_id, hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( cache_pending_mappings_table_name, pending_mappings_table_name, cache_files_table_name ), ( storage_tag_id, ) )
+            
+            pending_delta = HydrusDB.GetRowCount( self._c )
+            
+            ac_cache_changes.append( ( storage_tag_id, 0, pending_delta ) )
+            
+        
+        self._CacheMappingsAddACCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, ac_cache_changes )
+        
+        self._CacheSpecificDisplayMappingsRegeneratePending( file_service_id, tag_service_id, status_hook = status_hook )
         
     
     def _CacheSpecificMappingsRescindPendingMappings( self, tag_service_id, tag_id, hash_ids, filtered_hashes_generator: FilteredHashesGenerator ):
@@ -11575,6 +11663,16 @@ class DB( HydrusDB.HydrusDB ):
                     hash_ids_to_hashes_and_mimes = { hash_id : ( hash, mime ) for ( hash_id, hash, mime ) in self._c.execute( 'SELECT hash_id, hash, mime FROM {} CROSS JOIN hashes USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
                     
                 
+                if len( hash_ids_to_hashes_and_mimes ) < len( hash_ids_i_can_process ):
+                    
+                    self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                    self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    
+                    self._cursor_transaction_wrapper.CommitAndBegin()
+                    
+                    raise Exception( 'An error was discovered during repository processing--some update files are missing file info or hashes. A maintenance routine will try to scan these files and fix this problem, but it may be more complicated to fix. Please contact hydev and let him know the details!' )
+                    
+                
                 for hash_id in hash_ids_i_can_process:
                     
                     ( hash, mime ) = hash_ids_to_hashes_and_mimes[ hash_id ]
@@ -15191,6 +15289,87 @@ class DB( HydrusDB.HydrusDB ):
         self._CacheTagParentsRegen( tag_service_ids )
         
         self.pub_after_job( 'notify_new_tag_display_application' )
+        
+    
+    def _RegenerateTagPendingMappingsCache( self, tag_service_key = None ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'regenerating tag pending mappings cache' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self.modules_services.GetServiceId( tag_service_key ), )
+                
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'regenerating specific cache pending {}_{}'.format( file_service_id, tag_service_id )
+                
+                def status_hook_1( s: str ):
+                    
+                    job_key.SetVariable( 'popup_text_2', s )
+                    self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
+                    
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                self._CacheSpecificMappingsRegeneratePending( file_service_id, tag_service_id, status_hook = status_hook_1 )
+                
+            
+            job_key.SetVariable( 'popup_text_2', '' )
+            self._controller.frame_splash_status.SetSubtext( '' )
+            
+            for tag_service_id in tag_service_ids:
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                message = 'regenerating combined cache pending {}'.format( tag_service_id )
+                
+                def status_hook_2( s: str ):
+                    
+                    job_key.SetVariable( 'popup_text_2', s )
+                    self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
+                    
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                self._CacheCombinedFilesMappingsRegeneratePending( tag_service_id, status_hook = status_hook_2 )
+                
+            
+            job_key.SetVariable( 'popup_text_2', '' )
+            self._controller.frame_splash_status.SetSubtext( '' )
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+            self.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            
         
     
     def _RegenerateTagSiblingsCache( self, only_these_service_ids = None ):
@@ -18909,6 +19088,34 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 435:
+            
+            try:
+                
+                self._RegenerateTagPendingMappingsCache()
+                
+                types_to_delete = (
+                    HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
+                    HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
+                    HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
+                    HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
+                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
+                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS,
+                    HC.SERVICE_INFO_NUM_PENDING_FILES,
+                    HC.SERVICE_INFO_NUM_PETITIONED_FILES
+                )
+                
+                self._DeleteServiceInfo( types_to_delete = types_to_delete )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to regenerate the pending tag cache failed! This is not a big deal, but you might still have a bad pending count for your pending menu. Error information has been written to the log. Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -19467,8 +19674,9 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_tag_display_mappings_cache': self._RegenerateTagDisplayMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_display_pending_mappings_cache': self._RegenerateTagDisplayPendingMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_parents_cache': self._RegenerateTagParentsCache( *args, **kwargs )
+        elif action == 'regenerate_tag_pending_mappings_cache': self._RegenerateTagPendingMappingsCache( *args, **kwargs )
+        elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
         elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
         elif action == 'repopulate_tag_cache_missing_subtags': self._RepopulateTagCacheMissingSubtags( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )

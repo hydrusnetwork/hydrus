@@ -1956,11 +1956,11 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 if HydrusData.TimeHasPassed( update_due ):
                     
-                    s = 'next update imminent'
+                    s = 'checking for updates imminently'
                     
                 else:
                     
-                    s = 'next update due {}'.format( HydrusData.TimestampToPrettyTimeDelta( update_due ) )
+                    s = 'checking for updates {}'.format( HydrusData.TimestampToPrettyTimeDelta( update_due ) )
                     
                 
                 return 'metadata synced up to {}, {}'.format( HydrusData.TimestampToPrettyTimeDelta( self._biggest_end ), s )
@@ -2077,13 +2077,20 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def UpdateFromSlice( self, metadata_slice ):
+    def UpdateFromSlice( self, metadata_slice: "Metadata" ):
         
         with self._lock:
             
             self._metadata.update( metadata_slice._metadata )
             
-            self._next_update_due = metadata_slice._next_update_due
+            new_next_update_due = metadata_slice._next_update_due
+            
+            if HydrusData.TimeHasPassed( new_next_update_due ):
+                
+                new_next_update_due = HydrusData.GetNow() + 100000
+                
+            
+            self._next_update_due = new_next_update_due
             self._biggest_end = self._CalculateBiggestEnd()
             
         
@@ -2497,6 +2504,14 @@ class ServerServiceRepository( ServerServiceRestricted ):
         with self._lock:
             
             return self._metadata.GetSlice( from_update_index )
+            
+        
+    
+    def GetUpdatePeriod( self ) -> int:
+        
+        with self._lock:
+            
+            return self._service_options[ 'update_period' ]
             
         
     

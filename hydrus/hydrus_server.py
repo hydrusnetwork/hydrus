@@ -43,6 +43,7 @@ try:
     argparser.add_argument( '--temp_dir', help = 'override the program\'s temporary directory' )
     argparser.add_argument( '--db_journal_mode', default = 'WAL', choices = [ 'WAL', 'TRUNCATE', 'PERSIST', 'MEMORY' ], help = 'change db journal mode (default=WAL)' )
     argparser.add_argument( '--db_cache_size', type = int, help = 'override SQLite cache_size per db file, in MB (default=200)' )
+    argparser.add_argument( '--db_transaction_commit_period', type = int, help = 'override how often (in seconds) database changes are saved to disk (default=120,min=10)' )
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
@@ -114,6 +115,15 @@ try:
     else:
         
         HG.db_cache_size = 200
+        
+    
+    if result.db_transaction_commit_period is not None:
+        
+        HG.db_transaction_commit_period = max( 10, result.db_transaction_commit_period )
+        
+    else:
+        
+        HG.db_transaction_commit_period = 30
         
     
     if result.db_synchronous_override is not None:

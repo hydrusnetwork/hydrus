@@ -17,6 +17,7 @@ The client can do quite a lot! Please check out the help inside the release or [
 * [tumblr](http://hydrus.tumblr.com/)
 * [discord](https://discord.gg/wPHPCUZ)
 * [patreon](https://www.patreon.com/hydrus_dev)
+* [user-run repository and wiki] (https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
 
 ## Attribution
 

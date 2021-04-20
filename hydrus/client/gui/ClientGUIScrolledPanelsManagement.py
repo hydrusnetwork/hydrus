@@ -3060,6 +3060,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_namespaces = QW.QCheckBox( render_panel )
             self._namespace_connector = QW.QLineEdit( render_panel )
             
+            self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
+            
             #
             
             namespace_colours_panel = ClientGUICommon.StaticBox( self, 'namespace colours' )
@@ -3076,6 +3078,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_namespaces.setChecked( new_options.GetBoolean( 'show_namespaces' ) )
             self._namespace_connector.setText( new_options.GetString( 'namespace_connector' ) )
+            self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
             
             #
             
@@ -3105,6 +3108,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
             rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
+            rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
             
             gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
             
@@ -3159,6 +3163,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.isChecked() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.text() )
+            self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
             
             HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
             
