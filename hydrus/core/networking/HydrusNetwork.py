@@ -738,7 +738,7 @@ class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
         
         if not self.HasAccountKey():
             
-            raise Exception( 'This Account Identifier does not have an account key!' )
+            raise Exception( 'This Account Identifier does not have an account id!' )
             
         
         return self._data

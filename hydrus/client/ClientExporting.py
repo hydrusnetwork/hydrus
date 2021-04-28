@@ -1,3 +1,4 @@
+import collections
 import os
 import re
 
@@ -276,7 +277,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if file_search_context is None:
             
-            file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            
+            file_search_context = ClientSearch.FileSearchContext( file_service_key = default_local_file_service_key )
             
         
         if phrase is None:
@@ -510,17 +513,34 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._delete_from_client_after_export:
             
-            deletee_hashes = { media_result.GetHash() for media_result in media_results }
+            local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
             
-            chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+            service_keys_to_deletee_hashes = collections.defaultdict( list )
+            
+            for media_result in media_results:
+                
+                hash = media_result.GetHash()
+                
+                deletee_service_keys = media_result.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
+                
+                for deletee_service_key in deletee_service_keys:
+                    
+                    service_keys_to_deletee_hashes[ deletee_service_key ].append( hash )
+                    
+                
             
             reason = 'Deleted after export to Export Folder "{}".'.format( self._path )
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
-            
-            for content_update in content_updates:
+            for ( service_key, deletee_hashes ) in service_keys_to_deletee_hashes.items():
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                
+                for chunk_of_hashes in chunks_of_hashes:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
+                    
                 
             
         

@@ -97,7 +97,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 for content_update in content_updates:
                     
@@ -966,15 +966,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             self._ResetArchiveButton()
             
-            current_locations = self._current_media.GetLocationsManager().GetCurrent()
+            locations_manager = self._current_media.GetLocationsManager()
             
-            if CC.LOCAL_FILE_SERVICE_KEY in current_locations:
+            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 
                 self._trash_button.show()
                 self._delete_button.hide()
                 self._undelete_button.hide()
                 
-            elif CC.TRASH_SERVICE_KEY in current_locations:
+            elif locations_manager.IsTrashed():
                 
                 self._trash_button.hide()
                 self._delete_button.show()
@@ -1111,7 +1111,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in list( service_keys_to_content_updates.items() ):
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -1388,7 +1388,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         if self._current_media is not None:
             
             has_inbox = self._current_media.HasInbox()
-            has_trash = CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent()
+            has_trash = self._current_media.GetLocationsManager().IsTrashed()
             has_notes = self._current_media.HasNotes()
             
             if has_inbox or has_trash or has_notes:
@@ -1481,7 +1481,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 # ratings updates do not change the shape of this hover but file changes of several kinds do
                 
@@ -1576,7 +1576,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     

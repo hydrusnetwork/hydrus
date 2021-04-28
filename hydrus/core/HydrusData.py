@@ -386,7 +386,7 @@ def ConvertTimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = 
     
     if timestamp is None:
         
-        return 'no time given'
+        return 'unknown time'
         
     
     if include_24h_time:
@@ -422,7 +422,7 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
     
     if timestamp is None:
         
-        timestamp = 0
+        return 'at an unknown time'
         
     
     if not show_seconds:
@@ -1647,7 +1647,16 @@ class ContentUpdate( object ):
             
             if self._action == HC.CONTENT_UPDATE_ADVANCED:
                 
-                hashes = set()
+                ( sub_action, possible_hashes ) = self._row
+                
+                if possible_hashes is None:
+                    
+                    hashes = set()
+                    
+                else:
+                    
+                    hashes = possible_hashes
+                    
                 
             elif self._action == HC.CONTENT_UPDATE_ADD:
                 

@@ -429,7 +429,7 @@ class HydrusResourceRestrictedAccountInfo( HydrusResourceRestrictedAccountModify
         
         if 'subject_identifier' not in request.parsed_request_args:
             
-            raise HydrusExceptions.BadRequestException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.BadRequestException( 'I was expecting an account id, but did not get one!' )
             
         
         subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
@@ -440,7 +440,7 @@ class HydrusResourceRestrictedAccountInfo( HydrusResourceRestrictedAccountModify
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id!' )
             
         
         subject_account = HG.server_controller.Read( 'account', self._service_key, subject_account_key )
@@ -460,7 +460,7 @@ class HydrusResourceRestrictedAccountModifyAccountType( HydrusResourceRestricted
         
         if 'subject_identifier' not in request.parsed_request_args:
             
-            raise HydrusExceptions.BadRequestException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.BadRequestException( 'I was expecting an account id, but did not get one!' )
             
         
         subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
@@ -471,7 +471,7 @@ class HydrusResourceRestrictedAccountModifyAccountType( HydrusResourceRestricted
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id!' )
             
         
         if 'account_type_key' not in request.parsed_request_args:
@@ -494,7 +494,7 @@ class HydrusResourceRestrictedAccountModifyBan( HydrusResourceRestrictedAccountM
         
         if 'subject_identifier' not in request.parsed_request_args:
             
-            raise HydrusExceptions.BadRequestException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.BadRequestException( 'I was expecting an account id, but did not get one!' )
             
         
         subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
@@ -505,7 +505,7 @@ class HydrusResourceRestrictedAccountModifyBan( HydrusResourceRestrictedAccountM
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id!' )
             
         
         if 'reason' not in request.parsed_request_args:
@@ -550,7 +550,7 @@ class HydrusResourceRestrictedAccountModifyExpires( HydrusResourceRestrictedAcco
         
         if 'subject_identifier' not in request.parsed_request_args:
             
-            raise HydrusExceptions.BadRequestException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.BadRequestException( 'I was expecting an account id, but did not get one!' )
             
         
         subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
@@ -561,7 +561,7 @@ class HydrusResourceRestrictedAccountModifyExpires( HydrusResourceRestrictedAcco
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id!' )
             
         
         if 'expires' not in request.parsed_request_args:
@@ -594,7 +594,7 @@ class HydrusResourceRestrictedAccountModifySetMessage( HydrusResourceRestrictedA
         
         if 'subject_identifier' not in request.parsed_request_args:
             
-            raise HydrusExceptions.BadRequestException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.BadRequestException( 'I was expecting an account id, but did not get one!' )
             
         
         subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
@@ -605,7 +605,7 @@ class HydrusResourceRestrictedAccountModifySetMessage( HydrusResourceRestrictedA
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id!' )
             
         
         if 'message' not in request.parsed_request_args:
@@ -633,7 +633,7 @@ class HydrusResourceRestrictedAccountModifyUnban( HydrusResourceRestrictedAccoun
         
         if 'subject_identifier' not in request.parsed_request_args:
             
-            raise HydrusExceptions.BadRequestException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.BadRequestException( 'I was expecting an account id, but did not get one!' )
             
         
         subject_identifier = request.parsed_request_args[ 'subject_identifier' ]
@@ -644,7 +644,7 @@ class HydrusResourceRestrictedAccountModifyUnban( HydrusResourceRestrictedAccoun
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id!' )
             
         
         HG.server_controller.WriteSynchronous( 'modify_account_unban', self._service_key, request.hydrus_account, subject_account_key )
@@ -686,7 +686,7 @@ class HydrusResourceRestrictedAccountOtherAccount( HydrusResourceRestrictedAccou
             
         else:
             
-            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account key or content!' )
+            raise HydrusExceptions.BadRequestException( 'The subject\'s account identifier did not include an account id or content!' )
             
         
         body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'account' : subject_account } )

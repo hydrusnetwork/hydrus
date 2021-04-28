@@ -454,12 +454,6 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         if suggested_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
             
             possible_file_service_keys.append( CC.LOCAL_FILE_SERVICE_KEY )
-            possible_file_service_keys.append( CC.TRASH_SERVICE_KEY )
-            possible_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-        elif suggested_file_service_key == CC.TRASH_SERVICE_KEY:
-            
-            possible_file_service_keys.append( CC.TRASH_SERVICE_KEY )
             possible_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         else:
@@ -477,6 +471,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( hashes ) > 0:
                 
+                # update this stuff to say 'send to trash?' vs 'remove from blah? (it is still in bleh)'. for multiple local file services
+                
                 if possible_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
                     
                     if not HC.options[ 'confirm_trash' ]:
@@ -488,27 +484,14 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     if num_to_delete == 1: text = 'Send this file to the trash?'
                     else: text = 'Send these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files to the trash?'
                     
-                elif possible_file_service_key == CC.TRASH_SERVICE_KEY:
+                elif possible_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                    
+                    # do a physical delete now, skipping or force-removing from trash
+                    
+                    possible_file_service_key = 'physical_delete'
                     
                     if num_to_delete == 1: text = 'Permanently delete this file?'
                     else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
-                    
-                elif possible_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
-                    
-                    # do a physical delete, skipping trash
-                    # this is only a valid option when local delete has some values, but it applies to both local and trash, hence the combined local fsk
-                    
-                    if CC.LOCAL_FILE_SERVICE_KEY in keys_to_hashes and len( keys_to_hashes[ CC.LOCAL_FILE_SERVICE_KEY ] ) > 0:
-                        
-                        possible_file_service_key = 'physical_delete'
-                        
-                        if num_to_delete == 1: text = 'Permanently delete this file?'
-                        else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
-                        
-                    else:
-                        
-                        continue
-                        
                     
                 else:
                     
@@ -583,7 +566,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         reason = self._GetReason()
         
-        local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
+        local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, )
         
         if file_service_key in local_file_services:
             
@@ -595,11 +578,6 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             jobs = [ { file_service_key : [ content_update ] } for content_update in content_updates ]
             
-            if file_service_key == CC.TRASH_SERVICE_KEY:
-                
-                involves_physical_delete = True
-                
-            
         elif file_service_key == 'physical_delete':
             
             chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
@@ -608,8 +586,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
             
-            jobs.extend( [ { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
-            jobs.extend( [ { CC.TRASH_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
+            jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
             
             involves_physical_delete = True
             
@@ -619,11 +596,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             jobs = []
             
-            # no reason, since pointless
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
             
-            jobs.extend( [ { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
-            jobs.extend( [ { CC.TRASH_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
+            jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
             
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', chunk_of_hashes ) ) for chunk_of_hashes in chunks_of_hashes ]
             

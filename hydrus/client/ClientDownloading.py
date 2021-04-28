@@ -284,7 +284,7 @@ class QuickDownloadManager( object ):
                 
                 random.shuffle( service_keys )
                 
-                if CC.LOCAL_FILE_SERVICE_KEY in service_keys:
+                if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in service_keys:
                     
                     total_successful_hashes_in_this_run += 1
                     

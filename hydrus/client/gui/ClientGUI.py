@@ -2006,7 +2006,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 if load_a_blank_page:
                     
-                    self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True )
+                    default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+                    
+                    self._notebook.NewPageQuery( default_local_file_service_key, on_deepest_notebook = True )
                     
                 else:
                     
@@ -3041,7 +3043,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         service = self._controller.services_manager.GetService( service_key )
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account id for the account to be modified.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
@@ -3051,7 +3053,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 except:
                     
-                    QW.QMessageBox.critical( self, 'Error', 'Could not parse that account key' )
+                    QW.QMessageBox.critical( self, 'Error', 'Could not parse that account id' )
                     
                     return
                     
@@ -3587,7 +3589,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ReviewServices( self ):
         
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review services', 'review_services' )
         
         panel = ClientGUIClientsideServices.ReviewServicesPanel( frame, self._controller )
         
@@ -3899,11 +3901,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def qt_open_pages():
             
+            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            
             page_of_pages = self._notebook.NewPagesNotebook( on_deepest_notebook = False, select_page = True )
             
             t = 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, page_name ='test', on_deepest_notebook = True)
+            HG.client_controller.CallLaterQtSafe(self, t, self._notebook.NewPageQuery, default_local_file_service_key, page_name ='test', on_deepest_notebook = True)
             
             t += 0.25
             
@@ -3911,7 +3915,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, page_of_pages.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, page_name ='test', on_deepest_notebook = False)
+            HG.client_controller.CallLaterQtSafe(self, t, page_of_pages.NewPageQuery, default_local_file_service_key, page_name ='test', on_deepest_notebook = False)
             
             t += 0.25
             
@@ -3973,9 +3977,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def qt_test_ac():
             
+            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            
             SYS_PRED_REFRESH = 1.0
             
-            page = self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, page_name = 'test', select_page = True )
+            page = self._notebook.NewPageQuery( default_local_file_service_key, page_name = 'test', select_page = True )
             
             t = 0.5
             
@@ -5464,7 +5470,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new accounts for this service.', self._GenerateNewAccounts, service_key )
                         
                     
                     if can_overrule_account_types:
@@ -5650,12 +5656,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             gui_actions = QW.QMenu( debug )
             
+            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, True )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a non-cancellable modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, False )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', default_local_file_service_key )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: HG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
@@ -5981,12 +5989,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         petition_resolvable_repositories = [ repository for repository in repositories if True in ( repository.HasPermission( content_type, action ) for ( content_type, action ) in petition_permissions ) ]
         
-        ClientGUIMenus.AppendMenuItem( search_menu, 'my files', 'Open a new search tab for your files.', self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook=True )
-        ClientGUIMenus.AppendMenuItem( search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY, on_deepest_notebook=True )
+        local_file_services = [ service for service in services if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN and service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
+        
+        for service in local_file_services:
+            
+            ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook = True )
+            
+        
+        ClientGUIMenus.AppendMenuItem( search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY, on_deepest_notebook = True )
         
         for service in file_repositories:
             
-            ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook=True )
+            ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook = True )
             
         
         ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
@@ -5999,7 +6013,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for service in petition_resolvable_repositories:
                 
-                ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook=True )
+                ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook = True )
                 
             
             ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )

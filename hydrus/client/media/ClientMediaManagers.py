@@ -157,23 +157,23 @@ class FileViewingStatsManager( object ):
     
 class LocationsManager( object ):
     
-    LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }
-    
     def __init__(
         self,
-        current: typing.Set[ bytes ],
-        deleted: typing.Set[ bytes ],
+        current_to_timestamps: typing.Dict[ bytes, typing.Optional[ int ] ],
+        deleted_to_timestamps: typing.Dict[ bytes, typing.Optional[ int ] ],
         pending: typing.Set[ bytes ],
         petitioned: typing.Set[ bytes ],
         inbox: bool = False,
         urls: typing.Optional[ typing.Set[ str ] ] = None,
         service_keys_to_filenames: typing.Optional[ typing.Dict[ bytes, str ] ] = None,
-        current_to_timestamps: typing.Optional[ typing.Dict[ bytes, int ] ] = None,
         file_modified_timestamp: typing.Optional[ int ] = None
     ):
         
-        self._current = current
-        self._deleted = deleted
+        self._current_to_timestamps = current_to_timestamps
+        self._deleted_to_timestamps = deleted_to_timestamps
+        
+        self._current = set( self._current_to_timestamps.keys() )
+        self._deleted = set( self._deleted_to_timestamps.keys() )
         self._pending = pending
         self._petitioned = petitioned
         
@@ -193,13 +193,6 @@ class LocationsManager( object ):
         
         self._service_keys_to_filenames = service_keys_to_filenames
         
-        if current_to_timestamps is None:
-            
-            current_to_timestamps = {}
-            
-        
-        self._current_to_timestamps = current_to_timestamps
-        
         self._file_modified_timestamp = file_modified_timestamp
         
     
@@ -211,29 +204,29 @@ class LocationsManager( object ):
     
     def Duplicate( self ):
         
-        current = set( self._current )
-        deleted = set( self._deleted )
+        current_to_timestamps = dict( self._current_to_timestamps )
+        deleted_to_timestamps = dict( self._deleted_to_timestamps )
         pending = set( self._pending )
         petitioned = set( self._petitioned )
         urls = set( self._urls )
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
-        current_to_timestamps = dict( self._current_to_timestamps )
         
-        return LocationsManager( current, deleted, pending, petitioned, self.inbox, urls, service_keys_to_filenames, current_to_timestamps, self._file_modified_timestamp )
-        
-    
-    def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
-    
-    def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ):
-        
-        return self._current - self.LOCAL_LOCATIONS
+        return LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, self.inbox, urls, service_keys_to_filenames, self._file_modified_timestamp )
         
     
-    def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ):
+    def GetCDPP( self ):
         
-        return self._deleted - self.LOCAL_LOCATIONS
+        return ( self._current, self._deleted, self._pending, self._petitioned )
+        
+    
+    def GetCurrent( self ):
+        
+        return self._current
+        
+    
+    def GetDeleted( self ):
+        
+        return self._deleted
         
     
     def GetFileModifiedTimestamp( self ):
@@ -246,42 +239,36 @@ class LocationsManager( object ):
         return self.inbox
         
     
-    def GetPending( self ): return self._pending
-    def GetPendingRemote( self ):
+    def GetPending( self ):
         
-        return self._pending - self.LOCAL_LOCATIONS
+        return self._pending
         
     
-    def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ):
+    def GetPetitioned( self ):
         
-        return self._petitioned - self.LOCAL_LOCATIONS
+        return self._petitioned
         
     
     def GetRemoteLocationStrings( self ):
-    
-        current = self.GetCurrentRemote()
-        pending = self.GetPendingRemote()
-        petitioned = self.GetPetitionedRemote()
         
-        remote_services = list( HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
+        remote_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
         
-        remote_services.sort( key = lambda s: s.GetName() )
+        remote_file_services.sort( key = lambda s: s.GetName() )
         
         remote_service_strings = []
         
-        for remote_service in remote_services:
+        for remote_service in remote_file_services:
             
             name = remote_service.GetName()
             service_key = remote_service.GetServiceKey()
             
-            if service_key in pending:
+            if service_key in self._pending:
                 
                 remote_service_strings.append( name + ' (+)' )
                 
-            elif service_key in current:
+            elif service_key in self._current:
                 
-                if service_key in petitioned:
+                if service_key in self._petitioned:
                     
                     remote_service_strings.append( name + ' (-)' )
                     
@@ -295,11 +282,23 @@ class LocationsManager( object ):
         return remote_service_strings
         
     
-    def GetTimestamp( self, service_key ):
+    def GetCurrentTimestamp( self, service_key ):
         
         if service_key in self._current_to_timestamps:
             
             return self._current_to_timestamps[ service_key ]
+            
+        else:
+            
+            return None
+            
+        
+    
+    def GetDeletedTimestamps( self, service_key ):
+        
+        if service_key in self._deleted_to_timestamps:
+            
+            return self._deleted_to_timestamps[ service_key ]
             
         else:
             
@@ -332,13 +331,131 @@ class LocationsManager( object ):
         return CC.TRASH_SERVICE_KEY in self._current
         
     
+    def _AddToService( self, service_key, do_undelete = False ):
+        
+        import_time = HydrusData.GetNow()
+        
+        if service_key in self._deleted_to_timestamps:
+            
+            if do_undelete:
+                
+                ( delete_timestamp, import_time ) = self._deleted_to_timestamps[ service_key ]
+                
+            
+            del self._deleted_to_timestamps[ service_key ]
+            
+            self._deleted.discard( service_key )
+            
+        
+        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            
+            if CC.TRASH_SERVICE_KEY in self._current_to_timestamps:
+                
+                del self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ]
+                
+                self._current.discard( CC.TRASH_SERVICE_KEY )
+                
+            
+            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+        
+        if service_key not in self._current_to_timestamps:
+            
+            self._current_to_timestamps[ service_key ] = import_time
+            self._current.add( service_key )
+            
+            if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                
+                self.inbox = True
+                
+            
+        
+        self._pending.discard( service_key )
+        
+    
+    def _DeleteFromService( self, service_key ):
+        
+        if service_key in self._current_to_timestamps:
+            
+            current_timestamp = self._current_to_timestamps[ service_key ]
+            
+            del self._current_to_timestamps[ service_key ]
+            
+            self._current.discard( service_key )
+            
+        else:
+            
+            current_timestamp = None
+            
+        
+        if service_key != CC.TRASH_SERVICE_KEY and service_key not in self._deleted_to_timestamps:
+            
+            self._deleted_to_timestamps[ service_key ] = ( HydrusData.GetNow(), current_timestamp )
+            self._deleted.add( service_key )
+            
+        
+        self._petitioned.discard( service_key )
+        
+        local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        
+        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            
+            if self._current.isdisjoint( local_service_keys ):
+                
+                self._AddToService( CC.TRASH_SERVICE_KEY )
+                
+            
+        elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+            
+            for local_service_key in list( self._current.intersection( local_service_keys ) ):
+                
+                self._DeleteFromService( local_service_key )
+                
+            
+            if CC.TRASH_SERVICE_KEY in self._current:
+                
+                self._DeleteFromService( CC.TRASH_SERVICE_KEY )
+                
+            
+            self.inbox = False
+            
+        
+    
     def ProcessContentUpdate( self, service_key, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
         if data_type == HC.CONTENT_TYPE_FILES:
             
-            if action == HC.CONTENT_UPDATE_ARCHIVE:
+            if action == HC.CONTENT_UPDATE_ADVANCED:
+                
+                ( sub_action, hashes ) = row
+                
+                if sub_action == 'delete_deleted':
+                    
+                    if CC.TRASH_SERVICE_KEY not in self._current:
+                        
+                        if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                            
+                            service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE ) )
+                            
+                        else:
+                            
+                            service_keys = ( service_key, )
+                            
+                        
+                        for service_key in service_keys:
+                            
+                            if service_key in self._deleted_to_timestamps:
+                                
+                                del self._deleted_to_timestamps[ service_key ]
+                                self._deleted.discard( service_key )
+                                
+                            
+                        
+                    
+                
+            elif action == HC.CONTENT_UPDATE_ARCHIVE:
                 
                 self.inbox = False
                 
@@ -348,65 +465,29 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_ADD:
                 
-                self._current.add( service_key )
-                
-                self._deleted.discard( service_key )
-                self._pending.discard( service_key )
-                
-                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
-                    
-                    self._current.discard( CC.TRASH_SERVICE_KEY )
-                    self._pending.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                    if CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current:
-                        
-                        self.inbox = True
-                        
-                        self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                        
-                        self._deleted.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                        
-                        self._current_to_timestamps[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = HydrusData.GetNow()
-                        
-                    
-                
-                self._current_to_timestamps[ service_key ] = HydrusData.GetNow()
+                self._AddToService( service_key )
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 
-                self._deleted.add( service_key )
-                
-                self._current.discard( service_key )
-                self._petitioned.discard( service_key )
-                
-                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
-                    
-                    self._current.add( CC.TRASH_SERVICE_KEY )
-                    
-                    self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = HydrusData.GetNow()
-                    
-                elif service_key == CC.TRASH_SERVICE_KEY:
-                    
-                    self.inbox = False
-                    
-                    self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    self._deleted.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
+                self._DeleteFromService( service_key )
                 
             elif action == HC.CONTENT_UPDATE_UNDELETE:
                 
-                self._current.discard( CC.TRASH_SERVICE_KEY )
-                
-                self._deleted.discard( CC.LOCAL_FILE_SERVICE_KEY )
-                self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
+                self._AddToService( service_key, do_undelete = True )
                 
             elif action == HC.CONTENT_UPDATE_PEND:
                 
-                if service_key not in self._current: self._pending.add( service_key )
+                if service_key not in self._current:
+                    
+                    self._pending.add( service_key )
+                    
                 
             elif action == HC.CONTENT_UPDATE_PETITION:
                 
-                if service_key not in self._deleted: self._petitioned.add( service_key )
+                if service_key not in self._deleted:
+                    
+                    self._petitioned.add( service_key )
+                    
                 
             elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
                 
@@ -418,7 +499,12 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
                 
-                self._deleted.discard( service_key )
+                if service_key in self._deleted_to_timestamps:
+                    
+                    del self._deleted_to_timestamps[ service_key ]
+                    
+                    self._deleted.discard( service_key )
+                    
                 
             
         elif data_type == HC.CONTENT_TYPE_URLS:
@@ -441,15 +527,22 @@ class LocationsManager( object ):
     
     def ResetService( self, service_key ):
         
-        self._current.discard( service_key )
+        if service_key in self._current_to_timestamps:
+            
+            del self._current_to_timestamps[ service_key ]
+            
+            self._current.discard( service_key )
+            
+        
+        if service_key in self._deleted_to_timestamps:
+            
+            del self._deleted_to_timestamps[ service_key ]
+            
+            self._deleted.discard( service_key )
+            
+        
         self._pending.discard( service_key )
-        self._deleted.discard( service_key )
         self._petitioned.discard( service_key )
-        
-    
-    def ShouldIdeallyHaveThumbnail( self ): # file repo or local
-        
-        return len( self._current ) > 0
         
     
 class NotesManager( object ):

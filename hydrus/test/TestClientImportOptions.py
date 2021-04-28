@@ -418,7 +418,7 @@ def GetNotesMediaResult( hash, names_to_notes ):
     
     tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
-    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = True )
+    locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set(), inbox = True )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )
     notes_manager = ClientMediaManagers.NotesManager( names_to_notes )
     file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
@@ -555,7 +555,7 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     
     tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
-    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), inbox = in_inbox )
+    locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set(), inbox = in_inbox )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )
     notes_manager = ClientMediaManagers.NotesManager( {} )
     file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )

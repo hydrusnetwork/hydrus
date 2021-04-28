@@ -312,7 +312,7 @@ class TestServer( unittest.TestCase ):
         
         file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
         
-        media_results = [ ClientMediaResult.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {}, {} ), ClientMediaManagers.LocationsManager( set(), set(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
+        media_results = [ ClientMediaResult.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {}, {} ), ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
         
         HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HG.test_controller.SetRead( 'local_booru_share', info )
@@ -569,7 +569,7 @@ class TestServer( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.BadRequestException ):
             
-            # can only do it with an account key
+            # can only do it with an account id
             response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
             
         
@@ -579,7 +579,7 @@ class TestServer( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.BadRequestException ):
             
-            # can only do it with an account key
+            # can only do it with an account id
             response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
             
         

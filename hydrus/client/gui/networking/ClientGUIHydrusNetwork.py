@@ -498,7 +498,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         
         self._account_info_box.setMinimumHeight( min_height )
         
-        self._copy_checked_account_keys_button = ClientGUICommon.BetterButton( self._accounts_box, 'copy checked account keys', self._CopyCheckedAccountKeys )
+        self._copy_checked_account_keys_button = ClientGUICommon.BetterButton( self._accounts_box, 'copy checked account ids', self._CopyCheckedAccountKeys )
         
         #
         
@@ -667,7 +667,7 @@ class ReviewAccountsPanel( QW.QWidget ):
             
             if not self._done_first_fetch:
                 
-                # if we launched with CPU-expensive mapping identifiers, let's move to nice account keys for future refreshes
+                # if we launched with CPU-expensive mapping identifiers, let's move to nice account ids for future refreshes
                 
                 self._account_identifiers = [ HydrusNetwork.AccountIdentifier( account_key = account_key ) for account_key in self._account_keys_to_accounts.keys() ]
                 

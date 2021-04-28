@@ -801,6 +801,9 @@ class Gauge( QW.QProgressBar ):
         
         self._is_pulsing = False
         
+        self.SetRange( 1 )
+        self.SetValue( 0 )
+        
     
     def GetValueRange( self ):
         
@@ -818,11 +821,9 @@ class Gauge( QW.QProgressBar ):
     
     def SetRange( self, range ):
         
-        if range is None:
+        if range is None or range == 0:
             
             self.Pulse()
-            
-            self._is_pulsing = True
             
         else:
             
@@ -858,8 +859,6 @@ class Gauge( QW.QProgressBar ):
                 
                 self.Pulse()
                 
-                self._is_pulsing = True
-                
             else:
                 
                 if self._actual_range is not None:
@@ -882,7 +881,6 @@ class Gauge( QW.QProgressBar ):
         self._is_pulsing = False
         
         self.SetRange( 1 )
-        self.SetValue( 1 )
         self.SetValue( 0 )
         
     
@@ -895,7 +893,6 @@ class Gauge( QW.QProgressBar ):
         #self.setMinimum( 0 )
         
         self.SetRange( 1 )
-        self.SetValue( 1 )
         self.SetValue( 0 )
         
         self._is_pulsing = True

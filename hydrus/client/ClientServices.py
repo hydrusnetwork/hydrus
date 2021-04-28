@@ -3152,6 +3152,19 @@ class ServicesManager( object ):
             
         
     
+    def GetDefaultLocalFileServiceKey( self ) -> bytes:
+        
+        return CC.LOCAL_FILE_SERVICE_KEY
+        
+    
+    def GetLocalMediaFileServices( self ):
+        
+        with self._lock:
+            
+            return [ service for service in self._services_sorted if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN and service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
+            
+        
+    
     def GetName( self, service_key: bytes ):
         
         with self._lock:
@@ -3159,6 +3172,14 @@ class ServicesManager( object ):
             service = self._GetService( service_key )
             
             return service.GetName()
+            
+        
+    
+    def GetRemoteFileServiceKeys( self ):
+        
+        with self._lock:
+            
+            return { service_key for ( service_key, service ) in self._keys_to_services.items() if service.GetServiceType() in HC.REMOTE_FILE_SERVICES }
             
         
     

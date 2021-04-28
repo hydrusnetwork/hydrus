@@ -769,6 +769,8 @@ def managementScrollbarValueChanged( value ):
     
 class ManagementPanel( QW.QScrollArea ):
     
+    fileServiceChanged = QC.Signal( bytes )
+    
     SHOW_COLLECT = True
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -808,6 +810,13 @@ class ManagementPanel( QW.QScrollArea ):
     def _GetDefaultEmptyPageStatusOverride( self ) -> str:
         
         return 'empty page'
+        
+    
+    def _SetFileServiceKey( self, file_service_key: bytes ):
+        
+        self._management_controller.SetKey( 'file_service', file_service_key )
+        
+        self.fileServiceChanged.emit( file_service_key )
         
     
     def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
@@ -1240,7 +1249,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._management_controller.SetVariable( 'file_search_context', file_search_context )
         self._management_controller.SetVariable( 'both_files_match', both_files_match )
-        self._management_controller.SetKey( 'file_service', file_search_context.GetFileServiceKey() )
+        
+        self._SetFileServiceKey( file_search_context.GetFileServiceKey() )
         
         self._UpdateBothFilesMatchButton()
         
@@ -2671,7 +2681,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
-        sort_watcher_status = ClientImporting.downloader_enum_sort_lookup[ status_enum ]
+        next_check_time = watcher.GetNextCheckTime()
+        
+        if next_check_time is None:
+            
+            next_check_time = 0
+            
+        
+        sort_watcher_status = ( ClientImporting.downloader_enum_sort_lookup[ status_enum ], next_check_time )
         
         display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
         sort_tuple = ( subject, files_paused, sort_checking_paused, sort_watcher_status, progress, added )
@@ -3914,7 +3931,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._process.clicked.connect( self.EventProcess )
         self._process.setObjectName( 'HydrusAccept' )
         
-        self._copy_account_key_button = ClientGUICommon.BetterButton( self._petition_panel, 'copy petitioner account key', self._CopyAccountKey )
+        self._copy_account_key_button = ClientGUICommon.BetterButton( self._petition_panel, 'copy petitioner account id', self._CopyAccountKey )
         
         self._modify_petitioner = QW.QPushButton( 'modify petitioner', self._petition_panel )
         self._modify_petitioner.clicked.connect( self.EventModifyPetitioner )
@@ -4729,7 +4746,7 @@ class ManagementPanelQuery( ManagementPanel ):
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
             self._management_controller.SetVariable( 'file_search_context', file_search_context )
-            self._management_controller.SetKey( 'file_service', file_search_context.GetFileServiceKey() )
+            self._SetFileServiceKey( file_search_context.GetFileServiceKey() )
             
             synchronised = self._tag_autocomplete.IsSynchronised()
             
@@ -4799,7 +4816,7 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def SetFileServiceKey( self, service_key: bytes ):
         
-        self._management_controller.SetKey( 'file_service', service_key )
+        self._SetFileServiceKey( service_key )
         
     
     def CleanBeforeClose( self ):

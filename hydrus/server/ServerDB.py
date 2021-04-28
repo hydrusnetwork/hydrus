@@ -393,7 +393,7 @@ class DB( HydrusDB.HydrusDB ):
         
         admin_service = HydrusNetwork.GenerateService( HC.SERVER_ADMIN_KEY, HC.SERVER_ADMIN, 'server admin', HC.DEFAULT_SERVER_ADMIN_PORT )
         
-        self._AddService( admin_service ) # this sets up the admin account and a registration key by itself
+        self._AddService( admin_service ) # this sets up the admin account and a registration token by itself
         
     
     def _DeleteOrphans( self ):
@@ -490,7 +490,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        # we generate a new access_key every time this is requested so that no one with access to the registration key can peek at the access_key before the legit user fetches it for real
+        # we generate a new access_key every time this is requested so that no one with access to the registration token can peek at the access_key before the legit user fetches it for real
         # the reg_key is deleted when the last-requested access_key is used to create a session, which calls getaccountkeyfromaccesskey
         
         registration_key_sha256 = hashlib.sha256( registration_key ).digest()
@@ -499,7 +499,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that registration key in its database.' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that registration token in its database.' )
             
         
         new_access_key = os.urandom( HC.HYDRUS_KEY_LENGTH )
@@ -698,7 +698,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account key in its database.' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account id in its database.' )
             
         
         ( account_id, ) = result

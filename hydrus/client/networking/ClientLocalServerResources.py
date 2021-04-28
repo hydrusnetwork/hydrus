@@ -975,7 +975,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
         
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes )
         
-        service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] }
         
         if len( service_keys_to_content_updates ) > 0:
             

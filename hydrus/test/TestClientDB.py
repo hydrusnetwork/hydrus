@@ -723,6 +723,177 @@ class TestClientDB( unittest.TestCase ):
         for i in range( len( predicates ) ): self.assertEqual( result[i].GetCount(), predicates[i].GetCount() )
         
     
+    def test_file_updates( self ):
+        
+        TestClientDB._clear_db()
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        md5 = bytes.fromhex( 'fdadb2cae78f2dfeb629449cd005f2a2' )
+        
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        hash_id = media_result.GetHashId()
+        
+        locations_manager = media_result.GetLocationsManager()
+        
+        self.assertFalse( locations_manager.IsLocal() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+        #
+        
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        locations_manager = media_result.GetLocationsManager()
+        
+        self.assertTrue( locations_manager.IsLocal() )
+        self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        locations_manager = media_result.GetLocationsManager()
+        
+        self.assertTrue( locations_manager.IsLocal() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( hash, ), reason = 'test delete' )
+        
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        locations_manager = media_result.GetLocationsManager()
+        
+        self.assertTrue( locations_manager.IsLocal() )
+        self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        locations_manager = media_result.GetLocationsManager()
+        
+        self.assertFalse( locations_manager.IsLocal() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+        #
+        
+        TestClientDB._clear_db()
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        md5 = bytes.fromhex( 'fdadb2cae78f2dfeb629449cd005f2a2' )
+        
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        hash_id = media_result.GetHashId()
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+        #
+        
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        locations_manager = media_result.GetLocationsManager()
+        
+        self.assertFalse( locations_manager.IsLocal() )
+        self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
+        
+        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        
+    
     def test_filter_existing_tags( self ):
         
         TestClientDB._clear_db()
@@ -1079,6 +1250,58 @@ class TestClientDB( unittest.TestCase ):
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
         service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        
+        self.assertEqual( ( status, hash ), ( CC.STATUS_DELETED, hash ) )
+        
+        # now physical delete
+        
+        TestClientDB._clear_db()
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        md5 = bytes.fromhex( 'fdadb2cae78f2dfeb629449cd005f2a2' )
+        
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        
+        #
+        
+        result = self._read( 'hash_status', 'md5', md5 )
+        
+        self.assertEqual( result, ( CC.STATUS_UNKNOWN, None, '' ) )
+        
+        #
+        
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
+        
+        #
+        
+        ( status, written_hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        
+        # would be redundant, but sometimes(?) triggers the 'it is missing from db' hook
+        self.assertIn( status, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+        self.assertEqual( written_hash, hash )
+        if status == CC.STATUS_UNKNOWN:
+            
+            self.assertIn( 'already in the db', note )
+            
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         
         self._write( 'content_updates', service_keys_to_content_updates )
         

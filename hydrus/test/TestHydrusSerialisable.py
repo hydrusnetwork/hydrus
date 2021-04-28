@@ -173,9 +173,9 @@ class TestSerialisables( unittest.TestCase ):
         has_audio = False
         num_words = None
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), inbox )
-        trash_locations_manager = ClientMediaManagers.LocationsManager( { CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), inbox )
-        deleted_locations_manager = ClientMediaManagers.LocationsManager( set(), { CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, dict(), set(), set(), inbox )
+        trash_locations_manager = ClientMediaManagers.LocationsManager( { CC.TRASH_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 12 }, dict(), set(), set(), inbox )
+        deleted_locations_manager = ClientMediaManagers.LocationsManager( dict(), { CC.LOCAL_FILE_SERVICE_KEY : 120, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, set(), set(), inbox )
         
         # duplicate to generate proper dicts
         
@@ -294,7 +294,7 @@ class TestSerialisables( unittest.TestCase ):
         
         scu = {}
         
-        scu[ CC.TRASH_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { trashed_hash_empty }, reason = file_deletion_reason ) ]
+        scu[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { trashed_hash_empty }, reason = file_deletion_reason ) ]
         
         assertSCUEqual( result, scu )
         

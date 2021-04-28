@@ -3428,7 +3428,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         self._tag_sort = HG.client_controller.new_options.GetDefaultTagSort()
         
-        self._last_media = set()
+        self._last_media_results = set()
         
         self._include_counts = include_counts
         
@@ -3551,38 +3551,25 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._RegenTermsToIndices()
         
     
-    def SetTagServiceKey( self, service_key ):
-        
-        ListBoxTagsDisplayCapable.SetTagServiceKey( self, service_key )
-        
-        self.SetTagsByMedia( self._last_media )
-        
-    
-    def SetSort( self, tag_sort: ClientTagSorting.TagSort ):
-        
-        self._tag_sort = tag_sort
-        
-        self._Sort()
-        
-        self._DataHasChanged()
-        
-    
-    def SetShow( self, show_type, value ):
-        
-        if show_type == 'current': self._show_current = value
-        elif show_type == 'deleted': self._show_deleted = value
-        elif show_type == 'pending': self._show_pending = value
-        elif show_type == 'petitioned': self._show_petitioned = value
-        
-        self._UpdateTerms()
-        
-    
     def IncrementTagsByMedia( self, media ):
         
-        media = set( media )
-        media = media.difference( self._last_media )
+        flat_media = ClientMedia.FlattenMedia( media )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._service_key, self._tag_display_type )
+        media_results = [ m.GetMediaResult() for m in flat_media ]
+        
+        self.IncrementTagsByMediaResults( media_results )
+        
+    
+    def IncrementTagsByMediaResults( self, media_results ):
+        
+        if not isinstance( media_results, set ):
+            
+            media_results = set( media_results )
+            
+        
+        media_results = media_results.difference( self._last_media_results )
+        
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediaResultsTagCount( media_results, self._service_key, self._tag_display_type )
         
         tags_changed = set()
         
@@ -3601,16 +3588,28 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             self._UpdateTerms( tags_changed )
             
         
-        self._last_media.update( media )
+        self._last_media_results.update( media_results )
         
         self._DataHasChanged()
         
     
     def SetTagsByMedia( self, media ):
         
-        media = set( media )
+        flat_media = ClientMedia.FlattenMedia( media )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._service_key, self._tag_display_type )
+        media_results = [ m.GetMediaResult() for m in flat_media ]
+        
+        self.SetTagsByMediaResults( media_results )
+        
+    
+    def SetTagsByMediaResults( self, media_results ):
+        
+        if not isinstance( media_results, set ):
+            
+            media_results = set( media_results )
+            
+        
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediaResultsTagCount( media_results, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count = current_tags_to_count
         self._deleted_tags_to_count = deleted_tags_to_count
@@ -3619,45 +3618,57 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         self._UpdateTerms()
         
-        self._last_media = media
+        self._last_media_results = media_results
         
         self._DataHasChanged()
         
     
     def SetTagsByMediaFromMediaPanel( self, media, tags_changed ):
         
+        flat_media = ClientMedia.FlattenMedia( media )
+        
+        media_results = [ m.GetMediaResult() for m in flat_media ]
+        
+        self.SetTagsByMediaResultsFromMediaPanel( media_results, tags_changed )
+        
+    
+    def SetTagsByMediaResultsFromMediaPanel( self, media_results, tags_changed ):
+        
+        if not isinstance( media_results, set ):
+            
+            media_results = set( media_results )
+            
+        
         # this uses the last-set media and count cache to generate new numbers and is faster than re-counting from scratch when the tags have not changed
         
-        selection_shrank_a_lot = len( media ) < len( self._last_media ) // 10 # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
+        selection_shrank_a_lot = len( media_results ) < len( self._last_media_results ) // 10 # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
         
         if tags_changed or selection_shrank_a_lot:
             
-            self.SetTagsByMedia( media )
+            self.SetTagsByMediaResults( media_results )
             
             return
             
         
-        media = set( media )
-        
-        removees = self._last_media.difference( media )
+        removees = self._last_media_results.difference( media_results )
         
         if len( removees ) == 0:
             
-            self.IncrementTagsByMedia( media )
+            self.IncrementTagsByMediaResults( media_results )
             
             return
             
         
-        adds = media.difference( self._last_media )
+        adds = media_results.difference( self._last_media_results )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._service_key, self._tag_display_type )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediaResultsTagCount( removees, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count.subtract( current_tags_to_count )
         self._deleted_tags_to_count.subtract( deleted_tags_to_count )
         self._pending_tags_to_count.subtract( pending_tags_to_count )
         self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( adds, self._service_key, self._tag_display_type )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediaResultsTagCount( adds, self._service_key, self._tag_display_type )
         
         self._current_tags_to_count.update( current_tags_to_count )
         self._deleted_tags_to_count.update( deleted_tags_to_count )
@@ -3679,14 +3690,40 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         self._UpdateTerms()
         
-        self._last_media = media
+        self._last_media_results = media_results
         
         self._DataHasChanged()
         
     
+    def SetTagServiceKey( self, service_key ):
+        
+        ListBoxTagsDisplayCapable.SetTagServiceKey( self, service_key )
+        
+        self.SetTagsByMediaResults( self._last_media_results )
+        
+    
+    def SetSort( self, tag_sort: ClientTagSorting.TagSort ):
+        
+        self._tag_sort = tag_sort
+        
+        self._Sort()
+        
+        self._DataHasChanged()
+        
+    
+    def SetShow( self, show_type, value ):
+        
+        if show_type == 'current': self._show_current = value
+        elif show_type == 'deleted': self._show_deleted = value
+        elif show_type == 'pending': self._show_pending = value
+        elif show_type == 'petitioned': self._show_petitioned = value
+        
+        self._UpdateTerms()
+        
+    
     def ForceTagRecalc( self ):
         
-        self.SetTagsByMedia( self._last_media )
+        self.SetTagsByMediaResults( self._last_media_results )
         
     
 class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):

@@ -1175,6 +1175,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         return fsc.GetPresentedHashes( file_import_options )
         
     
+    def GetNextCheckTime( self ):
+        
+        with self._lock:
+            
+            return self._next_check_time
+            
+        
+    
     def GetNumSeeds( self ):
         
         with self._lock:

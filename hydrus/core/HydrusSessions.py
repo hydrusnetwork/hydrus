@@ -49,7 +49,7 @@ class HydrusSessionManagerServer( object ):
             
             if HG.server_busy.locked():
                 
-                raise HydrusExceptions.ServerBusyException( 'Sorry, server is busy and cannot fetch account key data right now!' )
+                raise HydrusExceptions.ServerBusyException( 'Sorry, server is busy and cannot fetch account id data right now!' )
                 
             
             account_key = HG.controller.Read( 'account_key_from_access_key', service_key, access_key )

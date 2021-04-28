@@ -1,3 +1,4 @@
+import collections
 import os
 import time
 import typing
@@ -665,7 +666,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         self._auto_register = ClientGUICommon.BetterButton( self, 'check for automatic account creation', self._STARTFetchAutoAccountCreationAccountTypes )
         self._test_credentials_button = ClientGUICommon.BetterButton( self, 'test access key', self._STARTTestCredentials )
-        self._register = ClientGUICommon.BetterButton( self, 'fetch an access key with a registration key', self._EnterRegistrationKey )
+        self._register = ClientGUICommon.BetterButton( self, 'create an account with a registration token', self._EnterRegistrationKey )
         
         #
         
@@ -681,6 +682,12 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         QP.AddToLayout( hbox, self._auto_register, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._register, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._test_credentials_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        st = ClientGUICommon.BetterStaticText( self, 'DO NOT SHARE YOUR ACCESS KEY WITH ANYONE, EVEN SERVER MODS' )
+        
+        st.setObjectName( 'HydrusWarning' )
+        
+        self.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         wrapped_access_key = ClientGUICommon.WrapInText( self._access_key, self, 'access key: ' )
         
@@ -767,7 +774,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
     def _EnterRegistrationKey( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the registration key.' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the registration token.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
@@ -796,7 +803,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 
             except:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Could not parse that registration key!' )
+                QW.QMessageBox.critical( self, 'Error', 'Could not parse that registration token!' )
                 
                 return
                 
@@ -813,7 +820,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             ( host, port ) = credentials.GetAddress()
             
-            # get a registration key
+            # get a registration token
             
             url = 'https://{}:{}/auto_create_registration_key?account_type_key={}'.format( host, port, account_type.GetAccountTypeKey().hex() )
             
@@ -963,7 +970,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 message = 'Please select which account type you would like to create.'
                 message += unavailable_text
                 
-                choice_tuples = [ ( account_type.GetTitle(), account_type, account_type.GetPermissionsString() ) for account_type in available_account_types ]
+                choice_tuples = [ ( account_type.GetTitle(), account_type, ', '.join( account_type.GetPermissionStrings() ) ) for account_type in available_account_types ]
                 
                 try:
                     
@@ -1055,9 +1062,16 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         credentials = self._remote_panel.GetCredentials()
         
+        access_key_hex = self._access_key.text()
+        
+        if access_key_hex.startswith( 'r' ):
+            
+            raise HydrusExceptions.VetoException( 'The entered access key starts with an \'r\'! Is it actually a registration token?' )
+            
+        
         try:
             
-            access_key = bytes.fromhex( self._access_key.text() )
+            access_key = bytes.fromhex( access_key_hex )
             
         except Exception as e:
             
@@ -1727,7 +1741,6 @@ class ReviewServiceSubPanel( ClientGUICommon.StaticBox ):
             
         
     
-
 class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
@@ -2047,7 +2060,6 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
             
         
     
-
 class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
@@ -2110,7 +2122,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
         
         text = HydrusData.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
         
-        if service.GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
+        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
             
             num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
             
@@ -2258,7 +2270,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         self._network_sync_paused_button.setToolTip( 'pause/play account sync' )
         
         self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
-        self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account key', self._CopyAccountKey )
+        self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account id', self._CopyAccountKey )
         self._permissions_button = ClientGUIMenuButton.MenuButton( self, 'see special permissions', [] )
         
         #
@@ -3616,6 +3628,9 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
         
+        self._undelete_all = ClientGUICommon.BetterButton( self, 'undelete all', self._UndeleteAll )
+        self._undelete_all.setEnabled( False )
+        
         self._clear_trash = ClientGUICommon.BetterButton( self, 'clear trash', self._ClearTrash )
         self._clear_trash.setEnabled( False )
         
@@ -3627,6 +3642,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
+        QP.AddToLayout( hbox, self._undelete_all, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._clear_trash, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.Add( hbox, CC.FLAGS_ON_RIGHT )
@@ -3650,7 +3666,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
                 
-                service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
                 
                 HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                 
@@ -3666,6 +3682,31 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
     def _Refresh( self ):
         
         HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
+        
+    
+    def _UndeleteAll( self ):
+        
+        message = 'This will instruct your database to restore all files currently in the trash to all the local file services they have been in.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            def do_it( service ):
+                
+                hashes = HG.client_controller.Read( 'trash_hashes' )
+                
+                from hydrus.client.gui import ClientGUIMediaActions
+                
+                ClientGUIMediaActions.UndeleteFiles( hashes )
+                
+                HG.client_controller.pub( 'service_updated', service )
+                
+            
+            self._undelete_all.setEnabled( False )
+            
+            HG.client_controller.CallToThread( do_it, self._service )
+            
         
     
     def ServiceUpdated( self, service ):
@@ -3688,6 +3729,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                 
             
             self._clear_trash.setEnabled( num_files > 0 )
+            self._undelete_all.setEnabled( num_files > 0 )
             
         
         service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )

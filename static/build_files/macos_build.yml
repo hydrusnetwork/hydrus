@@ -56,7 +56,7 @@ jobs:
           </plist>
           EOF
           cp install/static/build_files/ReadMeFirst.rtf ./ReadMeFirst.rtf
-          cp install/static/build_files/Applications ./Applications
+          ln -s /Applications ./Applications
           cp install/static/build_files/running_from_app "install/running_from_app"
           mv install/* "Hydrus Network.app/Contents/MacOS/"
           rm -rf install

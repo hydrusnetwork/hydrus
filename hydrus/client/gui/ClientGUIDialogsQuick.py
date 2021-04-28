@@ -99,6 +99,13 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
     
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):
     
+    if len( choice_tuples ) == 1:
+        
+        ( ( text, data ), ) = choice_tuples
+        
+        return data
+        
+    
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
         panel = ClientGUIScrolledPanelsEdit.EditSelectFromListPanel( dlg, choice_tuples, value_to_select = value_to_select, sort_tuples = sort_tuples )
@@ -118,6 +125,13 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
         
     
 def SelectFromListButtons( win, title, choice_tuples, message = '' ):
+    
+    if len( choice_tuples ) == 1:
+        
+        ( ( text, data, tooltip ), ) = choice_tuples
+        
+        return data
+        
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, hide_buttons = True ) as dlg:
         

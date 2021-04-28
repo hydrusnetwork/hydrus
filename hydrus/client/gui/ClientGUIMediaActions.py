@@ -286,3 +286,40 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.Media ):
             
         
     
+def UndeleteFiles( hashes ):
+    
+    local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+    
+    for chunk_of_hashes in HydrusData.SplitIteratorIntoChunks( hashes, 64 ):
+        
+        media_results = HG.client_controller.Read( 'media_results', chunk_of_hashes )
+        
+        service_keys_to_hashes = collections.defaultdict( list )
+        
+        for media_result in media_results:
+            
+            locations_manager = media_result.GetLocationsManager()
+            
+            if CC.TRASH_SERVICE_KEY not in locations_manager.GetCurrent():
+                
+                continue
+                
+            
+            hash = media_result.GetHash()
+            
+            for service_key in locations_manager.GetDeleted().intersection( local_file_service_keys ):
+                
+                service_keys_to_hashes[ service_key ].append( hash )
+                
+            
+        
+        for ( service_key, service_hashes ) in service_keys_to_hashes.items():
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, service_hashes )
+            
+            service_keys_to_content_updates = { service_key : [ content_update ] }
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+    

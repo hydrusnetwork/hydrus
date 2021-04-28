@@ -93,7 +93,7 @@ def DAEMONMaintainTrash( controller ):
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
             
-            service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
             
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
@@ -118,7 +118,7 @@ def DAEMONMaintainTrash( controller ):
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
             
-            service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
             
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             

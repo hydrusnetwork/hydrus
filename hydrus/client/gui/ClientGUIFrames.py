@@ -12,7 +12,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
     
     def __init__( self, key_type, keys ):
         
-        if key_type == 'registration': title = 'Registration Keys'
+        if key_type == 'registration': title = 'Registration Tokens'
         elif key_type == 'access': title = 'Access Keys'
         
         tlw = HG.client_controller.GetMainTLW()

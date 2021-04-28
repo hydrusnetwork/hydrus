@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_437"><a href="#version_437">version 437</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>hydrus now keeps a track of when files were deleted! this information has never been recorded clientside, and it is sadly not retroactively recoverable, but it is stored for all deletes from now on. on occasion, when hydrus says 'this was deleted from xxx', it will now have 'at an unknown time' or a nice '3 days ago' string attached. it will take a few seconds to update this week as the new table data is created</li>
+					<li>the 'trash' panel on review services now has an 'undelete all' button</li>
+					<li>fixed a typo error in manage services when auto-creating a service account when more than one type of account can be created</li>
+					<li>the thread watcher page now sorts the status column secondarily by next check time (previously, equal status would sort alphabetically by subject as a fallback secondary sort)</li>
+					<li>I have renamed some network concepts across the program. before we had access keys, account keys, and registration keys--now we have access keys (secret password for account), account ids (identifier for account that jannies may need), and registration tokens (one-time token used to create a new account). I hope this reduces some confusion</li>
+					<li>reduced some overhead when fetching media results for a search, and when refreshing their tags on major content updates</li>
+					<li>fixed a 'no such table: mem.temp_int_hash_id_1'-style database error state that could persist for 30 seconds or more after certain rare rollbacks</li>
+					<li>fixed the FlipFlip link html in the client api help</li>
+					<li>fingers crossed, I fixed that bad Applications shortcut in the new macOS release</li>
+					<li>fixed a couple more instances of 'pulsing' progress gauges. now they should be blank</li>
+					<li>.</li>
+					<li>more efficient updates in sessions with collected media:</li>
+					<li>several updates this week should reduce client UI lag when the session contains any pages with a lot of collected media, particularly when you are also running several downloaders (which spam all sorts of content updates across the client):</li>
+					<li>the content update pipeline now tests collections for their files before content processing, and now filters down to process just the updates in a group that apply</li>
+					<li>collections' post-content-update internal data regeneration routine now has more options for fine regen (e.g. no need for tags recalc if the update was 'archive file'), ignores updates for urls and notes (for which it maintains no summary), and only falls back to 'just regen everything' on file location changes</li>
+					<li>the 'selection tags' taglist now retains intelligent memory of its previous selection through collect/uncollect events, which reduces collect/uncollect lag on well-tagged files significantly</li>
+					<li>.</li>
+					<li>boring multiple local file services stuff:</li>
+					<li>I cleaned a bunch of old hardcoded references to 'my files' and related code. it is not very interesting, but there are a few hundred references to clean up and convert to a system that supports 1-to-n local services, and this week I started hacking away, mostly presentation stuff, labels on menus and so on</li>
+					<li>your 'my files' now has a separate deletion record to the 'all local files' domain. its count shows in 'review services', and for the moment will just be 'all local files' plus the count in trash, but this will become more important when you can have multiple 'my files'</li>
+					<li>behind the scenes re-jiggering means that the deletion record now records deletion time and original import time. delete and undelete transitions are neater as a result</li>
+					<li>logically, files are now generally no longer moved to the trash nor undeleted from there, they instead fall there when they are in 'all local files' but no longer in any local domain, and are undeleted back to a specific service. a bunch of awkwardness is cleaned up, and import/delete/undelete content updates are regeared and ready for multiple local file services</li>
+					<li>a whole bunch of little things have been fixed and changed behind the scenes. I cleaned file service code in general as I went. examples of little things fixed:</li>
+					<li>- a 'delete and do not keep a deletion record' action now correctly does not change the cached number of deleted files as reported in review services</li>
+					<li>- the 'clear deletion record and try again' 'remove from trash' component now uses a unified and improved and UI-updating 'untrash' database action, with correct service count changes and UI-side status changes</li>
+					<li>- the 'clear deletion record and try again' action on downloader import queues now handles mixes of actually deleted files and files just in trash more neatly</li>
+					<li>- in the very odd situation that you are looking at a non-local file on 'all known files' and it is then imported using 'archive on import', its thumbnail and metadata now fade in correctly as archived</li>
+					<li>added some unit tests to test the new file delete/undelete transitions</li>
+					<li>cleaned up a bunch of hacky old db SELECT code</li>
+				</ul>
 				<li><h3 id="version_436"><a href="#version_436">version 436</a></h3></li>
 				<ul>
 					<li>macOS:</li>

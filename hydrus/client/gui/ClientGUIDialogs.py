@@ -88,7 +88,7 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         Dialog.__init__( self, parent, 'how to set up the account?', position = 'center' )
         
-        register_message = 'I want to initialise a new account with the server. I have a registration key (a key starting with \'r\').'
+        register_message = 'I want to initialise a new account with the server. I have a registration token (a hexadecimal key starting with \'r\').'
         
         self._register = QW.QPushButton( register_message, self )
         self._register.clicked.connect( self.EventRegister )

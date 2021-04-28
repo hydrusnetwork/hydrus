@@ -942,7 +942,7 @@ class ThumbnailCache( object ):
         
         locations_manager = display_media.GetLocationsManager()
         
-        if locations_manager.ShouldIdeallyHaveThumbnail():
+        if locations_manager.IsLocal() or not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) ):
             
             mime = display_media.GetMime()
             

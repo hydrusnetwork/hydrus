@@ -119,7 +119,7 @@ class TestServerDB( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
             
-            # this registration key has been deleted
+            # this registration token has been deleted
             self._read( 'access_key', self._tag_service_key, r_key )
             
         

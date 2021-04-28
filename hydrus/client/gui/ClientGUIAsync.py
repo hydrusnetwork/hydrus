@@ -287,7 +287,7 @@ class FastThreadToGUIUpdater( object ):
                 
                 self._work_needs_to_restart = True
                 
-            elif not self._callafter_waiting:
+            elif not ( self._callafter_waiting or HG.view_shutdown ):
                 
                 QP.CallAfter( self.QtDoIt )
                 

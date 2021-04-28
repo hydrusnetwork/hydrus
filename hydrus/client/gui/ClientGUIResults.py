@@ -142,7 +142,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
-            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, media_results )
+            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, self._file_service_key, media_results )
             
             canvas_frame.SetCanvas( canvas_window )
             
@@ -307,7 +307,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _Delete( self, file_service_key = None ):
         
-        if file_service_key is None or file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+        if file_service_key is None or file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ):
             
             default_reason = 'Deleted from Media Page.'
             
@@ -486,7 +486,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
-            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, media_results, first_hash )
+            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._file_service_key, media_results, first_hash )
             
             canvas_frame.SetCanvas( canvas_window )
             
@@ -1728,7 +1728,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             if do_it:
                 
-                HG.client_controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
+                HG.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
                 
             
         
@@ -2127,7 +2127,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         we_were_file_or_tag_affected = False
         
-        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             for content_update in content_updates:
                 
@@ -3080,9 +3080,14 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self._LaunchMediaViewer( t )
                 
-            elif len( locations_manager.GetCurrentRemote() ) > 0:
+            else:
                 
-                self._DownloadHashes( t.GetHashes() )
+                can_download = not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetRemoteFileServiceKeys() )
+                
+                if can_download:
+                    
+                    self._DownloadHashes( t.GetHashes() )
+                    
                 
             
         
@@ -3247,7 +3252,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         selection_has_local = True in ( locations_manager.IsLocal() for locations_manager in selected_locations_managers )
         selection_has_local_file_domain = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
-        selection_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
+        selection_has_trash = True in ( locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
         
@@ -3301,14 +3306,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             focused_is_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._focused_media.GetLocationsManager().GetCurrent()
             
-            file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
+            file_repository_service_keys = { repository.GetServiceKey() for repository in file_repositories }
             upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
             petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ) }
             petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ) } - petition_resolve_permission_file_service_keys
             user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ) }
             ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
             
-            focused_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focused_media.GetLocationsManager().GetCurrentRemote() )
+            focused_is_ipfs = not self._focused_media.GetLocationsManager().GetCurrent().isdisjoint( ipfs_service_keys )
             
             if multiple_selected:
                 
@@ -3329,7 +3334,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 archive_phrase = 'archive selected'
                 inbox_phrase = 'return selected to inbox'
                 local_delete_phrase = 'delete selected'
-                trash_delete_phrase = 'delete selected from trash now'
+                delete_physically_phrase = 'delete selected physically now'
                 undelete_phrase = 'undelete selected'
                 export_phrase = 'files'
                 copy_phrase = 'files'
@@ -3353,7 +3358,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 archive_phrase = 'archive'
                 inbox_phrase = 'return to inbox'
                 local_delete_phrase = 'delete'
-                trash_delete_phrase = 'delete from trash now'
+                delete_physically_phrase = 'delete physically now'
                 undelete_phrase = 'undelete'
                 export_phrase = 'file'
                 copy_phrase = 'file'
@@ -3361,10 +3366,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # info about the files
             
-            groups_of_current_remote_service_keys = [ locations_manager.GetCurrentRemote() for locations_manager in selected_locations_managers ]
-            groups_of_pending_remote_service_keys = [ locations_manager.GetPendingRemote() for locations_manager in selected_locations_managers ]
-            groups_of_petitioned_remote_service_keys = [ locations_manager.GetPetitionedRemote() for locations_manager in selected_locations_managers ]
-            groups_of_deleted_remote_service_keys = [ locations_manager.GetDeletedRemote() for locations_manager in selected_locations_managers ]
+            remote_service_keys = HG.client_controller.services_manager.GetRemoteFileServiceKeys()
+            
+            groups_of_current_remote_service_keys = [ locations_manager.GetCurrent().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+            groups_of_pending_remote_service_keys = [ locations_manager.GetPending().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+            groups_of_petitioned_remote_service_keys = [ locations_manager.GetPetitioned().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+            groups_of_deleted_remote_service_keys = [ locations_manager.GetDeleted().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
             
             current_remote_service_keys = HydrusData.MassUnion( groups_of_current_remote_service_keys )
             pending_remote_service_keys = HydrusData.MassUnion( groups_of_pending_remote_service_keys )
@@ -3383,18 +3390,18 @@ class MediaPanelThumbnails( MediaPanel ):
             
             some_downloading = True in ( locations_manager.IsDownloading() for locations_manager in selected_locations_managers )
             
-            pending_file_service_keys = pending_remote_service_keys.intersection( file_service_keys )
-            petitioned_file_service_keys = petitioned_remote_service_keys.intersection( file_service_keys )
+            pending_file_service_keys = pending_remote_service_keys.intersection( file_repository_service_keys )
+            petitioned_file_service_keys = petitioned_remote_service_keys.intersection( file_repository_service_keys )
             
-            common_current_file_service_keys = common_current_remote_service_keys.intersection( file_service_keys )
-            common_pending_file_service_keys = common_pending_remote_service_keys.intersection( file_service_keys )
-            common_petitioned_file_service_keys = common_petitioned_remote_service_keys.intersection( file_service_keys )
-            common_deleted_file_service_keys = common_deleted_remote_service_keys.intersection( file_service_keys )
+            common_current_file_service_keys = common_current_remote_service_keys.intersection( file_repository_service_keys )
+            common_pending_file_service_keys = common_pending_remote_service_keys.intersection( file_repository_service_keys )
+            common_petitioned_file_service_keys = common_petitioned_remote_service_keys.intersection( file_repository_service_keys )
+            common_deleted_file_service_keys = common_deleted_remote_service_keys.intersection( file_repository_service_keys )
             
-            disparate_current_file_service_keys = disparate_current_remote_service_keys.intersection( file_service_keys )
-            disparate_pending_file_service_keys = disparate_pending_remote_service_keys.intersection( file_service_keys )
-            disparate_petitioned_file_service_keys = disparate_petitioned_remote_service_keys.intersection( file_service_keys )
-            disparate_deleted_file_service_keys = disparate_deleted_remote_service_keys.intersection( file_service_keys )
+            disparate_current_file_service_keys = disparate_current_remote_service_keys.intersection( file_repository_service_keys )
+            disparate_pending_file_service_keys = disparate_pending_remote_service_keys.intersection( file_repository_service_keys )
+            disparate_petitioned_file_service_keys = disparate_petitioned_remote_service_keys.intersection( file_repository_service_keys )
+            disparate_deleted_file_service_keys = disparate_deleted_remote_service_keys.intersection( file_repository_service_keys )
             
             pending_ipfs_service_keys = pending_remote_service_keys.intersection( ipfs_service_keys )
             petitioned_ipfs_service_keys = petitioned_remote_service_keys.intersection( ipfs_service_keys )
@@ -3423,7 +3430,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             unpinnable_ipfs_service_keys = set()
             
+            remote_file_service_keys = ipfs_service_keys.union( file_repository_service_keys )
+            
             for locations_manager in selected_locations_managers:
+                
+                current = locations_manager.GetCurrent()
+                deleted = locations_manager.GetDeleted()
+                pending = locations_manager.GetPending()
+                petitioned = locations_manager.GetPetitioned()
                 
                 # FILE REPOS
                 
@@ -3431,27 +3445,31 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if locations_manager.IsLocal():
                     
-                    uploadable_file_service_keys.update( upload_permission_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - petition_resolve_permission_file_service_keys ) )
+                    cannot_upload_to = current.union( pending ).union( deleted.difference( petition_resolve_permission_file_service_keys ) )
+                    
+                    can_upload_to = upload_permission_file_service_keys.difference( cannot_upload_to )
+                    
+                    uploadable_file_service_keys.update( can_upload_to )
                     
                 
                 # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                 
                 if not locations_manager.IsLocal() and not locations_manager.IsDownloading():
                     
-                    downloadable_file_service_keys.update( ipfs_service_keys.union( file_service_keys ) & locations_manager.GetCurrentRemote() )
+                    downloadable_file_service_keys.update( remote_file_service_keys.intersection( current ) )
                     
                 
                 # we can petition when we have permission and a file is current and it is not already petitioned
                 
-                petitionable_file_service_keys.update( ( petition_permission_file_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
+                petitionable_file_service_keys.update( ( petition_permission_file_service_keys & current ) - petitioned )
                 
                 # we can delete remote when we have permission and a file is current and it is not already petitioned
                 
-                deletable_file_service_keys.update( ( petition_resolve_permission_file_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
+                deletable_file_service_keys.update( ( petition_resolve_permission_file_service_keys & current ) - petitioned )
                 
                 # we can modify users when we have permission and the file is current or deleted
                 
-                modifyable_file_service_keys.update( user_manage_permission_file_service_keys & ( locations_manager.GetCurrentRemote() | locations_manager.GetDeletedRemote() ) )
+                modifyable_file_service_keys.update( user_manage_permission_file_service_keys & ( current | deleted ) )
                 
                 # IPFS
                 
@@ -3459,12 +3477,12 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if locations_manager.IsLocal():
                     
-                    pinnable_ipfs_service_keys.update( ipfs_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() )
+                    pinnable_ipfs_service_keys.update( ipfs_service_keys - current - pending )
                     
                 
                 # we can unpin a file if it is current and not petitioned
                 
-                unpinnable_ipfs_service_keys.update( ( ipfs_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
+                unpinnable_ipfs_service_keys.update( ( ipfs_service_keys & current ) - petitioned )
                 
             
             # do the actual menu
@@ -3625,7 +3643,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if selection_has_trash:
                 
-                ClientGUIMenus.AppendMenuItem( menu, trash_delete_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self._Delete, CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, delete_physically_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
                 
             
@@ -4061,7 +4079,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
-            for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
+            for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrent().intersection( ipfs_service_keys ):
                 
                 name = service_keys_to_names[ ipfs_service_key ]
                 
@@ -4891,7 +4909,7 @@ class Thumbnail( Selectable ):
             icons_to_draw.append( CC.global_pixmaps().notes )
             
         
-        if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() or CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted():
+        if locations_manager.IsTrashed() or CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted():
             
             icons_to_draw.append( CC.global_pixmaps().trash )
             
@@ -4952,9 +4970,11 @@ class Thumbnail( Selectable ):
         
         services_manager = HG.client_controller.services_manager
         
-        current = locations_manager.GetCurrentRemote()
-        pending = locations_manager.GetPendingRemote()
-        petitioned = locations_manager.GetPetitionedRemote()
+        remote_file_service_keys = HG.client_controller.services_manager.GetRemoteFileServiceKeys()
+        
+        current = locations_manager.GetCurrent().intersection( remote_file_service_keys )
+        pending = locations_manager.GetPending().intersection( remote_file_service_keys )
+        petitioned = locations_manager.GetPetitioned().intersection( remote_file_service_keys )
         
         current_to_display = current.difference( petitioned )
         

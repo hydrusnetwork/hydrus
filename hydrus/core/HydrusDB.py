@@ -241,6 +241,9 @@ class DBCursorTransactionWrapper( object ):
             
             self._c.execute( 'ROLLBACK TO hydrus_savepoint;' )
             
+            # any temp int tables created in this lad will be rolled back, so 'initialised' can't be trusted. just reset, no big deal
+            TemporaryIntegerTableNameCache.instance().Clear()
+            
             # still in transaction
             # transaction may no longer contain writes, but it isn't important to figure out that it doesn't
             
@@ -1194,7 +1197,7 @@ class TemporaryIntegerTable( object ):
         
         if not self._initialised:
             
-            self._cursor.execute( 'CREATE TABLE {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
+            self._cursor.execute( 'CREATE TABLE IF NOT EXISTS {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
             
         
         self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), ( ( i, ) for i in self._integer_iterable ) )

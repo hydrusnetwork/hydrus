@@ -2659,7 +2659,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):
             
-            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 for content_update in content_updates:
                     

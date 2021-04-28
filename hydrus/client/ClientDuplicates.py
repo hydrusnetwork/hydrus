@@ -530,22 +530,18 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         for media in deletee_media:
             
-            current_locations = media.GetLocationsManager().GetCurrent()
-            
-            if CC.LOCAL_FILE_SERVICE_KEY in current_locations:
+            if media.GetLocationsManager().IsTrashed():
                 
-                deletee_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            elif CC.TRASH_SERVICE_KEY in current_locations:
-                
-                deletee_service_key = CC.TRASH_SERVICE_KEY
+                deletee_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, )
                 
             else:
                 
-                deletee_service_key = None
+                local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                
+                deletee_service_keys = media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
                 
             
-            if deletee_service_key is not None:
+            for deletee_service_key in deletee_service_keys:
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
                 

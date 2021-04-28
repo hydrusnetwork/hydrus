@@ -1417,7 +1417,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
             
-            self._ChangeFileService( CC.LOCAL_FILE_SERVICE_KEY )
+            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            
+            self._ChangeFileService( default_local_file_service_key )
             
         
         self._tag_service_key = tag_service_key

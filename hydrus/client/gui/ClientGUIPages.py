@@ -435,7 +435,9 @@ class Page( QW.QSplitter ):
         self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key )
+        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetKey( 'file_service' ) )
+        
+        self._management_panel.fileServiceChanged.connect( self._preview_canvas.SetFileServiceKey )
         
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
