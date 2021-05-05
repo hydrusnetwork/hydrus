@@ -291,6 +291,7 @@ class BytesControl( QW.QWidget ):
         self._spin.valueChanged.connect( self._HandleValueChanged )
         self._unit.currentIndexChanged.connect( self._HandleValueChanged )
         
+    
     def _HandleValueChanged( self, val ):
         
         self.valueChanged.emit()

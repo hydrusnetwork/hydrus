@@ -36,6 +36,7 @@ file_report_mode = False
 media_load_report_mode = False
 gui_report_mode = False
 shortcut_report_mode = False
+cache_report_mode = False
 subprocess_report_mode = False
 subscription_report_mode = False
 hover_window_report_mode = False

@@ -1066,7 +1066,8 @@ class Controller( HydrusController.HydrusController ):
         self.frame_splash_status.SetSubtext( 'image caches' )
         
         # careful: outside of qt since they don't need qt for init, seems ok _for now_
-        self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
+        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
+        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
         self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
         self.bitmap_manager = ClientManagers.BitmapManager( self )
         
@@ -2068,6 +2069,7 @@ class Controller( HydrusController.HydrusController ):
             
             def CopyToClipboard():
                 
+                # this is faster than qpixmap, which converts to a qimage anyway
                 qt_image = image_renderer.GetQtImage().copy()
                 
                 QW.QApplication.clipboard().setImage( qt_image )

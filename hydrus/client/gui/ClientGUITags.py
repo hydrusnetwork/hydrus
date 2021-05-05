@@ -1940,7 +1940,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 tlws = ClientGUIFunctions.GetTLWParents( self )
                 
-                from hydrus.client.gui import ClientGUICanvasFrame
+                from hydrus.client.gui.canvas import ClientGUICanvasFrame
                 
                 command_processed = False
                 
@@ -2741,7 +2741,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ) ] )
+        services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         for service in services:
             
@@ -3528,7 +3528,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.setText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
+                simple_status_text = 'Files with a tag on the left will also be given the tag on the right.'
+                simple_status_text += os.linesep
+                simple_status_text += 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.'
+                
+                self._status_st.setText( simple_status_text )
                 
                 looking_good = True
                 
@@ -3595,6 +3599,28 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     s = os.linesep * 2
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
+                    
+                
+                if not self._i_am_local_tag_service:
+                    
+                    account = self._service.GetAccount()
+                    
+                    if account.IsUnknown():
+                        
+                        looking_good = False
+                        
+                        s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
+                        
+                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        
+                    elif not account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ):
+                        
+                        looking_good = False
+                        
+                        s = 'The account for this service does not seem to have permission to upload parents! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
+                        
+                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        
                     
                 
                 self._sync_status_st.setText( status_text )
@@ -3664,7 +3690,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ) ] )
+        services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         for service in services:
             
@@ -4602,6 +4628,28 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     s = os.linesep * 2
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
+                    
+                
+                if not self._i_am_local_tag_service:
+                    
+                    account = self._service.GetAccount()
+                    
+                    if account.IsUnknown():
+                        
+                        looking_good = False
+                        
+                        s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
+                        
+                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        
+                    elif not account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
+                        
+                        looking_good = False
+                        
+                        s = 'The account for this service does not seem to have permission to upload parents! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
+                        
+                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        
                     
                 
                 self._sync_status_st.setText( status_text )

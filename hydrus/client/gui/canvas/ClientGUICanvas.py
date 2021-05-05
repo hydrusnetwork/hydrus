@@ -19,13 +19,11 @@ from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
-from hydrus.client.gui import ClientGUICanvasMedia
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUICanvasHoverFrames
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMediaControls
@@ -37,6 +35,8 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
+from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
@@ -394,6 +394,8 @@ class Canvas( QW.QWidget ):
         self._UpdateBackgroundColour()
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
+        
+        self._media_container.readyForNeighbourPrefetch.connect( self._PrefetchNeighbours )
         
         HG.client_controller.sub( self, 'ZoomIn', 'canvas_zoom_in' )
         HG.client_controller.sub( self, 'ZoomOut', 'canvas_zoom_out' )
@@ -1051,6 +1053,11 @@ class Canvas( QW.QWidget ):
         new_media_window_width = new_media_window_size.width()
         new_media_window_height = new_media_window_size.height()
         
+        if new_media_window_width > 32000 or new_media_window_height > 32000:
+            
+            return
+            
+        
         my_size = self.size()
         
         old_size_bigger = my_size.width() < media_window_width or my_size.height() < media_window_height
@@ -1058,46 +1065,49 @@ class Canvas( QW.QWidget ):
         
         #
         
-        if zoom_center_type_override is None:
+        if media_window_width > 0 and media_window_height > 0:
             
-            zoom_center_type = HG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
-            
-        else:
-            
-            zoom_center_type = zoom_center_type_override
-            
-        
-        # viewer center is the default
-        zoom_centerpoint = QC.QPoint( my_size.width() // 2, my_size.height() // 2 )
-        
-        if zoom_center_type == ZOOM_CENTERPOINT_MEDIA_CENTER:
-            
-            zoom_centerpoint = self._media_window_pos + QC.QPoint( media_window_width // 2, media_window_height // 2 )
-            
-        elif zoom_center_type == ZOOM_CENTERPOINT_MEDIA_TOP_LEFT:
-            
-            zoom_centerpoint = self._media_window_pos
-            
-        elif zoom_center_type == ZOOM_CENTERPOINT_MOUSE:
-            
-            mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
-            
-            if self.rect().contains( mouse_pos ):
+            if zoom_center_type_override is None:
                 
-                zoom_centerpoint = mouse_pos
+                zoom_center_type = HG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
+                
+            else:
+                
+                zoom_center_type = zoom_center_type_override
                 
             
+            # viewer center is the default
+            zoom_centerpoint = QC.QPoint( my_size.width() // 2, my_size.height() // 2 )
+            
+            if zoom_center_type == ZOOM_CENTERPOINT_MEDIA_CENTER:
+                
+                zoom_centerpoint = self._media_window_pos + QC.QPoint( media_window_width // 2, media_window_height // 2 )
+                
+            elif zoom_center_type == ZOOM_CENTERPOINT_MEDIA_TOP_LEFT:
+                
+                zoom_centerpoint = self._media_window_pos
+                
+            elif zoom_center_type == ZOOM_CENTERPOINT_MOUSE:
+                
+                mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
+                
+                if self.rect().contains( mouse_pos ):
+                    
+                    zoom_centerpoint = mouse_pos
+                    
+                
         
-        # probably a simpler way to calc this, but hey
-        widths_centerpoint_is_from_pos = ( zoom_centerpoint.x() - self._media_window_pos.x() ) / media_window_width
-        heights_centerpoint_is_from_pos = ( zoom_centerpoint.y() - self._media_window_pos.y() ) / media_window_height
-        
-        zoom_width_delta = media_window_width - new_media_window_width
-        zoom_height_delta = media_window_height - new_media_window_height
-        
-        centerpoint_adjusted_delta = QC.QPoint( int( zoom_width_delta * widths_centerpoint_is_from_pos ), int( zoom_height_delta * heights_centerpoint_is_from_pos ) )
-        
-        self._media_window_pos += centerpoint_adjusted_delta
+            # probably a simpler way to calc this, but hey
+            widths_centerpoint_is_from_pos = ( zoom_centerpoint.x() - self._media_window_pos.x() ) / media_window_width
+            heights_centerpoint_is_from_pos = ( zoom_centerpoint.y() - self._media_window_pos.y() ) / media_window_height
+            
+            zoom_width_delta = media_window_width - new_media_window_width
+            zoom_height_delta = media_window_height - new_media_window_height
+            
+            centerpoint_adjusted_delta = QC.QPoint( int( zoom_width_delta * widths_centerpoint_is_from_pos ), int( zoom_height_delta * heights_centerpoint_is_from_pos ) )
+            
+            self._media_window_pos += centerpoint_adjusted_delta
+            
         
         #
         
@@ -1668,8 +1678,6 @@ class Canvas( QW.QWidget ):
                     ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
                     
                     self._media_container.SetMedia( self._current_media, initial_size, self._media_window_pos, media_show_action, media_start_paused, media_start_with_embed )
-                    
-                    self._PrefetchNeighbours()
                     
                 else:
                     
@@ -3448,10 +3456,10 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         previous = self._current_media
         next = self._current_media
         
-        delay_base = 0.1
+        delay_base = HG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) / 1000
         
-        num_to_go_back = 3
-        num_to_go_forward = 5
+        num_to_go_back = HG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_num_previous' )
+        num_to_go_forward = HG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_num_next' )
         
         # if media_looked_at nukes the list, we want shorter delays, so do next first
         
@@ -3502,7 +3510,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    HG.client_controller.CallLaterQtSafe( self, delay, image_cache.GetImageRenderer, media )
+                    HG.client_controller.CallLaterQtSafe( self, delay, image_cache.PrefetchImageRenderer, media )
                     
                 
             

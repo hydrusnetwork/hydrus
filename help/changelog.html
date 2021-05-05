@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_438"><a href="#version_438">version 438</a></h3></li>
+				<ul>
+					<li>media viewer:</li>
+					<li>I have hacked in tile-based image rendering for the media viewer. this has always been planned as a larger, longer-term job, but the problem of large images is only getting worse, so I decided to just slam out a prototype in a week. if you have a steam-powered GPU or 4GB ram, you might like to wait until next week to update so I can iron out any surprise bugs or performance problems</li>
+					<li>images are now cut into tiles that are rendered on demand, so whenever the image is zoomed larger than the media viewer window, only those tiles currently in view have CPU and memory spent on resizing and storage. as you pan around, new tiles are rendered as needed, and old discarded. this makes zooming in super fast and low memory, even for large images!</li>
+					<li>although I am happy with this, and overall we are talking a huge improvement on previous performance, it is ugly fast code. it may fail for some unusual files. it slices and blits bitmaps around your video memory much faster than before, so some odd GPUs may also have problems. I haven't seen any alignment artifacts (1-pixel thick missing columns or rows), but some images may produce them. more apparent are some pretty ugly tile artifacts that show up between 200% and 500% zoom (interpolation algorithms, which rely on neighbour pixels, are missing border data with my simple system). I will consider how best to implement more complicated but stitch-correct overlapping tiles in future</li>
+					<li>futhermore, a new 'image tile' cache is added. you can customise size and timeout under _options->speed and memory_ like for images and thumbnails. this is a dedicated cache for remembering image resize computation across images and zooms. once you have seen both situations once, flicking back and forth between two images or zoom levels is now generally always instant! this new cache starts at a healthy default of 256MB. let's see how that amount works out IRL--I think it will be plenty</li>
+					<li>I tuned the image renderer cache--it no longer caches huge images that eat more than 25% its total size--meaning these images only hang around as long as you are looking at them--and the prefetch call that pre-renders several files previous/next to the current image no longer occurs on images that would eat more than 10% the cache size. this should greatly reduce weird flicker and other lag when browsing through a series of mega-images (which before would stomp through the cache in quick succession, barging each other out of the way and wasting a bunch of CPU). in real world terms, this basically means that with an image cache of 200MB, you should have slower individual image performance but much better overall performance looking at images with more than about 5k resolution. the dreaded 14,000x12,000 png will still bonk you on the head to do the first render, but it won't try to uselessly prefetch or flush the whole cache any more</li>
+					<li>if you are currently looking at a static image, neighbour prefetch now only starts once the image is rendered, giving the task in front of you a bit more CPU time</li>
+					<li>new options for prefetch delay and previous/next distance are added to 'speed and memory'</li>
+					<li>note this does not yet apply to the old hydrus animation renderer. that still sucks at high zoom!</li>
+					<li>another future step here is to expand prefetch to tiles so the first view of the 'next' media is instant, but let's let all this breathe for a bit. if you get bugs, let me know!</li>
+					<li>due to a Qt issue, I am stopping zoom-in events that would make the 'virtual' size of the image greater than 32,000x32,000</li>
+					<li>.</li>
+					<li>account permission improvements:</li>
+					<li>to group sibling and parent petitions by uploader (and thus help janitor workflow), the PTR is moving to a system where the public account is download-only and accounts that can upload content are auto-generated in manage services. this code has not been tested much before, and it revealed some very bad reporting and handling of current permissions. I move this forward this week:</li>
+					<li>if your repository account is currently unsynced from a serious previous error, any attempt to upload pending data will result in a little popup and the upload being abandoned</li>
+					<li>manage tag siblings and parents will now show service tabs even if the account for those services does not seem currently able to upload tags or siblngs</li>
+					<li>if your repository account is currently unsynced from a serious previous error, this is now noted in red text in manage siblings and manage parents</li>
+					<li>if your repository account does not have sibling/parent upload permission, this is now noted in red text in manage siblings and manage parents. you will be able to pend and petition siblings and parents ok</li>
+					<li>if your repository account does not have mapping/sibling/parent upload permission of the right kind, your client will no longer attempt to upload these content types, and if there is pending count for one of these types, a popup will note this on an upload attempt</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added https://github.com/NO-ob/LoliSnatcher_Droid to the Client API help!</li>
+					<li>improved some error handling, reporting, and recovery when importing serialised pngs. specific error info is now written to the log as well</li>
+					<li>fixed a secondary error when dropping non-list, non-downloader pngs on Lain's easy downloader import window, and fixed a 'no interesting objects' reporting test when dropping multiple pngs</li>
+					<li>added a 'cache report mode' to help debug image and thumb caching issues</li>
+					<li>refactored the media viewer code to a new 'canvas' submodule</li>
+					<li>improved the error reporting when a thumbnail cannot be generated for a file being imported</li>
+					<li>fixed an error in zoom center calculation when a change zoom event was sent in the split-second during media viewer initialisation</li>
+					<li>I think I fixed an issue where pages could sometimes not automatically move on from 'loading initial files' statusbar text when initialising the session</li>
+					<li>the requirements.txt now specifies 'requests' 2.23.0 exactly, as newer versions seemed to be giving odd urllib3 attribute binding errors (seems maybe a session thread safety thing) when recovering from connection failures. this should update the macOS build as well as anyone running from source who wants to re-run the requirements.txt. I hacked in a catch for this error case anyway, just a manual retry like a normal connection error, we'll see how it goes (issue #665)</li>
+					<li>patched an unusual file import bug for a flash file with an inverted bounding box that resulted in negative reported resolution. flash now takes absolute values for width and height</li>
+				</ul>
 				<li><h3 id="version_437"><a href="#version_437">version 437</a></h3></li>
 				<ul>
 					<li>misc:</li>

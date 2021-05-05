@@ -1392,7 +1392,11 @@ class TestClientDB( unittest.TestCase ):
         
         old_services = list( services )
         
-        services.append( ClientServices.GenerateService( service_key, HC.TAG_REPOSITORY, 'new tag repo' ) )
+        service = ClientServices.GenerateService( service_key, HC.TAG_REPOSITORY, 'new tag repo' )
+        
+        service._account._account_type = HydrusNetwork.AccountType.GenerateAdminAccountType( HC.TAG_REPOSITORY )
+        
+        services.append( service )
         
         self._write( 'update_services', services )
         
@@ -1408,7 +1412,7 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
-        result = self._read( 'pending', service_key )
+        result = self._read( 'pending', service_key, ( HC.CONTENT_TYPE_MAPPINGS, ) )
         
         self.assertIsInstance( result, HydrusNetwork.ClientToServerUpdate )
         

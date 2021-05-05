@@ -1334,6 +1334,31 @@ class NetworkJob( object ):
                     
                     self._WaitOnConnectionError( 'read timed out' )
                     
+                except Exception as e:
+                    
+                    if '\'Retry\' has no attribute' in str( e ):
+                        
+                        # this is that weird requests 2.25.x(?) urllib3 maybe thread safety error
+                        # we'll just try and pause a bit I guess!
+                        
+                        self._current_connection_attempt_number += 1
+                        
+                        if self._CanReattemptConnection():
+                            
+                            self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                            
+                        else:
+                            
+                            raise HydrusExceptions.ConnectionException( 'Could not connect!' )
+                            
+                        
+                        self._WaitOnConnectionError( 'connection failed, and could not recover neatly' )
+                        
+                    else:
+                        
+                        raise
+                        
+                    
                 finally:
                     
                     with self._lock:

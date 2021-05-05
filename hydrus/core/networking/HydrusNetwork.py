@@ -473,6 +473,14 @@ class Account( object ):
             
         
     
+    def IsUnknown( self ):
+        
+        with self._lock:
+            
+            return self._created == 0
+            
+        
+    
     def ReportDataUsed( self, num_bytes ):
         
         with self._lock:

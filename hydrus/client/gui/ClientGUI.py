@@ -104,6 +104,15 @@ def THREADUploadPending( service_key ):
         
         service = HG.client_controller.services_manager.GetService( service_key )
         
+        account = service.GetAccount()
+        
+        if account.IsUnknown():
+            
+            HydrusData.ShowText( 'Your account is currently unsynced, so the upload was cancelled. Please refresh the account under _review services_.' )
+            
+            return
+            
+        
         service_name = service.GetName()
         service_type = service.GetServiceType()
         
@@ -113,11 +122,92 @@ def THREADUploadPending( service_key ):
         
         nums_pending = HG.client_controller.Read( 'nums_pending' )
         
-        info = nums_pending[ service_key ]
+        nums_pending_for_this_service = nums_pending[ service_key ]
         
-        initial_num_pending = sum( info.values() )
+        content_types_for_this_service = set()
         
-        result = HG.client_controller.Read( 'pending', service_key )
+        if service_type in ( HC.IPFS, HC.FILE_REPOSITORY ):
+            
+            content_types_for_this_service = { HC.CONTENT_TYPE_FILES }
+            
+        elif service_type == HC.TAG_REPOSITORY:
+            
+            content_types_for_this_service = { HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS }
+            
+        
+        if service_type in HC.REPOSITORIES:
+            
+            unauthorised_content_types = set()
+            content_types_to_request = set()
+            
+            content_types_to_count_types_and_permissions = {
+                HC.CONTENT_TYPE_FILES : ( ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.PERMISSION_ACTION_CREATE ), ( HC.SERVICE_INFO_NUM_PETITIONED_FILES, HC.PERMISSION_ACTION_PETITION ) ),
+                HC.CONTENT_TYPE_MAPPINGS : ( ( HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.PERMISSION_ACTION_CREATE ), ( HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS, HC.PERMISSION_ACTION_PETITION ) ),
+                HC.CONTENT_TYPE_TAG_PARENTS : ( ( HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ), ( HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ) ),
+                HC.CONTENT_TYPE_TAG_SIBLINGS : ( ( HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ), ( HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ) )
+            }
+            
+            for content_type in content_types_for_this_service:
+                
+                for ( count_type, permission ) in content_types_to_count_types_and_permissions[ content_type ]:
+                    
+                    if count_type not in nums_pending_for_this_service:
+                        
+                        continue
+                        
+                    
+                    num_pending = nums_pending_for_this_service[ count_type ]
+                    
+                    if num_pending == 0:
+                        
+                        continue
+                        
+                    
+                    if account.HasPermission( content_type, permission ):
+                        
+                        content_types_to_request.add( content_type )
+                        
+                    else:
+                        
+                        unauthorised_content_types.add( content_type )
+                        
+                    
+                
+            
+            if len( unauthorised_content_types ) > 0:
+                
+                message = 'Unfortunately, your account ({}) does not have full permission to upload all your pending content of type ({})!'.format(
+                    account.GetAccountType().GetTitle(),
+                    ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in unauthorised_content_types ) )
+                )
+                
+                message += os.linesep * 2
+                message += 'If you are currently using a public, read-only account (such as with the PTR), please check this service under _manage services_ and see if the server allows you to auto-create a more powerful account to replace the public one. If accounts cannot be automatically created, you may have to contact the server owner directly.'
+                message += os.linesep * 2
+                message += 'If you think your account does have this permission, try refreshing it under _review services_.'
+                
+                unauthorised_job_key = ClientThreading.JobKey()
+                
+                unauthorised_job_key.SetVariable( 'popup_title', 'some data was not uploaded!' )
+                
+                unauthorised_job_key.SetVariable( 'popup_text_1', message )
+                
+                if len( content_types_to_request ) > 0:
+                    
+                    unauthorised_job_key.Delete( 5 )
+                    
+                
+                HG.client_controller.pub( 'message', unauthorised_job_key )
+                
+            
+        else:
+            
+            content_types_to_request = content_types_for_this_service
+            
+        
+        initial_num_pending = sum( nums_pending_for_this_service.values() )
+        
+        result = HG.client_controller.Read( 'pending', service_key, content_types_to_request )
         
         HG.client_controller.pub( 'message', job_key )
         
@@ -125,9 +215,9 @@ def THREADUploadPending( service_key ):
             
             nums_pending = HG.client_controller.Read( 'nums_pending' )
             
-            info = nums_pending[ service_key ]
+            nums_pending_for_this_service = nums_pending[ service_key ]
             
-            remaining_num_pending = sum( info.values() )
+            remaining_num_pending = sum( nums_pending_for_this_service.values() )
             
             # sometimes more come in while we are pending, -754/1,234 ha ha
             num_to_do = max( initial_num_pending, remaining_num_pending )
@@ -238,7 +328,7 @@ def THREADUploadPending( service_key ):
             
             HG.client_controller.WaitUntilViewFree()
             
-            result = HG.client_controller.Read( 'pending', service_key )
+            result = HG.client_controller.Read( 'pending', service_key, content_types_to_request )
             
         
         job_key.DeleteVariable( 'popup_gauge_1' )
@@ -247,7 +337,15 @@ def THREADUploadPending( service_key ):
         HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
-        job_key.Delete( 5 )
+        
+        if len( content_types_to_request ) == 0:
+            
+            job_key.Delete()
+            
+        else:
+            
+            job_key.Delete( 5 )
+            
         
     except Exception as e:
         
@@ -4455,6 +4553,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.daemon_report_mode = not HG.daemon_report_mode
             
+        elif name == 'cache_report_mode':
+            
+            HG.cache_report_mode = not HG.cache_report_mode
+            
         elif name == 'callto_profile_mode':
             
             HG.callto_profile_mode = not HG.callto_profile_mode
@@ -5638,6 +5740,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             report_modes = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'cache report mode', 'Have the image and thumb caches report their operation.', HG.cache_report_mode, self._SwitchBoolean, 'cache_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )

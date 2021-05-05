@@ -1,3 +1,4 @@
+import itertools
 import typing
 
 from qtpy import QtCore as QC
@@ -871,6 +872,7 @@ class AnimationBar( QW.QWidget ):
 class MediaContainer( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
+    readyForNeighbourPrefetch = QC.Signal()
     
     def __init__( self, parent, canvas_type, additional_event_filter: QC.QObject ):
         
@@ -905,6 +907,8 @@ class MediaContainer( QW.QWidget ):
         self._animation_bar = AnimationBar( self )
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, self._canvas_type, direction = 'up' )
         self._static_image_window = StaticImage( self, self._canvas_type )
+        
+        self._static_image_window.readyForNeighbourPrefetch.connect( self.readyForNeighbourPrefetch )
         
         self._volume_control.adjustSize()
         self._volume_control.setCursor( QC.Qt.ArrowCursor )
@@ -970,6 +974,8 @@ class MediaContainer( QW.QWidget ):
         old_media_window = self._media_window
         destroy_old_media_window = True
         
+        do_neighbour_prefetch_emit = True
+        
         if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and not ClientGUIMPV.MPV_IS_AVAILABLE:
             
             self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
@@ -1006,6 +1012,8 @@ class MediaContainer( QW.QWidget ):
                     
                 
                 self._media_window.SetMedia( self._media )
+                
+                do_neighbour_prefetch_emit = False
                 
             else:
                 
@@ -1072,6 +1080,11 @@ class MediaContainer( QW.QWidget ):
             
             # this forces a flush of the last valid background bmp, so we don't get a flicker of a file from five files ago when we last saw a static image
             self.repaint()
+            
+        
+        if do_neighbour_prefetch_emit:
+            
+            self.readyForNeighbourPrefetch.emit()
             
         
     
@@ -1578,6 +1591,7 @@ class OpenExternallyPanel( QW.QWidget ):
 class StaticImage( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
+    readyForNeighbourPrefetch = QC.Signal()
     
     def __init__( self, parent, canvas_type ):
         
@@ -1592,13 +1606,19 @@ class StaticImage( QW.QWidget ):
         
         self._media = None
         
-        self._first_background_drawn = False
-        
         self._image_renderer = None
+        
+        self._tile_cache = HG.client_controller.GetCache( 'image_tiles' )
+        
+        self._canvas_tiles = {}
         
         self._is_rendered = False
         
-        self._canvas_qt_pixmap = None
+        self._first_background_drawn = False
+        
+        self._canvas_tile_size = QC.QSize( 768, 768 )
+        
+        self._zoom = 1.0
         
         if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
             
@@ -1612,9 +1632,18 @@ class StaticImage( QW.QWidget ):
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
         
     
-    def _ClearCanvasBitmap( self ):
+    def _ClearCanvasTileCache( self ):
         
-        self._canvas_qt_pixmap = None
+        if self._media is None:
+            
+            self._zoom = 1.0
+            
+        else:
+            
+            self._zoom = self.width() / self._media.GetResolution()[ 0 ]
+            
+        
+        self._canvas_tiles = {}
         
         self._is_rendered = False
         
@@ -1632,27 +1661,91 @@ class StaticImage( QW.QWidget ):
         self._first_background_drawn = True
         
     
-    def _TryToDrawCanvasBitmap( self ):
+    def _DrawTile( self, tile_coordinate ):
         
-        if self._image_renderer is not None and self._image_renderer.IsReady():
+        ( native_clip_rect, canvas_clip_rect ) = self._GetClipRectsFromTileCoordinates( tile_coordinate )
+        
+        width = canvas_clip_rect.width()
+        height = canvas_clip_rect.height()
+        
+        tile_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( width, height )
+        
+        painter = QG.QPainter( tile_pixmap )
+        
+        self._DrawBackground( painter )
+        
+        tile = self._tile_cache.GetTile( self._image_renderer, self._media, native_clip_rect, canvas_clip_rect.size() )
+        
+        painter.drawPixmap( 0, 0, tile.qt_pixmap )
+        
+        self._canvas_tiles[ tile_coordinate ] = ( tile_pixmap, canvas_clip_rect.topLeft() )
+        
+    
+    def _GetClipRectsFromTileCoordinates( self, tile_coordinate ) -> typing.Tuple[ QC.QRect, QC.QRect ]:
+        
+        ( tile_x, tile_y ) = tile_coordinate
+        
+        ( my_width, my_height ) = ( self.width(), self.height() )
+        
+        ( normal_canvas_width, normal_canvas_height ) = ( self._canvas_tile_size.width(), self._canvas_tile_size.height() )
+        
+        ( media_width, media_height ) = self._media.GetResolution()
+        
+        canvas_x = tile_x * self._canvas_tile_size.width()
+        canvas_y = tile_y * self._canvas_tile_size.height()
+        
+        canvas_topLeft = QC.QPoint( canvas_x, canvas_y )
+        
+        canvas_width = normal_canvas_width
+        
+        if canvas_x + normal_canvas_width > my_width:
             
-            my_size = self.size()
+            # this is the rightmost tile and should be shrunk
             
-            width = my_size.width()
-            height = my_size.height()
+            canvas_width = my_width % normal_canvas_width
             
-            self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( width, height )
+        
+        canvas_height = normal_canvas_height
+        
+        if canvas_y + normal_canvas_height > my_height:
             
-            painter = QG.QPainter( self._canvas_qt_pixmap )
+            # this is the bottommost tile and should be shrunk
             
-            self._DrawBackground( painter )
+            canvas_height = my_height % normal_canvas_height
             
-            qt_bitmap = self._image_renderer.GetQtImage( self.size() )
-            
-            painter.drawImage( 0, 0, qt_bitmap )
-            
-            self._is_rendered = True
-            
+        
+        native_width = canvas_width * self._zoom
+        
+        # if we are the last row/column our size is not this!
+        
+        canvas_size = QC.QSize( canvas_width, canvas_height )
+        
+        canvas_clip_rect = QC.QRect( canvas_topLeft, canvas_size )
+        
+        native_clip_rect = QC.QRect( canvas_topLeft / self._zoom, canvas_size / self._zoom )
+        
+        return ( native_clip_rect, canvas_clip_rect )
+        
+    
+    def _GetTileCoordinateFromPoint( self, pos: QC.QPoint ):
+        
+        tile_x = pos.x() // self._canvas_tile_size.width()
+        tile_y = pos.y() // self._canvas_tile_size.height()
+        
+        return ( tile_x, tile_y )
+        
+    
+    def _GetTileCoordinatesInView( self, rect: QC.QRect ):
+        
+        topLeft_tile_coordinate = self._GetTileCoordinateFromPoint( rect.topLeft() )
+        bottomRight_tile_coordinate = self._GetTileCoordinateFromPoint( rect.bottomRight() )
+        
+        i = itertools.product(
+            range( topLeft_tile_coordinate[0], bottomRight_tile_coordinate[0] + 1 ),
+            range( topLeft_tile_coordinate[1], bottomRight_tile_coordinate[1] + 1 )
+        )
+        
+        return list( i )
         
     
     def ClearMedia( self ):
@@ -1660,33 +1753,64 @@ class StaticImage( QW.QWidget ):
         self._media = None
         self._image_renderer = None
         
-        self._ClearCanvasBitmap()
+        self._ClearCanvasTileCache()
         
         self.update()
         
     
-    def paintEvent( self, event ):           
-        
-        if self._canvas_qt_pixmap is None:
-            
-            self._TryToDrawCanvasBitmap()
-            
+    def paintEvent( self, event ):
         
         painter = QG.QPainter( self )
         
-        if self._canvas_qt_pixmap is None:
+        if self._image_renderer is None or not self._image_renderer.IsReady():
             
             self._DrawBackground( painter )
             
-        else:
+            return
             
-            painter.drawPixmap( 0, 0, self._canvas_qt_pixmap )
+        
+        dirty_tile_coordinates = self._GetTileCoordinatesInView( event.rect() )
+        
+        for dirty_tile_coordinate in dirty_tile_coordinates:
+            
+            if dirty_tile_coordinate not in self._canvas_tiles:
+                
+                self._DrawTile( dirty_tile_coordinate )
+                
+            
+        
+        for dirty_tile_coordinate in dirty_tile_coordinates:
+            
+            ( tile, pos ) = self._canvas_tiles[ dirty_tile_coordinate ]
+            
+            painter.drawPixmap( pos, tile )
+            
+        
+        all_visible_tile_coordinates = self._GetTileCoordinatesInView( self.visibleRegion().boundingRect() )
+        
+        deletee_tile_coordinates = set( self._canvas_tiles.keys() ).difference( all_visible_tile_coordinates )
+        
+        for deletee_tile_coordinate in deletee_tile_coordinates:
+            
+            del self._canvas_tiles[ deletee_tile_coordinate ]
+            
+        
+        if not self._is_rendered:
+            
+            self.readyForNeighbourPrefetch.emit()
+            
+            self._is_rendered = True
             
         
     
     def resizeEvent( self, event ):
         
-        self._ClearCanvasBitmap()
+        self._ClearCanvasTileCache()
+        
+    
+    def showEvent( self, event ):
+        
+        self._ClearCanvasTileCache()
         
     
     def IsRendered( self ):
@@ -1734,13 +1858,18 @@ class StaticImage( QW.QWidget ):
     
     def SetMedia( self, media ):
         
+        if media == self._media:
+            
+            return
+            
+        
+        self._ClearCanvasTileCache()
+        
         self._media = media
         
         image_cache = HG.client_controller.GetCache( 'images' )
         
         self._image_renderer = image_cache.GetImageRenderer( self._media )
-        
-        self._ClearCanvasBitmap()
         
         if not self._image_renderer.IsReady():
             
