@@ -19,9 +19,10 @@ from hydrus.client import ClientRendering
 
 class DataCache( object ):
     
-    def __init__( self, controller, cache_size, timeout = 1200 ):
+    def __init__( self, controller, name, cache_size, timeout = 1200 ):
         
         self._controller = controller
+        self._name = name
         self._cache_size = cache_size
         self._timeout = timeout
         
@@ -45,6 +46,11 @@ class DataCache( object ):
         del self._keys_to_data[ key ]
         
         self._RecalcMemoryUsage()
+        
+        if HG.cache_report_mode:
+            
+            HydrusData.ShowText( 'Cache "{}" removing "{}". Current size {}.'.format( self._name, key, HydrusData.ConvertValueRangeToBytes( self._total_estimated_memory_footprint, self._cache_size ) ) )
+            
         
     
     def _DeleteItem( self ):
@@ -98,6 +104,18 @@ class DataCache( object ):
                 
                 self._RecalcMemoryUsage()
                 
+                if HG.cache_report_mode:
+                    
+                    HydrusData.ShowText(
+                        'Cache "{}" adding "{}" ({}). Current size {}.'.format(
+                            self._name,
+                            key,
+                            HydrusData.ToHumanBytes( data.GetEstimatedMemoryFootprint() ),
+                            HydrusData.ConvertValueRangeToBytes( self._total_estimated_memory_footprint, self._cache_size )
+                        )
+                    )
+                    
+                
             
         
     
@@ -138,6 +156,14 @@ class DataCache( object ):
                 
                 return None
                 
+            
+        
+    
+    def GetSizeLimit( self ):
+        
+        with self._lock:
+            
+            return self._cache_size
             
         
     
@@ -433,7 +459,7 @@ class ParsingCache( object ):
             
         
     
-class RenderedImageCache( object ):
+class ImageRendererCache( object ):
     
     def __init__( self, controller ):
         
@@ -442,7 +468,7 @@ class RenderedImageCache( object ):
         cache_size = self._controller.options[ 'fullscreen_cache_size' ]
         cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
         
-        self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
+        self._data_cache = DataCache( self._controller, 'image cache', cache_size, timeout = cache_timeout )
         
     
     def Clear( self ):
@@ -462,7 +488,12 @@ class RenderedImageCache( object ):
             
             image_renderer = ClientRendering.ImageRenderer( media )
             
-            self._data_cache.AddData( key, image_renderer )
+            # we are no longer going to let big lads flush the whole cache. they can render on demand
+            
+            if image_renderer.GetEstimatedMemoryFootprint() < self._data_cache.GetSizeLimit() / 4:
+                
+                self._data_cache.AddData( key, image_renderer )
+                
             
         else:
             
@@ -479,6 +510,59 @@ class RenderedImageCache( object ):
         return self._data_cache.HasData( key )
         
     
+    def PrefetchImageRenderer( self, media ):
+        
+        ( width, height ) = media.GetResolution()
+        
+        # essentially, we are not going to prefetch giganto images any more. they can render on demand and not mess our queue
+        
+        if width * height * 3 < self._data_cache.GetSizeLimit() / 10:
+            
+            self.GetImageRenderer( media )
+            
+        
+    
+class ImageTileCache( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        cache_size = self._controller.new_options.GetInteger( 'image_tile_cache_size' )
+        cache_timeout = self._controller.new_options.GetInteger( 'image_tile_cache_timeout' )
+        
+        self._data_cache = DataCache( self._controller, 'image tile cache', cache_size, timeout = cache_timeout )
+        
+    
+    def Clear( self ):
+        
+        self._data_cache.Clear()
+        
+    
+    def GetTile( self, image_renderer, media, clip_rect, target_resolution ):
+        
+        hash = media.GetHash()
+        
+        key = ( hash, clip_rect, target_resolution )
+        
+        result = self._data_cache.GetIfHasData( key )
+        
+        if result is None:
+            
+            qt_pixmap = image_renderer.GetQtPixmap( clip_rect = clip_rect, target_resolution = target_resolution )
+            
+            tile = ClientRendering.ImageTile( hash, clip_rect, qt_pixmap )
+            
+            self._data_cache.AddData( key, tile )
+            
+        else:
+            
+            tile = result
+            
+        
+        return tile
+        
+    
 class ThumbnailCache( object ):
     
     def __init__( self, controller ):
@@ -488,7 +572,7 @@ class ThumbnailCache( object ):
         cache_size = self._controller.options[ 'thumbnail_cache_size' ]
         cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
         
-        self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
+        self._data_cache = DataCache( self._controller, 'thumbnail cache', cache_size, timeout = cache_timeout )
         
         self._magic_mime_thumbnail_ease_score_lookup = {}
         

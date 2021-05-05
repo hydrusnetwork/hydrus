@@ -28,8 +28,10 @@ def GetFlashProperties( path ):
         
         metadata = hexagonitswfheader.parse( f )
         
-        width = metadata[ 'width' ]
-        height = metadata[ 'height' ]
+        # abs since one flash delivered negatives, and hexagonit calcs by going width = ( xmax - xmin ) etc...
+        
+        width = abs( metadata[ 'width' ] )
+        height = abs( metadata[ 'height' ] )
         
         num_frames = metadata[ 'frames' ]
         fps = metadata[ 'fps' ]

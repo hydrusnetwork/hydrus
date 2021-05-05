@@ -2271,7 +2271,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
         self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account id', self._CopyAccountKey )
-        self._permissions_button = ClientGUIMenuButton.MenuButton( self, 'see special permissions', [] )
+        self._permissions_button = ClientGUIMenuButton.MenuButton( self, 'see account permissions', [] )
         
         #
         

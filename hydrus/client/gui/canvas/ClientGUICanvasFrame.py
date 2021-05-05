@@ -6,11 +6,11 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
-from hydrus.client.gui import ClientGUICanvas
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvas
 
 class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
     

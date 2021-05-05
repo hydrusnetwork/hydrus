@@ -264,13 +264,17 @@ def LoadFromPNG( path ):
     
     try:
         
-        try:
+        height = numpy_image.shape[0]
+        width = numpy_image.shape[1]
+        
+        if len( numpy_image.shape ) > 2:
             
-            ( height, width ) = numpy_image.shape
+            depth = numpy_image.shape[2]
             
-        except:
-            
-            raise Exception( 'The file did not appear to be monochrome!' )
+            if depth != 1:
+                
+                raise Exception( 'The file did not appear to be monochrome!' )
+                
             
         
         try:
@@ -302,6 +306,8 @@ def LoadFromPNG( path ):
             
         
     except Exception as e:
+        
+        HydrusData.PrintException( e )
         
         message = 'The image loaded, but it did not seem to be a hydrus serialised png! The error was: {}'.format( str( e ) )
         message += os.linesep * 2

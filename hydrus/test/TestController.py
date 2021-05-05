@@ -282,6 +282,13 @@ class Controller( object ):
         self.tag_display_manager = ClientTagsHandling.TagDisplayManager()
         
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
+        
+        self._caches = {}
+        
+        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
+        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
+        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self.bitmap_manager = ClientManagers.BitmapManager( self )
@@ -490,6 +497,11 @@ class Controller( object ):
     def DoingFastExit( self ):
         
         return False
+        
+    
+    def GetCache( self, name ):
+        
+        return self._caches[ name ]
         
     
     def GetCurrentSessionPageAPIInfoDict( self ):

@@ -1880,7 +1880,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        if len( obj_list ) - num_misc_objects == 0:
+        if len( gugs ) + len( url_classes ) + len( parsers ) + len( domain_metadatas ) + len( login_scripts ) == 0:
             
             if num_misc_objects > 0:
                 

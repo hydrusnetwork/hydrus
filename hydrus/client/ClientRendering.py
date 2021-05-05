@@ -98,15 +98,34 @@ class ImageRenderer( object ):
         HG.client_controller.CallToThread( self._Initialise )
         
     
-    def _GetNumPyImage( self, target_resolution = None ):
+    def _GetNumPyImage( self, clip_rect: QC.QRect, target_resolution: QC.QSize ):
         
-        if target_resolution is None:
+        clip_topleft = clip_rect.topLeft()
+        clip_size = clip_rect.size()
+        
+        ( my_width, my_height ) = self.GetResolution()
+        
+        my_full_rect = QC.QRect( 0, 0, my_width, my_height )
+        
+        if clip_rect == my_full_rect:
             
-            numpy_image = self._numpy_image
+            source = self._numpy_image
             
         else:
             
-            numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, self._numpy_image, ( target_resolution.width(), target_resolution.height() ) )
+            ( x, y ) = ( clip_topleft.x(), clip_topleft.y() )
+            ( clip_width, clip_height ) = ( clip_size.width(), clip_size.height() )
+            
+            source = self._numpy_image[ y : y + clip_height, x : x + clip_width ]
+            
+        
+        if target_resolution == clip_size:
+            
+            return source.copy()
+            
+        else:
+            
+            numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, source, ( target_resolution.width(), target_resolution.height() ) )
             
         
         return numpy_image
@@ -142,11 +161,19 @@ class ImageRenderer( object ):
     
     def GetResolution( self ): return self._resolution
     
-    def GetQtImage( self, target_resolution = None ):
+    def GetQtImage( self, clip_rect = None, target_resolution = None ):
         
-        # add region param to this to allow clipping before resize
+        if clip_rect is None:
+            
+            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( self._resolution ) )
+            
         
-        numpy_image = self._GetNumPyImage( target_resolution = target_resolution )
+        if target_resolution is None:
+            
+            target_resolution = clip_rect.size()
+            
+        
+        numpy_image = self._GetNumPyImage( clip_rect, target_resolution )
         
         ( height, width, depth ) = numpy_image.shape
         
@@ -155,11 +182,19 @@ class ImageRenderer( object ):
         return HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, depth * 8, data )
         
     
-    def GetQtPixmap( self, target_resolution = None ):
+    def GetQtPixmap( self, clip_rect = None, target_resolution = None ):
         
-        # add region param to this to allow clipping before resize
+        if clip_rect is None:
+            
+            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( self._resolution ) )
+            
         
-        numpy_image = self._GetNumPyImage( target_resolution = target_resolution )
+        if target_resolution is None:
+            
+            target_resolution = clip_rect.size()
+            
+        
+        numpy_image = self._GetNumPyImage( clip_rect, target_resolution )
         
         ( height, width, depth ) = numpy_image.shape
         
@@ -171,6 +206,22 @@ class ImageRenderer( object ):
     def IsReady( self ):
         
         return self._numpy_image is not None
+        
+    
+class ImageTile( object ):
+    
+    def __init__( self, hash: bytes, clip_rect: QC.QRect, qt_pixmap: QG.QPixmap ):
+        
+        self.hash = hash
+        self.clip_rect = clip_rect
+        self.qt_pixmap = qt_pixmap
+        
+        self._num_bytes = self.qt_pixmap.width() * self.qt_pixmap.height() * 3
+        
+    
+    def GetEstimatedMemoryFootprint( self ):
+        
+        return self._num_bytes
         
     
 class RasterContainer( object ):

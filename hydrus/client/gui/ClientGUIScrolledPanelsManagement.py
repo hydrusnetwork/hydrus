@@ -1950,7 +1950,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( self )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( self )
             
-            from hydrus.client.gui import ClientGUICanvas
+            from hydrus.client.gui.canvas import ClientGUICanvas
             
             self._media_viewer_zoom_center = ClientGUICommon.BetterChoice()
             
@@ -2502,11 +2502,23 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._estimated_number_fullscreens = QW.QLabel( '', media_panel )
             
+            self._image_tile_cache_size = ClientGUIControls.BytesControl( media_panel )
+            self._image_tile_cache_size.valueChanged.connect( self.EventImageTilesUpdate )
+            
+            self._estimated_number_image_tiles = QW.QLabel( '', media_panel )
+            
             self._thumbnail_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, days = True, hours = True, minutes = True )
             self._thumbnail_cache_timeout.setToolTip( 'The amount of time after which a thumbnail in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
             
             self._image_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, days = True, hours = True, minutes = True )
             self._image_cache_timeout.setToolTip( 'The amount of time after which a rendered image in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
+            
+            self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, hours = True, minutes = True )
+            self._image_tile_cache_timeout.setToolTip( 'The amount of time after which a rendered image tile in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
+            
+            self._media_viewer_prefetch_delay_base_ms = QP.MakeQSpinBox( media_panel, min = 0, max = 2000 )
+            self._media_viewer_prefetch_num_previous = QP.MakeQSpinBox( media_panel, min = 0, max = 5 )
+            self._media_viewer_prefetch_num_next = QP.MakeQSpinBox( media_panel, min = 0, max = 5 )
             
             #
             
@@ -2529,12 +2541,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._fullscreen_cache_size.setValue( int( HC.options['fullscreen_cache_size'] // 1048576 ) )
             
+            self._image_tile_cache_size.SetValue( self._new_options.GetInteger( 'image_tile_cache_size' ) )
+            
             self._thumbnail_cache_timeout.SetValue( self._new_options.GetInteger( 'thumbnail_cache_timeout' ) )
             self._image_cache_timeout.SetValue( self._new_options.GetInteger( 'image_cache_timeout' ) )
+            self._image_tile_cache_timeout.SetValue( self._new_options.GetInteger( 'image_tile_cache_timeout' ) )
             
             self._video_buffer_size_mb.setValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
             
             self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
+            
+            self._media_viewer_prefetch_delay_base_ms.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
+            self._media_viewer_prefetch_num_previous.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_previous' ) )
+            self._media_viewer_prefetch_num_next.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_next' ) )
             
             #
             
@@ -2552,17 +2571,39 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( fullscreens_sizer, self._fullscreen_cache_size, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( fullscreens_sizer, self._estimated_number_fullscreens, CC.FLAGS_CENTER_PERPENDICULAR )
             
+            image_tiles_sizer = QP.HBoxLayout()
+            
+            QP.AddToLayout( image_tiles_sizer, self._image_tile_cache_size, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( image_tiles_sizer, self._estimated_number_image_tiles, CC.FLAGS_CENTER_PERPENDICULAR )
+            
             video_buffer_sizer = QP.HBoxLayout()
             
             QP.AddToLayout( video_buffer_sizer, self._video_buffer_size_mb, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( video_buffer_sizer, self._estimated_number_video_frames, CC.FLAGS_CENTER_PERPENDICULAR )
             
+            text = 'These options are advanced!'
+            text += os.linesep
+            text += 'If your navigation back and forth or between zooms is sluggish, the \'tile\' cache is probably the best one to try boosting.'
+            text += os.linesep
+            text += 'PROTIP: Do not go crazy here.'
+            
+            st = ClientGUICommon.BetterStaticText( media_panel, text )
+            
+            st.setWordWrap( True )
+            
+            media_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             rows = []
             
-            rows.append( ( 'MB memory reserved for thumbnail cache: ', thumbnails_sizer ) )
-            rows.append( ( 'MB memory reserved for image cache: ', fullscreens_sizer ) )
-            rows.append( ( 'Thumbnail cache timeout: ', self._thumbnail_cache_timeout ) )
-            rows.append( ( 'Image cache timeout: ', self._image_cache_timeout ) )
+            rows.append( ( 'MB memory reserved for thumbnail cache:', thumbnails_sizer ) )
+            rows.append( ( 'MB memory reserved for image cache:', fullscreens_sizer ) )
+            rows.append( ( 'MB memory reserved for image tile cache:', image_tiles_sizer ) )
+            rows.append( ( 'Thumbnail cache timeout:', self._thumbnail_cache_timeout ) )
+            rows.append( ( 'Image cache timeout:', self._image_cache_timeout ) )
+            rows.append( ( 'Image tile cache timeout:', self._image_tile_cache_timeout ) )
+            rows.append( ( 'Base ms delay for media viewer neighbour render prefetch:', self._media_viewer_prefetch_delay_base_ms ) )
+            rows.append( ( 'Num previous to prefetch:', self._media_viewer_prefetch_num_previous ) )
+            rows.append( ( 'Num next to prefetch:', self._media_viewer_prefetch_num_next ) )
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
@@ -2572,7 +2613,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            text = 'Hydrus video rendering is CPU intensive.'
+            text = 'This old option does not apply to mpv! It only applies to the native hydrus animation renderer!'
+            text += os.linesep
+            text += 'Hydrus video rendering is CPU intensive.'
             text += os.linesep
             text += 'If you have a lot of memory, you can set a generous potential video buffer to compensate.'
             text += os.linesep
@@ -2580,7 +2623,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep
             text += 'PROTIP: Do not go crazy here.'
             
-            buffer_panel.Add( QW.QLabel( text, buffer_panel ), CC.FLAGS_CENTER_PERPENDICULAR )
+            st = ClientGUICommon.BetterStaticText( buffer_panel, text )
+            
+            st.setWordWrap( True )
+            
+            buffer_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
@@ -2614,6 +2661,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self.EventFullscreensUpdate( self._fullscreen_cache_size.value() )
             self.EventThumbnailsUpdate( self._thumbnail_cache_size.value() )
+            self.EventImageTilesUpdate()
             self.EventVideoBufferUpdate( self._video_buffer_size_mb.value() )
             
         
@@ -2625,7 +2673,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimate = ( value * 1048576 ) // estimated_bytes_per_fullscreen
             
-            self._estimated_number_fullscreens.setText( '(about {}-{} images)'.format( HydrusData.ToHumanInt( estimate ), HydrusData.ToHumanInt( estimate * 4 ) ) )
+            self._estimated_number_fullscreens.setText( '(about {}-{} images the size of your screen)'.format( HydrusData.ToHumanInt( estimate // 2 ), HydrusData.ToHumanInt( estimate * 2 ) ) )
+            
+        
+        def EventImageTilesUpdate( self ):
+            
+            value = self._image_tile_cache_size.GetValue()
+            
+            display_size = ClientGUIFunctions.GetDisplaySize( self )
+            
+            estimated_bytes_per_fullscreen = 3 * display_size.width() * display_size.height()
+            
+            estimate = value // estimated_bytes_per_fullscreen
+            
+            self._estimated_number_image_tiles.setText( '(about {} fullscreens)'.format( HydrusData.ToHumanInt( estimate ) ) )
             
         
         def EventThumbnailsUpdate( self, value ):
@@ -2653,8 +2714,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.value() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.value() * 1048576
             
+            self._new_options.SetInteger( 'image_tile_cache_size', self._image_tile_cache_size.GetValue() )
+            
             self._new_options.SetInteger( 'thumbnail_cache_timeout', self._thumbnail_cache_timeout.GetValue() )
             self._new_options.SetInteger( 'image_cache_timeout', self._image_cache_timeout.GetValue() )
+            self._new_options.SetInteger( 'image_tile_cache_timeout', self._image_tile_cache_timeout.GetValue() )
+            
+            self._new_options.SetInteger( 'media_viewer_prefetch_delay_base_ms', self._media_viewer_prefetch_delay_base_ms.value() )
+            self._new_options.SetInteger( 'media_viewer_prefetch_num_previous', self._media_viewer_prefetch_num_previous.value() )
+            self._new_options.SetInteger( 'media_viewer_prefetch_num_next', self._media_viewer_prefetch_num_next.value() )
             
             self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.value() )
             

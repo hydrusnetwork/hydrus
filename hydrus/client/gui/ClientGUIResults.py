@@ -24,8 +24,6 @@ from hydrus.client.media import ClientMedia
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIDragDrop
-from hydrus.client.gui import ClientGUICanvas
-from hydrus.client.gui import ClientGUICanvasFrame
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
@@ -42,6 +40,8 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvas
+from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.metadata import ClientTags
 

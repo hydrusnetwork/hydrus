@@ -11209,11 +11209,13 @@ class DB( HydrusDB.HydrusDB ):
         return options
         
     
-    def _GetPending( self, service_key ):
+    def _GetPending( self, service_key, content_types ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
         service = self.modules_services.GetService( service_id )
+        
+        account = service.GetAccount()
         
         service_type = service.GetServiceType()
         
@@ -11223,162 +11225,186 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type == HC.TAG_REPOSITORY:
                 
-                # mappings
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( service_id )
-                
-                pending_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' ORDER BY tag_id LIMIT 100;' ) )
-                
-                pending_mapping_ids = list( pending_dict.items() )
-                
-                # dealing with a scary situation when (due to some bug) mappings are current and pending. they get uploaded, but the content update makes no changes, so we cycle infitely!
-                addable_pending_mapping_ids = self._FilterExistingUpdateMappings( service_id, pending_mapping_ids, HC.CONTENT_UPDATE_ADD )
-                
-                pending_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in pending_mapping_ids ) )
-                addable_pending_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in addable_pending_mapping_ids ) )
-                
-                if pending_mapping_weight != addable_pending_mapping_weight:
+                if HC.CONTENT_TYPE_MAPPINGS in content_types:
                     
-                    message = 'Hey, while going through the pending tags to upload, it seemed some were simultaneously already in the \'current\' state. This looks like a bug.'
-                    message += os.linesep * 2
-                    message += 'Please run _database->check and repair->fix logically inconsistent mappings_. If everything seems good after that and you do not get this message again, you should be all fixed. If not, you may need to regenerate your mappings storage cache under the \'database\' menu. If that does not work, hydev would like to know about it!'
+                    if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_CREATE ):
+                        
+                        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( service_id )
+                        
+                        pending_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' ORDER BY tag_id LIMIT 100;' ) )
+                        
+                        pending_mapping_ids = list( pending_dict.items() )
+                        
+                        # dealing with a scary situation when (due to some bug) mappings are current and pending. they get uploaded, but the content update makes no changes, so we cycle infitely!
+                        addable_pending_mapping_ids = self._FilterExistingUpdateMappings( service_id, pending_mapping_ids, HC.CONTENT_UPDATE_ADD )
+                        
+                        pending_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in pending_mapping_ids ) )
+                        addable_pending_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in addable_pending_mapping_ids ) )
+                        
+                        if pending_mapping_weight != addable_pending_mapping_weight:
+                            
+                            message = 'Hey, while going through the pending tags to upload, it seemed some were simultaneously already in the \'current\' state. This looks like a bug.'
+                            message += os.linesep * 2
+                            message += 'Please run _database->check and repair->fix logically inconsistent mappings_. If everything seems good after that and you do not get this message again, you should be all fixed. If not, you may need to regenerate your mappings storage cache under the \'database\' menu. If that does not work, hydev would like to know about it!'
+                            
+                            HydrusData.ShowText( message )
+                            
+                            raise HydrusExceptions.VetoException( 'Logically inconsistent mappings detected!' )
+                            
+                        
+                        for ( tag_id, hash_ids ) in pending_mapping_ids:
+                            
+                            tag = self.modules_tags_local_cache.GetTag( tag_id )
+                            hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, hashes ) )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+                            
+                        
                     
-                    HydrusData.ShowText( message )
-                    
-                    raise HydrusExceptions.VetoException( 'Logically inconsistent mappings detected!' )
-                    
-                
-                for ( tag_id, hash_ids ) in pending_mapping_ids:
-                    
-                    tag = self.modules_tags_local_cache.GetTag( tag_id )
-                    hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, hashes ) )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
-                    
-                
-                petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( tag_id, reason_id ), hash_id ) for ( tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT tag_id, hash_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY reason_id LIMIT 100;' ) ] )
-                
-                petitioned_mapping_ids = list( petitioned_dict.items() )
-                
-                # dealing with a scary situation when (due to some bug) mappings are deleted and petitioned. they get uploaded, but the content update makes no changes, so we cycle infitely!
-                deletable_and_petitioned_mappings = self._FilterExistingUpdateMappings(
-                    service_id,
-                    [ ( tag_id, hash_ids ) for ( ( tag_id, reason_id ), hash_ids ) in petitioned_mapping_ids ],
-                    HC.CONTENT_UPDATE_DELETE
-                )
-                
-                petitioned_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in petitioned_mapping_ids ) )
-                deletable_petitioned_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in deletable_and_petitioned_mappings ) )
-                
-                if petitioned_mapping_weight != deletable_petitioned_mapping_weight:
-                    
-                    message = 'Hey, while going through the petitioned tags to upload, it seemed some were simultaneously already in the \'deleted\' state. This looks like a bug.'
-                    message += os.linesep * 2
-                    message += 'Please run _database->check and repair->fix logically inconsistent mappings_. If everything seems good after that and you do not get this message again, you should be all fixed. If not, you may need to regenerate your mappings storage cache under the \'database\' menu. If that does not work, hydev would like to know about it!'
-                    
-                    HydrusData.ShowText( message )
-                    
-                    raise HydrusExceptions.VetoException( 'Logically inconsistent mappings detected!' )
-                    
-                
-                for ( ( tag_id, reason_id ), hash_ids ) in petitioned_mapping_ids:
-                    
-                    tag = self.modules_tags_local_cache.GetTag( tag_id )
-                    hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
-                    
-                    reason = self.modules_texts.GetText( reason_id )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, hashes ) )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
-                    
-                
-                # tag parents
-                
-                pending = self._c.execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 1;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
-                
-                for ( child_tag_id, parent_tag_id, reason_id ) in pending:
-                    
-                    child_tag = self.modules_tags_local_cache.GetTag( child_tag_id )
-                    parent_tag = self.modules_tags_local_cache.GetTag( parent_tag_id )
-                    
-                    reason = self.modules_texts.GetText( reason_id )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag, parent_tag ) )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
+                    if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_PETITION ):
+                        
+                        petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( tag_id, reason_id ), hash_id ) for ( tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT tag_id, hash_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY reason_id LIMIT 100;' ) ] )
+                        
+                        petitioned_mapping_ids = list( petitioned_dict.items() )
+                        
+                        # dealing with a scary situation when (due to some bug) mappings are deleted and petitioned. they get uploaded, but the content update makes no changes, so we cycle infitely!
+                        deletable_and_petitioned_mappings = self._FilterExistingUpdateMappings(
+                            service_id,
+                            [ ( tag_id, hash_ids ) for ( ( tag_id, reason_id ), hash_ids ) in petitioned_mapping_ids ],
+                            HC.CONTENT_UPDATE_DELETE
+                        )
+                        
+                        petitioned_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in petitioned_mapping_ids ) )
+                        deletable_petitioned_mapping_weight = sum( ( len( hash_ids ) for ( tag_id, hash_ids ) in deletable_and_petitioned_mappings ) )
+                        
+                        if petitioned_mapping_weight != deletable_petitioned_mapping_weight:
+                            
+                            message = 'Hey, while going through the petitioned tags to upload, it seemed some were simultaneously already in the \'deleted\' state. This looks like a bug.'
+                            message += os.linesep * 2
+                            message += 'Please run _database->check and repair->fix logically inconsistent mappings_. If everything seems good after that and you do not get this message again, you should be all fixed. If not, you may need to regenerate your mappings storage cache under the \'database\' menu. If that does not work, hydev would like to know about it!'
+                            
+                            HydrusData.ShowText( message )
+                            
+                            raise HydrusExceptions.VetoException( 'Logically inconsistent mappings detected!' )
+                            
+                        
+                        for ( ( tag_id, reason_id ), hash_ids ) in petitioned_mapping_ids:
+                            
+                            tag = self.modules_tags_local_cache.GetTag( tag_id )
+                            hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
+                            
+                            reason = self.modules_texts.GetText( reason_id )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, hashes ) )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
+                            
+                        
                     
                 
-                petitioned = self._c.execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchall()
+                if HC.CONTENT_TYPE_TAG_PARENTS in content_types:
+                    
+                    if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ):
+                        
+                        pending = self._c.execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 1;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
+                        
+                        for ( child_tag_id, parent_tag_id, reason_id ) in pending:
+                            
+                            child_tag = self.modules_tags_local_cache.GetTag( child_tag_id )
+                            parent_tag = self.modules_tags_local_cache.GetTag( parent_tag_id )
+                            
+                            reason = self.modules_texts.GetText( reason_id )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag, parent_tag ) )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
+                            
+                        
+                        petitioned = self._c.execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchall()
+                        
+                        for ( child_tag_id, parent_tag_id, reason_id ) in petitioned:
+                            
+                            child_tag = self.modules_tags_local_cache.GetTag( child_tag_id )
+                            parent_tag = self.modules_tags_local_cache.GetTag( parent_tag_id )
+                            
+                            reason = self.modules_texts.GetText( reason_id )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag, parent_tag ) )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
+                            
+                        
+                    
                 
-                for ( child_tag_id, parent_tag_id, reason_id ) in petitioned:
+                if HC.CONTENT_TYPE_TAG_SIBLINGS in content_types:
                     
-                    child_tag = self.modules_tags_local_cache.GetTag( child_tag_id )
-                    parent_tag = self.modules_tags_local_cache.GetTag( parent_tag_id )
-                    
-                    reason = self.modules_texts.GetText( reason_id )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag, parent_tag ) )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
-                    
-                
-                # tag siblings
-                
-                pending = self._c.execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
-                
-                for ( bad_tag_id, good_tag_id, reason_id ) in pending:
-                    
-                    bad_tag = self.modules_tags_local_cache.GetTag( bad_tag_id )
-                    good_tag = self.modules_tags_local_cache.GetTag( good_tag_id )
-                    
-                    reason = self.modules_texts.GetText( reason_id )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag, good_tag ) )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
-                    
-                
-                petitioned = self._c.execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchall()
-                
-                for ( bad_tag_id, good_tag_id, reason_id ) in petitioned:
-                    
-                    bad_tag = self.modules_tags_local_cache.GetTag( bad_tag_id )
-                    good_tag = self.modules_tags_local_cache.GetTag( good_tag_id )
-                    
-                    reason = self.modules_texts.GetText( reason_id )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag, good_tag ) )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
+                    if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
+                        
+                        pending = self._c.execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
+                        
+                        for ( bad_tag_id, good_tag_id, reason_id ) in pending:
+                            
+                            bad_tag = self.modules_tags_local_cache.GetTag( bad_tag_id )
+                            good_tag = self.modules_tags_local_cache.GetTag( good_tag_id )
+                            
+                            reason = self.modules_texts.GetText( reason_id )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag, good_tag ) )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
+                            
+                        
+                        petitioned = self._c.execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchall()
+                        
+                        for ( bad_tag_id, good_tag_id, reason_id ) in petitioned:
+                            
+                            bad_tag = self.modules_tags_local_cache.GetTag( bad_tag_id )
+                            good_tag = self.modules_tags_local_cache.GetTag( good_tag_id )
+                            
+                            reason = self.modules_texts.GetText( reason_id )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag, good_tag ) )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
+                            
+                        
                     
                 
             elif service_type == HC.FILE_REPOSITORY:
                 
-                result = self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                
-                if result is not None:
+                if HC.CONTENT_TYPE_FILES in content_types:
                     
-                    ( hash_id, ) = result
+                    if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ):
+                        
+                        result = self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                        
+                        if result is not None:
+                            
+                            ( hash_id, ) = result
+                            
+                            media_result = self._GetMediaResults( ( hash_id, ) )[ 0 ]
+                            
+                            return media_result
+                            
+                        
                     
-                    media_result = self._GetMediaResults( ( hash_id, ) )[ 0 ]
-                    
-                    return media_result
-                    
-                
-                petitioned = list( HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items() )
-                
-                for ( reason_id, hash_ids ) in petitioned:
-                    
-                    hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
-                    
-                    reason = self.modules_texts.GetText( reason_id )
-                    
-                    content = HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, hashes )
-                    
-                    client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
+                    if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ):
+                        
+                        petitioned = list( HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items() )
+                        
+                        for ( reason_id, hash_ids ) in petitioned:
+                            
+                            hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
+                            
+                            reason = self.modules_texts.GetText( reason_id )
+                            
+                            content = HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, hashes )
+                            
+                            client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason )
+                            
+                        
                     
                 
             
