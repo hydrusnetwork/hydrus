@@ -34,7 +34,7 @@ def make_install(client, resources):
     files = FileManifest()
     files.add_python_resource(".", client)
 
-    static_resources = glob(["./*.py", "./*.md", "./*txt", "./static/**/*", "./help/**/*"], strip_prefix="{}/".format(CWD))
+    static_resources = glob(["./*.py", "./*.md", "./*txt", "./bin/**/*", "./static/**/*", "./help/**/*"], strip_prefix="{}/".format(CWD))
     files.add_manifest(static_resources)
      
     hydrus_source = glob(["./hydrus/**/*.py"], strip_prefix="{}/".format(CWD))

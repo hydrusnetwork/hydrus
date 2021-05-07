@@ -9,6 +9,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: FedericoCarboni/setup-ffmpeg@v1
+        id: setup_ffmpeg
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -22,6 +26,7 @@ jobs:
       - name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
+          cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
           cp static/build_files/pyoxidizer.bzl pyoxidizer.bzl
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
