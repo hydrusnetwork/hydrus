@@ -1,0 +1,59 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-18.04
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: hydrus
+      - 
+        name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+          architecture: x64
+      #- name: Cache Qt
+      #  id: cache-qt
+      #  uses: actions/cache@v1
+      #  with:
+      #    path: Qt
+      #    key: ${{ runner.os }}-QtCache
+      #- 
+      #  name: Install Qt
+      #  uses: jurplel/install-qt-action@v2
+      #  with:
+      #    install-deps: true
+      #    setup-python: 'false'
+      #    modules: qtcharts qtwidgets qtgui qtcore
+      #    cached: ${{ steps.cache-qt.outputs.cache-hit }}
+      - name: APT Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpv1
+      - name: Pip Installer
+        uses: BSFishy/pip-action@v1
+        with:
+          packages: pyinstaller
+          requirements: hydrus/requirements.txt
+      - name: PyInstaller
+        run: |
+          cp hydrus/static/build_files/linux/client.spec client.spec
+          cp hydrus/static/build_files/linux/server.spec server.spec
+          pyinstaller server.spec
+          pyinstaller client.spec
+      - name: Remove Files
+        run: |
+            cd hydrus
+            while read line; do rm -vf ${line} ; done < static/build_files/linux/files_to_delete.txt
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Hydrus Ubuntu LTS Extract
+          path: dist/client
