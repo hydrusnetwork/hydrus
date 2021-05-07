@@ -27,7 +27,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
-          cp static/build_files/pyoxidizer.bzl pyoxidizer.bzl
+          cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
           cd build/$(head -n 1 triple.txt)/release
@@ -60,9 +60,9 @@ jobs:
             <string>True</string></dict>
           </plist>
           EOF
-          cp install/static/build_files/ReadMeFirst.rtf ./ReadMeFirst.rtf
+          cp install/static/build_files/macos/ReadMeFirst.rtf ./ReadMeFirst.rtf
           ln -s /Applications ./Applications
-          cp install/static/build_files/running_from_app "install/running_from_app"
+          cp install/static/build_files/macos/running_from_app "install/running_from_app"
           mv install/* "Hydrus Network.app/Contents/MacOS/"
           rm -rf install
           cd $GITHUB_WORKSPACE
