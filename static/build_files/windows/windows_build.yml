@@ -1,0 +1,65 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: [windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: hydrus
+      - uses: FedericoCarboni/setup-ffmpeg@v1
+        id: setup_ffmpeg
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+          architecture: x64
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v2.1.4
+        with:
+          path: Qt
+          key: ${{ runner.os }}-QtCache
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          install-deps: true
+          setup-python: 'false'
+          modules: qtcharts qtwidgets qtgui qtcore
+          cached: ${{ steps.cache-qt.outputs.cache-hit }}
+      - name: Pip Installer
+        uses: BSFishy/pip-action@v1
+        with:
+          packages: pyinstaller
+          requirements: hydrus\requirements.txt
+      - name: build with pyinstaller
+        run: |
+          move ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} hydrus\bin\
+          move hydrus\static\build_files\windows\client-win.spec client-win.spec
+          move hydrus\static\build_files\windows\server-win.spec server-win.spec
+          pyinstaller server-win.spec
+          pyinstaller client-win.spec
+          dir -r
+      - name: InnoSetup
+        run: |
+          move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
+          ISCC.exe InnoSetup.iss
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Windows-Extract
+          path: dist\Hydrus Network
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Windows-Install
+          path: dist\HydrusInstaller.exe
+          if-no-files-found: error
+          retention-days: 2
