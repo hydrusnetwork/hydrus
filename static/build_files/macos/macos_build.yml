@@ -8,12 +8,15 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: FedericoCarboni/setup-ffmpeg@v1
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup FFMPEG
+        uses: FedericoCarboni/setup-ffmpeg@v1
         id: setup_ffmpeg
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions-rs/toolchain@v1
+      - name: Setup Rust Tollchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
       - name: Cargo Cache
@@ -42,6 +45,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
           cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
+          cp static/build_files/linux/requirements.txt requirements.txt
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
           cd build/$(head -n 1 triple.txt)/release
