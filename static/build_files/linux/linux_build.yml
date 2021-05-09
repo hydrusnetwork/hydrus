@@ -41,19 +41,21 @@ jobs:
         uses: BSFishy/pip-action@v1
         with:
           packages: pyinstaller
-          requirements: hydrus/requirements.txt
-      - name: PyInstaller
+          requirements: hydrus/static/build_files/linux/requirements.txt
+      - name: Build Hydrus
         run: |
           cp hydrus/static/build_files/linux/client.spec client.spec
           cp hydrus/static/build_files/linux/server.spec server.spec
           pyinstaller server.spec
           pyinstaller client.spec
-      - name: Remove Files
+      - name: Remove Chonk
         run: |
-            cd hydrus
-            while read line; do rm -vf ${line} ; done < static/build_files/linux/files_to_delete.txt
+            find dist/client/ -type f -name "*.pyc" -delete
+            while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Hydrus Ubuntu LTS Extract
+          name: Ubuntu-Extract
           path: dist/client
+          if-no-files-found: error
+          retention-days: 2
