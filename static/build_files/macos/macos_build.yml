@@ -8,18 +8,22 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - 
+        name: Checkout
         uses: actions/checkout@v2
-      - name: Setup FFMPEG
+      - 
+        name: Setup FFMPEG
         uses: FedericoCarboni/setup-ffmpeg@v1
         id: setup_ffmpeg
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup Rust Tollchain
+      - 
+        name: Setup Rust Tollchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Cargo Cache
+      - 
+        name: Cargo Cache
         uses: actions/cache@v2
         with:
           path: ~/.cargo
@@ -27,7 +31,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
             ${{ runner.os }}-cargo
-      - name: Cargo Artifacts Cache
+      - 
+        name: Cargo Artifacts Cache
         uses: actions/cache@v2
         with:
           path: target
@@ -35,12 +40,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-target-${{ hashFiles('Cargo.toml') }}
             ${{ runner.os }}-cargo-target
-      - name: Install PyOxidizer
+      - 
+        name: Install PyOxidizer
         uses: actions-rs/cargo@v1.0.3
         with:
           command: install
           args: pyoxidizer
-      - name: Build Hydrus
+      - 
+        name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
           cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
@@ -63,7 +70,8 @@ jobs:
           temp_dmg="$(mktemp).dmg"
           hdiutil create "$temp_dmg" -ov -volname "HydrusNetwork" -fs HFS+ -srcfolder "$GITHUB_WORKSPACE/build/$(head -n 1 triple.txt)/release"
           hdiutil convert "$temp_dmg" -format UDZO -o HydrusNetwork.dmg
-      - name: Upload a Build Artifact
+      -   
+        name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.1
         with:
           name: MacOS-DMG

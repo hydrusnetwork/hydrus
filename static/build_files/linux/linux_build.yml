@@ -33,26 +33,31 @@ jobs:
       #    setup-python: 'false'
       #    modules: qtcharts qtwidgets qtgui qtcore
       #    cached: ${{ steps.cache-qt.outputs.cache-hit }}
-      - name: APT Install
+      - 
+        name: APT Install
         run: |
           sudo apt-get update
           sudo apt-get install -y libmpv1
-      - name: Pip Installer
+      - 
+        name: Pip Installer
         uses: BSFishy/pip-action@v1
         with:
           packages: pyinstaller
           requirements: hydrus/static/build_files/linux/requirements.txt
-      - name: Build Hydrus
+      - 
+        name: Build Hydrus
         run: |
           cp hydrus/static/build_files/linux/client.spec client.spec
           cp hydrus/static/build_files/linux/server.spec server.spec
           pyinstaller server.spec
           pyinstaller client.spec
-      - name: Remove Chonk
+      - 
+        name: Remove Chonk
         run: |
             find dist/client/ -type f -name "*.pyc" -delete
             while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
-      - name: Upload a Build Artifact
+      - 
+        name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: Ubuntu-Extract
