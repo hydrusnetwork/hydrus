@@ -1268,6 +1268,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             self._matchable_search_texts = set()
             
         
+        #
+        
+        self._RecalcPythonHash()
+        
     
     def __eq__( self, other ):
         
@@ -1286,17 +1290,24 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        if self._predicate_type == PREDICATE_TYPE_PARENT:
-            
-            return self._parent_key.__hash__()
-            
-        
-        return ( self._predicate_type, self._value, self._inclusive ).__hash__()
+        return self._python_hash
         
     
     def __repr__( self ):
         
         return 'Predicate: ' + str( ( self._predicate_type, self._value, self._inclusive, self.GetCount() ) )
+        
+    
+    def _RecalcPythonHash( self ):
+        
+        if self._predicate_type == PREDICATE_TYPE_PARENT:
+            
+            self._python_hash = self._parent_key.__hash__()
+            
+        else:
+            
+            self._python_hash = ( self._predicate_type, self._value, self._inclusive ).__hash__()
+            
         
     
     def _GetSerialisableInfo( self ):
@@ -1412,6 +1423,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = tuple( self._value )
             
+        
+        self._RecalcPythonHash()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -1574,7 +1587,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 self._inclusive = operator == '+'
                 
-            else: self._inclusive = True
+            else:
+                
+                self._inclusive = True
+                
+            
+            self._RecalcPythonHash()
             
         
         return self._inclusive
@@ -1784,6 +1802,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def SetInclusive( self, inclusive ):
         
         self._inclusive = inclusive
+        
+        self._RecalcPythonHash()
         
     
     def SetKnownParents( self, parents: typing.Set[ str ] ):

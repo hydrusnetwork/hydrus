@@ -394,7 +394,7 @@ def GenerateThumbnailBytesNumPy( numpy_image, mime ):
         return GenerateThumbnailBytesPIL( pil_image, mime )
         
     
-    ( im_y, im_x, depth ) = numpy_image.shape
+    ( im_height, im_width, depth ) = numpy_image.shape
     
     if depth == 4:
         

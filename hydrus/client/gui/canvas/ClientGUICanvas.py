@@ -335,6 +335,9 @@ def CalculateMediaSize( media, zoom ):
     media_width = int( round( zoom * original_width ) )
     media_height = int( round( zoom * original_height ) )
     
+    media_width = max( 1, media_width )
+    media_height = max( 1, media_height )
+    
     return ( media_width, media_height )
     
 class Canvas( QW.QWidget ):
@@ -940,6 +943,45 @@ class Canvas( QW.QWidget ):
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
     
+    def _RescueOffScreenMediaWindow( self ):
+        
+        size = self._GetMediaContainerSize()
+        
+        my_rect = self.rect()
+        media_rect = QC.QRect( self._media_window_pos, size )
+        
+        if not my_rect.intersects( media_rect ):
+            
+            # up/down
+            
+            height_buffer = min( media_rect.height(), self.height() // 5 )
+            
+            if media_rect.bottom() < my_rect.top():
+                
+                media_rect.moveBottom( my_rect.top() + height_buffer )
+                
+            elif media_rect.top() > my_rect.bottom():
+                
+                media_rect.moveTop( my_rect.bottom() - height_buffer )
+                
+            
+            # left/right
+            
+            width_buffer = min( media_rect.width(), self.width() // 5 )
+            
+            if media_rect.right() < my_rect.left():
+                
+                media_rect.moveRight( my_rect.left() + width_buffer )
+                
+            elif media_rect.left() > my_rect.right():
+                
+                media_rect.moveLeft( my_rect.right() - width_buffer )
+                
+            
+            self._media_window_pos = media_rect.topLeft()
+            
+        
+    
     def _ResetMediaWindowCenterPosition( self ):
         
         if self._current_media is None:
@@ -1112,6 +1154,8 @@ class Canvas( QW.QWidget ):
         #
         
         self._current_zoom = new_zoom
+        
+        self._RescueOffScreenMediaWindow()
         
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         '''

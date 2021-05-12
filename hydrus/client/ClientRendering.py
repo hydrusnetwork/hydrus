@@ -100,35 +100,87 @@ class ImageRenderer( object ):
     
     def _GetNumPyImage( self, clip_rect: QC.QRect, target_resolution: QC.QSize ):
         
-        clip_topleft = clip_rect.topLeft()
         clip_size = clip_rect.size()
         
-        ( my_width, my_height ) = self.GetResolution()
+        ( my_width, my_height ) = self._resolution
         
         my_full_rect = QC.QRect( 0, 0, my_width, my_height )
         
+        ZERO_MARGIN = QC.QMargins( 0, 0, 0, 0 )
+        
+        clip_padding = ZERO_MARGIN
+        target_padding = ZERO_MARGIN
+        
         if clip_rect == my_full_rect:
+            
+            # full image
             
             source = self._numpy_image
             
         else:
             
-            ( x, y ) = ( clip_topleft.x(), clip_topleft.y() )
-            ( clip_width, clip_height ) = ( clip_size.width(), clip_size.height() )
+            if target_resolution.width() > clip_size.width():
+                
+                # this is a tile that is being scaled!
+                # to reduce tiling artifacts, we want to oversample the clip for our tile so lanczos and friends can get good neighbour data and then crop it
+                # therefore, we'll figure out some padding for the clip, and then calculate what that means in the target end, and do a crop at the end
+                
+                # we want to pad. that means getting a larger resolution and keeping a record of the padding
+                # can't pad if we are at 0 for x or y, or up against width/height max
+                # but if we can pad, we will get a larger clip size and then _clip_ a better target endpoint. this is tricky.
+                
+                PADDING_AMOUNT = 4
+                
+                left_padding = min( PADDING_AMOUNT, clip_rect.x() )
+                top_padding = min( PADDING_AMOUNT, clip_rect.y() )
+                right_padding = min( PADDING_AMOUNT, my_width - clip_rect.bottomRight().x() )
+                bottom_padding = min( PADDING_AMOUNT, my_height - clip_rect.bottomRight().y() )
+                
+                clip_padding = QC.QMargins( left_padding, top_padding, right_padding, bottom_padding )
+                
+                # this is ugly and super inaccurate
+                target_padding = clip_padding * ( target_resolution.width() / clip_size.width() )
+                
+            
+            clip_rect_with_padding = clip_rect + clip_padding
+            
+            ( x, y, clip_width, clip_height ) = ( clip_rect_with_padding.x(), clip_rect_with_padding.y(), clip_rect_with_padding.width(), clip_rect_with_padding.height() )
             
             source = self._numpy_image[ y : y + clip_height, x : x + clip_width ]
             
         
         if target_resolution == clip_size:
             
-            return source.copy()
+            # 100% zoom
+            
+            result = source
             
         else:
             
-            numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, source, ( target_resolution.width(), target_resolution.height() ) )
+            if clip_padding == ZERO_MARGIN:
+                
+                result = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, source, ( target_resolution.width(), target_resolution.height() ) )
+                
+            else:
+                
+                target_width_with_padding = target_resolution.width() + target_padding.left() + target_padding.right()
+                target_height_with_padding = target_resolution.height() + target_padding.top() + target_padding.bottom()
+                
+                result = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, source, ( target_width_with_padding, target_height_with_padding ) )
+                
+                y = target_padding.top()
+                x = target_padding.left()
+                
+                result = result[ y : y + target_resolution.height(), x : x + target_resolution.width() ]
+                
             
         
-        return numpy_image
+        if not result.data.c_contiguous:
+            
+            result = result.copy()
+            
+        
+        return result
         
     
     def _Initialise( self ):
@@ -145,7 +197,7 @@ class ImageRenderer( object ):
         
         if self._numpy_image is None:
             
-            ( width, height ) = self.GetResolution()
+            ( width, height ) = self._resolution
             
             return width * height * 3
             
@@ -165,7 +217,9 @@ class ImageRenderer( object ):
         
         if clip_rect is None:
             
-            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( self._resolution ) )
+            ( width, height ) = self._resolution
+            
+            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( width, height ) )
             
         
         if target_resolution is None:
@@ -186,7 +240,9 @@ class ImageRenderer( object ):
         
         if clip_rect is None:
             
-            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( self._resolution ) )
+            ( width, height ) = self._resolution
+            
+            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( width, height ) )
             
         
         if target_resolution is None:

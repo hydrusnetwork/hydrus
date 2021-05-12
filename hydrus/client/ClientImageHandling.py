@@ -199,7 +199,7 @@ def ResizeNumPyImageForMediaViewer( mime, numpy_image, target_resolution ):
     
     ( scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomQuality( mime )
     
-    ( image_width, image_height, depth ) = numpy_image.shape
+    ( image_height, image_width, depth ) = numpy_image.shape
     
     if ( target_width, target_height ) == ( image_height, image_width ):
         
@@ -207,7 +207,7 @@ def ResizeNumPyImageForMediaViewer( mime, numpy_image, target_resolution ):
         
     else:
         
-        if target_width > image_height or target_height > image_width:
+        if target_width > image_width or target_height > image_height:
             
             interpolation = cv_interpolation_enum_lookup[ scale_up_quality ]
             

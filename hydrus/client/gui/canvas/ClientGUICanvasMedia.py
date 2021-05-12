@@ -1643,6 +1643,22 @@ class StaticImage( QW.QWidget ):
             self._zoom = self.width() / self._media.GetResolution()[ 0 ]
             
         
+        # it is most convenient to have tiles that line up with the current zoom ratio
+        # 768 is a convenient size for meaty GPU blitting, but as a number it doesn't make for nice multiplication
+        
+        # a 'nice' size is one that divides nicely by our zoom, so that integer translations between canvas and native res aren't losing too much in the float remainder
+        
+        if self.width() == 0 or self.height() == 0:
+            
+            tile_dimension = 0
+            
+        else:
+            
+            tile_dimension = round( ( 768 // self._zoom ) * self._zoom )
+            
+        
+        self._canvas_tile_size = QC.QSize( tile_dimension, tile_dimension )
+        
         self._canvas_tiles = {}
         
         self._is_rendered = False
@@ -1714,7 +1730,8 @@ class StaticImage( QW.QWidget ):
             canvas_height = my_height % normal_canvas_height
             
         
-        native_width = canvas_width * self._zoom
+        canvas_width = max( 1, canvas_width )
+        canvas_height = max( 1, canvas_height )
         
         # if we are the last row/column our size is not this!
         
@@ -1723,6 +1740,16 @@ class StaticImage( QW.QWidget ):
         canvas_clip_rect = QC.QRect( canvas_topLeft, canvas_size )
         
         native_clip_rect = QC.QRect( canvas_topLeft / self._zoom, canvas_size / self._zoom )
+        
+        if native_clip_rect.width() == 0:
+            
+            native_clip_rect.setWidth( 1 )
+            
+        
+        if native_clip_rect.height() == 0:
+            
+            native_clip_rect.setHeight( 1 )
+            
         
         return ( native_clip_rect, canvas_clip_rect )
         
@@ -1736,6 +1763,11 @@ class StaticImage( QW.QWidget ):
         
     
     def _GetTileCoordinatesInView( self, rect: QC.QRect ):
+        
+        if self.width() == 0 or self.height() == 0:
+            
+            return []
+            
         
         topLeft_tile_coordinate = self._GetTileCoordinateFromPoint( rect.topLeft() )
         bottomRight_tile_coordinate = self._GetTileCoordinateFromPoint( rect.bottomRight() )

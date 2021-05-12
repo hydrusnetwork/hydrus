@@ -22,7 +22,7 @@ jobs:
       - name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
-          cp static/build_files/pyoxidizer.bzl pyoxidizer.bzl
+          cp static/build_files/macos_pyoxidizer.bzl pyoxidizer.bzl
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
           cd build/$(head -n 1 triple.txt)/release

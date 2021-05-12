@@ -977,6 +977,11 @@ class MediaList( object ):
         pass
         
     
+    def _RecalcAfterMediaRemove( self ):
+        
+        self._RecalcHashes()
+        
+    
     def _RecalcHashes( self ):
         
         self._hashes = set()
@@ -1042,7 +1047,7 @@ class MediaList( object ):
         
         self._sorted_media.remove_items( singleton_media.union( collected_media ) )
         
-        self._RecalcHashes()
+        self._RecalcAfterMediaRemove()
         
     
     def AddMedia( self, new_media ):
@@ -2000,6 +2005,13 @@ class MediaCollection( MediaList, Media ):
             
         
     
+    def _RecalcAfterMediaRemove( self ):
+        
+        MediaList._RecalcAfterMediaRemove( self )
+        
+        self._RecalcArchiveInbox()
+        
+    
     def _RecalcArchiveInbox( self ):
         
         self._archive = True in ( media.HasArchive() for media in self._sorted_media )
@@ -2026,6 +2038,38 @@ class MediaCollection( MediaList, Media ):
         self._file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
         
     
+    def _RecalcHashes( self ):
+        
+        MediaList._RecalcHashes( self )
+        
+        all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
+        
+        current_to_timestamps = {}
+        deleted_to_timestamps = {}
+        
+        for service_key in HG.client_controller.services_manager.GetServiceKeys( HC.FILE_SERVICES ):
+            
+            current_timestamps = [ timestamp for timestamp in ( locations_manager.GetCurrentTimestamp( service_key ) for locations_manager in all_locations_managers ) if timestamp is not None ]
+            
+            if len( current_timestamps ) > 0:
+                
+                current_to_timestamps[ service_key ] = max( current_timestamps )
+                
+            
+            deleted_timestamps = [ timestamps for timestamps in ( locations_manager.GetDeletedTimestamps( service_key ) for locations_manager in all_locations_managers ) if timestamps is not None and timestamps[0] is not None ]
+            
+            if len( deleted_timestamps ) > 0:
+                
+                deleted_to_timestamps[ service_key ] = max( deleted_timestamps, key = lambda ts: ts[0] )
+                
+            
+        
+        pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
+        petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
+        
+        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned )
+        
+    
     def _RecalcInternals( self ):
         
         self._RecalcHashes()
@@ -2045,15 +2089,6 @@ class MediaCollection( MediaList, Media ):
         self._has_audio = True in ( media.HasAudio() for media in self._sorted_media )
         
         self._has_notes = True in ( media.HasNotes() for media in self._sorted_media )
-        
-        all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
-        
-        current_to_timestamps = { service_key : None for service_key in HydrusData.MassUnion( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] ) }
-        deleted_to_timestamps = { service_key : ( None, None ) for service_key in HydrusData.MassUnion( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] ) }
-        pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
-        petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
-        
-        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned )
         
         self._RecalcRatings()
         self._RecalcFileViewingStats()
@@ -2091,6 +2126,16 @@ class MediaCollection( MediaList, Media ):
         MediaList.DeletePending( self, service_key )
         
         self._RecalcInternals()
+        
+    
+    def GetCurrentTimestamp( self, service_key: bytes ) -> typing.Optional[ int ]:
+        
+        return self._locations_manager.GetCurrentTimestamp( service_key )
+        
+    
+    def GetDeletedTimestamps( self, service_key: bytes ) -> typing.Tuple[ typing.Optional[ int ], typing.Optional[ int ] ]:
+        
+        return self._locations_manager.GetDeletedTimestamps( service_key )
         
     
     def GetDisplayMedia( self ):
@@ -2207,16 +2252,6 @@ class MediaCollection( MediaList, Media ):
     def GetTagsManager( self ):
         
         return self._tags_manager
-        
-    
-    def GetCurrentTimestamp( self, service_key: bytes ) -> typing.Optional[ int ]:
-        
-        return None
-        
-    
-    def GetDeletedTimestamps( self, service_key: bytes ) -> typing.Tuple[ typing.Optional[ int ], typing.Optional[ int ] ]:
-        
-        return ( None, None )
         
     
     def HasArchive( self ):

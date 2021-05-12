@@ -1620,7 +1620,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and self._mime in ( HC.IMAGE_GIF, HC.GENERAL_ANIMATION ):
                 
-                s += ' (will show image gifs with native viewer)'
+                s += ' (will show unanimated gifs with native viewer)'
                 
             
             self._media_show_action.addItem( s, action )
@@ -2023,17 +2023,22 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         default_panel = ClientGUICommon.StaticBox( self, 'default options' )
         
-        self._is_default = QW.QCheckBox( default_panel )
+        self._use_default_dropdown = ClientGUICommon.BetterChoice( default_panel )
         
-        tt = 'If this is checked, the client will refer to the defaults (as set under "network->downloaders->manage default tag import options") for the appropriate tag import options at the time of import.'
+        self._use_default_dropdown.addItem( 'use the default tag import options at the time of import', True )
+        self._use_default_dropdown.addItem( 'set custom tag import options just for this downloader', False )
+        
+        tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default tag import options") for the appropriate tag import options at the time of import.'
         tt += os.linesep * 2
-        tt += 'It is easier to manage tag import options by relying on the defaults, since any change in the single default location will update all the eventual import queues that refer to those defaults, whereas having specific options for every subscription or downloader means making an update to the blacklist or tag filter needs to be repeated dozens or hundreds of times.'
+        tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
         tt += os.linesep * 2
-        tt += 'But if you are doing a one-time import that has some unusual tag rules, uncheck this and set those specific rules here.'
+        tt += 'But if you are doing a one-time import that has some unusual tag rules, set some specific rules here.'
         
-        self._is_default.setToolTip( tt )
+        self._use_default_dropdown.setToolTip( tt )
         
-        self._load_default_options = ClientGUICommon.BetterButton( default_panel, 'load one of the default options', self._LoadDefaultOptions )
+        #
+        
+        self._load_default_options = ClientGUICommon.BetterButton( self, 'load one of the default options', self._LoadDefaultOptions )
         
         #
         
@@ -2045,6 +2050,18 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
+        
+        tt = 'I strongly recommend you uncheck this for normal use. When it is on, downloaders are inefficent!'
+        tt += os.linesep * 2
+        tt += 'This will force the client to download the metadata for a file even if it thinks it has visited its page before. Normally, hydrus will skip an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
+        
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setToolTip( tt )
+        
+        tt = 'I strongly recommend you uncheck this for normal use.  When it is on, downloaders could be inefficent!'
+        tt += os.linesep * 2
+        tt += 'This will force the client to download the metadata for a file even if the gallery step has given a hash that the client thinks it recognises. Normally, hydrus will skip an URL in this case (although the hash-from-gallery case is rare, so this option rarely matters). This is mostly a debug complement to the url check option.'
+        
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( tt )
         
         tag_blacklist = tag_import_options.GetTagBlacklist()
         
@@ -2058,9 +2075,13 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._tag_blacklist_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
         
+        self._tag_blacklist_button.setToolTip( 'A blacklist will ignore files if they have any of a certain list of tags.' )
+        
         self._tag_whitelist = list( tag_import_options.GetTagWhitelist() )
         
         self._tag_whitelist_button = ClientGUICommon.BetterButton( downloader_options_panel, 'whitelist', self._EditWhitelist )
+        
+        self._tag_blacklist_button.setToolTip( 'A whitelist will ignore files if they do not have any of a certain list of tags.' )
         
         self._UpdateTagWhitelistLabel()
         
@@ -2068,7 +2089,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._is_default.setChecked( tag_import_options.IsDefault() )
+        self._use_default_dropdown.SetValue( tag_import_options.IsDefault() )
         
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
@@ -2079,12 +2100,6 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        rows = []
-        
-        rows.append( ( 'rely on the appropriate default tag import options at the time of import: ', self._is_default ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( default_panel, rows )
-        
         if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             st = ClientGUICommon.BetterStaticText( default_panel, label = 'Most of the time, you want to rely on the default tag import options!' )
@@ -2094,8 +2109,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             default_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        default_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        default_panel.Add( self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        default_panel.Add( self._use_default_dropdown, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if not allow_default_selection:
             
@@ -2106,8 +2120,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'fetch tags even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
-        rows.append( ( 'fetch tags even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
+        rows.append( ( 'force page fetch even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
+        rows.append( ( 'force page fetch even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
         rows.append( ( 'set file blacklist: ', self._tag_blacklist_button ) )
         rows.append( ( 'set file whitelist: ', self._tag_whitelist_button ) )
         
@@ -2135,6 +2149,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, help_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.addStretch( 1 )
         
@@ -2142,7 +2157,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._is_default.clicked.connect( self._UpdateIsDefault )
+        self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
         
         self._UpdateIsDefault()
         
@@ -2225,7 +2240,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetValue( self, tag_import_options: ClientImportOptions.TagImportOptions ):
         
-        self._is_default.setChecked( tag_import_options.IsDefault() )
+        self._use_default_dropdown.SetValue( tag_import_options.IsDefault() )
         
         self._tag_blacklist_button.SetValue( tag_import_options.GetTagBlacklist() )
         
@@ -2267,9 +2282,11 @@ Please note that once you know what tags you like, you can (and should) set up t
     
     def _UpdateIsDefault( self ):
         
-        is_default = self._is_default.isChecked()
+        is_default = self._use_default_dropdown.GetValue()
         
         show_specific_options = not is_default
+        
+        self._load_default_options.setVisible( show_specific_options )
         
         self._specific_options_panel.setVisible( show_specific_options )
         
@@ -2295,7 +2312,7 @@ Please note that once you know what tags you like, you can (and should) set up t
     
     def GetValue( self ) -> ClientImportOptions.TagImportOptions:
         
-        is_default = self._is_default.isChecked()
+        is_default = self._use_default_dropdown.GetValue()
         
         if is_default:
             

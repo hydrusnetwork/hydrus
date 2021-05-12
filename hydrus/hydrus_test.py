@@ -88,6 +88,9 @@ def boot():
         
         print( 'This was version ' + str( HC.SOFTWARE_VERSION ) )
         
-        input()
+        if sys.stdin.isatty():
+            
+            input( 'Press any key to exit.' )
+            
         
     

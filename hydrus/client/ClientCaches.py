@@ -539,11 +539,19 @@ class ImageTileCache( object ):
         self._data_cache.Clear()
         
     
-    def GetTile( self, image_renderer, media, clip_rect, target_resolution ):
+    def GetTile( self, image_renderer: ClientRendering.ImageRenderer, media, clip_rect, target_resolution ):
         
         hash = media.GetHash()
         
-        key = ( hash, clip_rect, target_resolution )
+        key = (
+            hash,
+            clip_rect.left(),
+            clip_rect.top(),
+            clip_rect.right(),
+            clip_rect.bottom(),
+            target_resolution.width(),
+            target_resolution.height()
+        )
         
         result = self._data_cache.GetIfHasData( key )
         

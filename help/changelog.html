@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_439"><a href="#version_439">version 439</a></h3></li>
+				<ul>
+					<li>tiled image renderer improvements:</li>
+					<li>I believe I fixed the 'non c-contiguous' crash issue with the new tile renderer. I had encountered this while developing, but it was still happening in rare situations--I _think_ in an unlucky edge case where a zoomed tile had the same resolution as the full image rotated by ninety degrees! there is now an additional catch for this situation, as well, to catch any future logical holes.</li>
+					<li>fixed a bug in the new renderer when copying an image to clipboard</li>
+					<li>I greatly mitigated the tiling artifacts with two changes:</li>
+					<li>- zoomed in tiles are now resized with a padding area of up to 4 pixels, with the actual tile cropped afterwards, which allows bilinear and lancsoz interpolation to get accurate neighbour data and have gradient math line up with neighbouring tiles more accurately</li>
+					<li>- on resize and zoom, media canvases now dynamically change tile size to 'neater' float/integer conversion dimensions to reduce sub-pixel panning alignment artifacts (e.g. if your zoom is 300%, the tile is now going to have a dimension that is a multiple of 3)</li>
+					<li>I hacked in a 'rescue offscreen media' calculation after any zoom event. now, if the window is completely out of view after a zoom, it'll snap to the nearest borders, lining against them or overlapping into a buffer zone depending on the zoom. let me know what you think!</li>
+					<li>I fixed a PyQt5 specific object tracking bug, I think the new renderer now works ok for PyQt5!</li>
+					<li>cleaned up some ugly code in the resize section that may have been resulting in incorrect interpolation algorithm choice in some situations</li>
+					<li>fixed a divide by zero issue when zooming out tiny images hugely (e.g. 32x32 at 1%)</li>
+					<li>media windows now try to have at least 1x1 size, just to catch some other weird error situations</li>
+					<li>similarly, tile and native sample sizes will have a minimum of size 1x1, which should fix issues during a delayed startup (issue #872)</li>
+					<li>cleaned up some misc media viewer and tile renderer code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>I started the next round of database optimisation tech, mostly testing out a pipeline upgrade. autocomplete fetching and wildcard file searching for very large queries should be a little faster to cancel now, and in some situations they should be a little faster. they may be slower for very small jobs, but I expect it to be unnoticeable. if you feel autocomplete is suddenly slow and laggy, let me know!</li>
+					<li>I optimised the basic 'ideal sibling normalisation' database query. this is used in a lot of places, so the little saving here should improve a bunch of work</li>
+					<li>I greatly optimised autocomplete sibling population, particularly for searches with a lot of tag results</li>
+					<li>I brushed up the tag import options UI: changed the 'use defaults' checkbox to a dropdown with clear labels for both modes; renamed the 'fetch tags even if' tag import options to 'force page fetch', which is a better description, and added tooltips to describe their ideal use; added tooltips to blacklist and whitelist; and hid the 'load from defaults' button if not set to view specific options</li>
+					<li>added a 'imgur single media file url' File URL Class, which points to direct file links without a referral header, which should fix some situations where these urls were pointed to by other site parsers</li>
+					<li>collections now store the _most recent_ import timestamp of their contents as the aggregate for time imported. previously they had no value, so would sort randomly with each other. collections therefore now sort by time imported reliably with each other, even if there is no 'correct' answer here</li>
+					<li>these new timestamps and service presence generally, and aggregated archive/inbox status, (all of which can update thumbnail display) is now recalculated when files are removed from the collection. so, hitting _right-click->remove->inbox_ will now update collections with a mix of archived and inboxed to remove the inbox icon immediately</li>
+					<li>as the "Retry has no attribute..." network errors have appeared in new forms, I gave the core of the problem another look. we could never really figure this out, but it seemed to be a network version thread safety issue. I think I have ruled this out, and I now believe these may have been occuring during faulty pickling during network session save/load. I fixed the problem here, so with luck this issue will not reappear--if you have had this a lot, let me know how you get on!</li>
+					<li>I broke the requirements.txt into several variants based on platform. we are going to try to pin down good fixed versions of python-mpv and requests/urllib3 for each platform</li>
+					<li>I also updated the 'running from source' help significantly, moving everything to the requirements.txt and making sections for things like FFMPEG and libmpv</li>
+					<li>Also updated the source and contact help around my work style and contact preferences</li>
+					<li>the test.py file now only does the final input() confirmation if there is an interactive stdin to respond</li>
+				</ul>
 				<li><h3 id="version_438"><a href="#version_438">version 438</a></h3></li>
 				<ul>
 					<li>media viewer:</li>

@@ -14,12 +14,12 @@
 				<li><i>ImportError: /home/user/hydrus/libX11.so.6: undefined symbol: xcb_poll_for_reply64</i></li>
 			</ul></p>
 			<p>But that by simply deleting the <i>libX11.so.6</i> file in the hydrus install directory, he was able to boot. I presume this meant my hydrus build was then relying on his local libX11.so, which happened to have better API compatibility. If you receive a similar error, you might like to try the same sort of thing. Let me know if you discover anything!</p>
-			<h3 id="windows_build"><a href="#windows_build">building on windows</a></h3>
+			<h3 id="windows_build"><a href="#windows_build">building packages on windows</a></h3>
                         <p>Installing some packages on windows with pip may need Visual Studio's C++ Build Tools for your version of python. Although these tools are free, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Instead, install Chocolatey and use this one simple line:</p>
                         <blockquote>choco install -y vcbuildtools visualstudio2017buildtools</blockquote>
-                        <p>Trust me, this will save a ton of headaches!</a>
+                        <p>Trust me, just do this, it will save a ton of headaches!</a>
 			<h3 id="what_you_need"><a href="#what_you_need">what you will need</a></h3>
-			<p>You will need basic python experience, python 3.x and a number of python modules. Most of it you can get through pip.</p>
+			<p>You will need basic python experience, python 3.x and a number of python modules, all through pip.</p>
 			<p>If you are on Linux or macOS, or if you are on Windows and have an existing python you do not want to stomp all over with new modules, I recommend you create a virtual environment:</p>
 			<p><i>Note, if you are on Linux, it may be easier to use your package manager instead of messing around with venv. A user has written a great summary with all needed packages <a href="running_from_source_linux_packages.txt">here</a>.</i></p>
 			<p>If you do want to create a new venv environment:</p>
@@ -33,45 +33,36 @@
 			</ul>
 			<p>That '. venv/bin/activate' line turns your venv on, and will be needed every time you run the client.pyw/server.py files. You can easily tuck it into a launch script.</p>
 			<p>On Windows, the path is venv&#92;Scripts&#92;activate, and the whole deal is done much easier in cmd than Powershell. If you get Powershell by default, just type 'cmd' to get an old fashioned command line. In cmd, the launch command is just 'venv&#92;scripts&#92;activate', no leading period.</p>
-			<p>After that, you can go nuts with pip. I think this will do for most systems:</p>
+			<p>After that, you can use pip to install everything you need from the appropriate requirements.txt in the base install directory. For instance, for Windows, you would go:</p>
 			<ul>
-				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyYAML requests Send2Trash service_identity twisted</li>
+				<li>pip3 install -r requirements_windows.txt</li>
 			</ul>
-			<p>You may want to do all that in smaller batches.</p>
-			<p>You will also need Qt5. Either PySide2 (default) or PyQt5 are supported, through qtpy. You can install, again, with pip:</p>
-			<ul>
-				<li>pip3 install qtpy PySide2</li>
-			</ul>
-			<p>-or-</p>
+                        <p>If you prefer to do things manually, inspect the document and install the modules yourself.</p>
+                        <h3 id="pyqt5"><a href="#pyqt5">PyQt5 support</a></h3>
+                        <p>For Qt, either PySide2 (default) or PyQt5 are supported, through qtpy. For PyQt5, go:</p>
 			<ul>
 				<li>pip3 install qtpy PyQtChart PyQt5</li>
 			</ul>
-			<p>Qt 5.15 currently seems to be working well, but 5.14 caused some trouble.</p>
-			<p>And optionally, you can add these packages:</p>
-			<ul>
-				<li>
-					<p><b>python-mpv - to get nice video and audio support!</b></p>
-					<blockquote>If you are on Linux/macOS, you will likely need the mpv library installed to your system, <i>not just mpv</i>, which is often called 'libmpv1'. You can usually get it with <i>apt</i>.</blockquote>
-				</li>
-				<li>lz4 - for some memory compression in the client</li>
-				<li>pylzma - for importing rare ZWS swf files</li>
-				<li>cloudscraper - for attempting to solve CloudFlare check pages</li>
-				<li>pysocks - for socks4/socks5 proxy support (although you may want to try "requests[socks]" instead)</li>
-                                <li>>PyOpenSSL - to generate a certificate if you want to run the server or the client api</li>
-				<li>mock httmock pyinstaller - if you want to run test.py and make a build yourself</li>
-				<li>PyWin32 pypiwin32 pywin32-ctypes - helpful to ensure you have if you want to make a build in Windows</li>
-			</ul>
-			<p>Here is a masterline with everything for general use:</p>
-			<ul>
-				<li>pip3 install beautifulsoup4 chardet html5lib lxml nose numpy opencv-python-headless six Pillow psutil PyOpenSSL PyYAML requests Send2Trash service_identity twisted qtpy PySide2 python-mpv lz4 pylzma cloudscraper pysocks</li>
-			</ul>
-			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python37\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
-			<p>If you don't have ffmpeg in your PATH and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. On Windows, you can copy the exe from one of those releases, or just download the latest static build right from the FFMPEG site.</a>
+			<h3 id="ffmpeg"><a href="#ffmpeg">FFMPEG</a></h3>
+                        <p>If you don't have FFMPEG in your PATH and you want to import anything more fun than jpegs, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in your PATH or the install_dir/bin directory. If you can't find a static exe on Windows, you can copy the exe from one of my extractable releases.</a>
+			<h3 id="mpv"><a href="#mpv">mpv support</a></h3>
+                        <p>MPV is optional and complicated, but it is great, so it is worth the time to figure out!</p>
+                        <p>As well as the python wrapper, 'python-mpv' as in the requirements.txt, you also need the underlying library. This is <i>not</i> mpv the program, but 'libmpv', often called 'libmpv1'.</p>
+                        <p>For Windows, the dll builds are <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/">here</a>, although getting the right version for the current wrapper can be difficult (you will get errors when you try to load video if it is not correct). Just put it in your hydrus base install directory. You can also just grab the 'mpv-1.dll' I bundle in my release. In my experience, <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z/download">this</a> works with python-mpv 0.5.2.</a>
+                        <p>If you are on Linux/macOS, you can usually get 'libmpv1' with <i>apt</i>. You might have to adjust your python-mpv version (e.g. "pip3 install python-mpv==0.4.5") to get it to work.</p>
+			<h3 id="sqlite"><a href="#sqlite">SQLite</a></h3>
+                        <p>If you can, update python's SQLite--it'll improve performance.</p>
+                        <p>On Windows, get the 64-bit sqlite3.dll <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python37\DLLs or wherever you have python installed. You'll be overwriting the old file, so make a backup if you want to (I have never had trouble updating like this, however).</p>
+                        <p>I don't know how to do it for Linux or macOS, so if you do, please let me know!</p>
+			<h3 id="additional_windows"><a href="#additional_windows">additional windows info</a></h3>
+			<p>This may not matter any more, but in the old days, Windows pip could have problems building modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times.</p>
+                        <p>I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
+			<h3 id="running_it"><a href="#running_it">running it</a></h3>
 			<p>Once you have everything set up, client.pyw and server.py should look for and run off client.db and server.db just like the executables. They will look in the 'db' directory by default, or anywhere you point them with the "-d" parameter, again just like the executables.</p>
-			<p>I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, so I would particularly appreciate your Linux/macOS bug reports and any informed suggestions.</p>
+			<p>I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.</p>
 			<h3 id="my_code"><a href="#my_code">my code</a></h3>
-			<p>Unlike most software people, I am more INFJ than INTP/J. My coding style is unusual and unprofessional, and everything is pretty much hacked together. Please look through the source if you are interested in how things work and ask me if you don't understand something. I'm constantly throwing new code together and then cleaning and overhauling it down the line.</p>
-			<p>I work strictly alone, so while I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests. Everything I do is <a href="https://github.com/sirkris/WTFPL/blob/master/WTFPL.md">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
+			<p>My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.</p>
+                        <p>I'm constantly throwing new code together and then cleaning and overhauling it down the line. I work strictly alone, however, so while I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is <a href="https://github.com/sirkris/WTFPL/blob/master/WTFPL.md">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
 		</div>
 	</body>
 </html>
