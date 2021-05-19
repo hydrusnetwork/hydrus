@@ -1,0 +1,189 @@
+From 063f2ae0e67111467fc21a2498e426e42f8fae4b Mon Sep 17 00:00:00 2001
+From: suika <2320837+Suika@users.noreply.github.com>
+Date: Thu, 24 Sep 2020 15:49:53 +0200
+Subject: [PATCH 1/4] Bypass proxy if no_proxy or no are set, merge proxy and
+ self.proxy
+
+Check if the proxy should be bypassed in case no_proxy or no match the host of the url.
+Also, since proxy can be defined in the session and the reuquest itself, both of them were never merged. Now they self.proxies will be updated by proxies.
+---
+ requests/sessions.py | 22 +++++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/requests/sessions.py b/requests/sessions.py
+index fdf7e9fe35..bdaf515a65 100644
+--- a/requests/sessions.py
++++ b/requests/sessions.py
+@@ -529,6 +529,14 @@ def request(self, method, url,
+ 
+         proxies = proxies or {}
+ 
++        # Update self.proxy with proxy and assing the result to proxies
++        if isinstance(proxies,dict):
++            slef_proxies_tmp = self.proxies.copy()
++            slef_proxies_tmp.update(proxies)
++            proxies = slef_proxies_tmp.copy()
++        else:
++            proxies = self.proxies.copy()
++
+         settings = self.merge_environment_settings(
+             prep.url, proxies, stream, verify, cert
+         )
+@@ -705,6 +713,7 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+         :rtype: dict
+         """
+         # Gather clues from the surrounding environment.
++        bypass_proxy = False
+         if self.trust_env:
+             # Set environment's proxies.
+             no_proxy = proxies.get('no_proxy') if proxies is not None else None
+@@ -712,6 +721,14 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+             for (k, v) in env_proxies.items():
+                 proxies.setdefault(k, v)
+ 
++            # Check for no_proxy and no since they could be loaded from environment
++            no_proxy = proxies.get('no_proxy') if proxies is not None else None
++            no = proxies.get('no') if proxies is not None else None
++            if any([no_proxy,no]):
++                no_proxy = ','.join(filter(None, (no_proxy, no)))
++            if should_bypass_proxies(url, no_proxy):
++              bypass_proxy = True
++
+             # Look for requests environment configuration and be compatible
+             # with cURL.
+             if verify is True or verify is None:
+@@ -719,7 +736,10 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+                           os.environ.get('CURL_CA_BUNDLE'))
+ 
+         # Merge all the kwargs.
+-        proxies = merge_setting(proxies, self.proxies)
++        if bypass_proxy:
++            proxies = {}
++        else:
++            proxies = merge_setting(proxies, self.proxies)
+         stream = merge_setting(stream, self.stream)
+         verify = merge_setting(verify, self.verify)
+         cert = merge_setting(cert, self.cert)
+
+From a3afa6b55d7596ab6a06207a32a5c96436a66e8c Mon Sep 17 00:00:00 2001
+From: suika <2320837+Suika@users.noreply.github.com>
+Date: Thu, 24 Sep 2020 16:00:30 +0200
+Subject: [PATCH 2/4] Rename bypass_proxy to bypass_proxies
+
+Make it match the variable being returned
+---
+ requests/sessions.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/requests/sessions.py b/requests/sessions.py
+index bdaf515a65..2db637dd6e 100644
+--- a/requests/sessions.py
++++ b/requests/sessions.py
+@@ -713,7 +713,7 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+         :rtype: dict
+         """
+         # Gather clues from the surrounding environment.
+-        bypass_proxy = False
++        bypass_proxies = False
+         if self.trust_env:
+             # Set environment's proxies.
+             no_proxy = proxies.get('no_proxy') if proxies is not None else None
+@@ -727,7 +727,7 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+             if any([no_proxy,no]):
+                 no_proxy = ','.join(filter(None, (no_proxy, no)))
+             if should_bypass_proxies(url, no_proxy):
+-              bypass_proxy = True
++              bypass_proxies = True
+ 
+             # Look for requests environment configuration and be compatible
+             # with cURL.
+@@ -736,7 +736,7 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+                           os.environ.get('CURL_CA_BUNDLE'))
+ 
+         # Merge all the kwargs.
+-        if bypass_proxy:
++        if bypass_proxies:
+             proxies = {}
+         else:
+             proxies = merge_setting(proxies, self.proxies)
+
+From 78682f9e21933bc6defca8f236b6c0bde5ac045f Mon Sep 17 00:00:00 2001
+From: suika <2320837+Suika@users.noreply.github.com>
+Date: Thu, 24 Sep 2020 16:12:39 +0200
+Subject: [PATCH 3/4] Move no_proxy check outside trust_env
+
+It makes more sense to have the check be outside the trust_env. Since it has to be always executed. Because proxy configuration can be performed on the Sessions class.
+---
+ requests/sessions.py | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/requests/sessions.py b/requests/sessions.py
+index 2db637dd6e..178ca7e9a7 100644
+--- a/requests/sessions.py
++++ b/requests/sessions.py
+@@ -721,20 +721,20 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+             for (k, v) in env_proxies.items():
+                 proxies.setdefault(k, v)
+ 
+-            # Check for no_proxy and no since they could be loaded from environment
+-            no_proxy = proxies.get('no_proxy') if proxies is not None else None
+-            no = proxies.get('no') if proxies is not None else None
+-            if any([no_proxy,no]):
+-                no_proxy = ','.join(filter(None, (no_proxy, no)))
+-            if should_bypass_proxies(url, no_proxy):
+-              bypass_proxies = True
+-
+             # Look for requests environment configuration and be compatible
+             # with cURL.
+             if verify is True or verify is None:
+                 verify = (os.environ.get('REQUESTS_CA_BUNDLE') or
+                           os.environ.get('CURL_CA_BUNDLE'))
+ 
++        # Check for no_proxy and no since they could be loaded from environment
++        no_proxy = proxies.get('no_proxy') if proxies is not None else None
++        no = proxies.get('no') if proxies is not None else None
++        if any([no_proxy, no]):
++            no_proxy = ','.join(filter(None, (no_proxy, no)))
++        if should_bypass_proxies(url, no_proxy):
++            bypass_proxy = True
++
+         # Merge all the kwargs.
+         if bypass_proxies:
+             proxies = {}
+
+From 0f6bd04349dc1bb2c0808f4de8583eace7c5aaa3 Mon Sep 17 00:00:00 2001
+From: suika <2320837+Suika@users.noreply.github.com>
+Date: Thu, 24 Sep 2020 16:34:20 +0200
+Subject: [PATCH 4/4] Remove bypass_proxies var and only use
+ should_bypass_proxies
+
+That logic was left from previous tires fixing no_proxy and since it's quite compact now, it can be removed and should_bypass_proxies should be used instead of setting a var.
+---
+ requests/sessions.py | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/requests/sessions.py b/requests/sessions.py
+index 178ca7e9a7..4ac01315cb 100644
+--- a/requests/sessions.py
++++ b/requests/sessions.py
+@@ -713,7 +713,6 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+         :rtype: dict
+         """
+         # Gather clues from the surrounding environment.
+-        bypass_proxies = False
+         if self.trust_env:
+             # Set environment's proxies.
+             no_proxy = proxies.get('no_proxy') if proxies is not None else None
+@@ -732,11 +731,9 @@ def merge_environment_settings(self, url, proxies, stream, verify, cert):
+         no = proxies.get('no') if proxies is not None else None
+         if any([no_proxy, no]):
+             no_proxy = ','.join(filter(None, (no_proxy, no)))
+-        if should_bypass_proxies(url, no_proxy):
+-            bypass_proxy = True
+ 
+         # Merge all the kwargs.
+-        if bypass_proxies:
++        if should_bypass_proxies(url, no_proxy):
+             proxies = {}
+         else:
+             proxies = merge_setting(proxies, self.proxies)
