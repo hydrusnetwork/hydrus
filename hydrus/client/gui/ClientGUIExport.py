@@ -867,7 +867,16 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
-                deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do }
+                delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+                
+                if delete_lock_for_archived_files:
+                    
+                    deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do if not media.HasArchive() }
+                    
+                else:
+                    
+                    deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do }
+                    
                 
                 chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
                 

@@ -229,7 +229,7 @@ def ParseClientAPISearchPredicates( request ):
             predicate_type = ClientSearch.PREDICATE_TYPE_TAG
             
         
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive ) )
+        predicates.append( ClientSearch.Predicate( predicate_type = predicate_type, value = tag, inclusive = inclusive ) )
         
     
     if system_inbox:

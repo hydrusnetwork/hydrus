@@ -517,7 +517,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             service_keys_to_deletee_hashes = collections.defaultdict( list )
             
+            delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+            
             for media_result in media_results:
+                
+                if delete_lock_for_archived_files and not media_result.GetInbox():
+                    
+                    continue
+                    
                 
                 hash = media_result.GetHash()
                 

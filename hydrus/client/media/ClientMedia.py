@@ -1737,7 +1737,7 @@ file_filter_str_lookup[ FILE_FILTER_INBOX ] = 'inbox'
 file_filter_str_lookup[ FILE_FILTER_ARCHIVE ] = 'archive'
 file_filter_str_lookup[ FILE_FILTER_FILE_SERVICE ] = 'file service'
 file_filter_str_lookup[ FILE_FILTER_LOCAL ] = 'local'
-file_filter_str_lookup[ FILE_FILTER_REMOTE ] = 'remote'
+file_filter_str_lookup[ FILE_FILTER_REMOTE ] = 'not local'
 file_filter_str_lookup[ FILE_FILTER_TAGS ] = 'tags'
 file_filter_str_lookup[ FILE_FILTER_MIME ] = 'filetype'
 
@@ -3010,7 +3010,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     tags_manager = x.GetTagsManager()
                     
-                    return len( tags_manager.GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
+                    return len( tags_manager.GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MIME:
@@ -3051,7 +3051,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) for namespace in namespaces ]
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), ClientTags.TAG_DISPLAY_ACTUAL ) for namespace in namespaces ]
                 
             
         elif sort_metadata == 'rating':

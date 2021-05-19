@@ -528,7 +528,14 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        
         for media in deletee_media:
+            
+            if delete_lock_for_archived_files and not media.HasInbox():
+                
+                continue
+                
             
             if media.GetLocationsManager().IsTrashed():
                 

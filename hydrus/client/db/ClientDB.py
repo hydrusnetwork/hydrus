@@ -7528,6 +7528,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                     
+                    ( original_mr, ) = self._GetMediaResults( ( hash_id, ) )
+                    
                     ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = additional_data
                     
                     files_rows = [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ]
@@ -7548,6 +7550,14 @@ class DB( HydrusDB.HydrusDB ):
                         if result is None:
                             
                             self._FileMaintenanceAddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP )
+                            
+                        
+                    
+                    if mime in HC.MIMES_WITH_THUMBNAILS:
+                        
+                        if original_mr.GetResolution() != ( width, height ):
+                            
+                            self._FileMaintenanceAddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
                             
                         
                     
@@ -7791,6 +7801,23 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return culled_mappings_ids
+        
+    
+    def _FilterForFileDeleteLock( self, service_id, hash_ids ):
+        
+        # eventually extend this to the metadata conditional object
+        
+        if HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
+            
+            service = self.modules_services.GetService( service_id )
+            
+            if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
+                
+                hash_ids = set( hash_ids ).intersection( self.modules_files_metadata_basic.inbox_hash_ids )
+                
+            
+        
+        return hash_ids
         
     
     def _FilterHashesByService( self, file_service_key: bytes, hashes: typing.Sequence[ bytes ] ) -> typing.List[ bytes ]:
@@ -12788,6 +12815,8 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?' + age_phrase + limit_phrase + ';', ( self.modules_services.trash_service_id, ) ) )
         
+        hash_ids = self._FilterForFileDeleteLock( self.modules_services.trash_service_id, hash_ids )
+        
         if HG.db_report_mode:
             
             message = 'When asked for '
@@ -14000,6 +14029,17 @@ class DB( HydrusDB.HydrusDB ):
                                 self._InboxFiles( hash_ids )
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
+                                
+                                actual_delete_hash_ids = self._FilterForFileDeleteLock( service_id, hash_ids )
+                                
+                                if len( actual_delete_hash_ids ) < len( hash_ids ):
+                                    
+                                    hash_ids = actual_delete_hash_ids
+                                    
+                                    hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
+                                    
+                                    content_update.SetRow( hashes )
+                                    
                                 
                                 if service_id == self.modules_services.local_file_service_id:
                                     

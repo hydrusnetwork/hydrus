@@ -346,9 +346,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._media = ClientMedia.FlattenMedia( media )
+        self._media = self._FilterForDeleteLock( ClientMedia.FlattenMedia( media ), suggested_file_service_key )
         
-        self._question_is_already_resolved = False
+        self._question_is_already_resolved = len( self._media ) == 0
         
         self._simple_description = ClientGUICommon.BetterStaticText( self, label = 'init' )
         
@@ -430,6 +430,28 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
+    def _FilterForDeleteLock( self, media, suggested_file_service_key ):
+        
+        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        
+        if delete_lock_for_archived_files:
+            
+            if suggested_file_service_key is None:
+                
+                suggested_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+                
+            
+            service = HG.client_controller.services_manager.GetService( suggested_file_service_key )
+            
+            if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
+                
+                media = [ m for m in media if m.HasInbox() ]
+                
+            
+        
+        return media
+        
+    
     def _GetReason( self ):
         
         reason = self._reason_radio.GetValue()
@@ -451,29 +473,42 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             suggested_file_service_key = CC.LOCAL_FILE_SERVICE_KEY
             
         
-        if suggested_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        if suggested_file_service_key not in ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ):
             
-            possible_file_service_keys.append( CC.LOCAL_FILE_SERVICE_KEY )
-            possible_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-        else:
-            
-            possible_file_service_keys.append( suggested_file_service_key )
+            possible_file_service_keys.append( ( suggested_file_service_key, suggested_file_service_key ) )
             
         
-        keys_to_hashes = { possible_file_service_key : [ m.GetHash() for m in self._media if possible_file_service_key in m.GetLocationsManager().GetCurrent() ] for possible_file_service_key in possible_file_service_keys }
+        possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        possible_file_service_keys.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
         
-        for possible_file_service_key in possible_file_service_keys:
+        keys_to_hashes = { ( selection_file_service_key, deletee_file_service_key ) : [ m.GetHash() for m in self._media if selection_file_service_key in m.GetLocationsManager().GetCurrent() ] for ( selection_file_service_key, deletee_file_service_key ) in possible_file_service_keys }
+        
+        trashed_key = ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        combined_key = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        
+        if trashed_key in keys_to_hashes and combined_key in keys_to_hashes and keys_to_hashes[ trashed_key ] == keys_to_hashes[ combined_key ]:
             
-            hashes = keys_to_hashes[ possible_file_service_key ]
+            del keys_to_hashes[ trashed_key ]
+            
+        
+        for fsk in possible_file_service_keys:
+            
+            if fsk not in keys_to_hashes:
+                
+                continue
+                
+            
+            hashes = keys_to_hashes[ fsk ]
             
             num_to_delete = len( hashes )
             
-            if len( hashes ) > 0:
+            if num_to_delete > 0:
+                
+                ( selection_file_service_key, deletee_file_service_key ) = fsk
                 
                 # update this stuff to say 'send to trash?' vs 'remove from blah? (it is still in bleh)'. for multiple local file services
                 
-                if possible_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                if deletee_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
                     
                     if not HC.options[ 'confirm_trash' ]:
                         
@@ -484,14 +519,22 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     if num_to_delete == 1: text = 'Send this file to the trash?'
                     else: text = 'Send these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files to the trash?'
                     
-                elif possible_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                elif deletee_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                     
                     # do a physical delete now, skipping or force-removing from trash
                     
-                    possible_file_service_key = 'physical_delete'
+                    deletee_file_service_key = 'physical_delete'
                     
-                    if num_to_delete == 1: text = 'Permanently delete this file?'
-                    else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
+                    if selection_file_service_key == CC.TRASH_SERVICE_KEY:
+                        
+                        if num_to_delete == 1: text = 'Permanently delete this trashed file?'
+                        else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' trashed files?'
+                        
+                    else:
+                        
+                        if num_to_delete == 1: text = 'Permanently delete this file?'
+                        else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
+                        
                     
                 else:
                     
@@ -499,7 +542,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     else: text = 'Admin-delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
                     
                 
-                self._permitted_action_choices.append( ( text, ( possible_file_service_key, hashes, text ) ) )
+                self._permitted_action_choices.append( ( text, ( deletee_file_service_key, hashes, text ) ) )
                 
             
         
@@ -509,7 +552,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             num_to_delete = len( hashes )
             
-            if len( hashes ) > 0:
+            if num_to_delete > 0:
                 
                 if num_to_delete == 1:
                     

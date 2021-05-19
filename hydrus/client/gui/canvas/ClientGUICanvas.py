@@ -1897,11 +1897,14 @@ class CanvasPanel( Canvas ):
             # brush this up to handle different service keys
             # undelete do an optional service key too
             
-            if not locations_manager.GetCurrent().isdisjoint( local_file_service_keys ):
+            local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = lambda fsk: HG.client_controller.services_manager.GetName( fsk ) )
+            
+            for file_service_key in local_file_service_keys_we_are_in:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete', 'Delete this file.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                 
-            elif not locations_manager.GetDeleted().isdisjoint( local_file_service_keys ):
+            
+            if locations_manager.IsTrashed():
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
@@ -3719,7 +3722,20 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def TryToDoPreClose( self ):
         
-        if len( self._kept ) > 0 or len( self._deleted ) > 0:
+        kept_hashes = [ media.GetHash() for media in self._kept ]
+        
+        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        
+        if delete_lock_for_archived_files:
+            
+            deleted_hashes = [ media.GetHash() for media in self._deleted if not media.HasArchive() ]
+            
+        else:
+            
+            deleted_hashes = [ media.GetHash() for media in self._deleted ]
+            
+        
+        if len( kept_hashes ) > 0 or len( deleted_hashes ) > 0:
             
             label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
             
@@ -3741,21 +3757,18 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
             elif result == QW.QDialog.Accepted:
                 
-                self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
-                self._kept_hashes = [ media.GetHash() for media in self._kept ]
-                
                 service_keys_to_content_updates = {}
                 
-                if len( self._deleted_hashes ) > 0:
+                if len( deleted_hashes ) > 0:
                     
                     reason = 'Deleted in Archive/Delete filter.'
                     
-                    service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes, reason = reason ) ]
+                    service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, deleted_hashes, reason = reason ) ]
                     
                 
-                if len( self._kept_hashes ) > 0:
+                if len( kept_hashes ) > 0:
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ]
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, kept_hashes ) ]
                     
                 
                 # do this in one go to ensure if the user hits F5 real quick, they won't see the files again
@@ -3774,8 +3787,8 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                     all_hashes = set()
                     
-                    all_hashes.update( self._deleted_hashes )
-                    all_hashes.update( self._kept_hashes )
+                    all_hashes.update( deleted_hashes )
+                    all_hashes.update( kept_hashes )
                     
                     HG.client_controller.pub( 'remove_media', self._page_key, all_hashes )
                     
@@ -4345,11 +4358,23 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-
-                ClientGUIMenus.AppendMenuItem( menu, 'delete', 'Send this file to the trash.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+            #
+            
+            local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+            
+            # brush this up to handle different service keys
+            # undelete do an optional service key too
+            
+            local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = lambda fsk: HG.client_controller.services_manager.GetName( fsk ) )
+            
+            for file_service_key in local_file_service_keys_we_are_in:
                 
-            elif locations_manager.IsTrashed():
+                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                
+            
+            #
+            
+            if locations_manager.IsTrashed():
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'delete physically now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )

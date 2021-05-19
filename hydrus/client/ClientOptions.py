@@ -235,6 +235,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'show_session_size_warnings' ] = True
         
+        self._dictionary[ 'booleans' ][ 'delete_lock_for_archived_files' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -314,7 +316,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         from hydrus.client.gui.canvas import ClientGUICanvas
         
-        self._dictionary[ 'integers' ][ 'media_viewer_zoom_center' ] = ClientGUICanvas.ZOOM_CENTERPOINT_VIEWER_CENTER
+        self._dictionary[ 'integers' ][ 'media_viewer_zoom_center' ] = ClientGUICanvas.ZOOM_CENTERPOINT_MOUSE
         
         self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
         

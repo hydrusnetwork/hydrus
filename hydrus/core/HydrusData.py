@@ -1763,6 +1763,11 @@ class ContentUpdate( object ):
         return self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX )
         
     
+    def SetRow( self, row ):
+        
+        self._row = row
+        
+    
     def ToTuple( self ):
         
         return ( self._data_type, self._action, self._row )

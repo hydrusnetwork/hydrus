@@ -939,6 +939,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
             self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
             
+            delete_lock_panel = ClientGUICommon.StaticBox( self, 'delete lock' )
+            
+            self._delete_lock_for_archived_files = QW.QCheckBox( delete_lock_panel )
+            
             advanced_file_deletion_panel = ClientGUICommon.StaticBox( self, 'advanced file deletion and custom reasons' )
             
             self._use_advanced_file_deletion_dialog = QW.QCheckBox( advanced_file_deletion_panel )
@@ -970,6 +974,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._remove_trashed_files.setChecked( HC.options[ 'remove_trashed_files' ] )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
+            
+            self._delete_lock_for_archived_files.setChecked( self._new_options.GetBoolean( 'delete_lock_for_archived_files' ) )
             
             self._use_advanced_file_deletion_dialog.setChecked( self._new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ) )
             
@@ -1003,6 +1009,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Do not permit archived files to be trashed or deleted: ', self._delete_lock_for_archived_files ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( delete_lock_panel, rows )
+            
+            delete_lock_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, delete_lock_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
             rows = []
             
             rows.append( ( 'Use the advanced file deletion dialog: ', self._use_advanced_file_deletion_dialog ) )
@@ -1011,6 +1031,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             advanced_file_deletion_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             advanced_file_deletion_panel.Add( self._advanced_file_deletion_reasons, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
             
             QP.AddToLayout( vbox, advanced_file_deletion_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
@@ -1066,6 +1088,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.isChecked()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            self._new_options.SetBoolean( 'delete_lock_for_archived_files', self._delete_lock_for_archived_files.isChecked() )
             
             self._new_options.SetBoolean( 'use_advanced_file_deletion_dialog', self._use_advanced_file_deletion_dialog.isChecked() )
             
@@ -2433,38 +2457,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditNamespaceSort( self, namespaces ):
             
-            # users might want to add a namespace with a hyphen in it, so in lieu of a nice list to edit we'll just escape for now mate
-            correct_char = '-'
-            escaped_char = '\\-'
-            
-            escaped_namespaces = [ namespace.replace( correct_char, escaped_char ) for namespace in namespaces ]
-            
-            edit_string = '-'.join( escaped_namespaces )
-            
-            message = 'Write the namespaces you would like to sort by here, separated by hyphens. Any namespace in any of your sort definitions will be added to the collect-by menu.'
-            message += os.linesep * 2
-            message += 'If the namespace you want to add has a hyphen, like \'creator-id\', instead type it with a backslash escape, like \'creator\\-id-page\'.'
-            
-            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False, default = edit_string ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_string = dlg.GetValue()
-                    
-                    edited_escaped_namespaces = re.split( r'(?<!\\)\-', edited_string )
-                    
-                    edited_namespaces = [ namespace.replace( escaped_char, correct_char ) for namespace in edited_escaped_namespaces ]
-                    
-                    edited_namespaces = [ HydrusTags.CleanTag( namespace ) for namespace in edited_namespaces if HydrusTags.TagOK( namespace ) ]
-                    
-                    if len( edited_namespaces ) > 0:
-                        
-                        return tuple( edited_namespaces )
-                        
-                    
-                
-                raise HydrusExceptions.VetoException()
-                
+            return ClientGUITags.EditNamespaceSort( self, namespaces )
             
         
         def UpdateOptions( self ):

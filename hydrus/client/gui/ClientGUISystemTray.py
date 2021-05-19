@@ -166,6 +166,11 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
     
     def _WasActivated( self, activation_reason ):
         
+        if not QP.isValid( self ):
+            
+            return
+            
+        
         if activation_reason in ( QW.QSystemTrayIcon.Unknown, QW.QSystemTrayIcon.Trigger ):
             
             if self._ui_is_currently_shown:

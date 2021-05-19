@@ -2,6 +2,7 @@ import collections
 import itertools
 import os
 import random
+import re
 import time
 import typing
 
@@ -45,6 +46,41 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
+def EditNamespaceSort( win: QW.QWidget, namespaces: typing.Collection[ str ] ):
+    
+    # users might want to add a namespace with a hyphen in it, so in lieu of a nice list to edit we'll just escape for now mate
+    correct_char = '-'
+    escaped_char = '\\-'
+    
+    escaped_namespaces = [ namespace.replace( correct_char, escaped_char ) for namespace in namespaces ]
+    
+    edit_string = '-'.join( escaped_namespaces )
+    
+    message = 'Write the namespaces you would like to sort by here, separated by hyphens. Any namespace in any of your sort definitions will be added to the collect-by menu.'
+    message += os.linesep * 2
+    message += 'If the namespace you want to add has a hyphen, like \'creator-id\', instead type it with a backslash escape, like \'creator\\-id-page\'.'
+    
+    with ClientGUIDialogs.DialogTextEntry( win, message, allow_blank = False, default = edit_string ) as dlg:
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            edited_string = dlg.GetValue()
+            
+            edited_escaped_namespaces = re.split( r'(?<!\\)\-', edited_string )
+            
+            edited_namespaces = [ namespace.replace( escaped_char, correct_char ) for namespace in edited_escaped_namespaces ]
+            
+            edited_namespaces = [ HydrusTags.CleanTag( namespace ) for namespace in edited_namespaces if HydrusTags.TagOK( namespace ) ]
+            
+            if len( edited_namespaces ) > 0:
+                
+                return tuple( edited_namespaces )
+                
+            
+        
+        raise HydrusExceptions.VetoException()
+        
+    
 class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, tag_autocomplete_options: ClientTagsHandling.TagAutocompleteOptions ):

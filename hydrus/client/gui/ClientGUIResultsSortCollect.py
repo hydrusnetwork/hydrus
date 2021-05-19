@@ -11,6 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -312,6 +313,11 @@ class MediaSortControl( QW.QWidget ):
                     
                 
             
+            if menu is not None:
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'custom', 'Set a custom namespace sort', self._SetCustomNamespaceSort )
+                
+            
         
         rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
@@ -356,6 +362,31 @@ class MediaSortControl( QW.QWidget ):
             
         
         return sort_types
+        
+    
+    def _SetCustomNamespaceSort( self ):
+        
+        if self._sort_type[0] == 'namespaces':
+            
+            initial_namespaces = self._sort_type[1]
+            
+        else:
+            
+            initial_namespaces = [ 'series' ]
+            
+        
+        try:
+            
+            edited_namespaces = ClientGUITags.EditNamespaceSort( self, initial_namespaces )
+            
+            sort_type = ( 'namespaces', edited_namespaces )
+            
+            self._SetSortType( sort_type )
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
         
     
     def _SortTypeButtonClick( self ):

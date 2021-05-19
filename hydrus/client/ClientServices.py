@@ -1802,7 +1802,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         self._do_a_full_metadata_resync = True
                         
-                        raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        raise Exception( 'An unusual error has occured during repository processing: an update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     with open( update_path, 'rb' ) as f:
@@ -1820,7 +1820,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         self._do_a_full_metadata_resync = True
                         
-                        raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        raise Exception( 'An unusual error has occured during repository processing: an update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
@@ -1829,7 +1829,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         self._do_a_full_metadata_resync = True
                         
-                        raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
+                        raise Exception( 'An unusual error has occured during repository processing: an update file ({}) has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     rows_in_this_update = definition_update.GetNumRows()
@@ -1936,7 +1936,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         self._do_a_full_metadata_resync = True
                         
-                        raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        raise Exception( 'An unusual error has occured during repository processing: an update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     with open( update_path, 'rb' ) as f:
@@ -1954,7 +1954,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         self._do_a_full_metadata_resync = True
                         
-                        raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        raise Exception( 'An unusual error has occured during repository processing: an update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
@@ -1963,7 +1963,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         self._do_a_full_metadata_resync = True
                         
-                        raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
+                        raise Exception( 'An unusual error has occured during repository processing: an update file ({}) has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     rows_in_this_update = content_update.GetNumRows()
@@ -2052,7 +2052,7 @@ class ServiceRepository( ServiceRestricted ):
             
             with self._lock:
                 
-                message = 'Failed to process updates for the ' + self._name + ' repository! The error follows:'
+                message = 'Failed to process updates for the {} repository! The error follows:'.format( self._name )
                 
                 HydrusData.ShowText( message )
                 

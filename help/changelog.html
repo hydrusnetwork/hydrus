@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_440"><a href="#version_440">version 440</a></h3></li>
+				<ul>
+					<li>tiled renderer:</li>
+					<li>the tiled renderer now has an additional error catching layer for tile rendering and coordinate calculation and _should_ be immune to to the crashes we have seen from unhandled errors inside Qt paint events</li>
+					<li>when a tile fails to render, a full black square will be used instead. additional error information is quickly printed to the log</li>
+					<li>fixed a tile coordinate bug related to viewer initialisation and shutdown. when the coordinate space is currently bugnuts, now nothing is drawn</li>
+					<li>if the image renderer encounters a file that appears to have a different resolution to that stored in the db, it now gives you a popup and automatically schedules a metadata regen job for that file. this should catch legacy files with EXIF rotation that were imported before hydrus understood that info</li>
+					<li>when a file completes a metadata regen, if the resolution changed it now schedules a force-regen of the thumbnail too</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added a prototype 'delete lock' for archived files to _options->files and trash_ (issue #846). this will be expanded in future when the metadata conditional object is made to lock various other file states, and there will be some better UI feedback, a padlock icon or similar, and some improved dialog texts. if you use this, let me know how you get on!</li>
+					<li>you can now set a custom namespace sort in the file sort menu. you have to type it manually, like when setting defaults in the options, but it will save with the page and should load up again nicely in the dialog if you edit it. this is an experiment in prep for better namespace sort edit UI</li>
+					<li>fixed an issue sorting by namespaces when one of those namespaces was hidden in the 'single media' tag context. now all 'display' tags are used for sort comparison groups. if users desire the old behaviour, we'll have to add an option, so let me know</li>
+					<li>the various service-level processing errors when update files are missing or janked out now report the actual hash of the bad update file. I am chasing down one of these errors with a couple of users and cannot quite figure out why the repair code is not auto-fixing things</li>
+					<li>fixed a problem when the system tray gets an activate event at unlucky moments</li>
+					<li>the default media viewer zoom centerpoint is now the mouse</li>
+					<li>fixed a typo in the client api with wildcard/namespace tag search--sorry for the trouble!</li>
+					<li>.</li>
+					<li>some boring multiple local file services cleanup:</li>
+					<li>if you have a mixture of trash and normal thumbnails selected, the right-click menu now has separate choices for 'delete trash' and 'delete selected' 'physically now'</li>
+					<li>if you have a mixture of trash and normal thumbnails selected, the advanced delete dialog now similarly provides separate 'physical delete' options for the trashed vs all</li>
+					<li>media viewer, preview viewer, and thumbnail view delete menu service actions are now populated dynamically. it should say 'delete from my files' instead of just 'delete'</li>
+					<li>in some file selection contexts, the 'remote' filter is renamed to 'not local'</li>
+				</ul>
 				<li><h3 id="version_439"><a href="#version_439">version 439</a></h3></li>
 				<ul>
 					<li>tiled image renderer improvements:</li>

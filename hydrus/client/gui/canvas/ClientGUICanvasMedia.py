@@ -1756,6 +1756,11 @@ class StaticImage( QW.QWidget ):
     
     def _GetTileCoordinateFromPoint( self, pos: QC.QPoint ):
         
+        if self._canvas_tile_size.width() == 0 or self._canvas_tile_size.height() == 0:
+            
+            return ( 0, 0 )
+            
+        
         tile_x = pos.x() // self._canvas_tile_size.width()
         tile_y = pos.y() // self._canvas_tile_size.height()
         
@@ -1764,7 +1769,7 @@ class StaticImage( QW.QWidget ):
     
     def _GetTileCoordinatesInView( self, rect: QC.QRect ):
         
-        if self.width() == 0 or self.height() == 0:
+        if self.width() == 0 or self.height() == 0 or self._canvas_tile_size.width() == 0 or self._canvas_tile_size.height() == 0:
             
             return []
             
@@ -1801,37 +1806,46 @@ class StaticImage( QW.QWidget ):
             return
             
         
-        dirty_tile_coordinates = self._GetTileCoordinatesInView( event.rect() )
-        
-        for dirty_tile_coordinate in dirty_tile_coordinates:
+        try:
             
-            if dirty_tile_coordinate not in self._canvas_tiles:
+            dirty_tile_coordinates = self._GetTileCoordinatesInView( event.rect() )
+            
+            for dirty_tile_coordinate in dirty_tile_coordinates:
                 
-                self._DrawTile( dirty_tile_coordinate )
+                if dirty_tile_coordinate not in self._canvas_tiles:
+                    
+                    self._DrawTile( dirty_tile_coordinate )
+                    
                 
             
-        
-        for dirty_tile_coordinate in dirty_tile_coordinates:
+            for dirty_tile_coordinate in dirty_tile_coordinates:
+                
+                ( tile, pos ) = self._canvas_tiles[ dirty_tile_coordinate ]
+                
+                painter.drawPixmap( pos, tile )
+                
             
-            ( tile, pos ) = self._canvas_tiles[ dirty_tile_coordinate ]
+            all_visible_tile_coordinates = self._GetTileCoordinatesInView( self.visibleRegion().boundingRect() )
             
-            painter.drawPixmap( pos, tile )
+            deletee_tile_coordinates = set( self._canvas_tiles.keys() ).difference( all_visible_tile_coordinates )
             
-        
-        all_visible_tile_coordinates = self._GetTileCoordinatesInView( self.visibleRegion().boundingRect() )
-        
-        deletee_tile_coordinates = set( self._canvas_tiles.keys() ).difference( all_visible_tile_coordinates )
-        
-        for deletee_tile_coordinate in deletee_tile_coordinates:
+            for deletee_tile_coordinate in deletee_tile_coordinates:
+                
+                del self._canvas_tiles[ deletee_tile_coordinate ]
+                
             
-            del self._canvas_tiles[ deletee_tile_coordinate ]
+            if not self._is_rendered:
+                
+                self.readyForNeighbourPrefetch.emit()
+                
+                self._is_rendered = True
+                
             
-        
-        if not self._is_rendered:
+        except Exception as e:
             
-            self.readyForNeighbourPrefetch.emit()
+            HydrusData.PrintException( e, do_wait = False )
             
-            self._is_rendered = True
+            return
             
         
     

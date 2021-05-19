@@ -83,7 +83,7 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
 class ImageRenderer( object ):
     
-    def __init__( self, media ):
+    def __init__( self, media, this_is_for_metadata_alone = False ):
         
         self._numpy_image = None
         
@@ -94,6 +94,8 @@ class ImageRenderer( object ):
         self._resolution = media.GetResolution()
         
         self._path = None
+        
+        self._this_is_for_metadata_alone = this_is_for_metadata_alone
         
         HG.client_controller.CallToThread( self._Initialise )
         
@@ -192,6 +194,28 @@ class ImageRenderer( object ):
         
         self._numpy_image = ClientImageHandling.GenerateNumPyImage( self._path, self._mime )
         
+        if not self._this_is_for_metadata_alone:
+            
+            my_resolution_size = QC.QSize( self._resolution[0], self._resolution[1] )
+            my_numpy_size = QC.QSize( self._numpy_image.shape[1], self._numpy_image.shape[0] )
+            
+            if my_resolution_size != my_numpy_size:
+                
+                HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                
+                m = 'There was a problem rendering the image with hash {}! Hydrus thinks its resolution is {}, but it was actually {}. Maybe hydrus missed rotation data when the file first imported?'.format(
+                    self._hash.hex(),
+                    my_resolution_size,
+                    my_numpy_size
+                )
+                
+                m += os.linesep * 2
+                m += 'You may see some black squares in the image. A metadata regeneration has been scheduled, so with luck the image will fix itself soon.'
+                
+                HydrusData.ShowText( m )
+                
+            
+        
     
     def GetEstimatedMemoryFootprint( self ):
         
@@ -250,13 +274,26 @@ class ImageRenderer( object ):
             target_resolution = clip_rect.size()
             
         
-        numpy_image = self._GetNumPyImage( clip_rect, target_resolution )
-        
-        ( height, width, depth ) = numpy_image.shape
-        
-        data = numpy_image.data
-        
-        return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
+        try:
+            
+            numpy_image = self._GetNumPyImage( clip_rect, target_resolution )
+            
+            ( height, width, depth ) = numpy_image.shape
+            
+            data = numpy_image.data
+            
+            return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e, do_wait = False )
+            
+            pixmap = QG.QPixmap( target_resolution )
+            
+            pixmap.fill( QC.Qt.black )
+            
+            return pixmap
+            
         
     
     def IsReady( self ):
