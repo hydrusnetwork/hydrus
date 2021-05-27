@@ -9,11 +9,11 @@
 			<h3 id="intro"><a href="#intro">running from source</a></h3>
 			<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is not simple to get hydrus running this way, but if none of the built packages work for you (for instance you use a non-Ubuntu-compatible flavour of Linux), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this stuff.</p>
 			<h3 id="linux_flavours"><a href="#linux_flavours">a quick note about Linux flavours</a></h3>
-			<p>I often point people here when they are running non-Ubuntu flavours of Linux and cannot run my build. One Debian user mentioned that he had an error like this:</p>
+			<p>I often point people here when they are running non-Ubuntu flavours of Linux and cannot run the build. One Debian user mentioned that he had an error like this:</p>
 			<p><ul>
 				<li><i>ImportError: /home/user/hydrus/libX11.so.6: undefined symbol: xcb_poll_for_reply64</i></li>
 			</ul></p>
-			<p>But that by simply deleting the <i>libX11.so.6</i> file in the hydrus install directory, he was able to boot. I presume this meant my hydrus build was then relying on his local libX11.so, which happened to have better API compatibility. If you receive a similar error, you might like to try the same sort of thing. Let me know if you discover anything!</p>
+			<p>But that by simply deleting the <i>libX11.so.6</i> file in the hydrus install directory, he was able to boot. I presume this meant the build was then relying on his local libX11.so, which happened to have better API compatibility. If you receive a similar error, you might like to try the same sort of thing. Let me know if you discover anything!</p>
 			<h3 id="windows_build"><a href="#windows_build">building packages on windows</a></h3>
                         <p>Installing some packages on windows with pip may need Visual Studio's C++ Build Tools for your version of python. Although these tools are free, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Instead, install Chocolatey and use this one simple line:</p>
                         <blockquote>choco install -y vcbuildtools visualstudio2017buildtools</blockquote>

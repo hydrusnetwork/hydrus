@@ -261,12 +261,12 @@ class ImageRenderer( object ):
         
     
     def GetQtPixmap( self, clip_rect = None, target_resolution = None ):
+    
+        ( my_width, my_height ) = self._resolution
         
         if clip_rect is None:
             
-            ( width, height ) = self._resolution
-            
-            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( width, height ) )
+            clip_rect = QC.QRect( QC.QPoint( 0, 0 ), QC.QSize( my_width, my_height ) )
             
         
         if target_resolution is None:
@@ -274,26 +274,33 @@ class ImageRenderer( object ):
             target_resolution = clip_rect.size()
             
         
-        try:
+        my_full_rect = QC.QRect( 0, 0, my_width, my_height )
+        
+        if my_full_rect.contains( clip_rect ):
             
-            numpy_image = self._GetNumPyImage( clip_rect, target_resolution )
+            try:
+                
+                numpy_image = self._GetNumPyImage( clip_rect, target_resolution )
+                
+                ( height, width, depth ) = numpy_image.shape
+                
+                data = numpy_image.data
+                
+                return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e, do_wait = False )
+                
             
-            ( height, width, depth ) = numpy_image.shape
-            
-            data = numpy_image.data
-            
-            return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
-            
-        except Exception as e:
-            
-            HydrusData.PrintException( e, do_wait = False )
-            
-            pixmap = QG.QPixmap( target_resolution )
-            
-            pixmap.fill( QC.Qt.black )
-            
-            return pixmap
-            
+        
+        HydrusData.Print( 'Failed to produce a tile! Info is: {}, {}, {}, {}'.format( self._hash.hex(), ( my_width, my_height ), clip_rect, target_resolution ) )
+        
+        pixmap = QG.QPixmap( target_resolution )
+        
+        pixmap.fill( QC.Qt.black )
+        
+        return pixmap
         
     
     def IsReady( self ):

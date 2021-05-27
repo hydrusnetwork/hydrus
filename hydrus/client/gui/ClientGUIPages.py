@@ -201,9 +201,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                         tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
                         
                     
+                    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+                    
                     tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
                     
-                    file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_search_context = tag_search_context )
+                    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context )
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
@@ -2795,9 +2797,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
             
         
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+        
         tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_search_context = tag_search_context, predicates = initial_predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         

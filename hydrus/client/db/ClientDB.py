@@ -8674,8 +8674,8 @@ class DB( HydrusDB.HydrusDB ):
         
         boned_stats = {}
         
-        ( num_total, size_total ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( self.modules_services.local_file_service_id, ) ).fetchone()
-        ( num_inbox, size_inbox ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files NATURAL JOIN file_inbox WHERE service_id = ?;', ( self.modules_services.local_file_service_id, ) ).fetchone()
+        ( num_total, size_total ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( self.modules_services.combined_local_file_service_id, ) ).fetchone()
+        ( num_inbox, size_inbox ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files NATURAL JOIN file_inbox WHERE service_id = ?;', ( self.modules_services.combined_local_file_service_id, ) ).fetchone()
         
         if size_total is None:
             
@@ -8716,7 +8716,7 @@ class DB( HydrusDB.HydrusDB ):
         total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._c.execute( 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;' ) if count > 1 ) )
         total_duplicate_files = sum( ( count for ( media_id, count ) in self._c.execute( 'SELECT media_id, COUNT( * ) FROM duplicate_file_members GROUP BY media_id;' ) if count > 1 ) )
         
-        ( table_join, predicates_string ) = self._DuplicatesGetPotentialDuplicatePairsTableJoinInfoOnFileService( CC.LOCAL_FILE_SERVICE_KEY )
+        ( table_join, predicates_string ) = self._DuplicatesGetPotentialDuplicatePairsTableJoinInfoOnFileService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         
         ( total_potential_pairs, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} WHERE {} );'.format( table_join, predicates_string ) ).fetchone()
         
@@ -9233,6 +9233,7 @@ class DB( HydrusDB.HydrusDB ):
         system_predicates = file_search_context.GetSystemPredicates()
         
         file_service_key = file_search_context.GetFileServiceKey()
+        location_search_context = file_search_context.GetLocationSearchContext()
         tag_search_context = file_search_context.GetTagSearchContext()
         
         tag_service_key = tag_search_context.service_key
@@ -9240,16 +9241,48 @@ class DB( HydrusDB.HydrusDB ):
         include_current_tags = tag_search_context.include_current_tags
         include_pending_tags = tag_search_context.include_pending_tags
         
-        try:
-            
-            file_service_id = self.modules_services.GetServiceId( file_service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            HydrusData.ShowText( 'A file search query was run for a file service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
+        if not location_search_context.SearchesAnything():
             
             return set()
             
+        
+        current_file_service_ids = set()
+        
+        for current_service_key in location_search_context.current_service_keys:
+            
+            try:
+                
+                current_file_service_id = self.modules_services.GetServiceId( current_service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                HydrusData.ShowText( 'A file search query was run for a file service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
+                
+                return set()
+                
+            
+            current_file_service_ids.add( current_file_service_id )
+            
+        
+        deleted_file_service_ids = set()
+        
+        for deleted_service_key in location_search_context.deleted_service_keys:
+            
+            try:
+                
+                deleted_file_service_id = self.modules_services.GetServiceId( deleted_service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                HydrusData.ShowText( 'A file search query was run for a file service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
+                
+                return set()
+                
+            
+            deleted_file_service_ids.add( deleted_file_service_id )
+            
+        
+        file_service_id = self.modules_services.GetServiceId( file_service_key )
         
         try:
             
@@ -9281,7 +9314,7 @@ class DB( HydrusDB.HydrusDB ):
         
         or_predicates = file_search_context.GetORPredicates()
         
-        need_file_domain_cross_reference = file_service_key != CC.COMBINED_FILE_SERVICE_KEY
+        need_file_domain_cross_reference = not location_search_context.IsAllKnownFiles()
         there_are_tags_to_search = len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0
         
         # ok, let's set up the big list of simple search preds
@@ -9549,7 +9582,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
+        if need_file_domain_cross_reference:
             
             import_timestamp_predicates = []
             
@@ -9835,7 +9868,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if we_need_some_results or we_need_to_cross_reference:
             
-            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            if location_search_context.IsAllKnownFiles():
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, self._GetHashIdsThatHaveTags( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, job_key = job_key ) )
                 
@@ -9918,7 +9951,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # hide update files
         
-        if file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+        if location_search_context.IsAllLocalFiles():
             
             repo_update_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( self.modules_services.local_update_service_id, ) ) )
             
@@ -11849,11 +11882,11 @@ class DB( HydrusDB.HydrusDB ):
         
         repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
         
-        result = self._c.execute( 'SELECT 1 FROM {} NATURAL JOIN files_info WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, True ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, True ) ).fetchone()
         
         this_is_first_definitions_work = result is None
         
-        result = self._c.execute( 'SELECT 1 FROM {} NATURAL JOIN files_info WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_CONTENT, True ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_CONTENT, True ) ).fetchone()
         
         this_is_first_content_work = result is None
         
@@ -14041,7 +14074,7 @@ class DB( HydrusDB.HydrusDB ):
                                     content_update.SetRow( hashes )
                                     
                                 
-                                if service_id == self.modules_services.local_file_service_id:
+                                if service_type == HC.LOCAL_FILE_DOMAIN:
                                     
                                     reason = content_update.GetReason()
                                     
@@ -16684,7 +16717,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + repository_updates_table_name + ' ( update_index, hash_id, processed ) VALUES ( ?, ?, ? );', inserts )
+        self._c.executemany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_table_name ), inserts )
         
     
     def _SetServiceFilename( self, service_id, hash_id, filename ):
@@ -16975,848 +17008,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
-        
-        if version == 369:
-            
-            try:
-                
-                # async processing came in 364. it truncated some data in certain large-list, slower-processing situations, so we want to reset some processing
-                # let's say 8 weeks to cover most of the problem for most people
-                
-                eight_weeks_previous = HydrusData.GetNow() - ( 8 * 7 * 86400 )
-                
-                service_ids = self.modules_services.GetServiceIds( ( HC.TAG_REPOSITORY, ) )
-                
-                for service_id in service_ids:
-                    
-                    service = self.modules_services.GetService( service_id )
-                    
-                    metadata = service.GetMetadata()
-                    
-                    repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
-                    
-                    update_indices_to_reset = set()
-                    
-                    for ( update_index, begin, end ) in metadata.GetUpdateIndicesAndTimes():
-                        
-                        if begin > eight_weeks_previous:
-                            
-                            update_indices_to_reset.add( update_index )
-                            
-                        
-                    
-                    content_hash_ids_to_reset = set()
-                    
-                    for update_index in update_indices_to_reset:
-                        
-                        content_hash_ids = self._STS( self._c.execute( 'SELECT hash_id from {} NATURAL JOIN files_info WHERE update_index = ? AND mime = ?;'.format( repository_updates_table_name ), ( update_index, HC.APPLICATION_HYDRUS_UPDATE_CONTENT ) ) )
-                        
-                        content_hash_ids_to_reset.update( content_hash_ids )
-                        
-                    
-                    self._c.executemany( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( False, hash_id ) for hash_id in content_hash_ids_to_reset ) )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to rewind some processing failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            result = self._c.execute( 'SELECT 1 FROM main.sqlite_master WHERE name = ?;', ( 'tag_censorship', ) ).fetchone()
-            
-            try:
-                
-                if result is not None:
-                    
-                    tag_display_manager = ClientTagsHandling.TagDisplayManager()
-                    
-                    old_tag_censorship = self._c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall()
-                    
-                    for ( service_id, blacklist, tags ) in old_tag_censorship:
-                        
-                        try:
-                            
-                            service = self.modules_services.GetService( service_id )
-                            
-                        except HydrusExceptions.DataMissing:
-                            
-                            continue
-                            
-                        
-                        service_key = service.GetServiceKey()
-                        
-                        tag_filter = HydrusTags.TagFilter()
-                        
-                        if blacklist:
-                            
-                            rule_type = HC.FILTER_BLACKLIST
-                            
-                        else:
-                            
-                            rule_type = HC.FILTER_WHITELIST
-                            
-                        
-                        for tag in tags:
-                            
-                            tag_filter.SetRule( tag, rule_type )
-                            
-                        
-                        tag_display_manager.SetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key, tag_filter )
-                        
-                    
-                    self.modules_serialisable.SetJSONDump( tag_display_manager )
-                    
-                    self._c.execute( 'DROP TABLE tag_censorship;' )
-                    
-                
-            except:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update tag censorship system to tag display system failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv file page new format (without language)', 'pixiv file page new format (with language)' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 370:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                names_to_tag_filters = {}
-                
-                tag_filter = HydrusTags.TagFilter()
-                
-                tag_filter.SetRule( 'diaper', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'gore', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'guro', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'scat', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'vore', HC.FILTER_BLACKLIST )
-                
-                names_to_tag_filters[ 'example blacklist' ] = tag_filter
-                
-                tag_filter = HydrusTags.TagFilter()
-                
-                tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'creator:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'studio:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'character:', HC.FILTER_WHITELIST )
-                
-                names_to_tag_filters[ 'basic namespaces only' ] = tag_filter
-                
-                tag_filter = HydrusTags.TagFilter()
-                
-                tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'creator:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'studio:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( 'character:', HC.FILTER_WHITELIST )
-                tag_filter.SetRule( '', HC.FILTER_WHITELIST )
-                
-                names_to_tag_filters[ 'basic booru tags only' ] = tag_filter
-                
-                tag_filter = HydrusTags.TagFilter()
-                
-                tag_filter.SetRule( 'title:', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'filename:', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'source:', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'booru:', HC.FILTER_BLACKLIST )
-                tag_filter.SetRule( 'url:', HC.FILTER_BLACKLIST )
-                
-                names_to_tag_filters[ 'exclude long/spammy namespaces' ] = tag_filter
-                
-                new_options.SetFavouriteTagFilters( names_to_tag_filters )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to save new default favourite tag filters failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 374:
-            
-            try:
-                
-                login_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.OverwriteDefaultLoginScripts( [ 'danbooru login' ] )
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( login_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some login scripts failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 375:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( ( 'pixiv tag search', 'twitter username lookup' ) )
-                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv search api', 'twitter tweets api - media only' ) )
-                domain_manager.OverwriteDefaultParsers( ( 'pixiv tag search api parser', 'twitter tweet parser (video from koto.reisen)', 'twitter media tweets api parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 376:
-            
-            result = self._c.execute( 'SELECT 1 FROM external_master.sqlite_master WHERE name = ?;', ( 'url_domains', ) ).fetchone()
-            
-            try:
-                
-                if result is None:
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'compressing url storage--creating' )
-                    
-                    self._c.execute( 'ALTER TABLE urls RENAME TO urls_old;' )
-                    
-                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.url_domains ( domain_id INTEGER PRIMARY KEY, domain TEXT UNIQUE );' )
-                    
-                    self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain_id INTEGER, url TEXT UNIQUE );' )
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'compressing url storage--populating domains' )
-                    
-                    self._c.execute( 'INSERT INTO url_domains ( domain ) SELECT DISTINCT domain FROM urls_old;' )
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'compressing url storage--populating urls' )
-                    
-                    self._c.execute( 'INSERT INTO urls ( url_id, domain_id, url ) SELECT url_id, domain_id, url FROM urls_old NATURAL JOIN url_domains;' )
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'compressing url storage--indexing' )
-                    
-                    self._CreateIndex( 'external_master.urls', [ 'domain_id' ] )
-                    
-                    self._c.execute( 'DROP TABLE urls_old;' )
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'compressing url storage--optimising' )
-                    
-                    self._c.execute( 'ANALYZE external_master.urls;' )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'Could not update URL storage!' )
-                HydrusData.PrintException( e )
-                
-                raise
-                
-            
-        
-        if version == 378:
-            
-            try:
-                
-                login_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                domains_to_login_info = login_manager.GetDomainsToLoginInfo()
-                
-                for ( login_domain, ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) ) in list( domains_to_login_info.items() ):
-                    
-                    ( login_script_key, login_script_name ) = login_script_key_and_name
-                    
-                    if login_domain == 'www.pixiv.net' and login_script_name == 'pixiv login' and active:
-                        
-                        active = False
-                        
-                        domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
-                        
-                        login_manager.SetDomainsToLoginInfo( domains_to_login_info )
-                        
-                        self.modules_serialisable.SetJSONDump( login_manager )
-                        
-                        self.pub_initial_message( 'The default Pixiv login script no longer works. It appeared to be active for you, so it has been deactivated. Please use the Hydrus Companion web browser addon to log in to Pixiv.' )
-                        
-                        break
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to deactivate pixiv login failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search', 'derpibooru tag search - no filter' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'derpibooru gallery page', 'derpibooru file page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'derpibooru.org file page parser', 'derpibooru gallery page parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update derpibooru failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 379:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'pixiv artist page', '8kun thread', '8kun thread json api', 'vch.moe thread', 'vch.moe thread json api' ] )
-                
-                domain_manager.DeleteURLClasses( [ 'pixiv artist gallery page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ '4chan-style thread api parser', '8kun thread api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 380:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                default_view_options = new_options.GetDefaultMediaViewOptions()
-                
-                new_options.SetMediaViewOptions( default_view_options )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update the media view options failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 382:
-            
-            existing_shortcut_names = self.modules_serialisable.GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
-            
-            if 'global' not in existing_shortcut_names:
-                
-                list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
-                
-                for shortcuts in list_of_shortcuts:
-                    
-                    if shortcuts.GetName() == 'global':
-                        
-                        self.modules_serialisable.SetJSONDump( shortcuts )
-                        
-                    
-                
-            
-        
-        if version == 383:
-            
-            existing_shortcut_names = self.modules_serialisable.GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
-            
-            list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
-            
-            for new_name in ( 'media_viewer_media_window', 'preview_media_window' ):
-                
-                if new_name not in existing_shortcut_names:
-                    
-                    for shortcuts in list_of_shortcuts:
-                        
-                        if shortcuts.GetName() == new_name:
-                            
-                            self.modules_serialisable.SetJSONDump( shortcuts )
-                            
-                        
-                    
-                
-            
-            if 'media_viewer_browser' in existing_shortcut_names:
-                
-                try:
-                    
-                    media_viewer_browser_shortcuts = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'media_viewer_browser' )
-                    
-                    from hydrus.client.gui import ClientGUIShortcuts
-                    
-                    right_up = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_RELEASE, [] )
-                    
-                    if media_viewer_browser_shortcuts.GetCommand( right_up ) is None:
-                        
-                        media_viewer_browser_shortcuts.SetCommand( right_up, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SHOW_MENU ) )
-                        
-                        self.modules_serialisable.SetJSONDump( media_viewer_browser_shortcuts )
-                        
-                    
-                except:
-                    
-                    HydrusData.PrintException( e )
-                    
-                    message = 'Trying to update the media_viewer_browser shortcuts failed! Please let hydrus dev know!'
-                    
-                    self.pub_initial_message( message )
-                    
-                
-            
-        
-        if version == 384:
-            
-            close_media_viewer = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_CLOSE_MEDIA_VIEWER )
-            keep_archive_filter = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP )
-            better_dupe_filter = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER )
-            
-            existing_shortcut_names = self.modules_serialisable.GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
-            
-            from hydrus.client.gui import ClientGUIShortcuts
-            
-            updates_to_do = {}
-            
-            shortcuts_and_commands = []
-            
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ), close_media_viewer ) )
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ), close_media_viewer ) )
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ESCAPE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
-            
-            updates_to_do[ 'media_viewer' ] = shortcuts_and_commands
-            
-            shortcuts_and_commands = []
-            
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), close_media_viewer ) )
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_MIDDLE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ), close_media_viewer ) )
-            
-            updates_to_do[ 'media_viewer_browser' ] = shortcuts_and_commands
-            
-            shortcuts_and_commands = []
-            
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), keep_archive_filter ) )
-            
-            updates_to_do[ 'archive_delete_filter' ] = shortcuts_and_commands
-            
-            shortcuts_and_commands = []
-            
-            shortcuts_and_commands.append( ( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_MOUSE, ClientGUIShortcuts.SHORTCUT_MOUSE_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_DOUBLE_CLICK, [] ), better_dupe_filter ) )
-            
-            updates_to_do[ 'duplicate_filter' ] = shortcuts_and_commands
-            
-            for ( shortcut_set_name, shortcuts_and_commands ) in updates_to_do.items():
-                
-                if shortcut_set_name in existing_shortcut_names:
-                    
-                    try:
-                        
-                        shortcut_set = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = shortcut_set_name )
-                        
-                        for ( s, c ) in shortcuts_and_commands:
-                            
-                            if shortcut_set.GetCommand( s ) is None:
-                                
-                                shortcut_set.SetCommand( s, c )
-                                
-                            
-                        
-                        self.modules_serialisable.SetJSONDump( shortcut_set )
-                        
-                    except:
-                        
-                        HydrusData.PrintException( e )
-                        
-                        message = 'Trying to update the "{}" shortcuts failed! Please let hydrus dev know!'.format( shortcut_set_name )
-                        
-                        self.pub_initial_message( message )
-                        
-                    
-                
-            
-            #
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 386:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'tvch.moe thread', 'tvch.moe thread json api', 'derpibooru gallery page', 'derpibooru gallery page api' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search', 'derpibooru tag search - no filter' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ '4chan-style thread api parser', 'derpibooru gallery page api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 387:
-            
-            result = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
-            
-            if result is None:
-                
-                favourite_search_manager = ClientSearch.FavouriteSearchManager()
-                
-                ClientDefaults.SetDefaultFavouriteSearchManagerData( favourite_search_manager )
-                
-                self.modules_serialisable.SetJSONDump( favourite_search_manager )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'e621 file page', 'e621 gallery page' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [ 'e621 tag search' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'e621 file page parser', 'e621 gallery page parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-                #
-                
-                login_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.DeleteLoginScripts( [ 'e-hentai login 2018.11.08', 'e-hentai login 2018.11.12' ] )
-                
-                #
-                
-                if not login_manager.DomainHasALoginScript( 'e-hentai.org' ):
-                    
-                    login_manager.DeleteLoginDomain( 'e-hentai.org' )
-                    
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( login_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 388:
-            
-            try:
-                
-                favourite_search_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
-                
-                folders_to_names = favourite_search_manager.GetFoldersToNames()
-                
-                do_it = True
-                
-                if None in folders_to_names:
-                    
-                    if 'empty page' in folders_to_names[ None ]:
-                        
-                        do_it = False
-                        
-                    
-                
-                if do_it:
-                    
-                    foldername = None
-                    name = 'empty page'
-                    
-                    tag_search_context = ClientSearch.TagSearchContext()
-                    
-                    predicates = []
-                    
-                    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
-                    
-                    synchronised = True
-                    media_sort = None
-                    media_collect = None
-                    
-                    new_rows = [ ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) ]
-                    
-                    #
-                    
-                    rows = list( favourite_search_manager.GetFavouriteSearchRows() )
-                    
-                    rows.extend( new_rows )
-                    
-                    favourite_search_manager.SetFavouriteSearchRows( rows )
-                    
-                    self.modules_serialisable.SetJSONDump( favourite_search_manager )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to add an empty favourite search failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                script_rows = ClientDefaults.GetDefaultScriptRows()
-                
-                for script_row in script_rows:
-                    
-                    dump_type = script_row[0]
-                    dump_name = script_row[1]
-                    
-                    self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
-                    
-                
-                self._c.executemany( 'REPLACE INTO json_dumps_named VALUES ( ?, ?, ?, ?, ? );', script_rows )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to add new file lookup scripts search failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [ 'deviant art file page', 'deviant art file page api', 'e621 file page (old format)' ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [ 'e621 file page parser', 'deviant art file page api parser' ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-                #
-                
-                login_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                #
-                
-                login_manager.DeleteLoginScripts( [ 'nijie.info login script' ] )
-                
-                #
-                
-                if not login_manager.DomainHasALoginScript( 'nijie.info' ):
-                    
-                    login_manager.DeleteLoginDomain( 'nijie.info' )
-                    
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( login_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 389:
             
@@ -19553,6 +18744,58 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultURLClasses( ( 'imgur single media file url', ) )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 440:
+            
+            try:
+                
+                old_options = self._GetOptions()
+                
+                if 'sort_by' in old_options:
+                    
+                    old_sort_by = old_options[ 'sort_by' ]
+                    
+                    new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                    
+                    default_namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', ( namespaces, ClientTags.TAG_DISPLAY_ACTUAL ) ) ) for ( gumpf, namespaces ) in old_sort_by ]
+                    
+                    new_options.SetDefaultNamespaceSorts( default_namespace_sorts )
+                    
+                    self.modules_serialisable.SetJSONDump( new_options )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to migrate the old default namespace sorts failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv artist page (new format)', ) )
                 
                 #
                 

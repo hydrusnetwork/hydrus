@@ -1968,6 +1968,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetGlobalUserAgent( self, user_agent_string ):
+        
+        with self._lock:
+            
+            self._network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ][ 'User-Agent' ] = ( user_agent_string, True, 'Set by Client API' )
+            
+        
+    
     def SetHeaderValidation( self, network_context, key, approved ):
         
         with self._lock:

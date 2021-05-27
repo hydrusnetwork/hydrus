@@ -93,11 +93,13 @@ def CreateManagementController( page_name, management_type, file_service_key = N
     
 def CreateManagementControllerDuplicateFilter():
     
-    file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+    default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
     
-    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, file_service_key = file_service_key )
+    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
     
-    file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, file_service_key = default_local_file_service_key )
+    
+    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
     
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'both_files_match', False )
@@ -428,7 +430,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                     del serialisable_keys[ 'duplicate_filter_file_domain' ]
                     
                 
-                file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
                 
                 serialisable_serialisables[ 'file_search_context' ] = file_search_context.GetSerialisableTuple()
                 

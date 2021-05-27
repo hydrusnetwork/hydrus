@@ -60,4 +60,5 @@ restart = False
 twisted_is_broke = False
 
 dirty_object_lock = threading.Lock()
+client_busy = threading.Lock()
 server_busy = threading.Lock()

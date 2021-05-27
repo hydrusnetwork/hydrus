@@ -70,7 +70,12 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         path = ''
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
         delete_from_client_after_export = False
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+        
+        default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        
         period = 15 * 60
         
         export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )

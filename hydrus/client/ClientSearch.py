@@ -783,9 +783,14 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT
     SERIALISABLE_NAME = 'File Search Context'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+    def __init__( self, location_search_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+        
+        if location_search_context is None:
+            
+            location_search_context = LocationSearchContext()
+            
         
         if tag_search_context is None:
             
@@ -797,7 +802,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             predicates = []
             
         
-        self._file_service_key = file_service_key
+        self._location_search_context = location_search_context
         self._tag_search_context = tag_search_context
         
         self._search_type = search_type
@@ -812,26 +817,17 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
+        serialisable_location_search_context = self._location_search_context.GetSerialisableTuple()
         
-        return ( self._file_service_key.hex(), self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
+        return ( serialisable_location_search_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( file_service_key, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
+        ( serialisable_location_search_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
-        self._file_service_key = bytes.fromhex( file_service_key )
+        self._location_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_search_context )
         self._tag_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_search_context )
-        
-        if HG.client_controller.IsBooted():
-            
-            services_manager = HG.client_controller.services_manager
-            
-            if not services_manager.ServiceExists( self._file_service_key ):
-                
-                self._file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-                
-            
         
         self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
         
@@ -929,27 +925,56 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( file_service_key_hex, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete ) = old_serialisable_info
+            
+            file_service_key = bytes.fromhex( file_service_key_hex )
+            
+            location_search_context = LocationSearchContext( current_service_keys = [ file_service_key ] )
+            
+            serialisable_location_search_context = location_search_context.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_location_search_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def FixMissingServices( self, services_manager ):
         
-        if not HG.client_controller.services_manager.ServiceExists( self._file_service_key ) or not HG.client_controller.services_manager.ServiceExists( self._tag_search_context.service_key ):
+        self._location_search_context.FixMissingServices( services_manager )
+        self._tag_search_context.FixMissingServices( services_manager )
+        
+    
+    def GetFileServiceKey( self ):
+        
+        if len( self._location_search_context.current_service_keys ) > 0:
             
-            self._file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-            self._tag_search_context.service_key = CC.COMBINED_TAG_SERVICE_KEY
+            return self._location_search_context.current_service_keys[0]
+            
+        else:
+            
+            return CC.COMBINED_FILE_SERVICE_KEY
             
         
     
-    def GetFileServiceKey( self ): return self._file_service_key
+    def GetLocationSearchContext( self ) -> "LocationSearchContext":
+        
+        return self._location_search_context
+        
+    
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
     def GetNamespacesToInclude( self ): return self._namespaces_to_include
     def GetORPredicates( self ): return self._or_predicates
     def GetPredicates( self ): return self._predicates
+    
     def GetSystemPredicates( self ) -> FileSystemPredicates:
         
         return self._system_predicates
         
     
-    def GetTagSearchContext( self ):
+    def GetTagSearchContext( self ) -> "TagSearchContext":
         
         return self._tag_search_context
         
@@ -964,18 +989,24 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         return len( self._predicates ) == 0
         
     
-    def IsComplete( self ): return self._search_complete
+    def IsComplete( self ):
+        
+        return self._search_complete
+        
     
     def IsJustSystemEverything( self ):
         
         return len( self._predicates ) == 1 and self._system_predicates.HasSystemEverything()
         
     
-    def SetComplete( self ): self._search_complete = True
-    
-    def SetFileServiceKey( self, file_service_key ):
+    def SetComplete( self ):
         
-        self._file_service_key = file_service_key
+        self._search_complete = True
+        
+    
+    def SetLocationSearchContext( self, location_search_context: "LocationSearchContext" ):
+        
+        self._location_search_context = location_search_context
         
     
     def SetIncludeCurrentTags( self, value ):
@@ -1002,6 +1033,72 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
+
+class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT
+    SERIALISABLE_NAME = 'Location Search Context'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, current_service_keys = None, deleted_service_keys = None ):
+        
+        if current_service_keys is None:
+            
+            current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
+            
+        
+        if deleted_service_keys is None:
+            
+            deleted_service_keys = []
+            
+        
+        self.current_service_keys = current_service_keys
+        self.deleted_service_keys = deleted_service_keys
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_current_service_keys = [ service_key.hex() for service_key in self.current_service_keys ]
+        serialisable_deleted_service_keys = [ service_key.hex() for service_key in self.deleted_service_keys ]
+        
+        return ( serialisable_current_service_keys, serialisable_deleted_service_keys )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_current_service_keys, serialisable_deleted_service_keys ) = serialisable_info
+        
+        self.current_service_keys = [ bytes.fromhex( service_key ) for service_key in serialisable_current_service_keys ]
+        self.deleted_service_keys = [ bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys ]
+        
+    
+    def FixMissingServices( self, services_manager ):
+        
+        self.current_service_keys = services_manager.FilterValidServiceKeys( self.current_service_keys )
+        self.deleted_service_keys = services_manager.FilterValidServiceKeys( self.deleted_service_keys )
+        
+    
+    def IsAllKnownFiles( self ):
+        
+        return len( self.deleted_service_keys ) == 0 and len( self.current_service_keys ) == 1 and CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
+        
+    
+    def IsAllLocalFiles( self ):
+        
+        return len( self.deleted_service_keys ) == 0 and len( self.current_service_keys ) == 1 and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
+        
+    
+    def IsOneDomain( self ):
+        
+        return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
+        
+    
+    def SearchesAnything( self ):
+        
+        return len( self.current_service_keys ) + len( self.deleted_service_keys ) > 0
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT ] = LocationSearchContext
 
 class TagSearchContext( HydrusSerialisable.SerialisableBase ):
     
@@ -1050,6 +1147,14 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( encoded_service_key, self.include_current_tags, self.include_pending_tags, encoded_display_service_key )
             
             return ( 2, new_serialisable_info )
+            
+        
+    
+    def FixMissingServices( self, services_manager ):
+        
+        if not services_manager.ServiceExists( self.service_key ):
+            
+            self.service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
     

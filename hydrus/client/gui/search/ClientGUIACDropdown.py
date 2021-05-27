@@ -1771,7 +1771,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AutoCompleteDropdownTags._ChangeFileService( self, file_service_key )
         
-        self._file_search_context.SetFileServiceKey( file_service_key )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+        
+        self._file_search_context.SetLocationSearchContext( location_search_context )
         
         self._SignalNewSearchState()
         

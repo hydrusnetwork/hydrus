@@ -1010,7 +1010,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         size_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusData.ConvertUnitToInt( 'B' ) ) )
         
-        self._file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ size_pred ] )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        self._file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ size_pred ] )
         
         self._import_and_find_dupes()
         

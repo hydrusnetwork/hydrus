@@ -46,7 +46,9 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
-def EditNamespaceSort( win: QW.QWidget, namespaces: typing.Collection[ str ] ):
+def EditNamespaceSort( win: QW.QWidget, sort_data ):
+    
+    ( namespaces, tag_display_type ) = sort_data
     
     # users might want to add a namespace with a hyphen in it, so in lieu of a nice list to edit we'll just escape for now mate
     correct_char = '-'
@@ -74,7 +76,33 @@ def EditNamespaceSort( win: QW.QWidget, namespaces: typing.Collection[ str ] ):
             
             if len( edited_namespaces ) > 0:
                 
-                return tuple( edited_namespaces )
+                if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                    
+                    available_types = [
+                        ClientTags.TAG_DISPLAY_ACTUAL,
+                        ClientTags.TAG_DISPLAY_SELECTION_LIST,
+                        ClientTags.TAG_DISPLAY_SINGLE_MEDIA
+                    ]
+                    
+                    choice_tuples = [ ( ClientTags.tag_display_str_lookup[ tag_display_type ], tag_display_type, ClientTags.tag_display_str_lookup[ tag_display_type ] ) for tag_display_type in available_types ]
+                    
+                    message = 'If you filter your different tag views (e.g. hiding the PTR\'s title tags), sorting on those views may give a different order. If you are not sure on this, set \'display tags\'.'
+                    
+                    try:
+                        
+                        tag_display_type = ClientGUIDialogsQuick.SelectFromListButtons( win, 'select tag view to sort on', choice_tuples = choice_tuples, message = message )
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        raise HydrusExceptions.VetoException()
+                        
+                    
+                else:
+                    
+                    tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL
+                    
+                
+                return ( tuple( edited_namespaces ), tag_display_type )
                 
             
         
@@ -3284,7 +3312,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( tags ) % 2 == 1:
                 
-                raise Exception( 'Uneven number of tags found!' )
+                QW.QMessageBox.information( self, 'Information', 'Uneven number of tags in clipboard!' )
+                
+                return
                 
             
             pairs = []
@@ -4280,7 +4310,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( tags ) % 2 == 1:
                 
-                raise Exception( 'Uneven number of tags found!' )
+                QW.QMessageBox.information( self, 'Information', 'Uneven number of tags in clipboard!' )
                 
             
             pairs = []

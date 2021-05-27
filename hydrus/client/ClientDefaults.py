@@ -62,13 +62,6 @@ def GetClientDefaultOptions():
     
     options[ 'namespace_colours' ] = default_namespace_colours
     
-    default_sort_by_choices = []
-    
-    default_sort_by_choices.append( ( 'namespaces', [ 'series', 'creator', 'title', 'volume', 'chapter', 'page' ] ) )
-    default_sort_by_choices.append( ( 'namespaces', [ 'creator', 'series', 'title', 'volume', 'chapter', 'page' ] ) )
-    
-    options[ 'sort_by' ] = default_sort_by_choices
-    
     options[ 'proxy' ] = None
     
     options[ 'confirm_client_exit' ] = False
@@ -603,6 +596,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
     
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; Hydrus Client)'
+
 def SetDefaultDomainManagerData( domain_manager ):
     
     network_contexts_to_custom_header_dicts = {}
@@ -614,7 +609,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     custom_header_dict = {}
     
-    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (compatible; Hydrus Client)', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
+    custom_header_dict[ 'User-Agent' ] = ( DEFAULT_USER_AGENT, ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
     
     network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
     
@@ -666,6 +661,8 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     foldername = 'example search'
     name = 'inbox filter'
     
+    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+    
     tag_search_context = ClientSearch.TagSearchContext()
     
     predicates = []
@@ -680,7 +677,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
     
-    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = predicates )
     
     synchronised = True
     media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
@@ -693,11 +690,13 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     foldername = None
     name = 'empty page'
     
+    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+    
     tag_search_context = ClientSearch.TagSearchContext()
     
     predicates = []
     
-    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = predicates )
     
     synchronised = True
     media_sort = None

@@ -5,6 +5,7 @@ import typing
 import urllib
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusImageHandling
@@ -12,10 +13,12 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core.networking import HydrusNetwork
 
 INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
-BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'update_hash' }
+BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'registration_key', 'hash', 'subject_hash', 'update_hash' }
 STRING_PARAMS = { 'subject_tag', 'reason', 'message' }
 JSON_PARAMS = set()
 JSON_BYTE_LIST_PARAMS = { 'registration_keys' }
+
+HASH_BYTE_PARAMS = { 'hash', 'subject_hash', 'update_hash' }
 
 def DumpHydrusArgsToNetworkBytes( args ):
     
@@ -245,7 +248,14 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes ):
         
         if param_name in args:
             
-            args[ param_name ] = bytes.fromhex( args[ param_name ] )
+            value = args[ param_name ]
+            
+            if param_name in HASH_BYTE_PARAMS and ':' in value:
+                
+                value = value.split( ':', 1 )[1]
+                
+            
+            args[ param_name ] = bytes.fromhex( value )
             
         
     
@@ -327,6 +337,11 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
         elif name in byte_params:
             
             try:
+                
+                if name in HASH_BYTE_PARAMS and ':' in value:
+                    
+                    value = value.split( ':', 1 )[1]
+                    
                 
                 args[ name ] = bytes.fromhex( value )
                 
