@@ -77,7 +77,7 @@ jobs:
       -
         name: Compress Client
         run: |
-            7z.exe a -tzip -mm=Deflate -mx=5 Windows-Extract.zip '.\dist\Hydrus Network\'
+          7z.exe a -tzip -mm=Deflate -mx=5 Windows-Extract.zip '.\dist\Hydrus Network\'
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2

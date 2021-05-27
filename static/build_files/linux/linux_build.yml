@@ -60,7 +60,7 @@ jobs:
         name: Compress Client
         run: |
             mv dist/client "dist/Hydrus Network"
-            tar -czvf Ubuntu-Extract.tar.gz -C dist "dist/Hydrus Network"
+            tar -czvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
