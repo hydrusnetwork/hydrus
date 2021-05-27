@@ -131,12 +131,17 @@ jobs:
         run: |
             find dist/client/ -type f -name "*.pyc" -delete
             while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
+      -
+        name: Compress Client
+        run: |
+            mv dist/client "dist/Hydrus Network"
+            tar -czvf Ubuntu-Extract.tar.gz -C dist "ubuntu/Hydrus Network"
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: Ubuntu-Extract
-          path: dist/client
+          path: Ubuntu-Extract.tar.gz
           if-no-files-found: error
           retention-days: 2
 
@@ -209,6 +214,10 @@ jobs:
         run: |
           move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
           ISCC.exe InnoSetup.iss
+      -
+        name: Compress Client
+        run: |
+            7z.exe a -tzip -mm=Deflate -mx=9 Windows-Extract.zip '.\dist\Hydrus Network\'
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
@@ -222,7 +231,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Windows-Extract
-          path: dist\Hydrus Network
+          path: Windows-Extract.zip
           if-no-files-found: error
           retention-days: 2
 
@@ -247,15 +256,10 @@ jobs:
         name: Rename Files
         run: |
           mkdir ubuntu windows
-          mv MacOS-DMG/HydrusNetwork.dmg         Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.-.App.dmg
-          mv Windows-Install/HydrusInstaller.exe Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Installer.exe
-          mv Windows-Extract                     "windows/Hydrus Network"
-          mv Ubuntu-Extract                      "ubuntu/Hydrus Network"
-      - 
-        name: Compress Directories
-        run: |
-          zip -9 -r Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Extract.only.zip "windows/Hydrus Network"
-          tar -czvf Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.-.Executable.tar.gz  "ubuntu/Hydrus Network"
+          mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.-.App.dmg
+          mv Windows-Install/HydrusInstaller.exe  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Installer.exe
+          mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Extract.only.zip
+          mv Ubuntu-Extract/Ubuntu-Extract.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.-.Executable.tar.gz
       - 
         name: Release new
         uses: softprops/action-gh-release@v1
