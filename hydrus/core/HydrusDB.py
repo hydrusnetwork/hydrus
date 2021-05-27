@@ -323,6 +323,7 @@ class HydrusDB( object ):
         
         self._db = None
         self._c = None
+        self._is_connected = False
         
         self._cursor_transaction_wrapper = None
         
@@ -422,7 +423,7 @@ class HydrusDB( object ):
     
     def _AttachExternalDatabases( self ):
         
-        for ( name, filename ) in list(self._db_filenames.items()):
+        for ( name, filename ) in self._db_filenames.items():
             
             if name == 'main':
                 
@@ -463,6 +464,8 @@ class HydrusDB( object ):
             
             self._db = None
             self._c = None
+            
+            self._is_connected = False
             
             self._cursor_transaction_wrapper = None
             
@@ -614,6 +617,8 @@ class HydrusDB( object ):
             self._db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
             
             self._c = self._db.cursor()
+            
+            self._is_connected = True
             
             self._cursor_transaction_wrapper = DBCursorTransactionWrapper( self._c, HG.db_transaction_commit_period )
             
@@ -892,7 +897,7 @@ class HydrusDB( object ):
         
         total = 0
         
-        for filename in list(self._db_filenames.values()):
+        for filename in self._db_filenames.values():
             
             path = os.path.join( self._db_dir, filename )
             
@@ -931,6 +936,11 @@ class HydrusDB( object ):
     def GetStatus( self ):
         
         return ( self._current_status, self._current_job_name )
+        
+    
+    def IsConnected( self ):
+        
+        return self._is_connected
         
     
     def IsDBUpdated( self ):

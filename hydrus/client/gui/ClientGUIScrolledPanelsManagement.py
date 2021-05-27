@@ -2411,7 +2411,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._fallback_media_sort.SetSort( media_sort )
                 
             
-            self._namespace_sort_by.AddDatas( [ tuple( sort_by ) for ( namespace_gumpf, sort_by ) in HC.options[ 'sort_by' ] ] )
+            self._namespace_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in HG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
             
             self._save_page_sort_on_change.setChecked( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
             
@@ -2445,19 +2445,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AddNamespaceSort( self ):
             
-            default = ( 'creator', 'series', 'page' )
+            default = ( ( 'creator', 'series', 'page' ), ClientTags.TAG_DISPLAY_ACTUAL )
             
             return self._EditNamespaceSort( default )
             
         
-        def _ConvertNamespaceTupleToSortString( self, namespaces ):
+        def _ConvertNamespaceTupleToSortString( self, sort_data ):
+            
+            ( namespaces, tag_display_type ) = sort_data
             
             return '-'.join( namespaces )
             
         
-        def _EditNamespaceSort( self, namespaces ):
+        def _EditNamespaceSort( self, sort_data ):
             
-            return ClientGUITags.EditNamespaceSort( self, namespaces )
+            return ClientGUITags.EditNamespaceSort( self, sort_data )
             
         
         def UpdateOptions( self ):
@@ -2467,9 +2469,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.isChecked() )
             self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
             
-            sort_by_choices = [ ( 'namespaces', list( data ) ) for data in self._namespace_sort_by.GetData() ]
+            namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_sort_by.GetData() ]
             
-            HC.options[ 'sort_by' ] = sort_by_choices
+            self._new_options.SetDefaultNamespaceSorts( namespace_sorts )
             
         
     

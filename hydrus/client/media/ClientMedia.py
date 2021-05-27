@@ -2716,7 +2716,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT
     SERIALISABLE_NAME = 'Media Sort'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, sort_type = None, sort_order = None ):
         
@@ -2728,6 +2728,17 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         if sort_order is None:
             
             sort_order = CC.SORT_ASC
+            
+        
+        ( sort_metatype, sort_data ) = sort_type
+        
+        if sort_metatype == 'namespaces':
+            
+            ( namespaces, tag_display_type ) = sort_data
+            
+            sort_data = ( tuple( namespaces ), tag_display_type )
+            
+            sort_type = ( sort_metatype, sort_data )
             
         
         self.sort_type = sort_type
@@ -2766,7 +2777,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         elif sort_metatype == 'namespaces':
             
-            sort_data = tuple( serialisable_sort_data )
+            ( namespaces, tag_display_type ) = serialisable_sort_data
+            
+            sort_data = ( tuple( namespaces ), tag_display_type )
             
         elif sort_metatype == 'rating':
             
@@ -2774,6 +2787,24 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         
         self.sort_type = ( sort_metatype, sort_data )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( sort_metatype, serialisable_sort_data, sort_order ) = old_serialisable_info
+            
+            if sort_metatype == 'namespaces':
+                
+                namespaces = serialisable_sort_data
+                serialisable_sort_data = ( namespaces, ClientTags.TAG_DISPLAY_ACTUAL )
+                
+            
+            new_serialisable_info = ( sort_metatype, serialisable_sort_data, sort_order )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def CanAsc( self ):
@@ -2789,6 +2820,22 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         
         return True
+        
+    
+    def GetNamespaces( self ):
+        
+        ( sort_metadata, sort_data ) = self.sort_type
+        
+        if sort_metadata == 'namespaces':
+            
+            ( namespaces, tag_display_type ) = sort_data
+            
+            return list( namespaces )
+            
+        else:
+            
+            return []
+            
         
     
     def GetSortKeyAndReverse( self, file_service_key ):
@@ -3045,13 +3092,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         elif sort_metadata == 'namespaces':
             
-            namespaces = sort_data
+            ( namespaces, tag_display_type ) = sort_data
             
             def sort_key( x ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), ClientTags.TAG_DISPLAY_ACTUAL ) for namespace in namespaces ]
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), tag_display_type ) for namespace in namespaces ]
                 
             
         elif sort_metadata == 'rating':
@@ -3124,7 +3171,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         elif sort_metatype == 'namespaces':
             
-            namespaces = sort_data
+            ( namespaces, tag_display_type ) = sort_data
             
             sort_string += 'tags: ' + '-'.join( namespaces )
             

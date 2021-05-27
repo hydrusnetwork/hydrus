@@ -2235,7 +2235,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+        default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
@@ -2528,7 +2532,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_repo_files.setEnabled( False )
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_UPDATE_SERVICE_KEY )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
         
         HG.client_controller.CallToThread( do_it, file_search_context )
         

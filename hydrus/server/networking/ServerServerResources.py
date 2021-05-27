@@ -1,5 +1,6 @@
 import http.cookies
 import threading
+import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -797,7 +798,17 @@ class HydrusResourceRestrictedLockOn( HydrusResourceRestricted ):
         
         HG.server_controller.db.PauseAndDisconnect( True )
         
-        # shut down db, wait until it is done?
+        TIME_BLOCK = 0.25
+        
+        for i in range( int( 5 / TIME_BLOCK ) ):
+            
+            if not HG.server_controller.db.IsConnected():
+                
+                break
+                
+            
+            time.sleep( TIME_BLOCK )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

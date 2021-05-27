@@ -1741,6 +1741,17 @@ class StaticImage( QW.QWidget ):
         
         native_clip_rect = QC.QRect( canvas_topLeft / self._zoom, canvas_size / self._zoom )
         
+        # dealing with rounding errors with zoom calc
+        if native_clip_rect.width() + native_clip_rect.x() > media_width:
+            
+            native_clip_rect.setWidth( media_width - native_clip_rect.x() )
+            
+        
+        if native_clip_rect.height() + native_clip_rect.y() > media_height:
+            
+            native_clip_rect.setHeight( media_height - native_clip_rect.y() )
+            
+        
         if native_clip_rect.width() == 0:
             
             native_clip_rect.setWidth( 1 )
@@ -1755,11 +1766,6 @@ class StaticImage( QW.QWidget ):
         
     
     def _GetTileCoordinateFromPoint( self, pos: QC.QPoint ):
-        
-        if self._canvas_tile_size.width() == 0 or self._canvas_tile_size.height() == 0:
-            
-            return ( 0, 0 )
-            
         
         tile_x = pos.x() // self._canvas_tile_size.width()
         tile_y = pos.y() // self._canvas_tile_size.height()

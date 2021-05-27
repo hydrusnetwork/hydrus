@@ -104,17 +104,20 @@ def THREADUploadPending( service_key ):
         
         service = HG.client_controller.services_manager.GetService( service_key )
         
-        account = service.GetAccount()
-        
-        if account.IsUnknown():
-            
-            HydrusData.ShowText( 'Your account is currently unsynced, so the upload was cancelled. Please refresh the account under _review services_.' )
-            
-            return
-            
-        
         service_name = service.GetName()
         service_type = service.GetServiceType()
+        
+        if service_type in HC.REPOSITORIES:
+            
+            account = service.GetAccount()
+            
+            if account.IsUnknown():
+                
+                HydrusData.ShowText( 'Your account is currently unsynced, so the upload was cancelled. Please refresh the account under _review services_.' )
+                
+                return
+                
+            
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         

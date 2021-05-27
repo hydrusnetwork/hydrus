@@ -218,7 +218,13 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             foldername = None
             name = 'new favourite search'
-            file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+            
+            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            
+            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
+            
+            file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+            
             synchronised = True
             media_sort = None
             media_collect = None

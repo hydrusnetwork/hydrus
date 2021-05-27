@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_441"><a href="#version_441">version 441</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>after successful testing, all the master builds are now made on github rather than my home dev situation. the clients now work off python 3.8, and several security libraries (e.g. OpenSSL) are now always going to be latest, so there should be several quiet performance and reliability improvements across the program. there are no special install instructions--normal update seems to go fine--but let me know if you do have any trouble. big thanks to the user who did the leg work on developing the workflow build scripts here</li>
+					<li>if you are in advanced mode, namespace file sorting now allows you to set the 'tag display context' on which it will sort. this appears as a new menu button or a button list selection dialog wherever you edit namespace file sorts. if you are not in advanced mode, the default is the 'display tags' I switched to last week (i.e. before any tags are hidden by your tag display options)</li>
+					<li>namespace sort has some related code cleanup. the 'defaults' object is updated and moved to the newer options object</li>
+					<li>the new tiled renderer now checks for rounding errors in zoom calc, which in some cases was giving a single extra (non-existing) native pixel row or column on rightmost or bottommost tile samples</li>
+					<li>the new tiled renderer now double-checks clip regions for validity before attempting to crop</li>
+					<li>improved the reported error information when a tile fails to render</li>
+					<li>when pasting an uneven number of tags into manage siblings/parents, the error is now a nicer popup dialog. I'm pursuing a related error here--if you get this a bunch, please let me know what more info you discover</li>
+					<li>when repositories fail to fetch the update hashes to process, they now force a metadata resync. any processing error should force a metadata resync now</li>
+					<li>added a default url class for the new pixiv _artist_ page format</li>
+					<li>fixed a recent typo bug with ipfs pinning</li>
+					<li>.</li>
+					<li>client api additions:</li>
+					<li>the client api has a new /manage_headers/set_user_agent call, which is a simple hack for now for external programs to set the 'Global' User-Agent. it should allow for some CloudFlare solutions when just copying cookies is not enough</li>
+					<li>the client api has a new /get_services call, which talks about more services and also exposes service_keys for the first time, which are likely to be useful in future. check out the help for an example. the old /add_tags/get_tag_services call is now deprecated, please move to the new call</li>
+					<li>the client api /version call now responds with 'hydrus_version' as well, which this week will be 441</li>
+					<li>the client api now has a semi-experimental /manage_database/lock system, just like the server's. a new 'manage database' permission is added for this. don't play around with this system idly.</li>
+					<li>the client api should now support sha256 hash parameters if they start with a type prefix like 'sha256:0123789abcdef...'</li>
+					<li>the client and server's database lock commands now wait up to five seconds for the database to finish disconnecting to respond</li>
+					<li>expanded client api unit tests to cover the above</li>
+					<li>the client api version is now 17</li>
+					<li>.</li>
+					<li>boring multiple local file services work:</li>
+					<li>the main search object now stores the file domain using a new 'location context' object that will in future hold multiple file services and can say whether we should search files currently in a domain, or those once deleted from it. a variety of back-end search code has been updated to deal with this more flexible situation</li>
+					<li>removed more static references to the single 'my files' domain in db and related code. in a couple places, like mr. bones, it now fetches 'all local files', but this will likely be updated in future to a new umbrella 'all non-trash, non-repo-update-files local files' service</li>
+				</ul>
 				<li><h3 id="version_440"><a href="#version_440">version 440</a></h3></li>
 				<ul>
 					<li>tiled renderer:</li>

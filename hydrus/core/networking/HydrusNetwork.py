@@ -2004,7 +2004,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 all_update_hashes = set()
                 
-                for ( update_hashes, begin, end ) in list(self._metadata.values()):
+                for ( update_hashes, begin, end ) in self._metadata.values():
                     
                     all_update_hashes.update( update_hashes )
                     

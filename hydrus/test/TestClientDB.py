@@ -233,7 +233,9 @@ class TestClientDB( unittest.TestCase ):
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = HydrusData.GenerateKey() )
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), tag_search_context = tag_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' ) ] )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ HydrusData.GenerateKey() ] )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' ) ] )
         
         export_folder = ClientExporting.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
         
@@ -254,7 +256,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) ]
                 
-                search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -268,7 +272,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ ClientSearch.Predicate( predicate_type, info ) ]
                 
-                search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -282,7 +288,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive ) ]
                 
-                search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -294,7 +302,9 @@ class TestClientDB( unittest.TestCase ):
             
             for ( predicates, result ) in tests:
                 
-                search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -1002,7 +1012,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [] )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, True )
                 
@@ -1014,7 +1026,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_search_context = tag_search_context, predicates = [] )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = [] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, False )
                 
@@ -1024,7 +1038,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
                 
@@ -1034,7 +1050,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', fsc, True )
                 
@@ -1044,7 +1062,9 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
+                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+                
+                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
                 

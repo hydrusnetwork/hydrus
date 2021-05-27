@@ -31,7 +31,9 @@ class ORPredicateControl( QW.QWidget ):
         
         page_key = HydrusData.GenerateKey()
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
         
         self._search_control = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, hide_favourites_edit_actions = True )
         

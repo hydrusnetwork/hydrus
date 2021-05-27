@@ -54,6 +54,7 @@
 						<li><a href="#request_new_permissions">GET /request_new_permissions</a></li>
 						<li><a href="#session_key">GET /session_key</a></li>
 						<li><a href="#verify_access_key">GET /verify_access_key</a></li>
+						<li><a href="#get_services">GET /get_services</a></li>
 					</ul>
 					<h4><a href="#adding_files">Adding Files</a></h4>
 					<ul>
@@ -66,7 +67,7 @@
 					<h4><a href="#adding_tags">Adding Tags</a></h4>
 					<ul>
 						<li><a href="#add_tags_clean_tags">GET /add_tags/clean_tags</a></li>
-						<li><a href="#add_tags_get_tag_services">GET /add_tags/get_tag_services</a></li>
+						<li><a href="#add_tags_get_tag_services">GET /add_tags/get_tag_services</a> (legacy)</li>
 						<li><a href="#add_tags_add_tags">POST /add_tags/add_tags</a></li>
 					</ul>
 					<h4><a href="#adding_urls">Adding URLs</a></h4>
@@ -76,10 +77,11 @@
 						<li><a href="#add_urls_add_url">POST /add_urls/add_url</a></li>
 						<li><a href="#add_urls_associate_url">POST /add_urls/associate_url</a></li>
 					</ul>
-					<h4><a href="#managing_cookies">Managing Cookies</a></h4>
+					<h4><a href="#managing_cookies">Managing Cookies and HTTP Headers</a></h4>
 					<ul>
 						<li><a href="#manage_cookies_get_cookies">GET /manage_cookies/get_cookies</a></li>
 						<li><a href="#manage_cookies_set_cookies">POST /manage_cookies/set_cookies</a></li>
+						<li><a href="#manage_headers_set_user_agent">POST /manage_headers/set_user_agent</a></li>
 					</ul>
 					<h4><a href="#managing_pages">Managing Pages</a></h4>
 					<ul>
@@ -94,6 +96,11 @@
 						<li><a href="#get_files_file">GET /get_files/file</a></li>
 						<li><a href="#get_files_thumbnail">GET /get_files/thumbnail</a></li>
 					</ul>
+					<h4><a href="#managing_database">Managing the Database</a></h4>
+					<ul>
+						<li><a href="#manage_database_lock_on">POST /manage_database/lock_on</a></li>
+						<li><a href="#manage_database_lock_off">POST /manage_database/lock_off</a></li>
+					</ul>
 			</ul>
 			<h3 id="access_management"><a href="#access_management">Access Management</a></h3>
 			<div class="apiborder">
@@ -103,11 +110,15 @@
 					<li><p>Restricted access: NO.</p></li>
 					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments: n/a</p></li>
-					<li><p>Response description: Some simple JSON describing the current version.</p></li>
+					<li><p>Response description: Some simple JSON describing the current api version (and hydrus client version, if you are interested).</p></li>
 					<li>
 						<p>Example response:</p>
 						<ul>
-							<li><pre>{"version" : 1}</pre></li>
+							<li>
+<pre>{
+    "version" : 17,
+    "hydrus_version" : 441
+}</pre></li>
 						</ul>
 					</li>
 				</ul>
@@ -134,6 +145,7 @@
 							<li>3 - Search for Files</li>
 							<li>4 - Manage Pages</li>
 							<li>5 - Manage Cookies</li>
+							<li>6 - Manage Database</li>
 						</ul>
 					</li>
 					<li>
@@ -191,6 +203,76 @@
 }</pre>
 							</li>
 						</ul>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder">
+				<h3 id="get_services"><a href="#get_services"><b>GET /get_services</b></a></h3>
+				<p><i>Ask the client about its file and tag services.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. At least one of Add Files, Add Tags, Manage Pages, or Search Files permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
+					<li><p>Arguments: n/a</p></li>
+					<li>
+						<p>Response description: Some JSON listing the client's file and tag services by name and 'service key'.</p>
+					</li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{
+    'local_tags': [
+        {
+            'name': 'my tags',
+            'service_key': '6c6f63616c2074616773'
+        },
+        {
+            'name': 'filenames',
+            'service_key': '231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b'
+        }
+    ],
+    'tag_repositories': [
+        {
+            'name': 'PTR',
+            'service_key': 'ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9'
+        }
+    ],
+    'local_files': [
+        {
+            'name': 'my files',
+            'service_key': '6c6f63616c2066696c6573'
+        }
+    ],
+    'file_repositories': [
+    ],
+    'all_local_files': [
+        { 
+            'name': 'all local files',
+            'service_key': '616c6c206c6f63616c2066696c6573'
+        }
+    ],
+    'all_known_files': [
+        {
+            'name': 'all known files',
+            'service_key': '616c6c206b6e6f776e2066696c6573'
+        }
+    ],
+    'all_known_tags': [
+        {
+            'name': 'all known tags',
+            'service_key': '616c6c206b6e6f776e2074616773'
+        }
+    ],
+    'trash': [
+        {
+            'name': 'trash',
+            'service_key': '7472617368'
+        }
+    ]
+}</pre>
+							</li>
+						</ul>
+						<p>These services may be referred to in various metadata responses or required in request parameters (e.g. where to add tag mappings). Note that a user can rename their services. Much of this Client API uses this renameable 'service name' as service identifier, but I may start using service key, which is non-mutable ID specific to each client. The hardcoded services have shorter service key strings (it is usually just 'all known files' etc.. ASCII-converted to hex), but user-made stuff will have 64-character hex.</p>
 					</li>
 				</ul>
 			</div>
@@ -378,6 +460,7 @@
 			</div>
 			<div class="apiborder">
 				<h3 id="add_tags_get_tag_services"><a href="#add_tags_get_tag_services"><b>GET /add_tags/get_tag_services</b></a></h3>
+                                <p class="warning"><b>This is now legacy! Use <a href="#get_services">/get_services</a> instead!</b></p>
 				<p><i>Ask the client about its tag services.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
@@ -689,7 +772,7 @@
 					<li><p>Response description: 200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.</p></li>
 				</ul>
 			</div>
-			<h3 id="managing_cookies"><a href="#managing_cookies">Managing Cookies</a></h3>
+			<h3 id="managing_cookies"><a href="#managing_cookies">Managing Cookies and HTTP Headers</a></h3>
 			<p>This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.</p>
 			<div class="apiborder">
 				<h3 id="manage_cookies_get_cookies"><a href="#manage_cookies_get_cookies"><b>GET /manage_cookies/get_cookies</b></a></h3>
@@ -757,6 +840,36 @@
 					</li>
 					<p>You can set 'value' to be null, which will clear any existing cookie with the corresponding name, domain, and path (acting essentially as a delete).</p>
 					<p>Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.</p>
+				</ul>
+			</div>
+			<div class="apiborder">
+				<h3 id="manage_headers_set_user_agent"><a href="#manage_headers_set_user_agent"><b>POST /manage_headers/set_user_agent</b></a></h3>
+				<p>This sets the 'Global' User-Agent for the client, as typically editable under <i>network->data->manage http headers</i>, for instance if you want hydrus to appear as a specific browser associated with some cookies.</p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Cookies permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in JSON):</p>
+						<ul>
+							<li>user-agent : (a string)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example request body:</p>
+						<ul>
+							<li>
+<pre>{
+	"user-agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
+}</pre>
+							</li>
+						</ul>
+					</li>
+                                        <p>Send an empty string to reset the client back to the default User-Agent, which should be 'Mozilla/5.0 (compatible; Hydrus Client)'.</p>
 				</ul>
 			</div>
 			<h3 id="managing_pages"><a href="#managing_pages">Managing Pages</a></h3>
@@ -1208,6 +1321,31 @@
 						</ul>
 					</li>
 					<li><p>Response description: The thumbnail for the file. It will give application/octet-stream as the mime type. Some hydrus thumbs are jpegs, some are pngs.</p></li>
+				</ul>
+			</div>
+			<h3 id="managing_database"><a href="#managing_database">Managing the Database</a></h3>
+			<div class="apiborder">
+				<h3 id="manage_database_lock_on"><a href="#manage_database_lock_on"><b>POST /manage_database/lock_on</b></a></h3>
+				<p><i>Pause the client's database activity and disconnect the current connection.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Database permission needed.</p></li>
+					<li>
+						<p>Arguments: None</p>
+					</li>
+					<p>This is a hacky prototype. It commands the client database to pause its job queue and release its connection (and related file locks and journal files). This puts the client in a similar position as a long VACUUM command--it'll hang in there, but not much will work, and since the UI async code isn't great yet, the UI may lock up after a minute or two. If you would like to automate database backup without shutting the client down, this is the thing to play with.</p>
+                                        <p>This should return pretty quick, but it will wait up to five seconds for the database to actually disconnect. If there is a big job (like a VACUUM) current going on, it may take substantially longer to finish that up and process this STOP command. You might like to check for the existence of a journal file in the db dir just to be safe.</p>
+                                        <p>As long as this lock is on, all Client API calls except the unlock command will return 503. (This is a decent way to test the current lock status, too)</p>
+				</ul>
+			</div>
+                        <div class="apiborder">
+				<h3 id="manage_database_lock_off"><a href="#manage_database_lock_off"><b>POST /manage_database/lock_off</b></a></h3>
+				<p><i>Reconnect the client's database and resume activity.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Database permission needed.</p></li>
+					<li>
+						<p>Arguments: None</p>
+					</li>
+					<p>This is the obvious complement to the lock. The client will resume processing its job queue and will catch up. If the UI was frozen, it should free up in a few seconds, just like after a big VACUUM.</p>
 				</ul>
 			</div>
 		</div>
