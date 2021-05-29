@@ -134,9 +134,9 @@ jobs:
       -
         name: Set Permissions
         run: |
-            chown --recursive 1000:1000 dist/client
-            find dist/client -type d -exec chmod 0755 {} \;
-            chmod +x dist/client/client dist/client/server dist/client/client.py dist/client/server.py dist/client/bin/swfrender_linux
+            sudo chown --recursive 1000:1000 dist/client
+            sudo find dist/client -type d -exec chmod 0755 {} \;
+            sudo chmod +x dist/client/client dist/client/server dist/client/client.py dist/client/server.py dist/client/bin/swfrender_linux
       -
         name: Compress Client
         run: |
@@ -223,9 +223,9 @@ jobs:
       -
         name: Compress Client
         run: |
-          Set-Location -Path dist
-          7z.exe a -tzip -mm=Deflate -mx=5 '..\Windows-Extract.zip' 'Hydrus Network\'
-          Set-Location -Path ..
+          cd .\dist
+          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
+          cd ..
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
