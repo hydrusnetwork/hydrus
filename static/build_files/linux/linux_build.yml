@@ -57,6 +57,12 @@ jobs:
             find dist/client/ -type f -name "*.pyc" -delete
             while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
       -
+        name: Set Permissions
+        run: |
+            chown --recursive 1000:1000 dist/client
+            find dist/client -type d -exec chmod 0755 {} \;
+            chmod +x dist/client/client dist/client/server dist/client/client.py dist/client/server.py dist/client/bin/swfrender_linux
+      -
         name: Compress Client
         run: |
             mv dist/client "dist/Hydrus Network"
