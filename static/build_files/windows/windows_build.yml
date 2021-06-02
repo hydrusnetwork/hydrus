@@ -74,6 +74,12 @@ jobs:
         run: |
           move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
           ISCC.exe InnoSetup.iss
+      -
+        name: Compress Client
+        run: |
+          cd .\dist
+          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
+          cd ..
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
@@ -87,6 +93,6 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Windows-Extract
-          path: dist\Hydrus Network
+          path: Windows-Extract.zip
           if-no-files-found: error
           retention-days: 2

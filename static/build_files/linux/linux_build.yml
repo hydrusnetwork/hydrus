@@ -56,11 +56,22 @@ jobs:
         run: |
             find dist/client/ -type f -name "*.pyc" -delete
             while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
+      -
+        name: Set Permissions
+        run: |
+            sudo chown --recursive 1000:1000 dist/client
+            sudo find dist/client -type d -exec chmod 0755 {} \;
+            sudo chmod +x dist/client/client dist/client/server dist/client/bin/swfrender_linux
+      -
+        name: Compress Client
+        run: |
+            mv dist/client "dist/Hydrus Network"
+            tar -czvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: Ubuntu-Extract
-          path: dist/client
+          path: Ubuntu-Extract.tar.gz
           if-no-files-found: error
           retention-days: 2

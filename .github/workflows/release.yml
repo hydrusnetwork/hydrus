@@ -23,24 +23,16 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - 
-        name: Cargo Cache
+      - name: Cargo Cache
         uses: actions/cache@v2
         with:
-          path: ~/.cargo
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
-            ${{ runner.os }}-cargo
-      - 
-        name: Cargo Artifacts Cache
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-target-${{ hashFiles('Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-target-${{ hashFiles('Cargo.toml') }}
-            ${{ runner.os }}-cargo-target
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - 
         name: Install PyOxidizer
         uses: actions-rs/cargo@v1.0.3
@@ -131,12 +123,23 @@ jobs:
         run: |
             find dist/client/ -type f -name "*.pyc" -delete
             while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
+      -
+        name: Set Permissions
+        run: |
+            sudo chown --recursive 1000:1000 dist/client
+            sudo find dist/client -type d -exec chmod 0755 {} \;
+            sudo chmod +x dist/client/client dist/client/server dist/client/bin/swfrender_linux
+      -
+        name: Compress Client
+        run: |
+            mv dist/client "dist/Hydrus Network"
+            tar -czvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: Ubuntu-Extract
-          path: dist/client
+          path: Ubuntu-Extract.tar.gz
           if-no-files-found: error
           retention-days: 2
 
@@ -209,6 +212,12 @@ jobs:
         run: |
           move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
           ISCC.exe InnoSetup.iss
+      -
+        name: Compress Client
+        run: |
+          cd .\dist
+          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
+          cd ..
       - 
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
@@ -222,7 +231,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Windows-Extract
-          path: dist\Hydrus Network
+          path: Windows-Extract.zip
           if-no-files-found: error
           retention-days: 2
 
@@ -247,15 +256,10 @@ jobs:
         name: Rename Files
         run: |
           mkdir ubuntu windows
-          mv MacOS-DMG/HydrusNetwork.dmg         Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.-.App.dmg
-          mv Windows-Install/HydrusInstaller.exe Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Installer.exe
-          mv Windows-Extract                     "windows/Hydrus Network"
-          mv Ubuntu-Extract                      "ubuntu/Hydrus Network"
-      - 
-        name: Compress Directories
-        run: |
-          zip -9 -r Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Extract.only.zip "windows/Hydrus Network"
-          tar -czvf Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.-.Executable.tar.gz  "ubuntu/Hydrus Network"
+          mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.-.App.dmg
+          mv Windows-Install/HydrusInstaller.exe  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Installer.exe
+          mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.-.Extract.only.zip
+          mv Ubuntu-Extract/Ubuntu-Extract.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.-.Executable.tar.gz
       - 
         name: Release new
         uses: softprops/action-gh-release@v1
