@@ -14,8 +14,9 @@ from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
-from hydrus.client.gui import ClientGUIManagement
-from hydrus.client.gui import ClientGUIPages
+from hydrus.client.gui.pages import ClientGUIManagement
+from hydrus.client.gui.pages import ClientGUIPages
+from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportFileSeeds
@@ -958,147 +959,218 @@ class TestClientDB( unittest.TestCase ):
     
     def test_gui_sessions( self ):
         
-        def qt_code():
+        page_containers = []
+        hashes_to_page_data = {}
+        
+        #
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher()
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
+        
+        management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerPetitions( HG.test_controller.example_tag_repo_service_key )
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, True )
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, False )
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', fsc, True )
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        
+        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
+        
+        page_name = management_controller.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        top_notebook_container = ClientGUISession.GUISessionContainerPageNotebook( 'top notebook', page_containers = page_containers)
+        
+        session = ClientGUISession.GUISessionContainer( 'test_session', top_notebook_container = top_notebook_container, hashes_to_page_data = hashes_to_page_data )
+        
+        self.assertTrue( session.HasAllPageData() )
+        
+        self._write( 'serialisable', session )
+        
+        loaded_session = self._read( 'gui_session', 'test_session' )
+        
+        self.assertTrue( loaded_session.HasAllPageData() )
+        
+        page_names = []
+        
+        for page_container in loaded_session.GetTopNotebook().GetPageContainers():
             
-            test_frame = TestController.TestFrame()
-            
-            try:
-                
-                session = ClientGUIPages.GUISession( 'test_session' )
-                
-                #
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher()
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
-                
-                management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerPetitions( HG.test_controller.example_tag_repo_service_key )
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
-                
-                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [] )
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, True )
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
-                
-                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
-                
-                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = [] )
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, False )
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
-                
-                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
-                
-                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', fsc, True )
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
-                
-                fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
-                
-                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', fsc, True )
-                
-                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-                
-                session.AddPageTuple( page )
-                
-                #
-                
-                self._write( 'serialisable', session )
-                
-                result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, 'test_session' )
-                
-                page_names = []
-                
-                for ( page_type, page_data ) in result.GetPageTuples():
-                    
-                    if page_type == 'page':
-                        
-                        ( management_controller, initial_hashes ) = page_data
-                        
-                        page_names.append( management_controller.GetPageName() )
-                        
-                    
-                
-                self.assertEqual( page_names, [ 'gallery', 'watcher', 'import', 'simple downloader', 'example tag repo petitions', 'search', 'search', 'files', 'wew lad', 'files' ] )
-                
-            finally:
-                
-                test_frame.deleteLater()
-                
+            page_names.append( page_container.GetName() )
             
         
-        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
+        self.assertEqual( page_names, [ 'gallery', 'watcher', 'import', 'simple downloader', 'example tag repo petitions', 'search', 'search', 'files', 'wew lad', 'files' ] )
+        
         
     
     def test_import( self ):

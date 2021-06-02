@@ -1629,6 +1629,8 @@ class ServiceRepository( ServiceRestricted ):
                         
                     except HydrusExceptions.NetworkException as e:
                         
+                        self._DelayFutureRequests( str( e ) )
+                        
                         HydrusData.Print( 'Attempting to download an update for ' + name + ' resulted in a network error:' )
                         
                         HydrusData.Print( e )
@@ -2324,7 +2326,10 @@ class ServiceRepository( ServiceRestricted ):
                 
                 self._SyncDownloadUpdates( stop_time )
                 
-                self.SyncThumbnails( stop_time )
+                if self._is_mostly_caught_up is not None and self._is_mostly_caught_up:
+                    
+                    self.SyncThumbnails( stop_time )
+                    
                 
             except HydrusExceptions.ShutdownException:
                 
@@ -2420,6 +2425,10 @@ class ServiceRepository( ServiceRestricted ):
                     except HydrusExceptions.CancelledException as e:
                         
                         self._DelayFutureRequests( str( e ) )
+                        
+                        return
+                        
+                    except HydrusExceptions.NotFoundException:
                         
                         return
                         
@@ -2830,7 +2839,7 @@ class ServiceIPFS( ServiceRemote ):
                         
                     except HydrusExceptions.DataMissing:
                         
-                        HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hexh() ) )
+                        HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hex() ) )
                         
                         continue
                         

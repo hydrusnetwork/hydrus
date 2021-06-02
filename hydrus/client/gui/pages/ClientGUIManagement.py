@@ -1,6 +1,5 @@
 import os
 import random
-import time
 import typing
 
 from qtpy import QtCore as QC
@@ -12,7 +11,6 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusThreading
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
@@ -30,8 +28,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIParsing
-from hydrus.client.gui import ClientGUIResults
-from hydrus.client.gui import ClientGUIResultsSortCollect
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
@@ -45,8 +41,9 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
+from hydrus.client.gui.pages import ClientGUIResults
+from hydrus.client.gui.pages import ClientGUIResultsSortCollect
 from hydrus.client.gui.search import ClientGUIACDropdown
-from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -235,11 +232,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_keys = { name : value.hex() for ( name, value ) in list(self._keys.items()) }
+        # don't save these
+        TRANSITORY_KEYS = { 'page' }
+        
+        serialisable_keys = { name : value.hex() for ( name, value ) in self._keys.items() if name not in TRANSITORY_KEYS }
         
         serialisable_simples = dict( self._simples )
         
-        serialisable_serialisables = { name : value.GetSerialisableTuple() for ( name, value ) in list(self._serialisables.items()) }
+        serialisable_serialisables = { name : value.GetSerialisableTuple() for ( name, value ) in self._serialisables.items() }
         
         return ( self._page_name, self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
         
@@ -257,7 +257,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._keys.update( { name : bytes.fromhex( key ) for ( name, key ) in list(serialisable_keys.items()) } )
         
-        if 'file_service' in self._keys:
+        if 'file_service' in self._keys and HG.client_controller.IsBooted():
             
             if not HG.client_controller.services_manager.ServiceExists( self._keys[ 'file_service' ] ):
                 

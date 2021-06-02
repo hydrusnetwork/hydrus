@@ -10,7 +10,6 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientSearch
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):

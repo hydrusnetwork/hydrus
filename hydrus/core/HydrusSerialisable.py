@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import zlib
@@ -32,7 +33,7 @@ SERIALISABLE_TYPE_HDD_IMPORT = 9
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE = 10
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_SERVICE_UPDATE_PACKAGE = 11
 SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER = 12
-SERIALISABLE_TYPE_GUI_SESSION = 13
+SERIALISABLE_TYPE_GUI_SESSION_LEGACY = 13
 SERIALISABLE_TYPE_PREDICATE = 14
 SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT = 15
 SERIALISABLE_TYPE_EXPORT_FOLDER = 16
@@ -123,6 +124,10 @@ SERIALISABLE_TYPE_STRING_SLICER = 100
 SERIALISABLE_TYPE_TAG_SORT = 101
 SERIALISABLE_TYPE_ACCOUNT_TYPE = 102
 SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT = 103
+SERIALISABLE_TYPE_GUI_SESSION_CONTAINER = 104
+SERIALISABLE_TYPE_GUI_SESSION_PAGE_DATA = 105
+SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_NOTEBOOK = 106
+SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_SINGLE = 107
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -254,6 +259,12 @@ class SerialisableBase( object ):
     def Duplicate( self ):
         
         return CreateFromString( self.DumpToString() )
+        
+    
+    def GetSerialisedHash( self ):
+        
+        # as a note, this should not be relied on in future--the serialised string could change due to object updates, or in rare cases, because the contained objects are still hot
+        return hashlib.sha256( bytes( self.DumpToString(), 'utf-8' ) ).digest()
         
     
     def GetSerialisableTuple( self ):

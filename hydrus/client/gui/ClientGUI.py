@@ -53,11 +53,9 @@ from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUILogin
-from hydrus.client.gui import ClientGUIManagement
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
-from hydrus.client.gui import ClientGUIPages
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -77,6 +75,9 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
+from hydrus.client.gui.pages import ClientGUIManagement
+from hydrus.client.gui.pages import ClientGUIPages
+from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.services import ClientGUIClientsideServices
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -303,7 +304,7 @@ def THREADUploadPending( service_key ):
                             
                         except HydrusExceptions.DataMissing:
                             
-                            HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hexh() ) )
+                            HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hex() ) )
                             
                             continue
                             
@@ -436,8 +437,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._lock = threading.Lock()
         
         self._delayed_dialog_lock = threading.Lock()
-        
-        self._last_total_page_weight = None
         
         self._first_session_loaded = False
         
@@ -978,6 +977,36 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _ClearOrphanHashedSerialisables( self ):
+        
+        text = 'This force-runs a routine that regularly removes some spare data from the database. You most likely do not need to run it.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            controller = self._controller
+            
+            def do_it():
+                
+                num_done = controller.WriteSynchronous( 'maintain_hashed_serialisables', force_start = True )
+                
+                if num_done == 0:
+                    
+                    message = 'No orphans found!'
+                    
+                else:
+                    
+                    message = '{} orphans cleared!'.format( HydrusData.ToHumanInt( num_done ) )
+                    
+                
+                HydrusData.ShowText( message )
+                
+            
+            HG.client_controller.CallToThread( do_it )
+            
+        
+    
     def _ClearOrphanTables( self ):
         
         text = 'This will instruct the database to review its service tables and delete any orphans. This will typically do nothing, but hydrus dev may tell you to run this, just to check. Be sure you have a semi-recent backup before you run this.'
@@ -1425,7 +1454,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if result == QW.QDialog.Accepted:
             
-            self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+            self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, name )
             
             self._controller.pub( 'notify_new_sessions' )
             
@@ -1978,11 +2007,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def work_callable():
             
-            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
             
             if len( gui_session_names ) > 0:
                 
-                gui_session_names_to_backup_timestamps = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+                gui_session_names_to_backup_timestamps = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
                 
             else:
                 
@@ -2074,7 +2103,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         default_gui_session = HC.options[ 'default_gui_session' ]
         
-        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
         
         cannot_load_from_db = default_gui_session not in existing_session_names
         
@@ -5332,7 +5361,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'files' )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
+            #ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
             
             ClientGUIMenus.AppendSeparator( submenu )
@@ -5344,6 +5373,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
                 
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan hashed serialisables', 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintainance' )
             
@@ -5960,17 +5991,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self.GetTotalPageCounts()
         
-        self._last_total_page_weight = total_active_weight + total_closed_weight
-        
-        if total_active_weight > 500000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
+        if total_active_weight > 10000000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
             
             self._have_shown_session_size_warning = True
             
-            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free and avoid potential session saving problems that occur around 2 million weight, please try to close some pages or clear some finished downloaders!'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
             
         
         ClientGUIMenus.AppendMenuLabel( menu, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ), 'You have this many pages open.' )
-        ClientGUIMenus.AppendMenuLabel( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( self._last_total_page_weight ) ), 'Your session is this heavy.' )
+        ClientGUIMenus.AppendMenuItem( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( total_active_weight ) ), 'Your session is this heavy.', QW.QMessageBox.information, self, 'For session weight, a file counts as 1, and a URL counts as 20!' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -6015,7 +6044,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for name in gui_session_names:
                 
-                ClientGUIMenus.AppendMenuItem( append, name, 'Append this session to whatever pages are already open.', self._notebook.AppendGUISession, name )
+                ClientGUIMenus.AppendMenuItem( append, name, 'Append this session to whatever pages are already open.', self._notebook.AppendGUISessionFreshest, name )
                 
             
             ClientGUIMenus.AppendMenu( sessions, append, 'append' )
@@ -6046,7 +6075,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         for name in gui_session_names:
             
-            if name in ClientGUIPages.RESERVED_SESSION_NAMES:
+            if name in ClientGUISession.RESERVED_SESSION_NAMES:
                 
                 continue
                 
@@ -6058,13 +6087,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ClientGUIMenus.AppendMenu( sessions, save, 'save' )
         
-        if len( set( gui_session_names ).difference( ClientGUIPages.RESERVED_SESSION_NAMES ) ) > 0:
+        if len( set( gui_session_names ).difference( ClientGUISession.RESERVED_SESSION_NAMES ) ) > 0:
             
             delete = QW.QMenu( sessions )
             
             for name in gui_session_names:
                 
-                if name in ClientGUIPages.RESERVED_SESSION_NAMES:
+                if name in ClientGUISession.RESERVED_SESSION_NAMES:
                     
                     continue
                     
@@ -6721,13 +6750,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         name = dlg.GetValue()
                         
-                        if name in ClientGUIPages.RESERVED_SESSION_NAMES:
+                        if name in ClientGUISession.RESERVED_SESSION_NAMES:
                             
                             QW.QMessageBox.critical( self, 'Error', 'Sorry, you cannot have that name! Try another.' )
                             
                         else:
                             
-                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
                             
                             if name in existing_session_names:
                                 
@@ -6755,7 +6784,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 
             
-        elif name not in ClientGUIPages.RESERVED_SESSION_NAMES: # i.e. a human asked to do this
+        elif name not in ClientGUISession.RESERVED_SESSION_NAMES: # i.e. a human asked to do this
             
             message = 'Overwrite this session?'
             

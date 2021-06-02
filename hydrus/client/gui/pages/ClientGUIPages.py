@@ -1,5 +1,6 @@
 import collections
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -20,14 +21,14 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIManagement
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIResults
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
-
-RESERVED_SESSION_NAMES = { '', 'just a blank page', 'last session', 'exit session' }
+from hydrus.client.gui.pages import ClientGUIManagement
+from hydrus.client.gui.pages import ClientGUIResults
+from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
 
 class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
@@ -128,9 +129,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
     def _AddEntry( self, button, entry ):
         
-        id = int( button.objectName() )
+        button_id = int( button.objectName() )
         
-        self._command_dict[ id ] = entry
+        self._command_dict[ button_id ] = entry
         
         ( entry_type, obj ) = entry
         
@@ -172,11 +173,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         button.show()
         
     
-    def _HitButton( self, id ):
+    def _HitButton( self, button_id ):
         
-        if id in self._command_dict:
+        if button_id in self._command_dict:
             
-            ( entry_type, obj ) = self._command_dict[ id ]
+            ( entry_type, obj ) = self._command_dict[ button_id ]
             
             if entry_type == 'menu':
                 
@@ -351,23 +352,23 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
     def keyPressEvent( self, event ):
         
-        id = None
+        button_id = None
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key == QC.Qt.Key_Up: id = 8
-        elif key == QC.Qt.Key_Left: id = 4
-        elif key == QC.Qt.Key_Right: id = 6
-        elif key == QC.Qt.Key_Down: id = 2
-        elif key == QC.Qt.Key_1 and modifier == QC.Qt.KeypadModifier: id = 1
-        elif key == QC.Qt.Key_2 and modifier == QC.Qt.KeypadModifier: id = 2
-        elif key == QC.Qt.Key_3 and modifier == QC.Qt.KeypadModifier: id = 3
-        elif key == QC.Qt.Key_4 and modifier == QC.Qt.KeypadModifier: id = 4
-        elif key == QC.Qt.Key_5 and modifier == QC.Qt.KeypadModifier: id = 5
-        elif key == QC.Qt.Key_6 and modifier == QC.Qt.KeypadModifier: id = 6
-        elif key == QC.Qt.Key_7 and modifier == QC.Qt.KeypadModifier: id = 7
-        elif key == QC.Qt.Key_8 and modifier == QC.Qt.KeypadModifier: id = 8
-        elif key == QC.Qt.Key_9 and modifier == QC.Qt.KeypadModifier: id = 9
+        if key == QC.Qt.Key_Up: button_id = 8
+        elif key == QC.Qt.Key_Left: button_id = 4
+        elif key == QC.Qt.Key_Right: button_id = 6
+        elif key == QC.Qt.Key_Down: button_id = 2
+        elif key == QC.Qt.Key_1 and modifier == QC.Qt.KeypadModifier: button_id = 1
+        elif key == QC.Qt.Key_2 and modifier == QC.Qt.KeypadModifier: button_id = 2
+        elif key == QC.Qt.Key_3 and modifier == QC.Qt.KeypadModifier: button_id = 3
+        elif key == QC.Qt.Key_4 and modifier == QC.Qt.KeypadModifier: button_id = 4
+        elif key == QC.Qt.Key_5 and modifier == QC.Qt.KeypadModifier: button_id = 5
+        elif key == QC.Qt.Key_6 and modifier == QC.Qt.KeypadModifier: button_id = 6
+        elif key == QC.Qt.Key_7 and modifier == QC.Qt.KeypadModifier: button_id = 7
+        elif key == QC.Qt.Key_8 and modifier == QC.Qt.KeypadModifier: button_id = 8
+        elif key == QC.Qt.Key_9 and modifier == QC.Qt.KeypadModifier: button_id = 9
         elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
             
             # get the 'first', scanning from top-left
@@ -376,7 +377,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                 
                 if possible_id in self._command_dict:
                     
-                    id = possible_id
+                    button_id = possible_id
                     
                     break
                     
@@ -393,9 +394,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             event.ignore()
             
         
-        if id is not None:
+        if button_id is not None:
             
-            self._HitButton( id )
+            self._HitButton( button_id )
             
         
     
@@ -685,6 +686,23 @@ class Page( QW.QSplitter ):
         return self._parent_notebook
         
     
+    def GetSerialisablePage( self ):
+        
+        name = self.GetName()
+        
+        page_data = ClientGUISession.GUISessionPageData( self._management_controller, self.GetHashes() )
+        
+        # this is the only place this is generated. this will be its key/name/id from now on
+        # we won't regen the hash for identifier since it could change due to object updates etc...
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( name, page_data_hash )
+        
+        hashes_to_page_data = { page_data_hash : page_data }
+        
+        return ( page_container, hashes_to_page_data )
+        
+    
     def GetSessionAPIInfoDict( self, is_selected = False ):
         
         root = {}
@@ -736,8 +754,7 @@ class Page( QW.QSplitter ):
         num_hashes = len( self.GetHashes() )
         num_seeds = self._management_controller.GetNumSeeds()
         
-        # hashes are smaller, but seeds tend to need more cpu, so we'll just say 1:1 for now
-        return num_hashes + num_seeds
+        return num_hashes + ( num_seeds * 20 )
         
     
     def IsMultipleWatcherPage( self ):
@@ -1204,13 +1221,13 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         page = self.widget( index )
         
-        session = GUISession( 'dupe page session' )
+        ( container, hashes_to_page_data ) = page.GetSerialisablePage()
         
-        session.AddPageTuple( page )
+        top_notebook_container = ClientGUISession.GUISessionContainerPageNotebook( 'dupe top notebook', page_containers = [ container ] )
         
-        session = session.Duplicate() # this ensures we are using fresh new objects
+        session = ClientGUISession.GUISessionContainer( 'dupe session', top_notebook_container = top_notebook_container, hashes_to_page_data = hashes_to_page_data )
         
-        self.InsertSessionPageTuples( index + 1, session.GetPageTuples() )
+        self.InsertSession( index + 1, session )
         
     
     def _GetDefaultPageInsertionIndex( self ):
@@ -1584,6 +1601,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             click_over_page_of_pages = isinstance( page, PagesNotebook )
             
+            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                label = 'page weight: {}'.format( HydrusData.ToHumanInt( page.GetTotalWeight() ) )
+                
+                ClientGUIMenus.AppendMenuLabel( menu, label, label )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+            
             ClientGUIMenus.AppendMenuItem( menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             
             if num_pages > 1:
@@ -1674,7 +1700,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
             
         
-        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
         
         if len( existing_session_names ) > 0 or click_over_page_of_pages:
             
@@ -1687,7 +1713,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             for name in existing_session_names:
                 
-                ClientGUIMenus.AppendMenuItem( submenu, name, 'Load this session here.', self.AppendGUISession, name )
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Load this session here.', self.AppendGUISessionFreshest, name )
                 
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'append session' )
@@ -1699,7 +1725,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             for name in existing_session_names:
                 
-                if name in RESERVED_SESSION_NAMES:
+                if name in ClientGUISession.RESERVED_SESSION_NAMES:
                     
                     continue
                     
@@ -1777,7 +1803,42 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def AppendGUISession( self, name, load_in_a_page_of_pages = True ):
+    def AppendGUISession( self, session: ClientGUISession.GUISessionContainer ):
+        
+        starting_index = self._GetDefaultPageInsertionIndex()
+        
+        forced_insertion_index = starting_index
+        
+        self.InsertSession( forced_insertion_index, session )
+        
+    
+    def AppendGUISessionBackup( self, name, timestamp, load_in_a_page_of_pages = True ):
+        
+        try:
+            
+            session = session = self._controller.Read( 'gui_session', name, timestamp )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'While trying to load session "{}" (ts {}), this error happened:'.format( name, timestamp ) )
+            HydrusData.ShowException( e )
+            
+            return
+            
+        
+        if load_in_a_page_of_pages:
+            
+            destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False )
+            
+        else:
+            
+            destination = self
+            
+        
+        destination.AppendGUISession( session )
+        
+    
+    def AppendGUISessionFreshest( self, name, load_in_a_page_of_pages = True ):
         
         job_key = ClientThreading.JobKey()
         
@@ -1790,14 +1851,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         try:
             
-            session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+            session = self._controller.Read( 'gui_session', name )
             
         except Exception as e:
             
-            HydrusData.ShowText( 'While trying to load session ' + name + ', this error happened:' )
+            HydrusData.ShowText( 'While trying to load session "{}", this error happened:'.format( name ) )
             HydrusData.ShowException( e )
-            
-            self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
             
             return
             
@@ -1806,59 +1865,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if load_in_a_page_of_pages:
             
-            destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False)
+            destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False )
             
         else:
             
             destination = self
             
         
-        page_tuples = session.GetPageTuples()
-        
         HG.client_controller.app.processEvents()
         
-        destination.AppendSessionPageTuples( page_tuples )
+        destination.AppendGUISession( session )
         
         job_key.Delete()
-        
-    
-    def AppendGUISessionBackup( self, name, timestamp, load_in_a_page_of_pages = True ):
-        
-        try:
-            
-            session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name, timestamp )
-            
-        except Exception as e:
-            
-            HydrusData.ShowText( 'While trying to load session ' + name + ' (ts ' + str( timestamp ) + ', this error happened:' )
-            HydrusData.ShowException( e )
-            
-            self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            return
-            
-        
-        if load_in_a_page_of_pages:
-            
-            destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False)
-            
-        else:
-            
-            destination = self
-            
-        
-        page_tuples = session.GetPageTuples()
-        
-        destination.AppendSessionPageTuples( page_tuples )
-        
-    
-    def AppendSessionPageTuples( self, page_tuples ):
-        
-        starting_index = self._GetDefaultPageInsertionIndex()
-        
-        forced_insertion_index = starting_index
-        
-        self.InsertSessionPageTuples( forced_insertion_index, page_tuples )
         
     
     def ChooseNewPage( self ):
@@ -2010,12 +2028,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def GetCurrentGUISession( self, name ):
         
-        session = GUISession( name )
+        ( page_container, hashes_to_page_data ) = self.GetSerialisablePage()
         
-        for page in self._GetPages():
-            
-            session.AddPageTuple( page )
-            
+        session = ClientGUISession.GUISessionContainer( name, top_notebook_container = page_container, hashes_to_page_data = hashes_to_page_data )
         
         return session
         
@@ -2204,6 +2219,26 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._parent_notebook
         
     
+    def GetSerialisablePage( self ):
+        
+        page_containers = []
+        
+        hashes_to_page_data = {}
+        
+        for page in self._GetPages():
+            
+            ( sub_page_container, some_hashes_to_page_data ) = page.GetSerialisablePage()
+            
+            page_containers.append( sub_page_container )
+            
+            hashes_to_page_data.update( some_hashes_to_page_data )
+            
+        
+        page_container = ClientGUISession.GUISessionContainerPageNotebook( self._name, page_containers = page_containers )
+        
+        return ( page_container, hashes_to_page_data )
+        
+    
     def GetSessionAPIInfoDict( self, is_selected = True ):
         
         current_page = self.currentWidget()
@@ -2381,49 +2416,83 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return False
         
     
-    def InsertSessionPageTuples( self, forced_insertion_index, page_tuples ):
+    def InsertSession( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer ):
+        
+        # get the top notebook, then for every page in there...
+        
+        top_notebook_container = session.GetTopNotebook()
+        
+        page_containers = top_notebook_container.GetPageContainers()
+        select_first_page = True
+        
+        self.InsertSessionNotebookPages( forced_insertion_index, session, page_containers, select_first_page )
+        
+    
+    def InsertSessionNotebook( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, notebook_page_container: ClientGUISession.GUISessionContainerPageNotebook, select_first_page: bool ):
+        
+        name = notebook_page_container.GetName()
+        
+        page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False, select_page = select_first_page )
+        
+        page_containers = notebook_page_container.GetPageContainers()
+        
+        page.InsertSessionNotebookPages( 0, session, page_containers, select_first_page )
+        
+    
+    def InsertSessionNotebookPages( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, page_containers: typing.Collection[ ClientGUISession.GUISessionContainerPage ], select_first_page: bool ):
         
         done_first_page = False
         
-        for page_tuple in page_tuples:
+        for page_container in page_containers:
             
-            select_page = not done_first_page
+            select_page = select_first_page and not done_first_page
             
-            ( page_type, page_data ) = page_tuple
-            
-            if page_type == 'pages':
+            try:
                 
-                ( name, subpage_tuples ) = page_data
+                if isinstance( page_container, ClientGUISession.GUISessionContainerPageNotebook ):
+                    
+                    self.InsertSessionNotebook( forced_insertion_index, session, page_container, select_page )
+                    
+                else:
+                    
+                    result = self.InsertSessionPage( forced_insertion_index, session, page_container, select_page )
+                    
+                    if result is None:
+                        
+                        continue
+                        
+                    
                 
-                try:
-                    
-                    page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False, select_page = select_page )
-                    
-                    page.AppendSessionPageTuples( subpage_tuples )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
+            except Exception as e:
                 
-            elif page_type == 'page':
-                
-                ( management_controller, initial_hashes ) = page_data
-                
-                try:
-                    
-                    self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
+                HydrusData.ShowException( e )
                 
             
             forced_insertion_index += 1
             
             done_first_page = True
             
+        
+    
+    def InsertSessionPage( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, page_container: ClientGUISession.GUISessionContainerPageSingle, select_page: bool ):
+        
+        try:
+            
+            page_data_hash = page_container.GetPageDataHash()
+            
+            page_data = session.GetPageData( page_data_hash )
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.ShowText( 'The page with name "{}" and hash "{}" failed to load because its data was missing!'.format( page_container.GetName(), page_data_hash.hex() ) )
+            
+            return None
+            
+        
+        management_controller = page_data.GetManagementController()
+        initial_hashes = page_data.GetHashes()
+        
+        return self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
         
     
     def IsMultipleWatcherPage( self ):
@@ -2465,11 +2534,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self._CloseAllPages( polite = False, delete_pages = True )
             
-            self._controller.CallLaterQtSafe(self, 1.0, self.AppendGUISession, name, load_in_a_page_of_pages = False)
+            self._controller.CallLaterQtSafe(self, 1.0, self.AppendGUISessionFreshest, name, load_in_a_page_of_pages = False)
             
         else:
             
-            self.AppendGUISession( name, load_in_a_page_of_pages = False )
+            self.AppendGUISessionFreshest( name, load_in_a_page_of_pages = False )
             
         
     
@@ -3067,257 +3136,3 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         pass
         
     
-class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION
-    SERIALISABLE_NAME = 'GUI Session'
-    SERIALISABLE_VERSION = 4
-    
-    def __init__( self, name ):
-        
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
-        
-        self._page_tuples = []
-        
-    
-    def _GetPageTuple( self, page ):
-        
-        if isinstance( page, PagesNotebook ):
-            
-            name = page.GetName()
-            
-            page_tuples = [ self._GetPageTuple( subpage ) for subpage in page.GetPages() ]
-            
-            return ( 'pages', ( name, page_tuples ) )
-            
-        else:
-            
-            management_controller = page.GetManagementController()
-            
-            hashes = list( page.GetHashes() )
-            
-            return ( 'page', ( management_controller, hashes ) )
-            
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        def handle_e( page_tuple, e ):
-            
-            HydrusData.ShowText( 'Attempting to save a page to the session failed! Its data tuple and error follows! Please close it or see if you can clear any potentially invalid data from it!' )
-            
-            HydrusData.ShowText( page_tuple )
-            
-            HydrusData.ShowException( e )
-            
-        
-        def GetSerialisablePageTuple( page_tuple ):
-            
-            ( page_type, page_data ) = page_tuple
-            
-            if page_type == 'pages':
-                
-                ( name, page_tuples ) = page_data
-                
-                serialisable_page_tuples = []
-                
-                for pt in page_tuples:
-                    
-                    try:
-                        
-                        serialisable_page_tuples.append( GetSerialisablePageTuple( pt ) )
-                        
-                    except Exception as e:
-                        
-                        handle_e( page_tuple, e )
-                        
-                    
-                
-                serialisable_page_data = ( name, serialisable_page_tuples )
-                
-            elif page_type == 'page':
-                
-                ( management_controller, hashes ) = page_data
-                
-                serialisable_management_controller = management_controller.GetSerialisableTuple()
-                
-                serialisable_hashes = [ hash.hex() for hash in hashes ]
-                
-                serialisable_page_data = ( serialisable_management_controller, serialisable_hashes )
-                
-            
-            serialisable_tuple = ( page_type, serialisable_page_data )
-            
-            return serialisable_tuple
-            
-        
-        serialisable_info = []
-        
-        for page_tuple in self._page_tuples:
-            
-            try:
-                
-                serialisable_page_tuple = GetSerialisablePageTuple( page_tuple )
-                
-                serialisable_info.append( serialisable_page_tuple )
-                
-            except Exception as e:
-                
-                handle_e( page_tuple, e )
-                
-            
-        
-        return serialisable_info
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        def handle_e( serialisable_page_tuple, e ):
-            
-            HydrusData.ShowText( 'A page failed to load! Its serialised data and error follows!' )
-            
-            HydrusData.ShowText( serialisable_page_tuple )
-            
-            HydrusData.ShowException( e )
-            
-        
-        def GetPageTuple( serialisable_page_tuple ):
-            
-            ( page_type, serialisable_page_data ) = serialisable_page_tuple
-            
-            if page_type == 'pages':
-                
-                ( name, serialisable_page_tuples ) = serialisable_page_data
-                
-                page_tuples = []
-                
-                for spt in serialisable_page_tuples:
-                    
-                    try:
-                        
-                        page_tuples.append( GetPageTuple( spt ) )
-                        
-                    except Exception as e:
-                        
-                        handle_e( spt, e )
-                        
-                    
-                
-                page_data = ( name, page_tuples )
-                
-            elif page_type == 'page':
-                
-                ( serialisable_management_controller, serialisable_hashes ) = serialisable_page_data
-                
-                management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
-                
-                hashes = [ bytes.fromhex( hash ) for hash in serialisable_hashes ]
-                
-                page_data = ( management_controller, hashes )
-                
-            
-            page_tuple = ( page_type, page_data )
-            
-            return page_tuple
-            
-        
-        for serialisable_page_tuple in serialisable_info:
-            
-            try:
-                
-                page_tuple = GetPageTuple( serialisable_page_tuple )
-                
-                self._page_tuples.append( page_tuple )
-                
-            except Exception as e:
-                
-                handle_e( serialisable_page_tuple, e )
-                
-            
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            new_serialisable_info = []
-            
-            for ( page_name, serialisable_management_controller, serialisable_hashes ) in old_serialisable_info:
-                
-                management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
-                
-                management_controller.SetPageName( page_name )
-                
-                serialisable_management_controller = management_controller.GetSerialisableTuple()
-                
-                new_serialisable_info.append( ( serialisable_management_controller, serialisable_hashes ) )
-                
-            
-            return ( 2, new_serialisable_info )
-            
-        
-        if version == 2:
-            
-            new_serialisable_info = []
-            
-            for ( serialisable_management_controller, serialisable_hashes ) in old_serialisable_info:
-                
-                new_serialisable_info.append( ( 'page', ( serialisable_management_controller, serialisable_hashes ) ) )
-                
-            
-            return ( 3, new_serialisable_info )
-            
-        
-        if version == 3:
-            
-            def clean_tuple( spt ):
-                
-                ( page_type, serialisable_page_data ) = spt
-                
-                if page_type == 'pages':
-                    
-                    ( name, pages_serialisable_page_tuples ) = serialisable_page_data
-                    
-                    if name.startswith( '[USER]' ) and len( name ) > 6:
-                        
-                        name = name[6:]
-                        
-                    
-                    pages_serialisable_page_tuples = [ clean_tuple( pages_spt ) for pages_spt in pages_serialisable_page_tuples ]
-                    
-                    return ( 'pages', ( name, pages_serialisable_page_tuples ) )
-                    
-                else:
-                    
-                    return spt
-                    
-                
-            
-            new_serialisable_info = []
-            
-            serialisable_page_tuples = old_serialisable_info
-            
-            for serialisable_page_tuple in serialisable_page_tuples:
-                
-                serialisable_page_tuple = clean_tuple( serialisable_page_tuple )
-                
-                new_serialisable_info.append( serialisable_page_tuple )
-                
-            
-            return ( 4, new_serialisable_info )
-            
-        
-    
-    def AddPageTuple( self, page ):
-        
-        page_tuple = self._GetPageTuple( page )
-        
-        self._page_tuples.append( page_tuple )
-        
-    
-    def GetPageTuples( self ):
-        
-        return self._page_tuples
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION ] = GUISession

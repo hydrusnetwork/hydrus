@@ -21,7 +21,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core.networking import HydrusNetwork
-from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientApplicationCommand as CAC
@@ -48,7 +47,6 @@ from hydrus.client.media import ClientMediaResultCache
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworkingBandwidth
-from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
@@ -5467,7 +5465,7 @@ class DB( HydrusDB.HydrusDB ):
         
         now = HydrusData.GetNow()
         
-        if service.GetServiceKey() != CC.TRASH_SERVICE_KEY:
+        if service_id != self.modules_services.trash_service_id:
             
             if only_if_current:
                 
@@ -10945,15 +10943,6 @@ class DB( HydrusDB.HydrusDB ):
         
         jobs_to_do = []
         
-        # vacuum
-        
-        due_names = self._GetMaintenanceVacuumNamesDue( stop_time = stop_time )
-        
-        if len( due_names ) > 0:
-            
-            jobs_to_do.append( 'vacuum ' + ', '.join( due_names ) )
-            
-        
         # analyze
         
         names_to_analyze = self._GetTableNamesDueAnalysis()
@@ -10975,9 +10964,12 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetMaintenanceVacuumNamesDue( self, stop_time = None ):
         
+        # this is the old code that worked on regular vacuums. we'll move to a manually-fired system, probably working next shutdown or similar, that presents a table of databases and 'last done' time etc..
+        # so, don't delete the vacuum_timestamps table, but modify this to return name, size, and timestamp
+        
         due_names = []
         
-        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        maintenance_vacuum_period_days = 90
         
         if maintenance_vacuum_period_days is not None:
             
@@ -11434,13 +11426,13 @@ class DB( HydrusDB.HydrusDB ):
         
         service = self.modules_services.GetService( service_id )
         
-        account = service.GetAccount()
-        
         service_type = service.GetServiceType()
         
-        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
-        
         if service_type in HC.REPOSITORIES:
+            
+            account = service.GetAccount()
+            
+            client_to_server_update = HydrusNetwork.ClientToServerUpdate()
             
             if service_type == HC.TAG_REPOSITORY:
                 
@@ -14074,7 +14066,7 @@ class DB( HydrusDB.HydrusDB ):
                                     content_update.SetRow( hashes )
                                     
                                 
-                                if service_type == HC.LOCAL_FILE_DOMAIN:
+                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE ):
                                     
                                     reason = content_update.GetReason()
                                     
@@ -15025,6 +15017,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'filter_existing_tags': result = self._FilterExistingTags( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashesByService( *args, **kwargs )
         elif action == 'force_refresh_tags_managers': result = self._GetForceRefreshTagsManagers( *args, **kwargs )
+        elif action == 'gui_session': result = self.modules_serialisable.GetGUISession( *args, **kwargs )
         elif action == 'hash_ids_to_hashes': result = self.modules_hashes_local_cache.GetHashIdsToHashes( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
         elif action == 'ideal_client_files_locations': result = self._GetIdealClientFilesLocations( *args, **kwargs )
@@ -18811,6 +18804,120 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 441:
+            
+            result = self._c.execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'json_dumps_hashed', ) ).fetchone()
+            
+            if result is None:
+                
+                one_worked_ok = False
+                
+                self._c.execute( 'CREATE TABLE json_dumps_hashed ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );' )
+                
+                legacy_dump_type = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_LEGACY
+                
+                names_and_timestamps = self._c.execute( 'SELECT dump_name, timestamp FROM json_dumps_named WHERE dump_type = ?;', ( legacy_dump_type, ) ).fetchall()
+                
+                from hydrus.client.gui.pages import ClientGUISessionLegacy
+                
+                import json
+                
+                for ( i, ( name, timestamp ) ) in enumerate( names_and_timestamps ):
+                    
+                    self._controller.frame_splash_status.SetSubtext( 'converting "{}" "{}"\u2026'.format( name, HydrusData.ConvertTimestampToPrettyTime( timestamp ) ) )
+                    
+                    ( dump_version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( legacy_dump_type, name, timestamp ) ).fetchone()
+                    
+                    try:
+                        
+                        if isinstance( dump, bytes ):
+                            
+                            dump = str( dump, 'utf-8' )
+                            
+                        
+                        serialisable_info = json.loads( dump )
+                        
+                        legacy_session = HydrusSerialisable.CreateFromSerialisableTuple( ( legacy_dump_type, name, dump_version, serialisable_info ) )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.PrintException( e, do_wait = False )
+                        
+                        try:
+                            
+                            timestamp_string = time.strftime( '%Y-%m-%d %H-%M-%S' )
+                            
+                            filename = '({}, {}) at {}.json'.format( name, timestamp, timestamp_string )
+                            
+                            path = os.path.join( self._db_dir, filename )
+                            
+                            with open( path, 'wb' ) as f:
+                                
+                                if isinstance( dump, str ):
+                                    
+                                    dump = bytes( dump, 'utf-8', errors = 'replace' )
+                                    
+                                
+                                f.write( dump )
+                                
+                            
+                        except:
+                            
+                            pass
+                            
+                        
+                        message = 'When updating sessions, "{}" at "{}" was non-loadable/convertable! I tried to save a backup of the object to your database directory.'.format( name, HydrusData.ConvertTimestampToPrettyTime( timestamp ) )
+                        
+                        HydrusData.Print( message )
+                        
+                        self.pub_initial_message( message )
+                        
+                        continue
+                        
+                    
+                    session = ClientGUISessionLegacy.ConvertLegacyToNew( legacy_session )
+                    
+                    self.modules_serialisable.SetJSONDump( session, force_timestamp = timestamp )
+                    
+                    self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( legacy_dump_type, name, timestamp ) )
+                    
+                    one_worked_ok = True
+                    
+                
+                if not one_worked_ok:
+                    
+                    raise Exception( 'When trying to update your sessions to the new format, none of them converted correctly! Rather than send you into an empty and potentially non-functional client, the update is now being abandoned. Please roll back to v441 and let hydev know!' )
+                    
+                
+                self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ?;', ( legacy_dump_type, ) )
+                
+                self._controller.frame_splash_status.SetSubtext( 'session converting finished' )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'yande.re post page parser', 'moebooru file page parser' ) )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -19172,6 +19279,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None, force_vacuum = False ):
         
+        # this is disabled for now. we'll modify it to work on individual files, maybe on next client shutdown
+        
         new_options = self._controller.new_options
         
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
@@ -19284,15 +19393,11 @@ class DB( HydrusDB.HydrusDB ):
                         
                         text = 'An attempt to vacuum the database failed.'
                         text += os.linesep * 2
-                        text += 'For now, automatic vacuuming has been disabled. If the error is not obvious, please contact the hydrus developer.'
+                        text += 'If the error is not obvious, please contact the hydrus developer.'
                         
                         HydrusData.ShowText( text )
                         
                         self._InitDBCursor()
-                        
-                        new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', None )
-                        
-                        self._SaveOptions( HC.options )
                         
                         return
                         
@@ -19353,6 +19458,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
         elif action == 'last_shutdown_work_time': self._SetLastShutdownWorkTime( *args, **kwargs )
         elif action == 'local_booru_share': self.modules_serialisable.SetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'maintain_hashed_serialisables': result = self.modules_serialisable.MaintainHashedStorage( *args, **kwargs )
         elif action == 'maintain_similar_files_search_for_potential_duplicates': result = self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self.modules_similar_files.MaintainTree( *args, **kwargs )
         elif action == 'migration_clear_job': self._MigrationClearJob( *args, **kwargs )

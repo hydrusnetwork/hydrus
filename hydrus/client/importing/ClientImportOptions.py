@@ -125,6 +125,11 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity ) = serialisable_info
         
     
+    def GetDeathFileVelocity( self ):
+        
+        return self._death_file_velocity
+        
+    
     def GetDeathFileVelocityPeriod( self ):
         
         ( death_files_found, death_time_delta ) = self._death_file_velocity

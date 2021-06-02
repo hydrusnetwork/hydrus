@@ -2,7 +2,6 @@ import itertools
 import os
 import random
 import time
-import traceback
 import typing
 
 from qtpy import QtCore as QC

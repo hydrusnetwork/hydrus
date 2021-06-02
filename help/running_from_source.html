@@ -7,7 +7,7 @@
 	<body>
 		<div class="content">
 			<h3 id="intro"><a href="#intro">running from source</a></h3>
-			<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is not simple to get hydrus running this way, but if none of the built packages work for you (for instance you use a non-Ubuntu-compatible flavour of Linux), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this stuff.</p>
+			<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is not simple to get hydrus running this way, but if none of the built packages work for you (for instance you use a non-Ubuntu-compatible flavour of Linux), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.</p>
 			<h3 id="linux_flavours"><a href="#linux_flavours">a quick note about Linux flavours</a></h3>
 			<p>I often point people here when they are running non-Ubuntu flavours of Linux and cannot run the build. One Debian user mentioned that he had an error like this:</p>
 			<p><ul>
@@ -20,19 +20,21 @@
                         <p>Trust me, just do this, it will save a ton of headaches!</a>
 			<h3 id="what_you_need"><a href="#what_you_need">what you will need</a></h3>
 			<p>You will need basic python experience, python 3.x and a number of python modules, all through pip.</p>
-			<p>If you are on Linux or macOS, or if you are on Windows and have an existing python you do not want to stomp all over with new modules, I recommend you create a virtual environment:</p>
+                        <p>First of all, get the actual program. The github repo is <a href="https://github.com/hydrusnetwork/hydrus">https://github.com/hydrusnetwork/hydrus</a>. If you are familiar with git, you can just clone the repo to the location you want, but if not, then just go to the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> and download and extract the source code .zip or .tar.gz somewhere. The same database location rules apply for the source release as the builds, so if you are not planning to redirect the database with the -d launch parameter, make sure the directory has write permissions (e.g. in Windows, don't put it in "Program Files")</p>
+                        <p>Inside the extract should be client.py, client.pyw, and server.py. You will be treating these basically the same as the 'client' and 'server' executables--you should be able to launch them the same way and they take the same launch parameters as the exes. On Windows, using client.pyw allows you to neatly launch the program without a command terminal appearing behind it, but both the .py and .pyw work fundamentally the same--feel free to play with them both.</p>
+			<p>Hydrus needs a whole bunch of libraries, so let's now set your python up. If you are on Linux or macOS, or if you are on Windows and have an existing python you do not want to stomp all over with new modules, I recommend you create a virtual environment:</p>
 			<p><i>Note, if you are on Linux, it may be easier to use your package manager instead of messing around with venv. A user has written a great summary with all needed packages <a href="running_from_source_linux_packages.txt">here</a>.</i></p>
-			<p>If you do want to create a new venv environment:</p>
+			<p>To create a new venv environment:</p>
 			<ul>
-				<li>(navigate to your hydrus extract folder)</li>
+				<li>(navigate to your hydrus extract folder in a terminal)</li>
 				<li>pip3 install virtualenv (if you need it)</li>
 				<li>pip3 install wheel (if you need it)</li>
 				<li>mkdir venv</li>
 				<li>virtualenv --python=python3 venv</li>
 				<li>. venv/bin/activate</li>
 			</ul>
-			<p>That '. venv/bin/activate' line turns your venv on, and will be needed every time you run the client.pyw/server.py files. You can easily tuck it into a launch script.</p>
-			<p>On Windows, the path is venv&#92;Scripts&#92;activate, and the whole deal is done much easier in cmd than Powershell. If you get Powershell by default, just type 'cmd' to get an old fashioned command line. In cmd, the launch command is just 'venv&#92;scripts&#92;activate', no leading period.</p>
+			<p>That '. venv/bin/activate' line turns your venv on, which is an isolated copy of python that you can install modules to without worrying about breaking something system-wide, and will be needed every time you run the client.pyw/server.py files. You should see your terminal note you are now in the venv. You can easily tuck this venv activation into a launch script.</p>
+			<p>On Windows Powershell, the command is '.&#92;venv&#92;Scripts&#92;activate', but you may find the whole deal is done much easier in cmd than Powershell. When in Powershell, just type 'cmd' to get an old fashioned command line. In cmd, the launch command is just 'venv&#92;scripts&#92;activate', no leading period.</p>
 			<p>After that, you can use pip to install everything you need from the appropriate requirements.txt in the base install directory. For instance, for Windows, you would go:</p>
 			<ul>
 				<li>pip3 install -r requirements_windows.txt</li>
@@ -58,7 +60,12 @@
 			<p>This may not matter any more, but in the old days, Windows pip could have problems building modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times.</p>
                         <p>I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<h3 id="running_it"><a href="#running_it">running it</a></h3>
-			<p>Once you have everything set up, client.pyw and server.py should look for and run off client.db and server.db just like the executables. They will look in the 'db' directory by default, or anywhere you point them with the "-d" parameter, again just like the executables.</p>
+			<p>Once you have everything set up, client.pyw and server.py should look for and run off client.db and server.db just like the executables. They will look in the 'db' directory by default, or anywhere you point them with the "-d" parameter, again just like the executables. Explictly, you will be entering something like this in the terminal:</p>
+                        <ul>
+                            <li>. venv/bin/activate</li>
+                            <li>./client.py -d="/path/to/database"</li>
+                        </ul>
+                        <p>Again, you may want to set up a shortcut to a script to make it easy.</p>
 			<p>I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.</p>
 			<h3 id="my_code"><a href="#my_code">my code</a></h3>
 			<p>My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.</p>

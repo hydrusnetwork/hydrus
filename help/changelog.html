@@ -8,6 +8,46 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_442"><a href="#version_442">version 442</a></h3></li>
+				<ul>
+					<li>gui sessions:</li>
+					<li>gui sessions are no longer a monolithic object! now, each page is stored in the database separately, and when a session saves, only those pages that have had changes since the last save are written to db. this will massively reduce long-term HDD writes for clients with large sessions and generally reduce lag during session save intervals</li>
+					<li>the new gui sessions are resilient against database damage--if a page fails to load, or is missing from the new store, its information will be recorded and saved, but the rest of the session will load</li>
+					<li>the new page storage can now be shared across sessions. multiple backups of a session that use the same page now point to the same record, which massively reduces the size of client.db for large-sessioned clients</li>
+					<li>your existing sessions and their backups will obviously be converted to the new system on update. if any fail to load or convert, a backup of the original object will be written to your database directory. the conversion shouldn't take more than a minute or two</li>
+					<li>the old max-object limit at which a session would fail to save was around 10M files and/or 500k urls total. it equated to a saved object of larger than 1Gb, which hit an internal SQLite limit. sessions overall now have no storage limit, but individual pages now inherit the old limit. Please do not hurry to try to test this out with giganto pages. if you want to make do a heap of large long-term downloaders, please spread the job across several pages</li>
+					<li>it seems URLs were the real killer here, so I am rebalancing it so URLs now count for 20 weight each. the weight limit at which point a _page_ will now fail to save, and the client will start generally moaning at you for the whole session (which can be turned off in the options), is therefore raised to 10M. most of the checks are still session-wide for now, but I will do more work here in future</li>
+					<li>if you are in advanced mode, then each page now gives its weight (including combined weight for 'page of pages') from its tab right-click menu. with the new URL weight, let's get a new sense of where the memory is actually hanging around IRL</li>
+					<li>the page and session objects are now more healthily plugged into my serialisation system, so it should be much easier to update them in future (e.g. adding memory for tag sort or current file selection)</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>when subscriptions die, the little reporting popup now includes the death file velocity ('it found fewer than 1 files in the last 90 days' etc...)		</li>
+					<li>the client no longer does vacuums automatically in idle time, and the soft/full maintenance action is removed. as average database size has grown, this old maintenance function has increasingly proved more trouble than it is worth. it will return in future as a per-file thing, with better information to the user on past vacuums and empty pages and estimates on duration to completion, and perhaps some database interrupt tech so it can be cancelled. if you really want to do a vacuum for now, do it outside the program through a SQLite intepreter on the files separately</li>
+					<li>thanks to a user submission, a yande.re post parser is added that should grab tags correct if you are logged in. the existing moebooru post parser default has its yande.re example url removed, so the url_class-parser link should move over on update</li>
+					<li>for file repositories, the client will not try to sync thumbnails until the repository store counts as 'caught up' (on a busy repo, it was trying to pull thumbs that had been deleted 'in the future'). furthermore, a 404 error due a thumb being pulled out of sync will no longer print a load of error info to the log. more work will be needed here in future</li>
+					<li>I fixed another stupid IPFS pin-commit bug, sorry for the trouble! (issue #894)</li>
+					<li>some maintenance-triggered file delete actions are now better about saving a good attached file delition reason</li>
+					<li>when the file maintenance manager does a popup with a lot of thumbnail or file integrity checks, the 'num thumbs regenned/files missing or invalid' number is now preserved through the batches of 256 jobs</li>
+					<li>thoroughly tested and brushed up the 'check for missing/invalid files' maintenance code, particularly in relation to its automatic triggering after a repository processing problem, but I still could not figure out specifically why it is not working for some users. we will have to investigate and try some more things</li>
+					<li>fixed a typo in client api help regarding the 'service_names_to_statuses_to_display_tags' variable name (I had 'displayed' before, which is incorrect)</li>
+					<li>.</li>
+					<li>build fixes:</li>
+					<li>fixed the new Linux and Windows extract builds being tucked into a little 'ubuntu'/'windows' subfolder, sorry for the trouble! They should both now have the same (note Caps) 'Hydrus Network' as their first directory</li>
+					<li>fixed the new Linux buld having borked permissions on the executables, sorry for the trouble!</li>
+					<li>since I fixed the urllib3 problem we had with serialised sessions and Retry objects, I removed it from the requirements.txts. now 'requests' can pull what it likes</li>
+					<li>after testing it with the new build, it looks like I was mistaken years ago that anyone could run hydrus from source when inside a 'built' release (due to dll conflicts in CWD vs your python install). maybe this is now only true in py3 where dll loading is a little different, but it was likely always true and my old tests only ever worked because I was in the same/so-similar environment so the dlls were not conflicting. in any case the builds no longer include the .py/.pyw files and the 'hydrus' source folder, since it just doesn't seem to work. if you want to run from source, grab the actual source release in a fresh, non-conflicting directory. I've updated the help regarding this, sorry for any trouble or confusion you have ever run into here</li>
+					<li>updated the running from source document to talk more about actually getting the source and fleshed out the info about running the scripts</li>
+					<li>.</li>
+					<li>misc boring refactoring and db updates:</li>
+					<li>created a new 'pages' gui module and moved Pages, Thumbs, Sort/Collect widgets, Management panel, and the new split Session code into it</li>
+					<li>wrote new container objects for sessions, notebook pages, and media pages, and wrote a new hash-based data object for a media page's management info and file list</li>
+					<li>added a table to the database for storing serialised objects by their hash, and updated the load/save code to work with the new session objects and manage shared page data in the hashed storage</li>
+					<li>a new maintenance routine checks which hashed serialisables are still needed by master containers and deletes the orphans. it can be manually fired from the _database->maintenance_ menu. this routine otherwise runs just after boot and then every 24 hours or every 512MB of new hashed serialisables added, whichever comes first</li>
+					<li>management controllers now discard the random per-session 'page key' from their serialised key lookup, meaning they serialise the same across sessions (making the above hash-page stuff work better!)</li>
+					<li>improved a bunch of access and error code around serialised object load/save</li>
+					<li>improved a heap of session code all over</li>
+					<li>improved serialised object hashing code</li>
+				</ul>
 				<li><h3 id="version_441"><a href="#version_441">version 441</a></h3></li>
 				<ul>
 					<li>misc:</li>

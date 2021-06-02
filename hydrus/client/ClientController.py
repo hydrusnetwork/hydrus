@@ -1275,19 +1275,17 @@ class Controller( HydrusController.HydrusController ):
             return
             
         
-        self.WriteSynchronous( 'vacuum', maintenance_mode = maintenance_mode, stop_time = stop_time )
-        
-        if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
-            
-            return
-            
-        
         self.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
         
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
             
             return
             
+        
+    
+    def MaintainHashedSerialisables( self ):
+        
+        self.WriteSynchronous( 'maintain_hashed_serialisables' )
         
     
     def MaintainMemoryFast( self ):
@@ -1384,6 +1382,11 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'notify_new_export_folders' )
         job.ShouldDelayOnWakeup( True )
         self._daemon_jobs[ 'export_folders' ] = job
+        
+        job = self.CallRepeating( 30.0, 600.0, self.MaintainHashedSerialisables )
+        job.WakeOnPubSub( 'maintain_hashed_serialisables' )
+        job.ShouldDelayOnWakeup( True )
+        self._daemon_jobs[ 'maintain_hashed_serialisables' ] = job
         
         self.subscriptions_manager.Start()
         
@@ -1586,8 +1589,9 @@ class Controller( HydrusController.HydrusController ):
         
         if name == 'last session':
             
-            session_hash = hashlib.sha256( bytes( session.DumpToString(), 'utf-8' ) ).digest()
+            session_hash = session.GetSerialisedHash()
             
+            # keep this in. we still don't want to overwrite backups if no changes have occurred
             if session_hash == self._last_last_session_hash:
                 
                 return

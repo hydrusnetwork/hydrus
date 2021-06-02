@@ -23,7 +23,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
-from hydrus.client.gui import ClientGUIResultsSortCollect
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
@@ -36,6 +35,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.pages import ClientGUIResultsSortCollect
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -1417,7 +1417,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_session_size_warnings = QW.QCheckBox( self._sessions_panel )
             
-            self._show_session_size_warnings.setToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 500k objects.' )
+            self._show_session_size_warnings.setToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 10M weight.' )
             
             #
             
@@ -1474,7 +1474,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
             
             if 'last session' not in gui_session_names:
                 
@@ -1704,7 +1704,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._file_maintenance_panel = ClientGUICommon.StaticBox( self, 'file maintenance' )
-            self._vacuum_panel = ClientGUICommon.StaticBox( self, 'vacuum' )
             
             self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
             self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
@@ -1755,14 +1754,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._vacuum_panel, '', min = 28, max = 1000, none_phrase = 'do not automatically vacuum' )
-            
-            tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 180 days+.'
-            
-            self._maintenance_vacuum_period_days.setToolTip( tts )
-            
-            #
-            
             self._idle_normal.setChecked( HC.options[ 'idle_normal' ] )
             self._idle_period.SetValue( HC.options['idle_period'] )
             self._idle_mouse_period.SetValue( HC.options['idle_mouse_period'] )
@@ -1789,8 +1780,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             file_maintenance_active_throttle_velocity = ( file_maintenance_active_throttle_files, file_maintenance_active_throttle_time_delta )
             
             self._file_maintenance_active_throttle_velocity.SetValue( file_maintenance_active_throttle_velocity )
-            
-            self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
             
             #
             
@@ -1859,21 +1848,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period_days ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._vacuum_panel, rows )
-            
-            self._vacuum_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._vacuum_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -1942,8 +1920,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'file_maintenance_active_throttle_files', file_maintenance_active_throttle_files )
             self._new_options.SetInteger( 'file_maintenance_active_throttle_time_delta', file_maintenance_active_throttle_time_delta )
-            
-            self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
         
     

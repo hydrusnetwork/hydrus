@@ -405,8 +405,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
         
-        self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
-        
         self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity' ] = 3
         
         self._dictionary[ 'noneable_integers' ][ 'last_review_bandwidth_search_distance' ] = 7 * 86400
