@@ -3557,7 +3557,9 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    HG.client_controller.CallLaterQtSafe( self, delay, image_cache.PrefetchImageRenderer, media )
+                    # we do qt safe to make sure the job is cancelled if we are destroyed, but then that launches an immediate off-qt thread to actually poke around in image cache land, which _should_ be fast, but let's not mess around
+                    
+                    HG.client_controller.CallLaterQtSafe( self, delay, HG.client_controller.CallToThread, image_cache.PrefetchImageRenderer, media )
                     
                 
             

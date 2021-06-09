@@ -226,7 +226,7 @@ class QuickDownloadManager( object ):
                         
                         job_key = ClientThreading.JobKey( cancellable = True )
                         
-                        job_key.SetVariable( 'popup_title', 'downloading' )
+                        job_key.SetStatusTitle( 'downloading' )
                         
                         job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
                         

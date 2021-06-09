@@ -843,7 +843,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             pubbed_job_key = False
             
-            job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
+            job_key.SetStatusTitle( 'import folder - ' + self._name )
             
             due_by_check_now = self._check_now
             due_by_period = self._check_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )

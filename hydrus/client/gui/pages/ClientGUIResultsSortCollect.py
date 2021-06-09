@@ -171,7 +171,7 @@ class MediaSortControl( QW.QWidget ):
         self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
         
         self._sort_type_button = ClientGUICommon.BetterButton( self, 'sort', self._SortTypeButtonClick )
-        self._sort_tag_display_type_button = ClientGUICommon.BetterButton( self, 'tag type', self._SortTagDisplayTypeClick )
+        self._sort_tag_display_type_button = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         self._sort_order_choice = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         
         type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 14 )
@@ -218,6 +218,7 @@ class MediaSortControl( QW.QWidget ):
                 
             
         
+        self._sort_tag_display_type_button.valueChanged.connect( self.EventTagDisplayTypeChoice )
         self._sort_order_choice.valueChanged.connect( self.EventSortAscChoice )
         
     
@@ -393,7 +394,9 @@ class MediaSortControl( QW.QWidget ):
             
         
     
-    def _SetTagDisplayType( self, tag_display_type ):
+    def EventTagDisplayTypeChoice( self ):
+        
+        tag_display_type = self._sort_tag_display_type_button.GetValue()
         
         ( sort_metatype, sort_data ) = self._sort_type
         
@@ -408,31 +411,6 @@ class MediaSortControl( QW.QWidget ):
             self._UserChoseASort()
             
             self._BroadcastSort()
-            
-        
-    
-    def _SortTagDisplayTypeClick( self ):
-        
-        ( sort_metatype, sort_data ) = self._sort_type
-        
-        if sort_metatype == 'namespaces':
-            
-            ( namespaces, current_tag_display_type ) = sort_data
-            
-            menu = QW.QMenu()
-            
-            for tag_display_type in [ ClientTags.TAG_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ]:
-                
-                ClientGUIMenus.AppendMenuCheckItem(
-                    menu,
-                    ClientTags.tag_display_str_lookup[ tag_display_type ],
-                    ClientTags.tag_display_str_lookup[ tag_display_type ],
-                    tag_display_type == current_tag_display_type,
-                    self._SetTagDisplayType, tag_display_type
-                )
-                
-            
-            CGC.core().PopupMenu( self, menu )
             
         
     
@@ -461,6 +439,8 @@ class MediaSortControl( QW.QWidget ):
         
         media_sort = self._GetCurrentSort()
         
+        self._sort_order_choice.blockSignals( True )
+        
         if media_sort.CanAsc():
             
             ( asc_str, desc_str, default_sort_order ) = media_sort.GetSortOrderStrings()
@@ -488,6 +468,8 @@ class MediaSortControl( QW.QWidget ):
             self._sort_order_choice.SetChoiceTuples( [] )
             
         
+        self._sort_order_choice.blockSignals( False )
+        
     
     def _UpdateSortTypeLabel( self ):
         
@@ -495,9 +477,33 @@ class MediaSortControl( QW.QWidget ):
         
         self._sort_type_button.setText( example_sort.GetSortTypeString() )
         
-        ( sort_metadatype, sort_data ) = self._sort_type
+        ( sort_metatype, sort_data ) = self._sort_type
         
-        show_tdt = sort_metadatype == 'namespaces' and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        show_tdt = sort_metatype == 'namespaces' and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        if show_tdt:
+            
+            if sort_metatype == 'namespaces':
+                
+                ( namespaces, current_tag_display_type ) = sort_data
+                
+                tag_display_types = [
+                    ClientTags.TAG_DISPLAY_ACTUAL,
+                    ClientTags.TAG_DISPLAY_SELECTION_LIST,
+                    ClientTags.TAG_DISPLAY_SINGLE_MEDIA
+                ]
+                
+                choice_tuples = [ ( ClientTags.tag_display_str_lookup[ tag_display_type ], tag_display_type ) for tag_display_type in tag_display_types ]
+                
+                self._sort_tag_display_type_button.blockSignals( True )
+                
+                self._sort_tag_display_type_button.SetChoiceTuples( choice_tuples )
+                
+                self._sort_tag_display_type_button.SetValue( current_tag_display_type )
+                
+                self._sort_tag_display_type_button.blockSignals( False )
+                
+            
         
         self._sort_tag_display_type_button.setVisible( show_tdt )
         

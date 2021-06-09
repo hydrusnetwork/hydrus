@@ -70,12 +70,12 @@ def GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ):
         
         def enter_call():
             
-            job_key.SetVariable( 'popup_network_job', network_job )
+            job_key.SetNetworkJob( network_job )
             
         
         def exit_call():
             
-            job_key.SetVariable( 'popup_network_job', None )
+            job_key.DeleteNetworkJob()
             
         
         return NetworkJobPresentationContext( enter_call, exit_call )
@@ -89,12 +89,12 @@ def GenerateSinglePopupNetworkJobPresentationContextFactory( job_key ):
         
         def enter_call():
             
-            job_key.SetVariable( 'popup_network_job', network_job )
+            job_key.SetNetworkJob( network_job )
             
         
         def exit_call():
             
-            job_key.DeleteVariable( 'popup_network_job' )
+            job_key.DeleteNetworkJob()
             
         
         return NetworkJobPresentationContext( enter_call, exit_call )
@@ -129,7 +129,7 @@ def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button
     
 def THREADDownloadURL( job_key, url, url_string ):
     
-    job_key.SetVariable( 'popup_title', url_string )
+    job_key.SetStatusTitle( url_string )
     job_key.SetVariable( 'popup_text_1', 'initialising' )
     
     #
@@ -195,9 +195,9 @@ def THREADDownloadURL( job_key, url, url_string ):
         job_key.Finish()
         
     
-def THREADDownloadURLs( job_key, urls, title ):
+def THREADDownloadURLs( job_key: ClientThreading.JobKey, urls, title ):
     
-    job_key.SetVariable( 'popup_title', title )
+    job_key.SetStatusTitle( title )
     job_key.SetVariable( 'popup_text_1', 'initialising' )
     
     num_successful = 0
@@ -297,7 +297,7 @@ def THREADDownloadURLs( job_key, urls, title ):
             
         
     
-    job_key.DeleteVariable( 'popup_network_job' )
+    job_key.DeleteNetworkJob()
     
     text_components = []
     

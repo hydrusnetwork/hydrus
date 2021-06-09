@@ -340,7 +340,7 @@ class MigrationJob( object ):
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
-        job_key.SetVariable( 'popup_title', self._title )
+        job_key.SetStatusTitle( self._title )
         
         self._controller.pub( 'message', job_key )
         

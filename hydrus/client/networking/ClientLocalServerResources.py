@@ -569,6 +569,8 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         
         self._service.ReportRequestUsed()
         
+        HG.client_controller.ResetIdleTimerFromClientAPI()
+        
     
     def _checkService( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -1628,6 +1630,11 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIR
             
             path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
+            if not os.path.exists( path ):
+                
+                raise HydrusExceptions.FileMissingException()
+                
+            
         except HydrusExceptions.FileMissingException:
             
             raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
@@ -1858,6 +1865,12 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
         try:
             
             path = HG.client_controller.client_files_manager.GetThumbnailPath( media_result )
+            
+            if not os.path.exists( path ):
+                
+                # not _supposed_ to happen, but it seems in odd situations it can
+                raise HydrusExceptions.FileMissingException()
+                
             
         except HydrusExceptions.FileMissingException:
             

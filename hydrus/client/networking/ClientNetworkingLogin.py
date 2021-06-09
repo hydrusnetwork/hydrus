@@ -931,7 +931,7 @@ class LoginProcessDomain( LoginProcess ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
-        job_key.SetVariable( 'popup_title', 'Logging in ' + login_domain )
+        job_key.SetStatusTitle( 'Logging in ' + login_domain )
         
         HG.client_controller.pub( 'message', job_key )
         

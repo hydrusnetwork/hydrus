@@ -952,7 +952,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         current_active_window = QW.QApplication.activeWindow()
         
-        i_am_active_and_focused = self.window() == current_active_window and self._text_ctrl.hasFocus()
+        i_am_active_and_focused = self.window() == current_active_window and self._text_ctrl.hasFocus() and not self.visibleRegion().isEmpty()
         
         dropdown_is_active = self._dropdown_window == current_active_window
         

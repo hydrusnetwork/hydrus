@@ -757,9 +757,9 @@ class Page( QW.QSplitter ):
         return num_hashes + ( num_seeds * 20 )
         
     
-    def IsMultipleWatcherPage( self ):
+    def IsGalleryDownloaderPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
+        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY
         
     
     def IsImporter( self ):
@@ -770,6 +770,11 @@ class Page( QW.QSplitter ):
     def IsInitialised( self ):
         
         return self._initialised
+        
+    
+    def IsMultipleWatcherPage( self ):
+        
+        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
         
     
     def IsURLImportPage( self ):
@@ -2103,6 +2108,40 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
+    def GetOrMakeGalleryDownloaderPage( self, desired_page_name = None, desired_page_key = None, select_page = True ):
+        
+        potential_gallery_downloader_pages = [ page for page in self._GetMediaPages( False ) if page.IsGalleryDownloaderPage() ]
+        
+        if desired_page_key is not None and desired_page_key in ( page.GetPageKey() for page in potential_gallery_downloader_pages ):
+            
+            potential_gallery_downloader_pages = [ page for page in potential_gallery_downloader_pages if page.GetPageKey() == desired_page_key ]
+            
+        elif desired_page_name is not None:
+            
+            potential_gallery_downloader_pages = [ page for page in potential_gallery_downloader_pages if page.GetName() == desired_page_name ]
+            
+        
+        if len( potential_gallery_downloader_pages ) > 0:
+            
+            # ok, we can use an existing one. should we use the current?
+            
+            current_media_page = self.GetCurrentMediaPage()
+            
+            if current_media_page is not None and current_media_page in potential_gallery_downloader_pages:
+                
+                return current_media_page
+                
+            else:
+                
+                return potential_gallery_downloader_pages[0]
+                
+            
+        else:
+            
+            return self.NewPageImportGallery( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page )
+            
+        
+    
     def GetOrMakeMultipleWatcherPage( self, desired_page_name = None, desired_page_key = None, select_page = True ):
         
         potential_watcher_pages = [ page for page in self._GetMediaPages( False ) if page.IsMultipleWatcherPage() ]
@@ -2798,11 +2837,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportGallery( self, on_deepest_notebook = False ):
+    def NewPageImportGallery( self, page_name = None, on_deepest_notebook = False, select_page = True ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( page_name = page_name )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportSimpleDownloader( self, on_deepest_notebook = False ):

@@ -1873,12 +1873,46 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self.SetURLClasses( new_url_classes )
         
     
-    def OverwriteParserLink( self, url_class, parser ):
+    def OverwriteParserLink( self, url_class_name, parser_name ):
         
         with self._lock:
             
-            url_class_key = url_class.GetClassKey()
-            parser_key = parser.GetParserKey()
+            url_class_to_link = None
+            
+            for url_class in self._url_classes:
+                
+                if url_class.GetName() == url_class_name:
+                    
+                    url_class_to_link = url_class
+                    
+                    break
+                    
+                
+            
+            if url_class_to_link is None:
+                
+                return False
+                
+            
+            parser_to_link = None
+            
+            for parser in self._parsers:
+                
+                if parser.GetName() == parser_name:
+                    
+                    parser_to_link = parser
+                    
+                    break
+                    
+                
+            
+            if parser_to_link is None:
+                
+                return False
+                
+            
+            url_class_key = url_class_to_link.GetClassKey()
+            parser_key = parser_to_link.GetParserKey()
             
             self._url_class_keys_to_parser_keys[ url_class_key ] = parser_key
             

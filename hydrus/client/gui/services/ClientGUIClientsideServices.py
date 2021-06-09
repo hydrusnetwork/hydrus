@@ -44,7 +44,7 @@ from hydrus.client.networking import ClientNetworkingJobs
 
 class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, auto_account_creation_service_key = None ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
@@ -85,6 +85,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         QP.AddToLayout( vbox, add_remove_hbox, CC.FLAGS_ON_RIGHT )
         
         self.widget().setLayout( vbox )
+        
+        if auto_account_creation_service_key is not None:
+            
+            HG.client_controller.CallLaterQtSafe( self, 1.2, self._Edit, auto_account_creation_service_key = auto_account_creation_service_key )
+            
         
     
     def _Add( self, service_type ):
@@ -184,9 +189,16 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _Edit( self ):
+    def _Edit( self, auto_account_creation_service_key = None ):
         
-        selected_services = self._listctrl.GetData( only_selected = True )
+        if auto_account_creation_service_key is None:
+            
+            selected_services = self._listctrl.GetData( only_selected = True )
+            
+        else:
+            
+            selected_services = [ service for service in self._listctrl.GetData( only_selected = False ) if service.GetServiceKey() == auto_account_creation_service_key ]
+            
         
         try:
             
@@ -194,7 +206,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service' ) as dlg:
                     
-                    panel = EditClientServicePanel( dlg, service )
+                    panel = EditClientServicePanel( dlg, service, auto_account_creation_service_key = auto_account_creation_service_key )
                     
                     dlg.SetPanel( panel )
                     
@@ -257,7 +269,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
 class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, service ):
+    def __init__( self, parent, service, auto_account_creation_service_key = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -278,7 +290,7 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._service_type in HC.RESTRICTED_SERVICES:
             
-            self._panels.append( EditServiceRestrictedSubPanel( self, self._service_key, remote_panel, self._service_type, self._dictionary ) )
+            self._panels.append( EditServiceRestrictedSubPanel( self, self._service_key, remote_panel, self._service_type, self._dictionary, auto_account_creation_service_key = auto_account_creation_service_key ) )
             
         
         if self._service_type in HC.REAL_TAG_SERVICES:
@@ -652,7 +664,7 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
 
 class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, service_key, remote_panel: EditServiceRemoteSubPanel, service_type, dictionary ):
+    def __init__( self, parent, service_key, remote_panel: EditServiceRemoteSubPanel, service_type, dictionary, auto_account_creation_service_key = None ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus network' )
         
@@ -700,6 +712,11 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         self._remote_panel.becameValidSignal.connect( self._UpdateButtons )
         self._remote_panel.becameInvalidSignal.connect( self._UpdateButtons )
+        
+        if auto_account_creation_service_key is not None:
+            
+            HG.client_controller.CallLaterQtSafe( self, 1.2, self._STARTFetchAutoAccountCreationAccountTypes )
+            
         
     
     def _EnableDisableButtons( self, value ):
@@ -1628,7 +1645,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
             
-            job_key.SetVariable( 'popup_title', self._service.GetName() + ': immediate sync' )
+            job_key.SetStatusTitle( self._service.GetName() + ': immediate sync' )
             job_key.SetVariable( 'popup_text_1', 'downloading' )
             
             self._controller.pub( 'message', job_key )
@@ -2639,7 +2656,7 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
                     
                     try:
                         
-                        job_key.SetVariable( 'popup_title', 'exporting updates for ' + service.GetName() )
+                        job_key.SetStatusTitle( 'exporting updates for ' + service.GetName() )
                         HG.client_controller.pub( 'message', job_key )
                         
                         client_files_manager = HG.client_controller.client_files_manager

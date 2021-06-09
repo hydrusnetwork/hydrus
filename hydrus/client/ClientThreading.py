@@ -32,7 +32,6 @@ class JobKey( object ):
         
         self._deleted = threading.Event()
         self._deletion_time = None
-        self._begun = threading.Event()
         self._done = threading.Event()
         self._cancelled = threading.Event()
         self._paused = threading.Event()
@@ -115,25 +114,6 @@ class JobKey( object ):
             
         
     
-    def Begin( self ): self._begun.set()
-    
-    def CanBegin( self ):
-        
-        self._CheckCancelTests()
-        
-        if self.IsCancelled():
-            
-            return False
-            
-        
-        if self._only_start_if_unbusy and HG.client_controller.SystemBusy():
-            
-            return False
-            
-        
-        return True
-        
-    
     def Cancel( self, seconds = None ):
         
         if seconds is None:
@@ -158,6 +138,11 @@ class JobKey( object ):
             
             self._deletion_time = HydrusData.GetNow() + seconds
             
+        
+    
+    def DeleteNetworkJob( self ):
+        
+        self.DeleteVariable( 'network_job' )
         
     
     def DeleteVariable( self, name ):
@@ -224,12 +209,32 @@ class JobKey( object ):
         return self._key
         
     
+    def GetNetworkJob( self ):
+        
+        return self.GetIfHasVariable( 'network_job' )
+        
+    
+    def GetStatusTitle( self ) -> typing.Optional[ str ]:
+        
+        return self.GetIfHasVariable( 'status_title' )
+        
+    
+    def GetTraceback( self ):
+        
+        return self.GetIfHasVariable( 'traceback' )
+        
+    
     def GetURLs( self ):
         
         with self._variable_lock:
             
             return list( self._urls )
             
+        
+    
+    def GetUserCallable( self ) -> typing.Optional[ HydrusData.Call ]:
+        
+        return self.GetIfHasVariable( 'user_callable' )
         
     
     def HadError( self ):
@@ -240,13 +245,6 @@ class JobKey( object ):
     def HasVariable( self, name ):
         
         with self._variable_lock: return name in self._variables
-        
-    
-    def IsBegun( self ):
-        
-        self._CheckCancelTests()
-        
-        return self._begun.is_set()
         
     
     def IsCancellable( self ):
@@ -295,7 +293,7 @@ class JobKey( object ):
         
         self._CheckCancelTests()
         
-        return self.IsBegun() and not self.IsDone()
+        return not self.IsDone()
         
     
     def PausePlay( self ):
@@ -304,7 +302,10 @@ class JobKey( object ):
         else: self._paused.set()
         
     
-    def SetCancellable( self, value ): self._cancellable = value
+    def SetCancellable( self, value ):
+        
+        self._cancellable = value
+        
     
     def SetErrorException( self, e: Exception ):
         
@@ -313,7 +314,27 @@ class JobKey( object ):
         self.Cancel()
         
     
+    def SetNetworkJob( self, network_job ):
+        
+        self.SetVariable( 'network_job', network_job )
+        
+    
     def SetPausable( self, value ): self._pausable = value
+    
+    def SetStatusTitle( self, title: str ):
+        
+        self.SetVariable( 'status_title', title )
+        
+    
+    def SetTraceback( self, trace: str ):
+        
+        self.SetVariable( 'traceback', trace )
+        
+    
+    def SetUserCallable( self, call: HydrusData.Call ):
+        
+        self.SetVariable( 'user_callable', call )
+        
     
     def SetVariable( self, name, value ):
         
@@ -336,15 +357,25 @@ class JobKey( object ):
         
         stuff_to_print = []
         
-        with self._variable_lock:
+        status_title = self.GetStatusTitle()
+        
+        if status_title is not None:
             
-            if 'popup_title' in self._variables: stuff_to_print.append( self._variables[ 'popup_title' ] )
+            stuff_to_print.append( status_title )
+            
+        
+        with self._variable_lock:
             
             if 'popup_text_1' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_1' ] )
             
             if 'popup_text_2' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_2' ] )
             
-            if 'popup_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_traceback' ] )
+        
+        trace = self.GetTraceback()
+        
+        if trace is not None:
+            
+            stuff_to_print.append( trace )
             
         
         stuff_to_print = [ str( s ) for s in stuff_to_print ]

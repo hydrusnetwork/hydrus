@@ -1463,10 +1463,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._controls_panel = ClientGUICommon.StaticBox( self, 'controls' )
             
             self._autocomplete_float_main_gui = QW.QCheckBox( self._controls_panel )
+            tt = 'The autocomplete dropdown can either \'float\' on top of the main window, or if that does not work well for you, it can embed into the parent panel.'
+            self._autocomplete_float_main_gui.setToolTip( tt )
+            
             self._autocomplete_float_frames = QW.QCheckBox( self._controls_panel )
+            tt = 'The autocomplete dropdown can either \'float\' on top of dialogs like _manage tags_, or if that does not work well for you (it can sometimes annoyingly overlap the ok/cancel buttons), it can embed into the parent dialog panel.'
+            self._autocomplete_float_frames.setToolTip( tt )
             
             self._ac_read_list_height_num_chars = QP.MakeQSpinBox( self._controls_panel, min = 1, max = 128 )
+            tt = 'Read autocompletes are those in search pages, where you are looking through existing tags.'
+            self._ac_read_list_height_num_chars.setToolTip( tt )
+            
             self._ac_write_list_height_num_chars = QP.MakeQSpinBox( self._controls_panel, min = 1, max = 128 )
+            tt = 'Write autocompletes are those in most dialogs, where you are adding new tags to files.'
+            self._ac_write_list_height_num_chars.setToolTip( tt )
             
             self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
             
@@ -1581,6 +1591,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._pages_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._pages_panel.Add( self._page_names_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            message = 'The autocomplete dropdown list is the panel that hangs below the tag input text box on search pages.'
+            
+            st = ClientGUICommon.BetterStaticText( self._controls_panel, label = message )
+            
+            self._controls_panel.Add( st, CC.FLAGS_CENTER )
             
             rows = []
             
@@ -1715,6 +1731,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
             self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
+            self._idle_mode_client_api_timeout = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore client api' )
             self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 5, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
             
             #
@@ -1757,6 +1774,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_normal.setChecked( HC.options[ 'idle_normal' ] )
             self._idle_period.SetValue( HC.options['idle_period'] )
             self._idle_mouse_period.SetValue( HC.options['idle_mouse_period'] )
+            self._idle_mode_client_api_timeout.SetValue( self._new_options.GetNoneableInteger( 'idle_mode_client_api_timeout' ) )
             self._idle_cpu_max.SetValue( HC.options['idle_cpu_max'] )
             
             self._idle_shutdown.SetValue( HC.options[ 'idle_shutdown' ] )
@@ -1786,9 +1804,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Run maintenance jobs when the client is idle and the system is not otherwise busy: ', self._idle_normal ) )
-            rows.append( ( 'Assume the client is idle if no general browsing activity has occurred in the past: ', self._idle_period ) )
-            rows.append( ( 'Assume the client is idle if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
-            rows.append( ( 'Assume the system is busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
+            rows.append( ( 'Permit idle mode if no general browsing activity has occurred in the past: ', self._idle_period ) )
+            rows.append( ( 'Permit idle mode if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
+            rows.append( ( 'Permit idle mode if no Client API requests in the past: ', self._idle_mode_client_api_timeout ) )
+            rows.append( ( 'Consider the system busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
             
@@ -1862,32 +1881,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EnableDisableIdleNormal( self ):
             
-            if self._idle_normal.isChecked():
-                
-                self._idle_period.setEnabled( True )
-                self._idle_mouse_period.setEnabled( True )
-                self._idle_cpu_max.setEnabled( True )
-                
-            else:
-                
-                self._idle_period.setEnabled( False )
-                self._idle_mouse_period.setEnabled( False )
-                self._idle_cpu_max.setEnabled( False )
-                
+            enabled = self._idle_normal.isChecked()
+            
+            self._idle_period.setEnabled( enabled )
+            self._idle_mouse_period.setEnabled( enabled )
+            self._idle_mode_client_api_timeout.setEnabled( enabled )
+            self._idle_cpu_max.setEnabled( enabled )
             
         
         def _EnableDisableIdleShutdown( self ):
             
-            if self._idle_shutdown.GetValue() == CC.IDLE_NOT_ON_SHUTDOWN:
-                
-                self._shutdown_work_period.setEnabled( False )
-                self._idle_shutdown_max_minutes.setEnabled( False )
-                
-            else:
-                
-                self._shutdown_work_period.setEnabled( True )
-                self._idle_shutdown_max_minutes.setEnabled( True )
-                
+            enabled = self._idle_shutdown.GetValue() != CC.IDLE_NOT_ON_SHUTDOWN
+            
+            self._shutdown_work_period.setEnabled( enabled )
+            self._idle_shutdown_max_minutes.setEnabled( enabled )
             
         
         def UpdateOptions( self ):
@@ -1896,6 +1903,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'idle_period' ] = self._idle_period.GetValue()
             HC.options[ 'idle_mouse_period' ] = self._idle_mouse_period.GetValue()
+            self._new_options.SetNoneableInteger( 'idle_mode_client_api_timeout', self._idle_mode_client_api_timeout.GetValue() )
             HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
             
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetValue()
@@ -2461,35 +2469,50 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            media_panel = ClientGUICommon.StaticBox( self, 'thumbnail size and media cache' )
+            thumbnail_cache_panel = ClientGUICommon.StaticBox( self, 'thumbnail cache' )
             
-            self._thumbnail_cache_size = QP.MakeQSpinBox( media_panel, min=5, max=3000 )
+            self._thumbnail_cache_size = QP.MakeQSpinBox( thumbnail_cache_panel, min=5, max=3000 )
             self._thumbnail_cache_size.valueChanged.connect( self.EventThumbnailsUpdate )
             
-            self._estimated_number_thumbnails = QW.QLabel( '', media_panel )
+            self._estimated_number_thumbnails = QW.QLabel( '', thumbnail_cache_panel )
             
-            self._fullscreen_cache_size = QP.MakeQSpinBox( media_panel, min=25, max=8192 )
-            self._fullscreen_cache_size.valueChanged.connect( self.EventFullscreensUpdate )
+            self._thumbnail_cache_timeout = ClientGUITime.TimeDeltaButton( thumbnail_cache_panel, min = 300, days = True, hours = True, minutes = True )
+            self._thumbnail_cache_timeout.setToolTip( 'The amount of time after which a thumbnail in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
             
-            self._estimated_number_fullscreens = QW.QLabel( '', media_panel )
+            image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache' )
             
-            self._image_tile_cache_size = ClientGUIControls.BytesControl( media_panel )
+            self._fullscreen_cache_size = QP.MakeQSpinBox( image_cache_panel, min=25, max=8192 )
+            self._fullscreen_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
+            
+            self._estimated_number_fullscreens = QW.QLabel( '', image_cache_panel )
+            
+            self._image_cache_timeout = ClientGUITime.TimeDeltaButton( image_cache_panel, min = 300, days = True, hours = True, minutes = True )
+            self._image_cache_timeout.setToolTip( 'The amount of time after which a rendered image in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
+            
+            self._media_viewer_prefetch_delay_base_ms = QP.MakeQSpinBox( image_cache_panel, min = 0, max = 2000 )
+            tt = 'How long to wait, after the current image is rendered, to start rendering neighbours. Does not matter so much any more, but if you have CPU lag, you can try boosting it a bit.'
+            self._media_viewer_prefetch_delay_base_ms.setToolTip( tt )
+            
+            self._media_viewer_prefetch_num_previous = QP.MakeQSpinBox( image_cache_panel, min = 0, max = 5 )
+            self._media_viewer_prefetch_num_next = QP.MakeQSpinBox( image_cache_panel, min = 0, max = 5 )
+            
+            self._image_cache_storage_limit_percentage = QP.MakeQSpinBox( image_cache_panel, min = 20, max = 50 )
+            
+            self._image_cache_storage_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
+            
+            self._image_cache_prefetch_limit_percentage = QP.MakeQSpinBox( image_cache_panel, min = 5, max = 20 )
+            
+            self._image_cache_prefetch_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
+            
+            image_tile_cache_panel = ClientGUICommon.StaticBox( self, 'image tile cache' )
+            
+            self._image_tile_cache_size = ClientGUIControls.BytesControl( image_tile_cache_panel )
             self._image_tile_cache_size.valueChanged.connect( self.EventImageTilesUpdate )
             
-            self._estimated_number_image_tiles = QW.QLabel( '', media_panel )
+            self._estimated_number_image_tiles = QW.QLabel( '', image_tile_cache_panel )
             
-            self._thumbnail_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, days = True, hours = True, minutes = True )
-            self._thumbnail_cache_timeout.setToolTip( 'The amount of time after which a thumbnail in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
-            
-            self._image_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, days = True, hours = True, minutes = True )
-            self._image_cache_timeout.setToolTip( 'The amount of time after which a rendered image in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
-            
-            self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, hours = True, minutes = True )
-            self._image_tile_cache_timeout.setToolTip( 'The amount of time after which a rendered image tile in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
-            
-            self._media_viewer_prefetch_delay_base_ms = QP.MakeQSpinBox( media_panel, min = 0, max = 2000 )
-            self._media_viewer_prefetch_num_previous = QP.MakeQSpinBox( media_panel, min = 0, max = 5 )
-            self._media_viewer_prefetch_num_next = QP.MakeQSpinBox( media_panel, min = 0, max = 5 )
+            self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( image_tile_cache_panel, min = 300, hours = True, minutes = True )
+            self._image_tile_cache_timeout.setToolTip( 'The amount of time after which a rendered image tile in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
             
             #
             
@@ -2526,9 +2549,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_viewer_prefetch_num_previous.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_previous' ) )
             self._media_viewer_prefetch_num_next.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_next' ) )
             
+            self._image_cache_storage_limit_percentage.setValue( self._new_options.GetInteger( 'image_cache_storage_limit_percentage' ) )
+            self._image_cache_prefetch_limit_percentage.setValue( self._new_options.GetInteger( 'image_cache_prefetch_limit_percentage' ) )
+            
             #
             
             vbox = QP.VBoxLayout()
+            
+            text = 'These options are advanced! PROTIP: Do not go crazy here.'
+            
+            st = ClientGUICommon.BetterStaticText( self, text )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_CENTER )
             
             #
             
@@ -2547,40 +2579,86 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( image_tiles_sizer, self._image_tile_cache_size, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( image_tiles_sizer, self._estimated_number_image_tiles, CC.FLAGS_CENTER_PERPENDICULAR )
             
+            image_cache_storage_sizer = QP.HBoxLayout()
+            
+            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage_st, CC.FLAGS_CENTER_PERPENDICULAR )
+            
+            image_cache_prefetch_sizer = QP.HBoxLayout()
+            
+            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage_st, CC.FLAGS_CENTER_PERPENDICULAR )
+            
             video_buffer_sizer = QP.HBoxLayout()
             
             QP.AddToLayout( video_buffer_sizer, self._video_buffer_size_mb, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( video_buffer_sizer, self._estimated_number_video_frames, CC.FLAGS_CENTER_PERPENDICULAR )
             
-            text = 'These options are advanced!'
-            text += os.linesep
-            text += 'If your navigation back and forth or between zooms is sluggish, the \'tile\' cache is probably the best one to try boosting.'
-            text += os.linesep
-            text += 'PROTIP: Do not go crazy here.'
+            #
             
-            st = ClientGUICommon.BetterStaticText( media_panel, text )
+            text = 'Does not change much, thumbs are cheap.'
             
-            st.setWordWrap( True )
+            st = ClientGUICommon.BetterStaticText( thumbnail_cache_panel, text )
             
-            media_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            thumbnail_cache_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
             rows.append( ( 'MB memory reserved for thumbnail cache:', thumbnails_sizer ) )
-            rows.append( ( 'MB memory reserved for image cache:', fullscreens_sizer ) )
-            rows.append( ( 'MB memory reserved for image tile cache:', image_tiles_sizer ) )
             rows.append( ( 'Thumbnail cache timeout:', self._thumbnail_cache_timeout ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( thumbnail_cache_panel, rows )
+            
+            thumbnail_cache_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, thumbnail_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            text = 'Important if you want smooth navigation between different images in the media viewer. If you deal with huge images, bump up cache size and max size that can be cached or prefetched, but be prepared to pay the memory price.'
+            text += os.linesep * 2
+            text += 'Allowing more prefetch is great, but it needs CPU.'
+            
+            st = ClientGUICommon.BetterStaticText( image_cache_panel, text )
+            
+            st.setWordWrap( True )
+            
+            image_cache_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'MB memory reserved for image cache:', fullscreens_sizer ) )
             rows.append( ( 'Image cache timeout:', self._image_cache_timeout ) )
-            rows.append( ( 'Image tile cache timeout:', self._image_tile_cache_timeout ) )
+            rows.append( ( 'Maximum image size (in % of cache) that can be cached:', image_cache_storage_sizer ) )
+            rows.append( ( 'Maximum image size (in % of cache) that will be prefetched:', image_cache_prefetch_sizer ) )
             rows.append( ( 'Base ms delay for media viewer neighbour render prefetch:', self._media_viewer_prefetch_delay_base_ms ) )
             rows.append( ( 'Num previous to prefetch:', self._media_viewer_prefetch_num_previous ) )
             rows.append( ( 'Num next to prefetch:', self._media_viewer_prefetch_num_next ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( image_cache_panel, rows )
             
-            media_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            image_cache_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            QP.AddToLayout( vbox, media_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, image_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            text = 'Important if you do a lot of zooming in and out on the same image or a small number of comparison images.'
+            
+            st = ClientGUICommon.BetterStaticText( image_tile_cache_panel, text )
+            
+            image_tile_cache_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'MB memory reserved for image tile cache:', image_tiles_sizer ) )
+            rows.append( ( 'Image tile cache timeout:', self._image_tile_cache_timeout ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( image_tile_cache_panel, rows )
+            
+            image_tile_cache_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, image_tile_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2630,21 +2708,46 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self.EventFullscreensUpdate( self._fullscreen_cache_size.value() )
+            self._image_cache_storage_limit_percentage.valueChanged.connect( self.EventImageCacheUpdate )
+            self._image_cache_prefetch_limit_percentage.valueChanged.connect( self.EventImageCacheUpdate )
+            
+            self.EventImageCacheUpdate()
             self.EventThumbnailsUpdate( self._thumbnail_cache_size.value() )
             self.EventImageTilesUpdate()
             self.EventVideoBufferUpdate( self._video_buffer_size_mb.value() )
             
         
-        def EventFullscreensUpdate( self, value ):
+        def EventImageCacheUpdate( self ):
+            
+            cache_size = self._fullscreen_cache_size.value() * 1048576
             
             display_size = ClientGUIFunctions.GetDisplaySize( self )
             
             estimated_bytes_per_fullscreen = 3 * display_size.width() * display_size.height()
             
-            estimate = ( value * 1048576 ) // estimated_bytes_per_fullscreen
+            estimate = cache_size // estimated_bytes_per_fullscreen
             
             self._estimated_number_fullscreens.setText( '(about {}-{} images the size of your screen)'.format( HydrusData.ToHumanInt( estimate // 2 ), HydrusData.ToHumanInt( estimate * 2 ) ) )
+            
+            num_pixels = cache_size * ( self._image_cache_storage_limit_percentage.value() / 100 ) / 3
+            
+            unit_square = num_pixels / ( 16 * 9 )
+            
+            unit_length = unit_square ** 0.5
+            
+            resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
+            
+            self._image_cache_storage_limit_percentage_st.setText( 'about a {} image'.format( HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            
+            num_pixels = cache_size * ( self._image_cache_prefetch_limit_percentage.value() / 100 ) / 3
+            
+            unit_square = num_pixels / ( 16 * 9 )
+            
+            unit_length = unit_square ** 0.5
+            
+            resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
+            
+            self._image_cache_prefetch_limit_percentage_st.setText( 'about a {} image'.format( HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
             
         
         def EventImageTilesUpdate( self ):
@@ -2694,6 +2797,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'media_viewer_prefetch_delay_base_ms', self._media_viewer_prefetch_delay_base_ms.value() )
             self._new_options.SetInteger( 'media_viewer_prefetch_num_previous', self._media_viewer_prefetch_num_previous.value() )
             self._new_options.SetInteger( 'media_viewer_prefetch_num_next', self._media_viewer_prefetch_num_next.value() )
+            
+            self._new_options.SetInteger( 'image_cache_storage_limit_percentage', self._image_cache_storage_limit_percentage.value() )
+            self._new_options.SetInteger( 'image_cache_prefetch_limit_percentage', self._image_cache_prefetch_limit_percentage.value() )
             
             self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.value() )
             

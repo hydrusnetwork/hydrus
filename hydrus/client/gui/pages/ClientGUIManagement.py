@@ -103,9 +103,12 @@ def CreateManagementControllerDuplicateFilter():
     
     return management_controller
     
-def CreateManagementControllerImportGallery():
+def CreateManagementControllerImportGallery( page_name = None ):
     
-    page_name = 'gallery'
+    if page_name is None:
+        
+        page_name = 'gallery'
+        
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
     
@@ -4443,7 +4446,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     job_key = ClientThreading.JobKey( cancellable = True )
                     
-                    job_key.SetVariable( 'popup_title', 'committing petitions' )
+                    job_key.SetStatusTitle( 'committing petitions' )
                     
                     HG.client_controller.pub( 'message', job_key )
                     

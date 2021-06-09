@@ -50,11 +50,11 @@ def CatchExceptionClient( etype, value, tb ):
             
         else:
             
-            try: job_key.SetVariable( 'popup_title', str( etype.__name__ ) )
-            except: job_key.SetVariable( 'popup_title', str( etype ) )
+            try: job_key.SetStatusTitle( str( etype.__name__ ) )
+            except: job_key.SetStatusTitle( str( etype ) )
             
             job_key.SetVariable( 'popup_text_1', first_line )
-            job_key.SetVariable( 'popup_traceback', trace )
+            job_key.SetTraceback( trace )
             
         
         text = job_key.ToString()
@@ -344,10 +344,10 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
         
         title = str( getattr( etype, '__name__', etype ) )
         
-        job_key.SetVariable( 'popup_title', title )
+        job_key.SetStatusTitle( title )
         
         job_key.SetVariable( 'popup_text_1', first_line )
-        job_key.SetVariable( 'popup_traceback', trace )
+        job_key.SetTraceback( trace )
         
     
     text = job_key.ToString()

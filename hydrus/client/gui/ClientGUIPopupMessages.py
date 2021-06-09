@@ -17,7 +17,6 @@ from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
 
 class PopupWindow( QW.QFrame ):
     
@@ -47,7 +46,7 @@ class PopupMessage( PopupWindow ):
     
     TEXT_CUTOFF = 1024
     
-    def __init__( self, parent, manager, job_key ):
+    def __init__( self, parent, manager, job_key: ClientThreading.JobKey ):
         
         PopupWindow.__init__( self, parent, manager )
         
@@ -131,6 +130,11 @@ class PopupMessage( PopupWindow ):
         self._show_files_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._show_files_button.hide()
         
+        self._user_callable_button = ClientGUICommon.BetterButton( self, 'run command', self.CallUserCallable )
+        self._user_callable_button_ev = QP.WidgetEventFilter( self._user_callable_button )
+        self._user_callable_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._user_callable_button.hide()
+        
         self._show_tb_button = ClientGUICommon.BetterButton( self, 'show traceback', self.ShowTB )
         self._show_tb_button_ev = QP.WidgetEventFilter( self._show_tb_button )
         self._show_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
@@ -177,6 +181,7 @@ class PopupMessage( PopupWindow ):
         QP.AddToLayout( vbox, self._network_job_ctrl )
         QP.AddToLayout( vbox, self._copy_to_clipboard_button )
         QP.AddToLayout( vbox, self._show_files_button )
+        QP.AddToLayout( vbox, self._user_callable_button )
         QP.AddToLayout( vbox, self._show_tb_button )
         QP.AddToLayout( vbox, self._tb_text )
         QP.AddToLayout( vbox, self._copy_tb_button )
@@ -221,6 +226,16 @@ class PopupMessage( PopupWindow ):
         
         self._yes.hide()
         self._no.hide()
+        
+    
+    def CallUserCallable( self ):
+        
+        user_callable = self._job_key.GetUserCallable()
+        
+        if user_callable is not None:
+            
+            user_callable()
+            
         
     
     def Cancel( self ):
@@ -316,9 +331,7 @@ class PopupMessage( PopupWindow ):
     
     def UpdateMessage( self ):
         
-        paused = self._job_key.IsPaused()
-        
-        title = self._job_key.GetIfHasVariable( 'popup_title' )
+        title = self._job_key.GetStatusTitle()
         
         if title is not None:
             
@@ -330,6 +343,10 @@ class PopupMessage( PopupWindow ):
             
             self._title.hide()
             
+        
+        #
+        
+        paused = self._job_key.IsPaused()
         
         popup_text_1 = self._job_key.GetIfHasVariable( 'popup_text_1' )
         
@@ -353,6 +370,8 @@ class PopupMessage( PopupWindow ):
             self._text_1.hide()
             
         
+        #
+        
         popup_gauge_1 = self._job_key.GetIfHasVariable( 'popup_gauge_1' )
         
         if popup_gauge_1 is not None and not paused:
@@ -369,6 +388,8 @@ class PopupMessage( PopupWindow ):
             self._gauge_1.hide()
             
         
+        #
+        
         popup_text_2 = self._job_key.GetIfHasVariable( 'popup_text_2' )
         
         if popup_text_2 is not None and not paused:
@@ -383,6 +404,8 @@ class PopupMessage( PopupWindow ):
             
             self._text_2.hide()
             
+        
+        #
         
         popup_gauge_2 = self._job_key.GetIfHasVariable( 'popup_gauge_2' )
         
@@ -400,13 +423,15 @@ class PopupMessage( PopupWindow ):
             self._gauge_2.hide()
             
         
+        #
+        
         popup_yes_no_question = self._job_key.GetIfHasVariable( 'popup_yes_no_question' )
         
         if popup_yes_no_question is not None and not paused:
             
             text = popup_yes_no_question
             
-            self._text_yes_no.setText( self._ProcessText(text) )
+            self._text_yes_no.setText( self._ProcessText( text ) )
             
             self._text_yes_no.show()
             
@@ -420,22 +445,24 @@ class PopupMessage( PopupWindow ):
             self._no.hide()
             
         
-        if self._job_key.HasVariable( 'popup_network_job' ):
-            
-            # this can be validly None, which confuses the getifhas result
-            
-            popup_network_job = self._job_key.GetIfHasVariable( 'popup_network_job' )
-            
-            self._network_job_ctrl.SetNetworkJob( popup_network_job )
-            
-            self._network_job_ctrl.show()
-            
-        else:
+        #
+        
+        network_job = self._job_key.GetNetworkJob()
+        
+        if network_job is None:
             
             self._network_job_ctrl.ClearNetworkJob()
             
             self._network_job_ctrl.hide()
             
+        else:
+            
+            self._network_job_ctrl.SetNetworkJob( network_job )
+            
+            self._network_job_ctrl.show()
+            
+        
+        #
         
         popup_clipboard = self._job_key.GetIfHasVariable( 'popup_clipboard' )
         
@@ -454,6 +481,8 @@ class PopupMessage( PopupWindow ):
             
             self._copy_to_clipboard_button.hide()
             
+        
+        #
         
         result = self._job_key.GetIfHasVariable( 'popup_files' )
         
@@ -477,30 +506,44 @@ class PopupMessage( PopupWindow ):
             self._show_files_button.hide()
             
         
-        popup_traceback = self._job_key.GetIfHasVariable( 'popup_traceback' )
+        #
+        
+        user_callable = self._job_key.GetUserCallable()
+        
+        if user_callable is None:
+            
+            self._user_callable_button.hide()
+            
+        else:
+            
+            self._user_callable_button.setText( user_callable.GetLabel() )
+            
+            self._user_callable_button.show()
+            
+        
+        #
+        
+        popup_traceback = self._job_key.GetTraceback()
         
         if popup_traceback is not None:
             
             self._copy_tb_button.show()
-            
-        else:
-            
-            self._copy_tb_button.hide()
-            
-        
-        if popup_traceback is not None:
+            self._show_tb_button.show()
             
             text = popup_traceback
             
             self._tb_text.setText( self._ProcessText( text ) )
             
-            self._show_tb_button.show()
+            # do not show automatically--that is up to the show button
             
         else:
             
+            self._copy_tb_button.hide()
             self._show_tb_button.hide()
             self._tb_text.hide()
             
+        
+        #
         
         if self._job_key.IsPausable():
             
@@ -626,11 +669,14 @@ class PopupMessageManager( QW.QWidget ):
             
             message_window = sizer_item.widget()
             
-            if not message_window: continue
+            if not message_window:
+                
+                continue
+                
             
             job_key = message_window.GetJobKey()
             
-            if job_key.HasVariable( 'popup_traceback' ):
+            if job_key.HadError():
                 
                 return True
                 

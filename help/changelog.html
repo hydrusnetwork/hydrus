@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_443"><a href="#version_443">version 443</a></h3></li>
+				<ul>
+					<li>quality of life:</li>
+					<li>when subscriptions hit their 'periodic file limit', which has always been an overly technical term, the popup message now explains the situation in better language. it also now provides a button to automatically fill in the gap via a new gallery downloader page called 'subscription gap downloaders' that gets the query with a file limit five times the size of the sub's periodic download limit</li>
+					<li>I rewrote the logic behind the 'small initial sync, larger periodic sync' detection in subscription sync, improving url counting and reliability through the third, fourth, fifth etc... sync, and then generalised the test to also work without fixed file limits and for large-gallery sites like pixiv, and any site that has URLs that often produce multiple files per URL. essentially, subs now have a nice test for appropriate times to stop url-adding part way through a page (typically, a sub will otherwise always add everything up to the end of a page, in order to catch late-tagged files that have appeared out of order, but if this is done too eagerly, some types of subs perform inefficiently)</li>
+					<li>this matters for PTR accounts: if your repository account does not have permissions to upload something you have pending, the popup message talking about this now hangs around for longer (120 seconds), explains the issue better, and has a button that will take you directly to the _manage services_ panel for the service and will hit up 'check for auto-account creation'</li>
+					<li>in _manage services_, whenever you change the credentials (host, port, or access key) on a restricted service, that service now resets its account to unknown and flags for a swift account re-fetch. this should solve some annoying 'sorry, please hit refresh account in _review services_ to fix that manually' problems</li>
+					<li>a new option in maintenance and processing allows you to disable idle mode if the client api has had a request in the past x minutes. it defaults disabled</li>
+					<li>an important improvement to the main JobScheduler object, which farms out a variety of small fast jobs, now massively reduces Add-Job latency when the queue is very busy. when you have a bunch of downloaders working in the background, the UI should have much less lag now</li>
+					<li>the _options->speed and memory_ page has a full pass. the thumbnail, image, and image tile caches now have their own sections, there is some more help text, and the new but previously hardcoded 10%/25% cache and prefetch limits are now settable and have dynamic guidance text that says 'about a 7,245x4,075 image' as image cache options change</li>
+					<li>all the cache options on this page now apply instantly on dialog ok. no more client restart required!</li>
+					<li>.</li>
+					<li>other stuff, mostly specific niche work:</li>
+					<li>last week's v441->442 update now has a pre-run check for free disk space. users with large sessions may need 10GB or more of free space to do the conversion, and this was not being checked. I will now try to integrate similar checks into all future large updates</li>
+					<li>fixed last week's yandere post parser link update--the post url class should move from legacy moebooru to the new yandere parser correctly</li>
+					<li>the big maintenance tasks of duplicate file potentials search and repository processing will now take longer breaks if the database is busy or their work is otherwise taking a long time. if the client is cluttered with work, they shouldn't accidentally lag out other areas of the program so much</li>
+					<li>label update on ipfs service management panel: the server now reports 'nocopy is available' rather than 'nocopy is enabled'</li>
+					<li>label update on shortcut: 'open a new page: search page' is now '...: choose a page'</li>
+					<li>fixed the little info message dialog when clicking on the page weight label menu item on the 'pages' menu</li>
+					<li>'database is complicated' menu label is updated to 'database is stored in multiple locations'</li>
+					<li>_options->gui pages->controls_ now has a little explanatory text about autocomplete dropdowns and some tooltips</li>
+					<li>migrate database dialog has some red warning text up top and a small layout and label text pass. the 'portable?' is now 'beneath db?'</li>
+					<li>the repositery hash_id and tag_id normalisation routines have two improvements: the error now shows specific service_ids that failed to lookup, and the mass-service_hash_id lookup now handles the situation where a hash_id is mapped by more than one service_id</li>
+					<li>repository definition reprocessing now corrects bad service_id rows, which will better heal clients that previously processed bad data</li>
+					<li>the client api and server in general should be better about giving 404s on certain sorts of missing files (it could dump out with 500 in some cases before)</li>
+					<li>it isn't perfect by any means, but the autocomplete dropdown should be a _little_ better about hiding itself in float mode if the parent text input box is scrolled off screen</li>
+					<li>reduced some lag in image neighbour precache when the client is very busy</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>removed old job status 'begin' handling, as it was never really used. jobs now start at creation</li>
+					<li>job titles, tracebacks, and network jobs are now get/set in a nicer way</li>
+					<li>jobs can now store arbitrary labelled callable commands, which in a popup message becomes a labelled button</li>
+					<li>added some user callable button tests to the 'make some popups' debug job</li>
+					<li>file import queues now have the ability to discern 'master' Post URLs from those that were created in multi-file parsing</li>
+					<li>wrote the behind the scenes guts to create a new downloader page programmatically and start a subscription 'gap' query download</li>
+					<li>cleaned up how different timestamps are tracked in the main controller</li>
+				</ul>
 				<li><h3 id="version_442"><a href="#version_442">version 442</a></h3></li>
 				<ul>
 					<li>gui sessions:</li>
@@ -33,7 +70,7 @@
 					<li>.</li>
 					<li>build fixes:</li>
 					<li>fixed the new Linux and Windows extract builds being tucked into a little 'ubuntu'/'windows' subfolder, sorry for the trouble! They should both now have the same (note Caps) 'Hydrus Network' as their first directory</li>
-					<li>fixed the new Linux buld having borked permissions on the executables, sorry for the trouble!</li>
+					<li>fixed the new Linux build having borked permissions on the executables, sorry for the trouble!</li>
 					<li>since I fixed the urllib3 problem we had with serialised sessions and Retry objects, I removed it from the requirements.txts. now 'requests' can pull what it likes</li>
 					<li>after testing it with the new build, it looks like I was mistaken years ago that anyone could run hydrus from source when inside a 'built' release (due to dll conflicts in CWD vs your python install). maybe this is now only true in py3 where dll loading is a little different, but it was likely always true and my old tests only ever worked because I was in the same/so-similar environment so the dlls were not conflicting. in any case the builds no longer include the .py/.pyw files and the 'hydrus' source folder, since it just doesn't seem to work. if you want to run from source, grab the actual source release in a fresh, non-conflicting directory. I've updated the help regarding this, sorry for any trouble or confusion you have ever run into here</li>
 					<li>updated the running from source document to talk more about actually getting the source and fleshed out the info about running the scripts</li>

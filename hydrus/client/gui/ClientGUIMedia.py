@@ -262,7 +262,7 @@ def OpenURLs( urls ):
             
             job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
             
-            job_key.SetVariable( 'popup_title', 'Opening URLs' )
+            job_key.SetStatusTitle( 'Opening URLs' )
             
             HG.client_controller.pub( 'message', job_key )
             

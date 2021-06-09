@@ -1588,6 +1588,9 @@ class Call( object ):
         self._args = args
         self._kwargs = kwargs
         
+        self._default_label = 'Call: {}( {}, {} )'.format( self._func, self._args, self._kwargs )
+        self._human_label = None
+        
     
     def __call__( self ):
         
@@ -1596,7 +1599,22 @@ class Call( object ):
     
     def __repr__( self ):
         
-        return 'Call: ' + repr( ( self._func, self._args, self._kwargs ) )
+        return self._default_label
+        
+    
+    def GetLabel( self ):
+        
+        if self._human_label is None:
+            
+            return self._default_label
+            
+        
+        return self._human_label
+        
+    
+    def SetLabel( self, label: str ):
+        
+        self._human_label = label
         
     
 class ContentUpdate( object ):

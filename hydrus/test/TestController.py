@@ -391,8 +391,6 @@ class Controller( object ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.Begin()
-        
         QP.CallAfter( qt_code, win, job_key )
         
         while not job_key.IsDone():
@@ -681,7 +679,15 @@ class Controller( object ):
         pass
         
     
-    def ResetIdleTimer( self ): pass
+    def ResetIdleTimer( self ):
+        
+        pass
+        
+    
+    def ResetIdleTimerFromClientAPI( self ):
+        
+        pass
+        
     
     def Run( self, window ):
         

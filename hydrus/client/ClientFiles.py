@@ -779,7 +779,7 @@ class ClientFilesManager( object ):
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
-            job_key.SetVariable( 'popup_title', 'clearing orphans' )
+            job_key.SetStatusTitle( 'clearing orphans' )
             job_key.SetVariable( 'popup_text_1', 'preparing' )
             
             self._controller.pub( 'message', job_key )
@@ -1943,7 +1943,7 @@ class FilesMaintenanceManager( object ):
         
         self._reset_background_event.set()
         
-        job_key.SetVariable( 'popup_title', 'regenerating file data' )
+        job_key.SetStatusTitle( 'regenerating file data' )
         
         message_pubbed = False
         work_done = False
@@ -2172,7 +2172,7 @@ class FilesMaintenanceManager( object ):
             job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
             
         
-        job_key.SetVariable( 'popup_title', 'regenerating file data' )
+        job_key.SetStatusTitle( 'regenerating file data' )
         
         if pub_job_key:
             

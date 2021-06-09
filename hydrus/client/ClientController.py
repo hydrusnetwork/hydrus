@@ -298,7 +298,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     if job_key.IsCancelled():
                         
-                        self._timestamps[ 'now_awake' ] = HydrusData.GetNow()
+                        self.TouchTimestamp( 'now_awake' )
                         
                         job_key.SetVariable( 'popup_text_1', 'enabling I/O now' )
                         
@@ -307,7 +307,7 @@ class Controller( HydrusController.HydrusController ):
                         return
                         
                     
-                    wake_time = self._timestamps[ 'now_awake' ]
+                    wake_time = self.GetTimestamp( 'now_awake' )
                     
                 
                 if HydrusData.TimeHasPassed( wake_time ):
@@ -318,7 +318,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 else:
                     
-                    job_key.SetVariable( 'popup_text_1', 'enabling I/O {}'.format( HydrusData.TimestampToPrettyTimeDelta( wake_time ) ) )
+                    job_key.SetVariable( 'popup_text_1', 'enabling I/O {}'.format( HydrusData.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
                     
                 
                 time.sleep( 0.5 )
@@ -327,7 +327,7 @@ class Controller( HydrusController.HydrusController ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
-        job_key.SetVariable( 'popup_title', 'just woke up from sleep' )
+        job_key.SetStatusTitle( 'just woke up from sleep' )
         
         self.pub( 'message', job_key )
         
@@ -422,8 +422,6 @@ class Controller( HydrusController.HydrusController ):
             
         
         job_key = ClientThreading.JobKey( cancel_on_shutdown = False )
-        
-        job_key.Begin()
         
         QP.CallAfter( qt_code, win, job_key )
         
@@ -569,7 +567,7 @@ class Controller( HydrusController.HydrusController ):
             
             idle_before_position_update = self.CurrentlyIdle()
             
-            self._timestamps[ 'last_mouse_action' ] = HydrusData.GetNow()
+            self.TouchTimestamp( 'last_mouse_action' )
             
             self._last_mouse_position = mouse_position
             
@@ -629,30 +627,42 @@ class Controller( HydrusController.HydrusController ):
             return True
             
         
-        if not HydrusData.TimeHasPassed( self._timestamps[ 'boot' ] + 120 ):
+        if not HydrusData.TimeHasPassed( self.GetBootTime() + 120 ):
             
             return False
             
         
         idle_normal = self.options[ 'idle_normal' ]
-        idle_period = self.options[ 'idle_period' ]
-        idle_mouse_period = self.options[ 'idle_mouse_period' ]
         
         if idle_normal:
             
             currently_idle = True
             
+            idle_period = self.options[ 'idle_period' ]
+            
             if idle_period is not None:
                 
-                if not HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + idle_period ):
+                if not HydrusData.TimeHasPassed( self.GetTimestamp( 'last_user_action' ) + idle_period ):
                     
                     currently_idle = False
                     
                 
             
+            idle_mouse_period = self.options[ 'idle_mouse_period' ]
+            
             if idle_mouse_period is not None:
                 
-                if not HydrusData.TimeHasPassed( self._timestamps[ 'last_mouse_action' ] + idle_mouse_period ):
+                if not HydrusData.TimeHasPassed( self.GetTimestamp( 'last_mouse_action' ) + idle_mouse_period ):
+                    
+                    currently_idle = False
+                    
+                
+            
+            idle_mode_client_api_timeout = self.new_options.GetNoneableInteger( 'idle_mode_client_api_timeout' )
+            
+            if idle_mode_client_api_timeout is not None:
+                
+                if not HydrusData.TimeHasPassed( self.GetTimestamp( 'last_client_api_action' ) + idle_mode_client_api_timeout ):
                     
                     currently_idle = False
                     
@@ -1186,7 +1196,6 @@ class Controller( HydrusController.HydrusController ):
         job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
         job.ShouldDelayOnWakeup( True )
         job.WakeOnPubSub( 'notify_unknown_accounts' )
-        job.WakeOnPubSub( 'notify_new_permissions' )
         self._daemon_jobs[ 'synchronise_accounts' ] = job
         
         job = self.CallRepeating( 5.0, HydrusNetwork.UPDATE_CHECKING_PERIOD, self.SynchroniseRepositories )
@@ -1299,11 +1308,11 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.MaintainMemorySlow( self )
         
-        if HydrusData.TimeHasPassed( self._timestamps[ 'last_page_change' ] + 30 * 60 ):
+        if HydrusData.TimeHasPassed( self.GetTimestamp( 'last_page_change' ) + 30 * 60 ):
             
             self.pub( 'delete_old_closed_pages' )
             
-            self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
+            self.TouchTimestamp( 'last_page_change' )
             
         
         def do_gui_refs( gui ):
@@ -1391,9 +1400,14 @@ class Controller( HydrusController.HydrusController ):
         self.subscriptions_manager.Start()
         
     
+    def ResetIdleTimerFromClientAPI( self ):
+        
+        self.TouchTimestamp( 'last_client_api_request' )
+        
+    
     def ResetPageChangeTimer( self ):
         
-        self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
+        self.TouchTimestamp( 'last_page_change' )
         
     
     def RestartClientServerServices( self ):
@@ -1921,7 +1935,7 @@ class Controller( HydrusController.HydrusController ):
             
         else:
             
-            if HydrusData.TimeHasPassed( self._timestamps[ 'last_cpu_check' ] + 60 ):
+            if HydrusData.TimeHasPassed( self.GetTimestamp( 'last_cpu_check' ) + 60 ):
                 
                 cpu_times = psutil.cpu_percent( percpu = True )
                 
@@ -1934,7 +1948,7 @@ class Controller( HydrusController.HydrusController ):
                     self._system_busy = False
                     
                 
-                self._timestamps[ 'last_cpu_check' ] = HydrusData.GetNow()
+                self.TouchTimestamp( 'last_cpu_check' )
                 
             
         

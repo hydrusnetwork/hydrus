@@ -407,6 +407,11 @@ class HydrusResource( Resource ):
             
             path = response_context.GetPath()
             
+            if not os.path.exists( path ):
+                
+                raise HydrusExceptions.NotFoundException( 'File not found. This was discovered later than expected, so hydev might like to know about this.' )
+                
+            
             filesize = os.path.getsize( path )
             
             offset_and_block_size_pairs = self._parseRangeHeader( request, filesize )

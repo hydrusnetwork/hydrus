@@ -356,6 +356,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'image_cache_timeout' ] = 600
         self._dictionary[ 'integers' ][ 'image_tile_cache_timeout' ] = 300
         
+        self._dictionary[ 'integers' ][ 'image_cache_storage_limit_percentage' ] = 25
+        self._dictionary[ 'integers' ][ 'image_cache_prefetch_limit_percentage' ] = 10
+        
         self._dictionary[ 'integers' ][ 'media_viewer_prefetch_delay_base_ms' ] = 100
         self._dictionary[ 'integers' ][ 'media_viewer_prefetch_num_previous' ] = 2
         self._dictionary[ 'integers' ][ 'media_viewer_prefetch_num_next' ] = 3
@@ -417,6 +420,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'subscription_file_error_cancel_threshold' ] = 5
         
         self._dictionary[ 'noneable_integers' ][ 'media_viewer_cursor_autohide_time_ms' ] = 700
+        
+        self._dictionary[ 'noneable_integers' ][ 'idle_mode_client_api_timeout' ] = None
         
         #
         

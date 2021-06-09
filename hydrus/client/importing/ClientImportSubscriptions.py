@@ -213,11 +213,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return HydrusData.TimeHasPassed( self._no_work_until )
         
     
-    def _ShowHitPeriodicFileLimitMessage( self, query_text ):
+    def _ShowHitPeriodicFileLimitMessage( self, query_name: int, query_text: int, file_limit: int ):
         
-        message = 'The query "{}" for subscription "{}" hit its periodic file limit without seeing any already-seen files.'.format( query_text, self._name )
+        message = 'The query "{}" for subscription "{}" found {} new URLs without running into any it had seen before.'.format( query_name, self._name, file_limit )
+        message += os.linesep
+        message += 'Either a user uploaded a lot of files to that query in a short period, in which case there is a gap in your subscription you may wish to fill, or the site has just changed its URL format, in which case you may see several of these messages for this site over the coming weeks, and you should ignore them.'
         
-        HydrusData.ShowText( message )
+        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, file_limit * 5 )
+        
+        call.SetLabel( 'start a new downloader for this to fill in the gap!' )
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', message )
+        job_key.SetUserCallable( call )
+        
+        HG.client_controller.pub( 'message', job_key )
         
     
     def _WorkOnQueriesFiles( self, job_key ):
@@ -667,7 +678,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         gallery_seed_log = query_log_container.GetGallerySeedLog()
         
         this_is_initial_sync = query_header.IsInitialSync()
-        num_file_seeds_at_start = len( file_seed_cache )
+        num_master_file_seeds_at_start = file_seed_cache.GetApproxNumMasterFileSeeds()
         total_new_urls_for_this_sync = 0
         total_already_in_urls_for_this_sync = 0
         
@@ -682,8 +693,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             file_limit_for_this_sync = self._periodic_file_limit
             
         
-        file_seeds_to_add = set()
-        file_seeds_to_add_ordered = []
+        file_seeds_to_add_in_this_sync = set()
+        file_seeds_to_add_in_this_sync_ordered = []
         
         stop_reason = 'unknown stop reason'
         
@@ -767,17 +778,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     pass
                     
                 
-                def file_seeds_callable( file_seeds ):
+                def file_seeds_callable( gallery_page_of_file_seeds ):
                     
                     num_urls_added = 0
                     num_urls_already_in_file_seed_cache = 0
                     can_search_for_more_files = True
                     stop_reason = 'unknown stop reason'
                     current_contiguous_num_urls_already_in_file_seed_cache = 0
+                    num_file_seeds_in_this_page = len( gallery_page_of_file_seeds )
                     
-                    for file_seed in file_seeds:
+                    for file_seed in gallery_page_of_file_seeds:
                         
-                        if file_seed in file_seeds_to_add:
+                        if file_seed in file_seeds_to_add_in_this_sync:
                             
                             # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
                             # we don't want to count these 'seen before this run' urls in the 'caught up to last time' count
@@ -808,8 +820,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             num_urls_added += 1
                             current_contiguous_num_urls_already_in_file_seed_cache = 0
                             
-                            file_seeds_to_add.add( file_seed )
-                            file_seeds_to_add_ordered.append( file_seed )
+                            file_seeds_to_add_in_this_sync.add( file_seed )
+                            file_seeds_to_add_in_this_sync_ordered.append( file_seed )
                             
                         
                         if file_limit_for_this_sync is not None:
@@ -835,7 +847,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                         
                                         # this page had all entirely new files
                                         
-                                        self._ShowHitPeriodicFileLimitMessage( query_name )
+                                        self._ShowHitPeriodicFileLimitMessage( query_name, query_text, file_limit_for_this_sync )
                                         
                                         stop_reason = 'hit periodic file limit without seeing any already-seen files!'
                                         
@@ -847,17 +859,36 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                             
                         
-                        if self._initial_file_limit is not None and self._periodic_file_limit is not None:
+                        if not this_is_initial_sync:
                             
-                            # if the user has initial file sync of 5 but then normal sync of 100, we don't want to keep stomping through to older files on any subsequent normal sync
-                            # therefore, if we started this normal sync with fewer than normal sync files, we won't tolerate more than initial sync number of already in db
-                            if not this_is_initial_sync and num_file_seeds_at_start < self._periodic_file_limit and total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache >= self._initial_file_limit:
+                            # ok, there are a couple of situations where we don't want to go steamroll past a certain point:
+                            
+                            # if the user set 5 initial file limit but 100 periodic limit, then on the first few syncs, we'll want to notice that situation and not steamroll through that first five (or ~seven on third sync)
+                            # if 'X' is new and get, 'A' is already in, and '-' is new and don't get, the page should be:
+                            # XXXAAAAA----------------------------------
+                            
+                            # the pixiv situation, where a single gallery page may have hundreds of results (and/or multi-file results that will pad out the file cache with more items)
+                            # super large gallery pages interfere with the compaction system, adding results that were removed again and making WE_HIT_OLD_GROUND_THRESHOLD test not work correct
+                            # similar to above:
+                            # XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                            # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                            # AAAAAAAAAAAAAAAAAAAA-----------------------------------
+                            # -------------------------------------------------------
+                            # ----------------------
+                            
+                            # I had specific logic targeting both these cases, but in making those, I make the num_master_file_seeds_at_start, which is actually the better thing to test
+                            # If the sub has seen basically everything it started with, we are by definition caught up and should stop immediately!
+                            
+                            excuse_the_odd_deleted_file_coefficient = 0.95
+                            
+                            # we found all the 'A's
+                            we_have_seen_everything_we_already_got = total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache >= num_master_file_seeds_at_start * excuse_the_odd_deleted_file_coefficient
+                            
+                            if we_have_seen_everything_we_already_got:
                                 
-                                stop_reason = 'believe I caught up with initial sync'
+                                stop_reason = 'saw everything I had previously (probably large gallery page or small recent initial sync), so assuming I caught up'
                                 
                                 can_search_for_more_files = False
-                                
-                                # since most initial file limits will be > 5, this will likely be superceded immediately by the WE_HIT_OLD_GROUND_THRESHOLD bit in a sec, but whatever
                                 
                                 break
                                 
@@ -873,8 +904,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             # this gallery page has caught up to before, so it should not spawn any more gallery pages
                             
                             can_search_for_more_files = False
-                            
-                            stop_reason = 'saw ' + HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) + ' previously seen urls, so assuming we caught up'
+                            stop_reason = 'saw {} contiguous previously seen urls at end of page, so assuming we caught up'.format( HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) )
                             
                         
                         if num_urls_added == 0:
@@ -945,11 +975,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        file_seeds_to_add_ordered.reverse()
+        file_seeds_to_add_in_this_sync_ordered.reverse()
         
         # 'first' urls are now at the end, so the file_seed_cache should stay roughly in oldest->newest order
         
-        file_seed_cache.AddFileSeeds( file_seeds_to_add_ordered )
+        file_seed_cache.AddFileSeeds( file_seeds_to_add_in_this_sync_ordered )
         
         query_header.RegisterSyncComplete( self._checker_options, query_log_container )
         
@@ -1453,7 +1483,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                job_key.SetVariable( 'popup_title', 'subscriptions - ' + self._name )
+                job_key.SetStatusTitle( 'subscriptions - ' + self._name )
                 
                 if self._show_a_popup_while_working:
                     
@@ -1493,7 +1523,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             finally:
                 
-                job_key.DeleteVariable( 'popup_network_job' )
+                job_key.DeleteNetworkJob()
                 
             
             if job_key.HasVariable( 'popup_files' ):

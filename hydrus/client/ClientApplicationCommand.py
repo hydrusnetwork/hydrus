@@ -199,7 +199,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_MOVE_ANIMATION_TO_PREVIOUS_FRAME : 'move animation one frame back',
     SIMPLE_NEW_DUPLICATE_FILTER_PAGE : 'open a new page: duplicate filter',
     SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE : 'open a new page: gallery downloader',
-    SIMPLE_NEW_PAGE : 'open a new page: search page',
+    SIMPLE_NEW_PAGE : 'open a new page: choose a page',
     SIMPLE_NEW_PAGE_OF_PAGES : 'open a new page: page of pages',
     SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE : 'open a new page: simple downloader',
     SIMPLE_NEW_URL_DOWNLOADER_PAGE : 'open a new page: url downloader',

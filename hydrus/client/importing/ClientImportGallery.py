@@ -946,8 +946,6 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._highlighted_gallery_import_key = None
         
-        new_options = HG.client_controller.new_options
-        
         self._file_limit = HC.options[ 'gallery_file_limit' ]
         
         self._start_file_queues_paused = False
@@ -1332,16 +1330,59 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             for gallery_import in self._gallery_imports:
                 
-                ( value, range ) = gallery_import.GetValueRange()
+                ( v, r ) = gallery_import.GetValueRange()
                 
-                if value != range:
+                if v != r:
                     
-                    total_value += value
-                    total_range += range
+                    total_value += v
+                    total_range += r
                     
                 
             
             return ( total_value, total_range )
+            
+        
+    
+    def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_limit ):
+        
+        with self._lock:
+            
+            gug = HG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
+            
+            if gug is None:
+                
+                HydrusData.ShowText( 'Could not find a Gallery URL Generator for "{}"!'.format( self._gug_key_and_name[1] ) )
+                
+                return
+                
+            
+            self._gug_key_and_name = gug.GetGUGKeyAndName() # just a refresher, to keep up with any changes
+            
+            initial_search_urls = gug.GenerateGalleryURLs( query_text )
+            
+            if len( initial_search_urls ) == 0:
+                
+                HydrusData.ShowText( 'The Gallery URL Generator "{}" did not produce any URLs!'.format( self._gug_key_and_name[1] ) )
+                
+                return
+                
+            
+            gallery_import = GalleryImport( query = query_text, source_name = self._gug_key_and_name[1], initial_search_urls = initial_search_urls, start_file_queue_paused = self._start_file_queues_paused, start_gallery_queue_paused = self._start_gallery_queues_paused )
+            
+            gallery_import.SetFileLimit( file_limit )
+            
+            gallery_import.SetFileImportOptions( self._file_import_options )
+            gallery_import.SetTagImportOptions( self._tag_import_options )
+            
+            publish_to_page = False
+            
+            gallery_import.Start( self._page_key, publish_to_page )
+            
+            self._AddGalleryImport( gallery_import )
+            
+            ClientImporting.WakeRepeatingJob( self._importers_repeating_job )
+            
+            self._SetDirty()
             
         
     

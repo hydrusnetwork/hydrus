@@ -945,6 +945,34 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.status == CC.STATUS_DELETED
         
     
+    def IsProbablyMasterPostURL( self ):
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            if self._referral_url is not None:
+                
+                try:
+                    
+                    # if our given referral is a post url, we are most probably a multi-file url
+                    
+                    ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
+                    
+                    if url_type == HC.URL_TYPE_POST:
+                        
+                        return False
+                        
+                    
+                except:
+                    
+                    # screw it
+                    return True
+                    
+                
+            
+        
+        return True
+        
+    
     def Normalise( self ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
@@ -2246,6 +2274,11 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             return d
             
+        
+    
+    def GetApproxNumMasterFileSeeds( self ):
+        
+        return len( [ file_seed for file_seed in self._file_seeds if file_seed.IsProbablyMasterPostURL() ] )
         
     
     def GetEarliestSourceTime( self ):

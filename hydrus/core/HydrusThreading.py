@@ -528,31 +528,34 @@ class JobScheduler( threading.Thread ):
                 
                 next_job = self._waiting[0]
                 
-                if next_job.IsDue():
+                if not next_job.IsDue():
                     
-                    next_job = self._waiting.pop( 0 )
+                    # front is not due, so nor is the rest of the list
+                    break
                     
-                    if next_job.IsCancelled():
-                        
-                        continue
-                        
+                
+                next_job = self._waiting.pop( 0 )
+                
+            
+            if next_job.IsCancelled():
+                
+                continue
+                
+            
+            if next_job.SlotOK():
+                
+                # important this happens outside of the waiting lock lmao!
+                next_job.StartWork()
+                
+                jobs_started += 1
+                
+            else:
+                
+                # delay is automatically set by SlotOK
+                
+                with self._waiting_lock:
                     
-                    if next_job.SlotOK():
-                        
-                        next_job.StartWork()
-                        
-                        jobs_started += 1
-                        
-                    else:
-                        
-                        # delay is automatically set by SlotOK
-                        
-                        bisect.insort( self._waiting, next_job )
-                        
-                    
-                else:
-                    
-                    break # all the rest in the queue are not due
+                    bisect.insort( self._waiting, next_job )
                     
                 
             
@@ -844,7 +847,7 @@ class SchedulableJob( object ):
     
 class SingleJob( SchedulableJob ):
     
-    def __init__( self, controller, scheduler, initial_delay, work_callable ):
+    def __init__( self, controller, scheduler: JobScheduler, initial_delay, work_callable ):
         
         SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
         
@@ -865,7 +868,7 @@ class SingleJob( SchedulableJob ):
     
 class RepeatingJob( SchedulableJob ):
     
-    def __init__( self, controller, scheduler, initial_delay, period, work_callable ):
+    def __init__( self, controller, scheduler: JobScheduler, initial_delay, period, work_callable ):
         
         SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
         

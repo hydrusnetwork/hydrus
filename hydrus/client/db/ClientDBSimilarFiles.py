@@ -463,7 +463,7 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
+            job_key.SetStatusTitle( 'similar files metadata maintenance' )
             
             rebalance_phash_ids = self._STL( self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) )
             
@@ -543,7 +543,7 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating similar file search data' )
+            job_key.SetStatusTitle( 'regenerating similar file search data' )
             
             HG.client_controller.pub( 'modal_message', job_key )
             

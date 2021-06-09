@@ -202,6 +202,17 @@ class DataCache( object ):
             
         
     
+    def SetCacheSizeAndTimeout( self, cache_size, timeout ):
+        
+        with self._lock:
+            
+            self._cache_size = cache_size
+            self._timeout = timeout
+            
+        
+        self.MaintainCache()
+        
+    
 class LocalBooruCache( object ):
     
     def __init__( self, controller ):
@@ -470,6 +481,8 @@ class ImageRendererCache( object ):
         
         self._data_cache = DataCache( self._controller, 'image cache', cache_size, timeout = cache_timeout )
         
+        self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        
     
     def Clear( self ):
         
@@ -490,7 +503,9 @@ class ImageRendererCache( object ):
             
             # we are no longer going to let big lads flush the whole cache. they can render on demand
             
-            if image_renderer.GetEstimatedMemoryFootprint() < self._data_cache.GetSizeLimit() / 4:
+            image_cache_storage_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_storage_limit_percentage' )
+            
+            if image_renderer.GetEstimatedMemoryFootprint() < self._data_cache.GetSizeLimit() * ( image_cache_storage_limit_percentage / 100 ):
                 
                 self._data_cache.AddData( key, image_renderer )
                 
@@ -510,13 +525,23 @@ class ImageRendererCache( object ):
         return self._data_cache.HasData( key )
         
     
+    def NotifyNewOptions( self ):
+        
+        cache_size = self._controller.options[ 'fullscreen_cache_size' ]
+        cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
+        
+        self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
+        
+    
     def PrefetchImageRenderer( self, media ):
         
         ( width, height ) = media.GetResolution()
         
         # essentially, we are not going to prefetch giganto images any more. they can render on demand and not mess our queue
         
-        if width * height * 3 < self._data_cache.GetSizeLimit() / 10:
+        image_cache_prefetch_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_prefetch_limit_percentage' )
+        
+        if width * height * 3 < self._data_cache.GetSizeLimit() * ( image_cache_prefetch_limit_percentage / 100 ):
             
             self.GetImageRenderer( media )
             
@@ -532,6 +557,8 @@ class ImageTileCache( object ):
         cache_timeout = self._controller.new_options.GetInteger( 'image_tile_cache_timeout' )
         
         self._data_cache = DataCache( self._controller, 'image tile cache', cache_size, timeout = cache_timeout )
+        
+        self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def Clear( self ):
@@ -571,6 +598,14 @@ class ImageTileCache( object ):
         return tile
         
     
+    def NotifyNewOptions( self ):
+        
+        cache_size = self._controller.new_options.GetInteger( 'image_tile_cache_size' )
+        cache_timeout = self._controller.new_options.GetInteger( 'image_tile_cache_timeout' )
+        
+        self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
+        
+    
 class ThumbnailCache( object ):
     
     def __init__( self, controller ):
@@ -608,6 +643,7 @@ class ThumbnailCache( object ):
         
         self._controller.sub( self, 'Clear', 'reset_thumbnail_cache' )
         self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
+        self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def _GetThumbnailHydrusBitmap( self, display_media ):
@@ -757,8 +793,6 @@ class ThumbnailCache( object ):
                         
                         HydrusData.ShowText( 'Thumbnail {} too small due to small source file.'.format( hash.hex() ) )
                         
-                    
-                    pass
                     
                 else:
                     
@@ -1099,6 +1133,14 @@ class ThumbnailCache( object ):
             
             return True
             
+        
+    
+    def NotifyNewOptions( self ):
+        
+        cache_size = self._controller.options[ 'thumbnail_cache_size' ]
+        cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
+        
+        self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
         
     
     def Waterfall( self, page_key, medias ):

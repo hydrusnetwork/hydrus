@@ -83,13 +83,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_panel = ClientGUICommon.StaticBox( self, 'locations' )
+        info_panel = ClientGUICommon.StaticBox( self, 'database components' )
         
         self._current_install_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_db_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_media_paths_st = ClientGUICommon.BetterStaticText( info_panel )
         
-        current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( info_panel )
+        file_locations_panel = ClientGUICommon.StaticBox( self, 'media file locations' )
+        
+        current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_locations_panel )
         
         self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, self._ConvertLocationToListCtrlTuples )
         self._current_media_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
@@ -103,29 +105,33 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         current_media_locations_listctrl_panel.AddButton( 'decrease location weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
         current_media_locations_listctrl_panel.AddButton( 'remove location', self._RemoveSelectedPath, enabled_check_func = self._CanRemoveLocation )
         
-        self._thumbnails_location = QW.QLineEdit( info_panel )
+        self._thumbnails_location = QW.QLineEdit( file_locations_panel )
         self._thumbnails_location.setEnabled( False )
         
-        self._thumbnails_location_set = ClientGUICommon.BetterButton( info_panel, 'set', self._SetThumbnailLocation )
+        self._thumbnails_location_set = ClientGUICommon.BetterButton( file_locations_panel, 'set', self._SetThumbnailLocation )
         
-        self._thumbnails_location_clear = ClientGUICommon.BetterButton( info_panel, 'clear', self._ClearThumbnailLocation )
+        self._thumbnails_location_clear = ClientGUICommon.BetterButton( file_locations_panel, 'clear', self._ClearThumbnailLocation )
         
-        self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel )
+        self._rebalance_status_st = ClientGUICommon.BetterStaticText( file_locations_panel )
         self._rebalance_status_st.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
         
-        self._rebalance_button = ClientGUICommon.BetterButton( info_panel, 'move files now', self._Rebalance )
+        self._rebalance_button = ClientGUICommon.BetterButton( file_locations_panel, 'move files now', self._Rebalance )
         
         #
         
-        migration_panel = ClientGUICommon.StaticBox( self, 'migrate entire database' )
+        migration_panel = ClientGUICommon.StaticBox( self, 'migrate database files (and portable media file locations)' )
         
         self._migrate_db_button = ClientGUICommon.BetterButton( migration_panel, 'move entire database and all portable paths', self._MigrateDatabase )
         
         #
         
+        info_panel.Add( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         t_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( t_hbox, ClientGUICommon.BetterStaticText(info_panel,'thumbnail location override'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( t_hbox, ClientGUICommon.BetterStaticText( file_locations_panel, 'thumbnail location override' ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( t_hbox, self._thumbnails_location, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( t_hbox, self._thumbnails_location_set, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( t_hbox, self._thumbnails_location_clear, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -135,12 +141,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( rebalance_hbox, self._rebalance_status_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( rebalance_hbox, self._rebalance_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        info_panel.Add( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.Add( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.Add( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.Add( current_media_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        info_panel.Add( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.Add( rebalance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        file_locations_panel.Add( current_media_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        file_locations_panel.Add( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        file_locations_panel.Add( rebalance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -150,8 +153,16 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
+        message = 'THIS IS ADVANCED. DO NOT CHANGE ANYTHING HERE UNLESS YOU KNOW WHAT IT DOES!'
+        
+        warning_st = ClientGUICommon.BetterStaticText( self, label = message )
+        
+        warning_st.setObjectName( 'HydrusWarning' )
+        
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, file_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
@@ -484,7 +495,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_current_usage, pretty_ideal_weight, pretty_ideal_usage )
-        sort_tuple = ( location, portable, free_space, current_usage, ideal_weight, ideal_usage )
+        sort_tuple = ( location, portable, free_space, ideal_weight, ideal_usage, current_usage )
         
         return ( display_tuple, sort_tuple )
         
@@ -890,7 +901,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     job_key = ClientThreading.JobKey( cancel_on_shutdown = False )
     
-    job_key.SetVariable( 'popup_title', 'migrating database' )
+    job_key.SetStatusTitle( 'migrating database' )
     
     QP.CallAfter( qt_code, job_key )
     

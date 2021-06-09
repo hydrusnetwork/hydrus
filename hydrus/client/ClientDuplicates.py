@@ -156,7 +156,7 @@ class DuplicatesManager( object ):
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
-            job_key.SetVariable( 'popup_title', 'searching for potential duplicates' )
+            job_key.SetStatusTitle( 'searching for potential duplicates' )
             
             HG.client_controller.pub( 'message', job_key )
             
@@ -166,7 +166,11 @@ class DuplicatesManager( object ):
                 
                 search_distance = HG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
                 
+                start_time = HydrusData.GetNowPrecise()
+                
                 ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key, work_time_float = 0.5 )
+                
+                time_it_took = HydrusData.GetNowPrecise() - start_time
                 
                 num_searched_estimate += num_done
                 
@@ -179,7 +183,7 @@ class DuplicatesManager( object ):
                     break
                     
                 
-                time.sleep( 0.5 )
+                time.sleep( time_it_took ) # ideally 0.5s, but potentially longer
                 
             
             job_key.Delete()

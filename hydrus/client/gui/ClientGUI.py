@@ -122,7 +122,7 @@ def THREADUploadPending( service_key ):
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
-        job_key.SetVariable( 'popup_title', 'uploading pending to ' + service_name )
+        job_key.SetStatusTitle( 'uploading pending to ' + service_name )
         
         nums_pending = HG.client_controller.Read( 'nums_pending' )
         
@@ -186,20 +186,26 @@ def THREADUploadPending( service_key ):
                 )
                 
                 message += os.linesep * 2
-                message += 'If you are currently using a public, read-only account (such as with the PTR), please check this service under _manage services_ and see if the server allows you to auto-create a more powerful account to replace the public one. If accounts cannot be automatically created, you may have to contact the server owner directly.'
+                message += 'If you are currently using a public, read-only account (such as with the PTR), you may be able to generate your own private account with more permissions. Please hit the button below to open this service in _manage services_ and see if you can generate a new account. If accounts cannot be automatically created, you may have to contact the server owner directly to get this permission.'
                 message += os.linesep * 2
                 message += 'If you think your account does have this permission, try refreshing it under _review services_.'
                 
                 unauthorised_job_key = ClientThreading.JobKey()
                 
-                unauthorised_job_key.SetVariable( 'popup_title', 'some data was not uploaded!' )
+                unauthorised_job_key.SetStatusTitle( 'some data was not uploaded!' )
                 
                 unauthorised_job_key.SetVariable( 'popup_text_1', message )
                 
                 if len( content_types_to_request ) > 0:
                     
-                    unauthorised_job_key.Delete( 5 )
+                    unauthorised_job_key.Delete( 120 )
                     
+                
+                call = HydrusData.Call( HG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
+                
+                call.SetLabel( 'open manage services and check for auto-creatable accounts' )
+                
+                unauthorised_job_key.SetUserCallable( call )
                 
                 HG.client_controller.pub( 'message', unauthorised_job_key )
                 
@@ -464,6 +470,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._last_move_pub = 0.0
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
+        self._controller.sub( self, 'CreateNewSubscriptionGapDownloader', 'make_new_subscription_gap_downloader' )
         self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
         self._controller.sub( self, 'DoFileStorageRebalance', 'do_file_storage_rebalance' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
@@ -476,6 +483,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'NotifyNewPages', 'notify_new_pages' )
         self._controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
         self._controller.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
+        self._controller.sub( self, 'NotifyNewPermissions', 'notify_unknown_accounts' )
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
@@ -483,6 +491,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
+        self._controller.sub( self, 'TryToOpenManageServicesForAutoAccountCreation', 'open_manage_services_and_try_to_auto_create_account' )
         
         vbox = QP.VBoxLayout()
         
@@ -1103,9 +1112,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetVariable( 'popup_title', 'debug network job' )
+            job_key.SetStatusTitle( 'debug network job' )
             
-            job_key.SetVariable( 'popup_network_job', network_job )
+            job_key.SetNetworkJob( network_job )
             
             self._controller.pub( 'message', job_key )
             
@@ -1142,7 +1151,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             job_key = ClientThreading.JobKey( cancellable = cancellable )
             
-            job_key.SetVariable( 'popup_title', 'debug modal job' )
+            job_key.SetStatusTitle( 'debug modal job' )
             
             controller.pub( 'modal_message', job_key )
             
@@ -1204,7 +1213,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.2
             
-            self._controller.CallLater( t, job_key.SetVariable, 'popup_title', text )
+            self._controller.CallLater( t, job_key.SetStatusTitle, text )
             
         
     
@@ -1241,7 +1250,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_title', 'This popup has a very long title -- it is a subscription that is running with a long "artist sub 123456" kind of name' )
+        job_key.SetStatusTitle( 'This popup has a very long title -- it is a subscription that is running with a long "artist sub 123456" kind of name' )
         
         job_key.SetVariable( 'popup_text_1', 'test' )
         
@@ -1251,7 +1260,59 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_title', '\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
+        job_key.SetStatusTitle( 'user call test' )
+        
+        job_key.SetVariable( 'popup_text_1', 'click the button m8' )
+        
+        call = HydrusData.Call( HydrusData.ShowText, 'iv damke' )
+        
+        call.SetLabel( 'cheeki breeki' )
+        
+        job_key.SetUserCallable( call )
+        
+        self._controller.pub( 'message', job_key )
+        
+        
+        #
+        
+        service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.TAG_REPOSITORY, ) ) )
+        
+        if len( service_keys ) > 0:
+            
+            service_key = service_keys[0]
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetStatusTitle( 'auto-account creation test' )
+            
+            call = HydrusData.Call( HG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
+            
+            call.SetLabel( 'open manage services and check for auto-creatable accounts' )
+            
+            job_key.SetUserCallable( call )
+            
+            HG.client_controller.pub( 'message', job_key )
+            
+        
+        #
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetStatusTitle( 'sub gap downloader test' )
+        
+        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', 2 )
+        
+        call.SetLabel( 'start a new downloader for this to fill in the gap!' )
+        
+        job_key.SetUserCallable( call )
+        
+        HG.client_controller.pub( 'message', job_key )
+        
+        #
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetStatusTitle( '\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
         
         job_key.SetVariable( 'popup_text_1', '\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
         job_key.SetVariable( 'popup_text_2', 'p\u0250\u05df \u028d\u01dd\u028d' )
@@ -1262,7 +1323,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
-        job_key.SetVariable( 'popup_title', 'test job' )
+        job_key.SetStatusTitle( 'test job' )
         
         job_key.SetVariable( 'popup_text_1', 'Currently processing test job 5/8' )
         job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
@@ -1756,7 +1817,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             try:
                 
-                job_key.SetVariable( 'popup_title', 'importing updates' )
+                job_key.SetStatusTitle( 'importing updates' )
                 HG.client_controller.pub( 'message', job_key )
                 
                 for ( i, update_path ) in enumerate( update_paths ):
@@ -2729,7 +2790,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _ManageServices( self ):
+    def _ManageServices( self, auto_account_creation_service_key = None ):
         
         original_pause_status = HC.options[ 'pause_repo_sync' ]
         
@@ -2741,7 +2802,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
-                panel = ClientGUIClientsideServices.ManageClientServicesPanel( dlg )
+                panel = ClientGUIClientsideServices.ManageClientServicesPanel( dlg, auto_account_creation_service_key = auto_account_creation_service_key )
                 
                 dlg.SetPanel( panel )
                 
@@ -2787,7 +2848,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 job_key = ClientThreading.JobKey()
                 
-                job_key.SetVariable( 'popup_title', 'setting update period' )
+                job_key.SetStatusTitle( 'setting update period' )
                 job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
                 
                 self._controller.pub( 'message', job_key )
@@ -2944,14 +3005,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                         
                         if HG.client_controller.subscriptions_manager.SubscriptionsRunning():
                             
-                                while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
+                            while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
+                                
+                                time.sleep( 0.1 )
+                                
+                                if HG.view_shutdown:
                                     
-                                    time.sleep( 0.1 )
-                                    
-                                    if HG.view_shutdown:
-                                        
-                                        return
-                                        
+                                    return
                                     
                                 
                             
@@ -3509,7 +3569,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
-            job_key.SetVariable( 'popup_title', 'repairing invalid tags' )
+            job_key.SetStatusTitle( 'repairing invalid tags' )
             
             self._controller.pub( 'message', job_key )
             
@@ -3813,7 +3873,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 job_key = ClientThreading.JobKey()
                 
-                job_key.SetVariable( 'popup_title', 'client api test' )
+                job_key.SetStatusTitle( 'client api test' )
                 
                 HG.client_controller.pub( 'message', job_key )
                 
@@ -4897,7 +4957,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def AddModalMessage( self, job_key ):
+    def AddModalMessage( self, job_key: ClientThreading.JobKey ):
         
         if job_key.IsCancelled() or job_key.IsDeleted():
             
@@ -4921,7 +4981,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.client_controller.pub( 'pause_all_media' )
             
-            title = job_key.GetIfHasVariable( 'popup_title' )
+            title = job_key.GetStatusTitle()
             
             if title is None:
                 
@@ -4999,6 +5059,24 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         event.ignore() # we always ignore, as we'll close through the window through other means
         
     
+    def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_limit ):
+        
+        page = self._notebook.GetOrMakeGalleryDownloaderPage( desired_page_name = 'subscription gap downloaders', select_page = True )
+        
+        if page is None:
+            
+            HydrusData.ShowText( 'Sorry, could not create the downloader page! Is your session super full atm?' )
+            
+        
+        management_controller = page.GetManagementController()
+        
+        multiple_gallery_import = management_controller.GetVariable( 'multiple_gallery_import' )
+        
+        multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_limit )
+        
+        self._notebook.ShowPage( page )
+        
+    
     def DeleteAllClosedPages( self ):
         
         deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
@@ -5071,7 +5149,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
         
-        job_key.SetVariable( 'popup_title', 'rebalancing files' )
+        job_key.SetStatusTitle( 'rebalancing files' )
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( None, 'migrating files' ) as dlg:
             
@@ -5329,7 +5407,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 message += os.linesep * 2
                 message += 'Please check the help for more info on how best to backup manually.'
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'database is complicated', 'Restore the database from an external location.', HydrusData.ShowText, message )
+                ClientGUIMenus.AppendMenuItem( menu, 'database is stored in multiple locations', 'The database is migrated.', HydrusData.ShowText, message )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -5999,7 +6077,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         ClientGUIMenus.AppendMenuLabel( menu, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ), 'You have this many pages open.' )
-        ClientGUIMenus.AppendMenuItem( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( total_active_weight ) ), 'Your session is this heavy.', QW.QMessageBox.information, self, 'For session weight, a file counts as 1, and a URL counts as 20!' )
+        
+        message = '''For session weight, a file counts as 1, and a URL counts as 20!
+
+Try to keep this below 10 million!'''
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( total_active_weight ) ), 'Your session is this heavy.', QW.QMessageBox.information, self, 'Information', message )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -7374,6 +7457,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         QP.CallAfter( self._controller.Exit )
+        
+    
+    def TryToOpenManageServicesForAutoAccountCreation( self, service_key: bytes ):
+        
+        self._ManageServices( auto_account_creation_service_key = service_key )
         
     
     def UnregisterAnimationUpdateWindow( self, window ):

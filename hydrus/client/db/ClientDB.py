@@ -723,7 +723,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                job_key.SetVariable( 'popup_title', 'database maintenance - analyzing' )
+                job_key.SetStatusTitle( 'database maintenance - analyzing' )
                 
                 self._controller.pub( 'modal_message', job_key )
                 
@@ -848,7 +848,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
-            job_key.SetVariable( 'popup_title', 'backing up db' )
+            job_key.SetStatusTitle( 'backing up db' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -1559,7 +1559,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            self._HandleCriticalRepositoryDefinitionError( service_id )
+            self._HandleCriticalRepositoryDefinitionError( service_id, 'hash_id', service_hash_id )
             
         
         ( hash_id, ) = result
@@ -1574,13 +1574,28 @@ class DB( HydrusDB.HydrusDB ):
         with HydrusDB.TemporaryIntegerTable( self._c, service_hash_ids, 'service_hash_id' ) as temp_table_name:
             
             # temp service hashes to lookup
-            hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_table_name, hash_id_map_table_name ) ) )
+            hash_ids_potentially_dupes = self._STL( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_table_name, hash_id_map_table_name ) ) )
             
         
-        if len( hash_ids ) != len( service_hash_ids ):
+        # every service_id can only exist once, but technically a hash_id could be mapped to two service_ids
+        if len( hash_ids_potentially_dupes ) != len( service_hash_ids ):
             
-            self._HandleCriticalRepositoryDefinitionError( service_id )
+            bad_service_hash_ids = []
             
+            for service_hash_id in service_hash_ids:
+                
+                result = self._c.execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
+                
+                if result is None:
+                    
+                    bad_service_hash_ids.append( service_hash_id )
+                    
+                
+            
+            self._HandleCriticalRepositoryDefinitionError( service_id, 'hash_ids', bad_service_hash_ids )
+            
+        
+        hash_ids = set( hash_ids_potentially_dupes )
         
         return hash_ids
         
@@ -1589,11 +1604,11 @@ class DB( HydrusDB.HydrusDB ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
         
-        result = self._c.execute( 'SELECT tag_id FROM ' + tag_id_map_table_name + ' WHERE service_tag_id = ?;', ( service_tag_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT tag_id FROM {} WHERE service_tag_id = ?;'.format( tag_id_map_table_name ), ( service_tag_id, ) ).fetchone()
         
         if result is None:
             
-            self._HandleCriticalRepositoryDefinitionError( service_id )
+            self._HandleCriticalRepositoryDefinitionError( service_id, 'tag_id', service_tag_id )
             
         
         ( tag_id, ) = result
@@ -4914,13 +4929,13 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', prefix_string + 'preparing' )
+            job_key.SetStatusTitle( prefix_string + 'preparing' )
             
             self._controller.pub( 'modal_message', job_key )
             
             num_errors = 0
             
-            job_key.SetVariable( 'popup_title', prefix_string + 'running' )
+            job_key.SetStatusTitle( prefix_string + 'running' )
             job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
             
             db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
@@ -4933,7 +4948,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if should_quit:
                         
-                        job_key.SetVariable( 'popup_title', prefix_string + 'cancelled' )
+                        job_key.SetStatusTitle( prefix_string + 'cancelled' )
                         job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
                         
                         return
@@ -4957,7 +4972,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.SetVariable( 'popup_title', prefix_string + 'completed' )
+            job_key.SetStatusTitle( prefix_string + 'completed' )
             job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
             
             HydrusData.Print( job_key.ToString() )
@@ -4979,7 +4994,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
-        job_key.SetVariable( 'popup_title', 'clear orphan file records' )
+        job_key.SetStatusTitle( 'clear orphan file records' )
         
         self._controller.pub( 'modal_message', job_key )
         
@@ -7858,7 +7873,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'fixing logically inconsistent mappings' )
+            job_key.SetStatusTitle( 'fixing logically inconsistent mappings' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -13229,7 +13244,7 @@ class DB( HydrusDB.HydrusDB ):
         return file_service_ids_to_hash_ids
         
     
-    def _HandleCriticalRepositoryDefinitionError( self, service_id ):
+    def _HandleCriticalRepositoryDefinitionError( self, service_id, name, bad_ids ):
         
         self._ReprocessRepositoryFromServiceId( service_id, ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) )
         
@@ -13238,7 +13253,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._cursor_transaction_wrapper.CommitAndBegin()
         
-        raise Exception( 'A critical error was discovered with one of your repositories: its definition reference is in an invalid state. Your repository should now be paused, and all update files have been scheduled for an integrity and metadata check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository. Once unpaused, it will reprocess your definition files and attempt to fill the missing entries. If this error occurs again once that is complete, please inform hydrus dev.' )
+        message = 'A critical error was discovered with one of your repositories: its definition reference is in an invalid state. Your repository should now be paused, and all update files have been scheduled for an integrity and metadata check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository. Once unpaused, it will reprocess your definition files and attempt to fill the missing entries. If this error occurs again once that is complete, please inform hydrus dev.'
+        message += os.linesep * 2
+        message += 'Error: {}: {}'.format( name, bad_ids )
+        
+        raise Exception( message )
         
     
     def _HashExists( self, hash ):
@@ -14924,7 +14943,7 @@ class DB( HydrusDB.HydrusDB ):
                     inserts.append( ( service_hash_id, hash_id ) )
                     
                 
-                self._c.executemany( 'INSERT OR IGNORE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
+                self._c.executemany( 'REPLACE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
                 
                 num_rows_processed += len( inserts )
                 
@@ -14961,7 +14980,7 @@ class DB( HydrusDB.HydrusDB ):
                     inserts.append( ( service_tag_id, tag_id ) )
                     
                 
-                self._c.executemany( 'INSERT OR IGNORE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
+                self._c.executemany( 'REPLACE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
                 
                 num_rows_processed += len( inserts )
                 
@@ -15170,7 +15189,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating local hash cache' )
+            job_key.SetStatusTitle( 'regenerating local hash cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15197,7 +15216,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating local tag cache' )
+            job_key.SetStatusTitle( 'regenerating local tag cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15227,7 +15246,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerate tag fast search cache searchable subtag map' )
+            job_key.SetStatusTitle( 'regenerate tag fast search cache searchable subtag map' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15299,7 +15318,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating tag fast search cache' )
+            job_key.SetStatusTitle( 'regenerating tag fast search cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15379,7 +15398,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating tag display mappings cache' )
+            job_key.SetStatusTitle( 'regenerating tag display mappings cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15500,7 +15519,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating tag display pending mappings cache' )
+            job_key.SetStatusTitle( 'regenerating tag display pending mappings cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15581,7 +15600,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating tag mappings cache' )
+            job_key.SetStatusTitle( 'regenerating tag mappings cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -15706,7 +15725,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'regenerating tag pending mappings cache' )
+            job_key.SetStatusTitle( 'regenerating tag pending mappings cache' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -16427,7 +16446,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_title', 'repopulate tag fast search cache subtags' )
+            job_key.SetStatusTitle( 'repopulate tag fast search cache subtags' )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -18810,11 +18829,37 @@ class DB( HydrusDB.HydrusDB ):
             
             if result is None:
                 
+                self._controller.frame_splash_status.SetSubtext( 'doing pre-update free space check' )
+                
+                legacy_dump_type = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_LEGACY
+                
+                result = self._c.execute( 'SELECT SUM( LENGTH( dump ) ) FROM json_dumps_named WHERE dump_type = ?;', ( legacy_dump_type, ) ).fetchone()
+                
+                if result is None or result[0] is None:
+                    
+                    raise Exception( 'Hey, for the v442 update step, I am supposed to be converting your sessions to a new object, but it did not seem like there were any! I am not sure what is going on, so the update will now be abandoned. Please roll back to v441 and let hydev know!' )
+                    
+                
+                ( space_needed, ) = result
+                
+                space_needed /= 2 # most sessions will have backups and shared pages will save space in the end
+                
+                try:
+                    
+                    HydrusPaths.CheckHasSpaceForDBTransaction( self._db_dir, space_needed )
+                    
+                except Exception as e:
+                    
+                    message = 'Hey, for the v442 update step, I am supposed to be converting your sessions to a new object, but there was a problem. It looks like you have very large sessions, and I do not think you have enough free disk space to perform the conversion safely. If you OK this dialog, it will be attempted anyway, but be warned: you may run out of space mid-update and then have serious problems. I recommend you kill the hydrus process NOW and then free up some space before trying again. Please check the full error:'
+                    message += os.linesep * 2
+                    message += str( e )
+                    
+                    BlockingSafeShowMessage( message )
+                    
+                
                 one_worked_ok = False
                 
                 self._c.execute( 'CREATE TABLE json_dumps_hashed ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );' )
-                
-                legacy_dump_type = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_LEGACY
                 
                 names_and_timestamps = self._c.execute( 'SELECT dump_name, timestamp FROM json_dumps_named WHERE dump_type = ?;', ( legacy_dump_type, ) ).fetchall()
                 
@@ -18903,6 +18948,32 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( ( 'yande.re post page parser', 'moebooru file page parser' ) )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 442:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteParserLink( 'yande.re file page', 'yande.re post page parser' )
                 
                 #
                 
@@ -19344,7 +19415,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetVariable( 'popup_title', 'database maintenance - vacuum' )
+            job_key.SetStatusTitle( 'database maintenance - vacuum' )
             
             self._CloseDBCursor()
             
