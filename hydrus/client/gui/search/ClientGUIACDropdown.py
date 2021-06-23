@@ -362,7 +362,7 @@ def ReadFetch(
         return
         
     
-    HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    HG.client_controller.CallAfterQtSafe( win, 'read a/c fetch', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
     
 def PutAtTopOfMatches( matches: list, predicate: ClientSearch.Predicate, insert_if_does_not_exist: bool = True ):
     
@@ -503,7 +503,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
     
     InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text )
     
-    HG.client_controller.CallLaterQtSafe( win, 0.0, results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    HG.client_controller.CallAfterQtSafe( win, 'write a/c fetch', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
     
 class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
@@ -819,7 +819,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         self._ScheduleResultsRefresh( 0.0 )
         
-        HG.client_controller.CallLaterQtSafe( self, 0.05, self._DropdownHideShow )
+        HG.client_controller.CallLaterQtSafe( self, 0.05, 'hide/show dropdown', self._DropdownHideShow )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -923,7 +923,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._schedule_results_refresh_job.Cancel()
             
         
-        self._schedule_results_refresh_job = HG.client_controller.CallLaterQtSafe( self, delay, self._UpdateSearchResults )
+        self._schedule_results_refresh_job = HG.client_controller.CallLaterQtSafe( self, delay, 'a/c results refresh', self._UpdateSearchResults )
         
     
     def _SetupTopListBox( self ):
@@ -1167,7 +1167,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             if self._float_mode and event.type() in ( QC.QEvent.WindowActivate, QC.QEvent.WindowDeactivate ):
                 
                 # we delay this slightly because when you click from dropdown to text, the deactivate event fires before the focusin, leading to a frame of hide
-                HG.client_controller.CallLaterQtSafe( self, 0.05, self._DropdownHideShow )
+                HG.client_controller.CallLaterQtSafe( self, 0.05, 'hide/show dropdown', self._DropdownHideShow )
                 
                 return False
                 
@@ -1385,6 +1385,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
         
     
+    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+        
+        raise NotImplementedError()
+        
+    
     def _ChangeFileService( self, file_service_key ):
         
         if not HG.client_controller.services_manager.ServiceExists( file_service_key ):
@@ -1497,10 +1502,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         service_types_in_order.append( HC.FILE_REPOSITORY )
         
-        if advanced_mode and self._allow_all_known_files:
-            
-            service_types_in_order.append( HC.COMBINED_FILE )
-            
+        self._AddAllKnownFilesServiceTypeIfAllowed( service_types_in_order )
         
         services = services_manager.GetServices( service_types_in_order )
         
@@ -1670,6 +1672,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._include_current_tags.valueChanged.connect( self.SetIncludeCurrent )
         self._include_pending_tags.valueChanged.connect( self.SetIncludePending )
         self._search_pause_play.valueChanged.connect( self.SetSynchronised )
+        
+    
+    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+        
+        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        if advanced_mode and self._allow_all_known_files:
+            
+            service_types_in_order.append( HC.COMBINED_FILE )
+            
         
     
     def _AdvancedORInput( self ):
@@ -2008,7 +2020,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AppendLoadingPredicate( stub_predicates )
         
-        HG.client_controller.CallLaterQtSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
+        HG.client_controller.CallLaterQtSafe( self, 0.2, 'set stub predicates', self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
         if self._under_construction_or_predicate is None:
             
@@ -2485,6 +2497,14 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._dropdown_window.setLayout( vbox )
         
     
+    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+        
+        if self._allow_all_known_files:
+            
+            service_types_in_order.append( HC.COMBINED_FILE )
+            
+        
+    
     def _BroadcastChoices( self, predicates, shift_down ):
         
         tags = { predicate.GetValue() for predicate in predicates }
@@ -2620,7 +2640,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         AppendLoadingPredicate( stub_predicates )
         
-        HG.client_controller.CallLaterQtSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
+        HG.client_controller.CallLaterQtSafe( self, 0.2, 'set stub predicates', self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
         

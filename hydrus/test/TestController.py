@@ -431,9 +431,9 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
-    def CallAfterQtSafe( self, window, func, *args, **kwargs ):
+    def CallAfterQtSafe( self, window, label, func, *args, **kwargs ):
         
-        self.CallLaterQtSafe( window, 0, func, *args, **kwargs )
+        self.CallLaterQtSafe( window, 0, label, func, *args, **kwargs )
         
     
     def CallLater( self, initial_delay, func, *args, **kwargs ):
@@ -447,18 +447,20 @@ class Controller( object ):
         return job
         
     
-    def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ):
+    def CallLaterQtSafe( self, window, initial_delay, label, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.QtAwareJob(self, self._job_scheduler, window, initial_delay, call)
+        call.SetLabel( label )
+        
+        job = ClientThreading.QtAwareJob( self, self._job_scheduler, window, initial_delay, call )
         
         self._job_scheduler.AddJob( job )
         
         return job
         
     
-    def CallRepeating( self, initial_delay, period, func, *args, **kwargs ):
+    def CallRepeating( self, initial_delay, period, label, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
@@ -469,7 +471,7 @@ class Controller( object ):
         return job
         
     
-    def CallRepeatingQtSafe( self, window, initial_delay, period, func, *args, **kwargs ):
+    def CallRepeatingQtSafe( self, window, initial_delay, period, label, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         

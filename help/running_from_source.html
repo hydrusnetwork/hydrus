@@ -18,6 +18,8 @@
                         <p>Installing some packages on windows with pip may need Visual Studio's C++ Build Tools for your version of python. Although these tools are free, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Instead, install Chocolatey and use this one simple line:</p>
                         <blockquote>choco install -y vcbuildtools visualstudio2017buildtools</blockquote>
                         <p>Trust me, just do this, it will save a ton of headaches!</a>
+                        <p>This can also be helpful for Windows 10 python work generally:</p>
+                        <blockquote>choco install -y windows-sdk-10.0</blockquote>
 			<h3 id="what_you_need"><a href="#what_you_need">what you will need</a></h3>
 			<p>You will need basic python experience, python 3.x and a number of python modules, all through pip.</p>
                         <p>First of all, get the actual program. The github repo is <a href="https://github.com/hydrusnetwork/hydrus">https://github.com/hydrusnetwork/hydrus</a>. If you are familiar with git, you can just clone the repo to the location you want, but if not, then just go to the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> and download and extract the source code .zip or .tar.gz somewhere. The same database location rules apply for the source release as the builds, so if you are not planning to redirect the database with the -d launch parameter, make sure the directory has write permissions (e.g. in Windows, don't put it in "Program Files")</p>

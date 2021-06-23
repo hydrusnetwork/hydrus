@@ -549,9 +549,9 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_gugs.html' ) )
+        call = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_gugs.html' ) )
         
-        menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', page_func ) )
+        menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', call ) )
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
@@ -1780,9 +1780,9 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_url_classes.html' ) )
+        call = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_url_classes.html' ) )
         
-        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', page_func ) )
+        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', call ) )
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         

@@ -4,6 +4,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
 from hydrus.client.gui import QtPorting as QP
@@ -265,6 +266,10 @@ def SetBitmapButtonBitmap( button, bitmap ):
     button.setIconSize( bitmap.size() )
     
     button.last_bitmap = bitmap
+    
+def SetFocusLater( win: QW.QWidget ):
+    
+    HG.client_controller.CallAfterQtSafe( win, 'set focus to a window', win.setFocus, QC.Qt.OtherFocusReason )
     
 def TLWIsActive( window ):
     

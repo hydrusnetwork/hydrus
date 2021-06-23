@@ -3268,7 +3268,7 @@ class MediaPanelThumbnails( MediaPanel ):
         all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )
         all_local_file_domains = services_manager.Filter( all_specific_file_domains, ( HC.LOCAL_FILE_DOMAIN, ) )
         
-        all_local_file_domains_sorted = sorted( all_local_file_domains, key = lambda fsk: HG.client_controller.services_manager.GetName( fsk ) )
+        all_local_file_domains_sorted = sorted( all_local_file_domains, key = HG.client_controller.services_manager.GetName )
         
         all_file_repos = services_manager.Filter( all_specific_file_domains, ( HC.FILE_REPOSITORY, ) )
         
@@ -4192,7 +4192,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
-            HG.client_controller.CallLaterQtSafe( win, 0, qt_do_update, hashes_to_media_results )
+            HG.client_controller.CallAfterQtSafe( win, 'new file info notification', qt_do_update, hashes_to_media_results )
             
         
         affected_hashes = self._hashes.intersection( hashes )

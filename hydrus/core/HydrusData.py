@@ -1584,12 +1584,11 @@ class Call( object ):
     
     def __init__( self, func, *args, **kwargs ):
         
+        self._label = None
+        
         self._func = func
         self._args = args
         self._kwargs = kwargs
-        
-        self._default_label = 'Call: {}( {}, {} )'.format( self._func, self._args, self._kwargs )
-        self._human_label = None
         
     
     def __call__( self ):
@@ -1599,22 +1598,34 @@ class Call( object ):
     
     def __repr__( self ):
         
-        return self._default_label
+        label = self._GetLabel()
+        
+        return 'Call: {}'.format( label )
         
     
-    def GetLabel( self ):
+    def _GetLabel( self ) -> str:
         
-        if self._human_label is None:
+        if self._label is None:
             
-            return self._default_label
+            # this can actually cause an error with Qt objects that are dead or from the wrong thread, wew!
+            label = '{}( {}, {} )'.format( self._func, self._args, self._kwargs )
+            
+        else:
+            
+            label = self._label
             
         
-        return self._human_label
+        return label
+        
+    
+    def GetLabel( self ) -> str:
+        
+        return self._GetLabel()
         
     
     def SetLabel( self, label: str ):
         
-        self._human_label = label
+        self._label = label
         
     
 class ContentUpdate( object ):

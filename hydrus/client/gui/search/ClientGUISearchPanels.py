@@ -204,7 +204,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if initial_search_row_to_edit is not None:
             
-            HG.client_controller.CallLaterQtSafe( self, 0.5, self._AddNewFavouriteSearch, initial_search_row_to_edit )
+            HG.client_controller.CallLaterQtSafe( self, 0.5, 'add new favourite search', self._AddNewFavouriteSearch, initial_search_row_to_edit )
             
         
     

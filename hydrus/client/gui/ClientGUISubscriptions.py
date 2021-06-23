@@ -1170,7 +1170,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._query_text.selectAll()
         
-        HG.client_controller.CallAfterQtSafe( self._query_text, self._query_text.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._query_text )
         
     
     def _GetValue( self ) -> typing.Tuple[ ClientImportSubscriptionQuery.SubscriptionQueryHeader, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ]:

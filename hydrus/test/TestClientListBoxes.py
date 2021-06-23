@@ -18,7 +18,7 @@ def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
     if do_delayed_ok_afterwards:
         
-        HG.test_controller.CallLaterQtSafe( panel, 1, PressKeyOnFocusedWindow, QC.Qt.Key_Return )
+        HG.test_controller.CallLaterQtSafe( panel, 1, 'test click', PressKeyOnFocusedWindow, QC.Qt.Key_Return )
         
     
     QW.QApplication.processEvents()

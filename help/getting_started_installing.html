@@ -38,6 +38,22 @@
 			</ul>
 			<p>By default, hydrus stores all its data&#x2014;options, files, subscriptions, <i>everything</i>&#x2014;entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.</p>
 			<p><span class="warning">However, for macOS users:</span> the Hydrus App is <b>non-portable</b> and puts your database in ~/Library/Hydrus (i.e. /Users/[You]/Library/Hydrus). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at ~/Library/Hydrus, not the App itself.</p>
+			<h3 id="running"><a href="#running">running</a></h3>
+                        <p>To run the client:</p>
+                        <p>for Windows:</p>
+			<ul>
+				<li>For the installer, run the Start menu shortcut it added.</li>
+				<li>For the extract, run 'client.exe' in the base directory, or make a shortcut to it.</li>
+			</ul>
+			<p>for macOS:</p>
+			<ul>
+				<li>Run the App you installed.</li>
+			</ul>
+			<p>for Linux:</p>
+			<ul>
+				<li>Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are talking './client' from the terminal.</li>
+                                <li>If you experience virtual memory crashes, please review <a href="Fixing_Hydrus_Random_Crashes_Under_Linux.md">this thorough guide</a> by a user.</li>
+			</ul>
 			<h3 id="updating"><a href="#updating">updating</a></h3>
 			<p class="warning">Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
 			<p><b>Hydrus does not auto-update. It will stay the same version unless you download and install a new one.</b></p>

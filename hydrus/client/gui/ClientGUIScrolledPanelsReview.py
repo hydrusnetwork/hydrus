@@ -883,7 +883,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     def qt_code( job_key ):
         
-        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, controller.Exit )
+        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, 'close program', controller.Exit )
         
         # no parent because this has to outlive the gui, obvs
         

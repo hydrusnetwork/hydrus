@@ -72,7 +72,14 @@ class AsyncQtJob( object ):
                 c = self._errback_callable
                 
             
-            HG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
+            try:
+                
+                HG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
+                
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                
+                return
+                
             
             return
             
@@ -98,7 +105,14 @@ class AsyncQtJob( object ):
                 c = self._errback_callable
                 
             
-            HG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
+            try:
+                
+                HG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
+                
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                
+                return
+                
             
         
     

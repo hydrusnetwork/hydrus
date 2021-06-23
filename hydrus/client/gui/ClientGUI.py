@@ -508,9 +508,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._RefreshStatusBar()
         
-        self._bandwidth_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGBandwidth)
+        self._bandwidth_repeating_job = self._controller.CallRepeatingQtSafe( self, 1.0, 1.0, 'repeating bandwidth status update', self.REPEATINGBandwidth )
         
-        self._page_update_repeating_job = self._controller.CallRepeatingQtSafe(self, 0.25, 0.25, self.REPEATINGPageUpdate)
+        self._page_update_repeating_job = self._controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating page update', self.REPEATINGPageUpdate )
         
         self._clipboard_watcher_repeating_job = None
         
@@ -549,7 +549,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._UpdateSystemTrayIcon( currently_booting = True )
         
-        self._controller.CallLaterQtSafe( self, 0.5, self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
+        self._controller.CallLaterQtSafe( self, 0.5, 'initialise session', self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
     
     def _AboutWindow( self ):
@@ -762,11 +762,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
             
         
-        text = 'This will automatically set up your client with the Public Tag Repository, just as if you had added it manually under services->manage services.'
+        text = 'This will automatically set up your client with public shared \'read-only\' account for the Public Tag Repository, just as if you had added it manually under services->manage services.'
         text += os.linesep * 2
-        text += 'Be aware that the PTR has been growing since 2011 and now has hundreds of millions of mappings. As of 2020-03, it requires about 4GB of bandwidth and file storage, and your database itself will grow by 25GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
+        text += 'Over the coming weeks, your client will download updates and then process them into your database in idle time, and the PTR\'s tags will increasingly appear across your files. If you decide to upload tags, it is just a couple of clicks (under services->manage services again) to generate your own account that has permission to do so.'
         text += os.linesep * 2
-        text += 'If you are on a mechanical HDD or do not have the space on your SSD, cancel out now.'
+        text += 'Be aware that the PTR has been growing since 2011 and now has more than a billion mappings. As of 2021-06, it requires about 6GB of bandwidth and file storage, and your database itself will grow by 50GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
+        text += os.linesep * 2
+        text += '++++If you are on a mechanical HDD or will not be able to free up enough space on your SSD, cancel out now.++++'
         
         if have_it_already:
             
@@ -871,6 +873,29 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             service = self._controller.services_manager.GetService( service_key )
             
             self._controller.CallToThread( do_it, service )
+            
+        
+    
+    def _BootOrStopClipboardWatcherIfNeeded( self ):
+        
+        allow_watchers = self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' )
+        allow_other_recognised_urls = self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' )
+        
+        if allow_watchers or allow_other_recognised_urls:
+            
+            if self._clipboard_watcher_repeating_job is None:
+                
+                self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe( self, 1.0, 1.0, 'repeating clipboard watcher', self.REPEATINGClipboardWatcher )
+                
+            
+        else:
+            
+            if self._clipboard_watcher_destination_page_watcher is not None:
+                
+                self._clipboard_watcher_repeating_job.Cancel()
+                
+                self._clipboard_watcher_repeating_job = None
+                
             
         
     
@@ -1691,7 +1716,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if self._clipboard_watcher_repeating_job is None:
             
-            self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGClipboardWatcher)
+            self._BootOrStopClipboardWatcherIfNeeded()
             
         
     
@@ -2210,17 +2235,17 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
                 
-                #self._controller.CallLaterQtSafe(self, 1.0, self.adjustSize ) # some i3 thing--doesn't layout main gui on init for some reason
+                #self._controller.CallLaterQtSafe(self, 1.0, 'adjust size', self.adjustSize ) # some i3 thing--doesn't layout main gui on init for some reason
                 
-                self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, self.AutoSaveLastSession)
+                self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, 'auto save session', self.AutoSaveLastSession )
                 
-                self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGClipboardWatcher)
+                self._BootOrStopClipboardWatcherIfNeeded()
                 
                 self._controller.ReportFirstSessionLoaded()
                 
             
         
-        self._controller.CallLaterQtSafe( self, 0.25, do_it, default_gui_session, load_a_blank_page )
+        self._controller.CallLaterQtSafe( self, 0.25, 'load a blank page', do_it, default_gui_session, load_a_blank_page )
         
     
     def _LockServer( self, service_key, lock ):
@@ -4097,39 +4122,39 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t = 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self._notebook.NewPageQuery, default_local_file_service_key, page_name ='test', on_deepest_notebook = True)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.NewPageQuery, default_local_file_service_key, page_name = 'test', on_deepest_notebook = True )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE_OF_PAGES))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, page_of_pages.NewPageQuery, default_local_file_service_key, page_name ='test', on_deepest_notebook = False)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', page_of_pages.NewPageQuery, default_local_file_service_key, page_name ='test', on_deepest_notebook = False )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProposeSaveGUISession, 'last session' )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProposeSaveGUISession, 'last session'  )
             
             return page_of_pages
             
@@ -4138,7 +4163,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             self._notebook.CloseCurrentPage()
             
-            HG.client_controller.CallLaterQtSafe(self, 0.5, self._UnclosePage)
+            HG.client_controller.CallLaterQtSafe( self, 0.5, 'test job', self._UnclosePage )
             
         
         def qt_close_pages( page_of_pages ):
@@ -4151,18 +4176,18 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             for i in indices:
                 
-                HG.client_controller.CallLaterQtSafe(self, t, page_of_pages._ClosePage, i)
+                HG.client_controller.CallLaterQtSafe( self, t, 'test job', page_of_pages._ClosePage, i )
                 
                 t += 0.25
                 
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self._notebook.CloseCurrentPage)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.CloseCurrentPage )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.DeleteAllClosedPages)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.DeleteAllClosedPages )
             
         
         def qt_test_ac():
@@ -4175,17 +4200,17 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t = 0.5
             
-            HG.client_controller.CallLaterQtSafe(self, t, page.SetSearchFocus)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', page.SetSearchFocus )
             
             ac_widget = page.GetManagementPanel()._tag_autocomplete._text_ctrl
             
             t += 0.5
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_MEDIA_FOCUS))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_MEDIA_FOCUS ) )
             
             t += 0.5
             
-            HG.client_controller.CallLaterQtSafe(self, t, self.ProcessApplicationCommand, CAC.ApplicationCommand(CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_SEARCH_FOCUS))
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_SEARCH_FOCUS ) )
             
             t += 0.5
             
@@ -4193,36 +4218,36 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             for c in 'the colour of her hair':
                 
-                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, ord( c ), text = c )
+                HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, ord( c ), text = c  )
                 
                 t += 0.01
                 
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
             
             t += 0.05
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
             
             t += 0.05
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
             for i in range( 16 ):
                 
@@ -4230,44 +4255,44 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 for j in range( i + 1 ):
                     
-                    HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
+                    HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
                     
                     t += 0.1
                     
                 
-                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+                HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
                 
                 t += SYS_PRED_REFRESH
                 
-                HG.client_controller.CallLaterQtSafe(self, t, uias.Char, None, QC.Qt.Key_Return)
+                HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, None, QC.Qt.Key_Return )
                 
             
             t += 1.0
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Down)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
             
             t += 0.05
             
-            HG.client_controller.CallLaterQtSafe(self, t, uias.Char, ac_widget, QC.Qt.Key_Return)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
             t += 1.0
             
-            HG.client_controller.CallLaterQtSafe(self, t, self._notebook.CloseCurrentPage)
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.CloseCurrentPage )
             
         
         def do_it():
             
             # pages
             
-            page_of_pages = HG.client_controller.CallBlockingToQt(self, qt_open_pages)
+            page_of_pages = HG.client_controller.CallBlockingToQt( self, qt_open_pages )
             
             time.sleep( 4 )
             
-            HG.client_controller.CallBlockingToQt(self, qt_close_unclose_one_page)
+            HG.client_controller.CallBlockingToQt( self, qt_close_unclose_one_page )
             
             time.sleep( 1.5 )
             
-            HG.client_controller.CallBlockingToQt(self, qt_close_pages, page_of_pages)
+            HG.client_controller.CallBlockingToQt( self, qt_close_pages, page_of_pages )
             
             time.sleep( 5 )
             
@@ -4275,7 +4300,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             # a/c
             
-            HG.client_controller.CallBlockingToQt(self, qt_test_ac)
+            HG.client_controller.CallBlockingToQt( self, qt_test_ac )
             
         
         HG.client_controller.CallToThread( do_it )
@@ -4975,7 +5000,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self._CurrentlyMinimisedOrHidden() or dialog_is_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
             
-            self._controller.CallLaterQtSafe( self, 0.5, self.AddModalMessage, job_key )
+            self._controller.CallLaterQtSafe( self, 0.5, 'modal message wait loop', self.AddModalMessage, job_key )
             
         else:
             
@@ -5019,7 +5044,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if only_save_last_session_during_idle and not self._controller.CurrentlyIdle():
             
-            self._controller.CallLaterQtSafe( self, 60, self.AutoSaveLastSession )
+            self._controller.CallLaterQtSafe( self, 60, 'auto session save wait loop', self.AutoSaveLastSession )
             
         else:
             
@@ -5037,7 +5062,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     controller.SaveGUISession( session )
                     
-                    controller.CallLaterQtSafe( win, next_call_delay, callable )
+                    controller.CallLaterQtSafe( win, next_call_delay, 'auto save session', callable )
                     
                 
                 self._controller.CallToThread( do_it, self._controller, session, self, next_call_delay, callable )
@@ -6898,7 +6923,7 @@ Try to keep this below 10 million!'''
         
         if db_going_to_hang_if_we_hit_it or menu_open:
             
-            self._controller.CallLaterQtSafe( self, 0.5, self.RefreshMenu )
+            self._controller.CallLaterQtSafe( self, 0.5, 'menu refresh wait loop', self.RefreshMenu )
             
             return
             
@@ -6917,7 +6942,7 @@ Try to keep this below 10 million!'''
         
         if len( self._dirty_menus ) > 0:
             
-            self._controller.CallLaterQtSafe( self, 0.5, self.RefreshMenu )
+            self._controller.CallLaterQtSafe( self, 0.5, 'refresh menu', self.RefreshMenu )
             
         
     
@@ -6951,7 +6976,7 @@ Try to keep this below 10 million!'''
         
         if self._ui_update_repeating_job is None:
             
-            self._ui_update_repeating_job = self._controller.CallRepeatingQtSafe(self, 0.0, 0.1, self.REPEATINGUIUpdate)
+            self._ui_update_repeating_job = self._controller.CallRepeatingQtSafe( self, 0.0, 0.1, 'repeating ui update', self.REPEATINGUIUpdate )
             
         
     
@@ -7008,9 +7033,7 @@ Try to keep this below 10 million!'''
         
         if not ( allow_watchers or allow_other_recognised_urls ):
             
-            self._clipboard_watcher_repeating_job.Cancel()
-            
-            self._clipboard_watcher_repeating_job = None
+            self._BootOrStopClipboardWatcherIfNeeded()
             
             return
             

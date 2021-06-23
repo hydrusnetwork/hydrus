@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -28,7 +29,7 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         self.widget().setLayout( vbox )
         
-        HG.client_controller.CallAfterQtSafe( self._commit, self._commit.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._commit )
         
     
 class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
@@ -65,7 +66,7 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         self.widget().setLayout( vbox )
         
-        HG.client_controller.CallAfterQtSafe( self._commit, self._commit.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._commit )
         
     
 class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
@@ -99,7 +100,7 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         self.widget().setLayout( vbox )
         
-        HG.client_controller.CallAfterQtSafe( self._yes, self._yes.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._yes )
         
     
 

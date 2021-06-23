@@ -454,16 +454,20 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
-    def CallAfterQtSafe( self, window, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
+    def CallAfterQtSafe( self, window, label, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
         
-        return self.CallLaterQtSafe( window, 0, func, *args, **kwargs )
+        return self.CallLaterQtSafe( window, 0, label, func, *args, **kwargs )
         
     
-    def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
+    def CallLaterQtSafe( self, window, initial_delay, label, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
         
+        # we set a label so the call won't have to look at Qt objects for a label in the wrong place
+        
         call = HydrusData.Call( func, *args, **kwargs )
+        
+        call.SetLabel( label )
         
         job = ClientThreading.QtAwareJob( self, job_scheduler, window, initial_delay, call )
         
@@ -475,13 +479,17 @@ class Controller( HydrusController.HydrusController ):
         return job
         
     
-    def CallRepeatingQtSafe(self, window, initial_delay, period, func, *args, **kwargs):
+    def CallRepeatingQtSafe( self, window, initial_delay, period, label, func, *args, **kwargs ) -> ClientThreading.QtAwareRepeatingJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( period )
         
+        # we set a label so the call won't have to look at Qt objects for a label in the wrong place
+        
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.QtAwareRepeatingJob(self, job_scheduler, window, initial_delay, period, call)
+        call.SetLabel( label )
+        
+        job = ClientThreading.QtAwareRepeatingJob( self, job_scheduler, window, initial_delay, period, call )
         
         if job_scheduler is not None:
             
@@ -1205,7 +1213,7 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'wake_idle_workers' )
         self._daemon_jobs[ 'synchronise_repositories' ] = job
         
-        job = self.CallRepeatingQtSafe( self, 10.0, 10.0, self.CheckMouseIdle )
+        job = self.CallRepeatingQtSafe( self, 10.0, 10.0, 'repeating mouse idle check', self.CheckMouseIdle )
         self._daemon_jobs[ 'check_mouse_idle' ] = job
         
         if self.db.IsFirstStart():

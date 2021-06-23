@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
@@ -612,7 +613,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( static_pred_buttons ) > 0 and len( editable_pred_panels ) == 0:
             
-            HG.client_controller.CallAfterQtSafe( static_pred_buttons[0], static_pred_buttons[0].setFocus, QC.Qt.OtherFocusReason )
+            ClientGUIFunctions.SetFocusLater( static_pred_buttons[0] )
             
         
         self.widget().setLayout( vbox )
@@ -654,7 +655,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             self.setLayout( hbox )
             
-            HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason )
+            ClientGUIFunctions.SetFocusLater( self._ok )
             
         
         def _DefaultsMenu( self ):

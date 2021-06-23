@@ -13,7 +13,6 @@ class HydrusLogger( object ):
         self._db_dir = db_dir
         self._prefix = prefix
         
-        self._log_path_base = self._GetLogPathBase()
         self._lock = threading.Lock()
         
         self._log_closed = False
@@ -57,14 +56,11 @@ class HydrusLogger( object ):
         
         ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
         
-        log_path = self._log_path_base + ' - ' + str( current_year ) + '-' + str( current_month ) + '.log'
+        log_filename = '{} - {}-{:02}.log'.format( self._prefix, current_year, current_month )
+        
+        log_path = os.path.join( self._db_dir, log_filename )
         
         return log_path
-        
-    
-    def _GetLogPathBase( self ):
-        
-        return os.path.join( self._db_dir, self._prefix )
         
     
     def _OpenLog( self ):

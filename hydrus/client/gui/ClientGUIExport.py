@@ -16,6 +16,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
@@ -651,13 +652,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._UpdateTxtButton()
         
-        HG.client_controller.CallAfterQtSafe( self._export, self._export.setFocus, QC.Qt.OtherFocusReason)
+        ClientGUIFunctions.SetFocusLater( self._export )
         
         self._paths.itemSelectionChanged.connect( self._RefreshTags )
         
         if do_export_and_then_quit:
             
-            QP.CallAfter( self._DoExport, True )
+            HG.client_controller.CallAfterQtSafe( self, 'doing export before dialog quit', self._DoExport, True )
             
         
     

@@ -1,4 +1,3 @@
-import collections
 import typing
 
 from qtpy import QtCore as QC
@@ -1897,7 +1896,7 @@ class CanvasPanel( Canvas ):
             # brush this up to handle different service keys
             # undelete do an optional service key too
             
-            local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = lambda fsk: HG.client_controller.services_manager.GetName( fsk ) )
+            local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = HG.client_controller.services_manager.GetName )
             
             for file_service_key in local_file_service_keys_we_are_in:
                 
@@ -2415,7 +2414,7 @@ class CanvasWithHovers( CanvasWithDetails ):
                 
             
         
-        self._timer_cursor_hide_job = HG.client_controller.CallLaterQtSafe( self, 0.1, self._HideCursorCheck )
+        self._timer_cursor_hide_job = HG.client_controller.CallLaterQtSafe( self, 0.1, 'hide cursor check', self._HideCursorCheck )
         
     
     def _TryToCloseWindow( self ):
@@ -3346,7 +3345,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        HG.client_controller.CallLaterQtSafe( self, 0.1, catch_up )
+        HG.client_controller.CallLaterQtSafe( self, 0.1, 'duplicates filter post-processing wait', catch_up )
         
     
     def SetMedia( self, media ):
@@ -3557,9 +3556,9 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    # we do qt safe to make sure the job is cancelled if we are destroyed, but then that launches an immediate off-qt thread to actually poke around in image cache land, which _should_ be fast, but let's not mess around
+                    # we do qt safe to make sure the job is cancelled if we are destroyed
                     
-                    HG.client_controller.CallLaterQtSafe( self, delay, HG.client_controller.CallToThread, image_cache.PrefetchImageRenderer, media )
+                    HG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', image_cache.PrefetchImageRenderer, media )
                     
                 
             
@@ -4157,7 +4156,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._timer_slideshow_interval = interval
             
-            self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
+            self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, 'slideshow', self.DoSlideshow )
             
         
     
@@ -4190,11 +4189,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     self._ShowNext()
                     
-                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
+                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, 'slideshow', self.DoSlideshow )
                     
                 else:
                     
-                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, 0.1, self.DoSlideshow )
+                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, 0.1, 'slideshow', self.DoSlideshow )
                     
                 
             
@@ -4367,7 +4366,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             # brush this up to handle different service keys
             # undelete do an optional service key too
             
-            local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = lambda fsk: HG.client_controller.services_manager.GetName( fsk ) )
+            local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = HG.client_controller.services_manager.GetName )
             
             for file_service_key in local_file_service_keys_we_are_in:
                 

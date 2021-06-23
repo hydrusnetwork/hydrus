@@ -239,9 +239,12 @@ def GenerateNumPyImage( path, mime, force_pil = False ):
     
     return numpy_image
     
-def GenerateNumPyImageFromPILImage( pil_image ):
+def GenerateNumPyImageFromPILImage( pil_image, dequantize = True ):
     
-    pil_image = Dequantize( pil_image )
+    if dequantize:
+        
+        pil_image = Dequantize( pil_image )
+        
     
     ( w, h ) = pil_image.size
     

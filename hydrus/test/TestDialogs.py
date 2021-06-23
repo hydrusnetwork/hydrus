@@ -69,11 +69,11 @@ class TestDBDialogs( unittest.TestCase ):
                 
                 dlg.SetPanel( panel )
                 
-                HG.test_controller.CallLaterQtSafe(dlg, 2, panel.Add)
+                HG.test_controller.CallLaterQtSafe( dlg, 2, 'test job', panel.Add )
                 
-                HG.test_controller.CallLaterQtSafe(dlg, 4, OKChildDialog, panel)
+                HG.test_controller.CallLaterQtSafe( dlg, 4, 'test job', OKChildDialog, panel )
                 
-                HG.test_controller.CallLaterQtSafe(dlg, 6, HitCancelButton, dlg)
+                HG.test_controller.CallLaterQtSafe( dlg, 6, 'test job', HitCancelButton, dlg )
                 
                 result = dlg.exec()
                 
@@ -92,7 +92,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 1, HitButton, dlg._register )
+                HG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitButton, dlg._register )
                 
                 result = dlg.exec()
                 
@@ -105,7 +105,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 1, HitButton, dlg._setup )
+                HG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitButton, dlg._setup )
                 
                 result = dlg.exec()
                 
@@ -118,7 +118,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 1, HitCancelButton, dlg )
+                HG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitCancelButton, dlg )
                 
                 result = dlg.exec()
                 

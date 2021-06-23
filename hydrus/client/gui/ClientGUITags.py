@@ -1348,7 +1348,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._redundant_st.setText( text )
         
-        HG.client_controller.CallLaterQtSafe( self._redundant_st, 2, self._redundant_st.setText, '' )
+        HG.client_controller.CallLaterQtSafe( self._redundant_st, 2, 'clear redundant error', self._redundant_st.setText, '' )
         
     
     def _SimpleAddBlacklistMultiple( self, tag_slices ):
@@ -1982,7 +1982,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if page is not None:
             
-            HG.client_controller.CallAfterQtSafe( page, page.SetTagBoxFocus )
+            HG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
             
         
     
@@ -3833,7 +3833,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if page is not None:
             
-            HG.client_controller.CallAfterQtSafe( page, page.SetTagBoxFocus )
+            HG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
             
         
     

@@ -627,13 +627,13 @@ class PopupMessageManager( QW.QWidget ):
         
         job_key.SetVariable( 'popup_text_1', 'initialising popup message manager\u2026' )
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, 'repeating popup message update', self.REPEATINGUpdate )
         
         self._summary_bar.expandCollapse.connect( self.ExpandCollapse )
         
-        HG.client_controller.CallLaterQtSafe(self, 0.5, self.AddMessage, job_key)
+        HG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_key )
         
-        HG.client_controller.CallLaterQtSafe(self, 1.0, job_key.Delete)
+        HG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_key.Delete )
         
     
     def _CheckPending( self ):
@@ -1140,7 +1140,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         self._message_pubbed = False
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, 'repeating popup dialog update', self.REPEATINGUpdate )
         
     
     def CleanBeforeDestroy( self ):

@@ -1,4 +1,3 @@
-import collections
 import os
 import time
 import typing
@@ -56,7 +55,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             service_string = HC.service_string_lookup[ service_type ]
             
-            menu_items.append( ( 'normal', service_string, 'Add a new ' + service_string + '.', HydrusData.Call( self._Add, service_type ) ) )
+            menu_items.append( ( 'normal', service_string, 'Add a new {}.'.format( service_string ), HydrusData.Call( self._Add, service_type ) ) )
             
         
         self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items = menu_items )
@@ -88,7 +87,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if auto_account_creation_service_key is not None:
             
-            HG.client_controller.CallLaterQtSafe( self, 1.2, self._Edit, auto_account_creation_service_key = auto_account_creation_service_key )
+            HG.client_controller.CallLaterQtSafe( self, 1.2, 'auto-account creation spawn', self._Edit, auto_account_creation_service_key = auto_account_creation_service_key )
             
         
     
@@ -715,7 +714,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         if auto_account_creation_service_key is not None:
             
-            HG.client_controller.CallLaterQtSafe( self, 1.2, self._STARTFetchAutoAccountCreationAccountTypes )
+            HG.client_controller.CallLaterQtSafe( self, 1.2, 'auto-account service spawn', self._STARTFetchAutoAccountCreationAccountTypes )
             
         
     
@@ -2446,7 +2445,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         if len( p_s ) == 0:
             
-            menu_items.append( ( 'label', 'no special permissions', 'no special permissions', None ) )
+            menu_items.append( ( 'label', 'can only download', 'can only download', None ) )
             
         else:
             
@@ -3476,7 +3475,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         menu_items = []
         
-        menu_items.append( ( 'normal', 'for deleted files', 'delete all set ratings for files that have since been deleted', HydrusData.Call( self._ClearRatings, 'delete_for_deleted_files', 'deleted files' ) ) )
+        menu_items.append( ( 'normal', 'for deleted files', 'delete all set ratings for files that have since been deleted', HydrusData.Call(  self._ClearRatings, 'delete_for_deleted_files', 'deleted files' ) ) )
         menu_items.append( ( 'normal', 'for all non-local files', 'delete all set ratings for files that are not in this client right now', HydrusData.Call( self._ClearRatings, 'delete_for_non_local_files', 'non-local files' ) ) )
         menu_items.append( ( 'separator', None, None, None ) )
         menu_items.append( ( 'normal', 'for all files', 'delete all set ratings for all files', HydrusData.Call( self._ClearRatings, 'delete_for_all_files', 'ALL FILES' ) ) )

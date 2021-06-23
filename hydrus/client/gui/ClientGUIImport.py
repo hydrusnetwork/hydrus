@@ -1567,7 +1567,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._schedule_refresh_file_list_job = None
                 
             
-            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe(self, 0.5, self.RefreshFileList)
+            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
             
         
     
@@ -1658,7 +1658,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._schedule_refresh_tags_job = None
             
         
-        self._schedule_refresh_tags_job = HG.client_controller.CallLaterQtSafe(self, 0.5, self.RefreshTags)
+        self._schedule_refresh_tags_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh tags', self.RefreshTags )
         
     
 class GalleryImportPanel( ClientGUICommon.StaticBox ):

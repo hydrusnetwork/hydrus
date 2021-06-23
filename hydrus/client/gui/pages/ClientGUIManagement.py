@@ -2403,7 +2403,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._query_input, self._query_input.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._query_input )
         
     
     def Start( self ):
@@ -3222,7 +3222,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._watcher_url_input, self._watcher_url_input.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._watcher_url_input )
         
     
     def Start( self ):
@@ -3677,7 +3677,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._page_url_input, self._page_url_input.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._page_url_input )
         
     
     def Start( self ):
@@ -3828,7 +3828,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        HG.client_controller.CallAfterQtSafe( self._url_input, self._url_input.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._url_input )
         
     
     def Start( self ):
@@ -4904,7 +4904,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            HG.client_controller.CallAfterQtSafe( self._tag_autocomplete, self._tag_autocomplete.setFocus, QC.Qt.OtherFocusReason )
+            ClientGUIFunctions.SetFocusLater( self._tag_autocomplete )
             
         
     

@@ -79,11 +79,11 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
             
             if auto_yes_time is not None:
                 
-                job = HG.client_controller.CallLaterQtSafe( dlg, auto_yes_time, dlg.done, QW.QDialog.Accepted )
+                job = HG.client_controller.CallLaterQtSafe( dlg, auto_yes_time, 'dialog auto-yes', dlg.done, QW.QDialog.Accepted )
                 
             elif auto_no_time is not None:
                 
-                job = HG.client_controller.CallLaterQtSafe( dlg, auto_no_time, dlg.done, QW.QDialog.Rejected )
+                job = HG.client_controller.CallLaterQtSafe( dlg, auto_no_time, 'dialog auto-no', dlg.done, QW.QDialog.Rejected )
                 
             
             try:

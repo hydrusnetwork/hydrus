@@ -112,7 +112,7 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         self._should_register = False
         
-        HG.client_controller.CallAfterQtSafe( self._register, self._register.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._register )
         
     
     def EventRegister( self ):
@@ -198,7 +198,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( self._ok )
         
     
     def EventOK( self ):
@@ -356,7 +356,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason)
+        ClientGUIFunctions.SetFocusLater( self._ok )
         
     
     def EventCopyExternalShareURL( self ):
@@ -463,7 +463,7 @@ class DialogInputNamespaceRegex( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason)
+        ClientGUIFunctions.SetFocusLater( self._ok )
         
     
     def EventOK( self ):
@@ -557,7 +557,7 @@ class DialogInputTags( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        HG.client_controller.CallAfterQtSafe( self._tag_autocomplete, self._tag_autocomplete.setFocus, QC.Qt.OtherFocusReason)
+        ClientGUIFunctions.SetFocusLater( self._tag_autocomplete )
         
 
     def EnterTags( self, tags ):
@@ -639,7 +639,7 @@ class DialogInputUPnPMapping( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        HG.client_controller.CallAfterQtSafe( self._ok, self._ok.setFocus, QC.Qt.OtherFocusReason)
+        ClientGUIFunctions.SetFocusLater( self._ok )
         
     
     def GetInfo( self ):
@@ -1034,7 +1034,7 @@ class DialogYesYesNo( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        HG.client_controller.CallAfterQtSafe( yes_buttons[0], yes_buttons[0].setFocus, QC.Qt.OtherFocusReason )
+        ClientGUIFunctions.SetFocusLater( yes_buttons[0] )
         
     
     def _DoYes( self, value ):

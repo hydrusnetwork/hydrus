@@ -1370,8 +1370,8 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._notebook.setCurrentIndex( 0 )
         
-        HG.client_controller.CallAfterQtSafe( first_panel, first_panel.setFocus, QC.Qt.OtherFocusReason )
-        HG.client_controller.CallAfterQtSafe( first_panel, first_panel.moveCursor, QG.QTextCursor.End )
+        ClientGUIFunctions.SetFocusLater( first_panel )
+        HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.End )
         
         #
         
@@ -1420,8 +1420,8 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._notebook.setCurrentWidget( control )
         
-        HG.client_controller.CallAfterQtSafe( control, control.setFocus, QC.Qt.OtherFocusReason )
-        HG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.End )
+        ClientGUIFunctions.SetFocusLater( control )
+        HG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.End )
         
         self._UpdateButtons()
         
@@ -2499,7 +2499,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not first_focused:
                 
-                HG.client_controller.CallAfterQtSafe( button, button.setFocus, QC.Qt.OtherFocusReason)
+                ClientGUIFunctions.SetFocusLater( button )
                 
                 first_focused = True
                 

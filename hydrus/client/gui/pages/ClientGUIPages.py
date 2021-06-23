@@ -530,7 +530,7 @@ class Page( QW.QSplitter ):
             
             if CGC.core().MenuIsOpen():
                 
-                self._controller.CallLaterQtSafe( self, 0.5, clean_up_old_panel )
+                self._controller.CallLaterQtSafe( self, 0.5, 'menu closed panel swap loop', clean_up_old_panel )
                 
                 return
                 
@@ -898,7 +898,7 @@ class Page( QW.QSplitter ):
                 
                 status = 'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
                 
-                controller.CallAfterQtSafe( self, qt_code_status, status )
+                controller.CallAfterQtSafe( self, 'setting status bar loading string', qt_code_status, status )
                 
                 QP.CallAfter( qt_code_status, status )
                 
@@ -2573,7 +2573,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self._CloseAllPages( polite = False, delete_pages = True )
             
-            self._controller.CallLaterQtSafe(self, 1.0, self.AppendGUISessionFreshest, name, load_in_a_page_of_pages = False)
+            self._controller.CallLaterQtSafe( self, 1.0, 'append session', self.AppendGUISessionFreshest, name, load_in_a_page_of_pages = False )
             
         else:
             
@@ -2824,7 +2824,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             # this is here for now due to the pagechooser having a double-layer dialog on a booru choice, which messes up some focus inheritance
             
-            self._controller.CallLaterQtSafe( self, 0.5, page.SetSearchFocus )
+            self._controller.CallLaterQtSafe( self, 0.5, 'set page focus', page.SetSearchFocus )
             
         
         return page

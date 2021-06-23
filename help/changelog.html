@@ -8,6 +8,19 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_444"><a href="#version_444">version 444</a></h3></li>
+				<ul>
+					<li>gave the 'access keys' and 'privacy' help pages a complete pass. the access keys section talks about the read-only shared key, and how to generate you own account, and the privacy section now compiles, as comprehensively as I could, our various discussions about multiple accounts, what you shouldn't upload to the PTR (basically your own name lol), self-signed https certificates, and what information is actually stored on an account</li>
+					<li>expanded the 'getting started - installing' help page with a 'how to run the client' section, including bundling the excellent Linux virtual memory guide written by a user</li>
+					<li>fixed the new 'fill in subscription with gap downloader' button, which was initialising with the wrong downloader at times (usually on the first gap downloader opened, when it opened a new page with it)</li>
+					<li>you can now set 'all known files' for the tag autocomplete in 'write' contexts (e.g. manage tags dialog) when not in advanced mode</li>
+					<li>cleaned up how a variety of delayed UI calls are registered and present information about themselves. every UI job now has a nice human name for debug purposes. this should improve program stability and clear some odd rare errors when closing some dialogs (this mostly affected certain linux users)</li>
+					<li>when an asynchronous UI job fails with a dead window, or if fails to publish to its window for a non-dead reason and then the window dies before that failure returns, the error handling code now catches and silences the error. an example of this would be clicking 'refresh account' on review services, then closing the window before the lagging job raises 'connection failure'</li>
+					<li>when windows are rescued from off screen, their frame key is now stated in the popup note</li>
+					<li>if your version of OpenCV is unable to load PNG files, your client should now be able to load serialised object PNGs (like those in the downloader system) correctly (the same PIL fallback for regular media files now works for deserialisation too)</li>
+					<li>the hydrus log path is finally month-zero-padded, ha ha ha</li>
+					<li>misc cleanup and label fixes</li>
+				</ul>
 				<li><h3 id="version_443"><a href="#version_443">version 443</a></h3></li>
 				<ul>
 					<li>quality of life:</li>
@@ -30,7 +43,7 @@
 					<li>'database is complicated' menu label is updated to 'database is stored in multiple locations'</li>
 					<li>_options->gui pages->controls_ now has a little explanatory text about autocomplete dropdowns and some tooltips</li>
 					<li>migrate database dialog has some red warning text up top and a small layout and label text pass. the 'portable?' is now 'beneath db?'</li>
-					<li>the repositery hash_id and tag_id normalisation routines have two improvements: the error now shows specific service_ids that failed to lookup, and the mass-service_hash_id lookup now handles the situation where a hash_id is mapped by more than one service_id</li>
+					<li>the repository hash_id and tag_id normalisation routines have two improvements: the error now shows specific service_ids that failed to lookup, and the mass-service_hash_id lookup now handles the situation where a hash_id is mapped by more than one service_id</li>
 					<li>repository definition reprocessing now corrects bad service_id rows, which will better heal clients that previously processed bad data</li>
 					<li>the client api and server in general should be better about giving 404s on certain sorts of missing files (it could dump out with 500 in some cases before)</li>
 					<li>it isn't perfect by any means, but the autocomplete dropdown should be a _little_ better about hiding itself in float mode if the parent text input box is scrolled off screen</li>

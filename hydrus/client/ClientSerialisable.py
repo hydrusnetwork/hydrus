@@ -12,6 +12,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 
@@ -249,13 +250,25 @@ def LoadFromPNG( path ):
         
         HydrusPaths.MirrorFile( path, temp_path )
         
-        numpy_image = cv2.imread( temp_path, flags = IMREAD_UNCHANGED )
-        
-    except Exception as e:
-        
-        HydrusData.ShowException( e )
-        
-        raise Exception( 'That did not appear to be a valid image!' )
+        try:
+            
+            numpy_image = cv2.imread( temp_path, flags = IMREAD_UNCHANGED )
+            
+        except Exception as e:
+            
+            try:
+                
+                pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
+                
+                numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image, dequantize = False )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                raise Exception( 'That did not appear to be a valid image!' )
+                
+            
         
     finally:
         

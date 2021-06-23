@@ -184,19 +184,22 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIMenus.AppendMenuItem( menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
             
             ClientGUIMenus.AppendSeparator( menu )
-
+            
+        
         ClientGUIMenus.AppendMenuItem( menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
         ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
+        
         ClientGUIMenus.AppendMenuItem( menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
-        ClientGUIMenus.AppendMenuItem( menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete from list', 'Remove all the selected imports.', HydrusData.Call( self._DeleteSelected ) )
         
         return menu
         

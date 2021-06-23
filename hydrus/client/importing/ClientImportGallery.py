@@ -1347,7 +1347,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            gug = HG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
+            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
             
             if gug is None:
                 
@@ -1355,8 +1355,6 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 return
                 
-            
-            self._gug_key_and_name = gug.GetGUGKeyAndName() # just a refresher, to keep up with any changes
             
             initial_search_urls = gug.GenerateGalleryURLs( query_text )
             
@@ -1367,7 +1365,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            gallery_import = GalleryImport( query = query_text, source_name = self._gug_key_and_name[1], initial_search_urls = initial_search_urls, start_file_queue_paused = self._start_file_queues_paused, start_gallery_queue_paused = self._start_gallery_queues_paused )
+            gallery_import = GalleryImport( query = query_text, source_name = gug_key_and_name[1], initial_search_urls = initial_search_urls, start_file_queue_paused = self._start_file_queues_paused, start_gallery_queue_paused = self._start_gallery_queues_paused )
             
             gallery_import.SetFileLimit( file_limit )
             

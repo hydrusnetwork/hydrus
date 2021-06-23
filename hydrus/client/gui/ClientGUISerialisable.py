@@ -173,7 +173,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.setText( 'done!' )
         
-        HG.client_controller.CallLaterQtSafe(self._export, 2.0, self._export.setText, 'export')
+        HG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
         
     
 class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -278,6 +278,6 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.setText( 'done!' )
         
-        HG.client_controller.CallLaterQtSafe(self._export, 2.0, self._export.setText, 'export')
+        HG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
         
     
