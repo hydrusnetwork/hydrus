@@ -2,11 +2,7 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusSerialisable
 
 from hydrus.client.db import ClientDBServices
 
@@ -77,6 +73,24 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( petitioned_mappings_table_name ) )
         self._CreateIndex( petitioned_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
+        
+    
+    def GetPendingCount( self, service_id ):
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( pending_mappings_table_name ) ).fetchone()
+        
+        if result is None:
+            
+            return 0
+            
+        else:
+            
+            ( count, ) = result
+            
+            return count
+            
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

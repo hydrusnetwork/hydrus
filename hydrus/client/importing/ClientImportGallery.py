@@ -12,7 +12,8 @@ from hydrus.client import ClientDownloading
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.networking import ClientNetworkingJobs
 
 class GalleryImport( HydrusSerialisable.SerialisableBase ):
@@ -63,7 +64,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         
@@ -555,7 +556,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             fsc = self._file_seed_cache
             
         
-        file_import_options = ClientImportOptions.FileImportOptions()
+        file_import_options = FileImportOptions.FileImportOptions()
         
         file_import_options.SetPresentationOptions( True, False, False )
         
@@ -953,7 +954,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         self._merge_simultaneous_pends_to_one_importer = False
         
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._gallery_imports = HydrusSerialisable.SerialisableList()
         

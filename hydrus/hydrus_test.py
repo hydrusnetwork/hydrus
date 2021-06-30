@@ -2,7 +2,6 @@
 
 from hydrus.client.gui import QtPorting as QP
 from qtpy import QtWidgets as QW
-from qtpy import QtCore as QC
 
 import locale
 
@@ -91,6 +90,15 @@ def boot():
         if sys.stdin.isatty():
             
             input( 'Press any key to exit.' )
+            
+        
+        if controller.was_successful:
+            
+            sys.exit( 0 )
+            
+        else:
+            
+            sys.exit( 1 )
             
         
     

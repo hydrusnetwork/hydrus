@@ -12,9 +12,11 @@ from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
+from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -511,11 +513,11 @@ class TestSerialisables( unittest.TestCase ):
         periodic_file_limit = 50
         paused = False
         
-        file_import_options = ClientImportOptions.FileImportOptions()
+        file_import_options = FileImportOptions.FileImportOptions()
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = False, additional_tags = { 'test additional tag', 'and another' } )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = False, additional_tags = { 'test additional tag', 'and another' } )
         
-        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = { HydrusData.GenerateKey() : service_tag_import_options } )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = { HydrusData.GenerateKey() : service_tag_import_options } )
         
         no_work_until = HydrusData.GetNow() - 86400 * 20
         

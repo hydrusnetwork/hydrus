@@ -17,8 +17,10 @@ from hydrus.client import ClientThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportGallerySeeds
-from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
+from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 
@@ -58,7 +60,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._paused = False
         
         self._file_import_options = new_options.GetDefaultFileImportOptions( 'quiet' )
-        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._no_work_until = 0
         self._no_work_until_reason = ''
@@ -1431,7 +1433,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._tag_import_options = tag_import_options.Duplicate()
         
     
-    def SetTuple( self, gug_key_and_name, checker_options: ClientImportOptions.CheckerOptions, initial_file_limit, periodic_file_limit, paused, file_import_options: ClientImportOptions.FileImportOptions, tag_import_options: ClientImportOptions.TagImportOptions, no_work_until ):
+    def SetTuple( self, gug_key_and_name, checker_options: ClientImportOptions.CheckerOptions, initial_file_limit, periodic_file_limit, paused, file_import_options: FileImportOptions.FileImportOptions, tag_import_options: TagImportOptions.TagImportOptions, no_work_until ):
         
         self._gug_key_and_name = gug_key_and_name
         self._checker_options = checker_options

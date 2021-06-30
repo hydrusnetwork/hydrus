@@ -23,6 +23,7 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
+from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -559,7 +560,13 @@ class TestClientAPI( unittest.TestCase ):
         
         # fail
         
-        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
+        hash = bytes.fromhex( 'a593942cb7ea9ffcd8ccf2f0fa23c338e23bfecd9a3e508dfc0bcf07501ead08' )
+        
+        f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+        
+        f.hash = hash
+        
+        HG.test_controller.SetRead( 'hash_status', f )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
         
@@ -580,10 +587,19 @@ class TestClientAPI( unittest.TestCase ):
         response_json = json.loads( text )
         
         self.assertEqual( response_json[ 'status' ], CC.STATUS_ERROR )
-        self.assertEqual( response_json[ 'hash' ], 'a593942cb7ea9ffcd8ccf2f0fa23c338e23bfecd9a3e508dfc0bcf07501ead08' )
+        self.assertEqual( response_json[ 'hash' ], hash.hex() )
         self.assertIn( 'Traceback', response_json[ 'note' ] )
         
         # success as body
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+        
+        f.hash = hash
+        f.note = 'test note'
+        
+        HG.test_controller.SetRead( 'hash_status', f )
         
         hydrus_png_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -610,11 +626,18 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : 'ad6d3599a6c489a575eb19c026face97a9cd6579e74728b0ce94a601d232f3c3' , 'note' : 'test note' }
+        expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : hash.hex() , 'note' : 'test note' }
         
         self.assertEqual( response_json, expected_result )
         
         # do hydrus png as path
+        
+        f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+        
+        f.hash = hash
+        f.note = 'test note'
+        
+        HG.test_controller.SetRead( 'hash_status', f )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -636,7 +659,7 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : 'ad6d3599a6c489a575eb19c026face97a9cd6579e74728b0ce94a601d232f3c3' , 'note' : 'test note' }
+        expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : hash.hex() , 'note' : 'test note' }
         
         self.assertEqual( response_json, expected_result )
         
@@ -1112,7 +1135,7 @@ class TestClientAPI( unittest.TestCase ):
         
         hash = os.urandom( 32 )
         
-        url_file_statuses = [ ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, 'muh import phrase' ) ]
+        url_file_statuses = [ ClientImportFiles.FileImportStatus( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, note = 'muh import phrase' ) ]
         json_url_file_statuses = [ { 'status' : CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, 'hash' : hash.hex(), 'note' : 'muh import phrase' } ]
         
         HG.test_controller.SetRead( 'url_statuses', url_file_statuses )

@@ -4093,7 +4093,7 @@ class StringSplitter( StringProcessingStep ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER ] = StringSplitter
 
-class StringProcessor( HydrusSerialisable.SerialisableBase ):
+class StringProcessor( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR
     SERIALISABLE_NAME = 'String Processor'

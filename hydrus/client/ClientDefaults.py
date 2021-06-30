@@ -77,7 +77,7 @@ def GetClientDefaultOptions():
     
 def GetDefaultCheckerOptions( name ):
     
-    from hydrus.client.importing import ClientImportOptions
+    from hydrus.client.importing.options import ClientImportOptions
     
     if name == 'thread':
         

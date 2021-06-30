@@ -1,4 +1,5 @@
 import os
+import shutil
 import socket
 import subprocess
 import threading
@@ -18,7 +19,7 @@ if HC.PLATFORM_WINDOWS:
     
 else:
     
-    possible_bin_filenames = [ 'upnpc-static', 'upnpc-shared', 'miniupnpc' ]
+    possible_bin_filenames = [ 'upnpc', 'upnpc-static', 'upnpc-shared', 'miniupnpc' ]
     
     if HC.PLATFORM_LINUX:
         
@@ -29,10 +30,10 @@ else:
         possible_bin_filenames.append( 'upnpc_osx' )
         
     
-UPNPC_PATH = 'miniupnpc' # no exe, we'll assume installed to system
+UPNPC_PATH = None
 
-UPNPC_IS_MISSING = False
 UPNPC_MANAGER_ERROR_PRINTED = False
+UPNPC_MISSING_ERROR_PRINTED = False
 
 for filename in possible_bin_filenames:
     
@@ -42,27 +43,45 @@ for filename in possible_bin_filenames:
         
         UPNPC_PATH = possible_path
         
+        break
+        
+    
+    possible_path_which = shutil.which( filename )
+    
+    if possible_path_which is not None:
+        
+        UPNPC_PATH = possible_path_which
+        
+        break
+        
     
 EXTERNAL_IP = {}
 EXTERNAL_IP[ 'ip' ] = None
 EXTERNAL_IP[ 'time' ] = 0
 
+UPNPC_IS_MISSING = UPNPC_PATH is None
+
 def RaiseMissingUPnPcError( operation ):
     
     message = 'Unfortunately, the operation "{}" requires miniupnpc, which does not seem to be available for your system. You can install it yourself easily, please check install_dir/bin/upnpc_readme.txt for more information!'.format( operation )
     
-    global UPNPC_IS_MISSING
+    global UPNPC_MISSING_ERROR_PRINTED
     
-    if not UPNPC_IS_MISSING:
+    if not UPNPC_MISSING_ERROR_PRINTED:
         
         HydrusData.ShowText( message )
         
-        UPNPC_IS_MISSING = True
+        UPNPC_MISSING_ERROR_PRINTED = True
         
     
     raise FileNotFoundError( message )
     
 def GetExternalIP():
+    
+    if UPNPC_IS_MISSING:
+        
+        RaiseMissingUPnPcError( 'fetch external IP' )
+        
     
     if HydrusData.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
         
@@ -123,6 +142,11 @@ def GetLocalIP():
     
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     
+    if UPNPC_IS_MISSING:
+        
+        RaiseMissingUPnPcError( 'add UPnP port forward' )
+        
+    
     cmd = [ UPNPC_PATH, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
@@ -181,6 +205,11 @@ def AddUPnPMappingCheckResponse( internal_client, internal_port, external_port, 
         
     
 def GetUPnPMappings():
+    
+    if UPNPC_IS_MISSING:
+        
+        RaiseMissingUPnPcError( 'get current UPnP port forward mappings' )
+        
     
     cmd = [ UPNPC_PATH, '-l' ]
     
@@ -290,6 +319,11 @@ def GetUPnPMappingsParseResponse( stdout ):
         
     
 def RemoveUPnPMapping( external_port, protocol ):
+    
+    if UPNPC_IS_MISSING:
+        
+        RaiseMissingUPnPcError( 'remove UPnP port forward' )
+        
     
     cmd = [ UPNPC_PATH, '-d', str( external_port ), protocol ]
     

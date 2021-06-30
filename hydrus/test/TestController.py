@@ -32,6 +32,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager
+from hydrus.client.importing import ClientImportFiles
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
@@ -172,6 +173,10 @@ class Controller( object ):
         self.app = win
         self.win = win
         self.only_run = only_run
+        self.run_finished = False
+        self.was_successful = False
+        
+        self._test_db = None
         
         self.db_dir = tempfile.mkdtemp()
         
@@ -482,6 +487,11 @@ class Controller( object ):
         return job
         
     
+    def ClearTestDB( self ):
+        
+        self._test_db = None
+        
+    
     def ClearWrites( self, name ):
         
         if name in self._writes:
@@ -645,6 +655,11 @@ class Controller( object ):
         
     
     def Read( self, name, *args, **kwargs ):
+        
+        if self._test_db is not None:
+            
+            return self._test_db.Read( name, *args, **kwargs )
+            
         
         try:
             
@@ -836,7 +851,10 @@ class Controller( object ):
             
             try:
                 
-                runner.run( suite )
+                result = runner.run( suite )
+                
+                self.run_finished = True
+                self.was_successful = result.wasSuccessful()
                 
             finally:
                 
@@ -864,6 +882,11 @@ class Controller( object ):
     def SetStatusBarDirty( self ):
         
         pass
+        
+    
+    def SetTestDB( self, db ):
+        
+        self._test_db = db
         
     
     def SetWebCookies( self, name, value ):
@@ -900,6 +923,11 @@ class Controller( object ):
     
     def Write( self, name, *args, **kwargs ):
         
+        if self._test_db is not None:
+            
+            return self._test_db.Write( name, *args, **kwargs )
+            
+        
         self._writes[ name ].append( ( args, kwargs ) )
         
     
@@ -917,7 +945,14 @@ class Controller( object ):
                 
             else:
                 
-                return ( CC.STATUS_SUCCESSFUL_AND_NEW, 'test note' )
+                h = file_import_job.GetHash()
+                
+                if h is None:
+                    
+                    h = os.urandom( 32 )
+                    
+                
+                return ClientImportFiles.FileImportStatus( CC.STATUS_SUCCESSFUL_AND_NEW, h, note = 'test note' )
                 
             
         

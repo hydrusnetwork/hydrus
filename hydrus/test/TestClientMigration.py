@@ -16,8 +16,8 @@ from hydrus.client import ClientManagers
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
-from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing import ClientImportFiles
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMediaResultCache
 from hydrus.client.metadata import ClientTags
 
@@ -173,6 +173,8 @@ class TestMigration( unittest.TestCase ):
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
         for i in range( 100 ):
             
             hash = HydrusData.GenerateKey()
@@ -190,13 +192,13 @@ class TestMigration( unittest.TestCase ):
             
             if i < 50:
                 
-                fake_file_import_job = ClientImportFileSeeds.FileImportJob( 'fake path' )
+                fake_file_import_job = ClientImportFiles.FileImportJob( 'fake path', file_import_options )
                 
-                fake_file_import_job._hash = hash
+                fake_file_import_job._pre_import_file_status = ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
                 fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
                 fake_file_import_job._extra_hashes = ( md5, sha1, sha512 )
                 fake_file_import_job._phashes = [ os.urandom( 8 ) ]
-                fake_file_import_job._file_import_options = ClientImportOptions.FileImportOptions()
+                fake_file_import_job._file_import_options = FileImportOptions.FileImportOptions()
                 
                 self.WriteSynchronous( 'import_file', fake_file_import_job )
                 

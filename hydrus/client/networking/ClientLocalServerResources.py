@@ -22,7 +22,7 @@ from hydrus.core.networking import HydrusServerResources
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
-from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
@@ -875,24 +875,22 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( temp_path, file_import_options )
+        file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
         
         try:
             
-            ( status, hash, note ) = file_import_job.DoWork()
+            file_import_status = file_import_job.DoWork()
             
         except:
             
-            status = CC.STATUS_ERROR
-            hash = file_import_job.GetHash()
-            note = traceback.format_exc()
+            file_import_status = ClientImportFiles.FileImportStatus( CC.STATUS_ERROR, file_import_job.GetHash(), note = traceback.format_exc() )
             
         
         body_dict = {}
         
-        body_dict[ 'status' ] = status
-        body_dict[ 'hash' ] = hash.hex()
-        body_dict[ 'note' ] = note
+        body_dict[ 'status' ] = file_import_status.status
+        body_dict[ 'hash' ] = HydrusData.BytesToNoneOrHex( file_import_status.hash )
+        body_dict[ 'note' ] = file_import_status.note
         
         body = json.dumps( body_dict )
         
@@ -1405,13 +1403,15 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         
         json_happy_url_statuses = []
         
-        for ( status, hash, note ) in url_statuses:
+        for file_import_status in url_statuses:
+            
+            file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
             
             d = {}
             
-            d[ 'status' ] = status
-            d[ 'hash' ] = hash.hex()
-            d[ 'note' ] = note
+            d[ 'status' ] = file_import_status.status
+            d[ 'hash' ] = HydrusData.BytesToNoneOrHex( file_import_status.hash )
+            d[ 'note' ] = file_import_status.note
             
             json_happy_url_statuses.append( d )
             

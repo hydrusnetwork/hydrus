@@ -33,7 +33,8 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
@@ -310,7 +311,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if not isinstance( tag_import_options, ClientImportOptions.TagImportOptions ):
+            if not isinstance( tag_import_options, TagImportOptions.TagImportOptions ):
                 
                 raise Exception( 'Not a Tag Import Options!' )
                 
@@ -1111,7 +1112,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, file_import_options: ClientImportOptions.FileImportOptions, show_downloader_options: bool ):
+    def __init__( self, parent: QW.QWidget, file_import_options: FileImportOptions.FileImportOptions, show_downloader_options: bool ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1300,7 +1301,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         QW.QMessageBox.information( self, 'Information', help_message )
         
     
-    def GetValue( self ) -> ClientImportOptions.FileImportOptions:
+    def GetValue( self ) -> FileImportOptions.FileImportOptions:
         
         exclude_deleted = self._exclude_deleted.isChecked()
         do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.isChecked()
@@ -1319,7 +1320,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         present_already_in_inbox_files = self._present_already_in_inbox_files.isChecked()
         present_already_in_archive_files = self._present_already_in_archive_files.isChecked()
         
-        file_import_options = ClientImportOptions.FileImportOptions()
+        file_import_options = FileImportOptions.FileImportOptions()
         
         file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
@@ -2049,7 +2050,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, tag_import_options: ClientImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool = False ):
+    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2281,7 +2282,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._SetValue( default_tag_import_options )
         
     
-    def _SetValue( self, tag_import_options: ClientImportOptions.TagImportOptions ):
+    def _SetValue( self, tag_import_options: TagImportOptions.TagImportOptions ):
         
         self._use_default_dropdown.SetValue( tag_import_options.IsDefault() )
         
@@ -2353,13 +2354,13 @@ Please note that once you know what tags you like, you can (and should) set up t
         self._tag_whitelist_button.setText( label )
         
     
-    def GetValue( self ) -> ClientImportOptions.TagImportOptions:
+    def GetValue( self ) -> TagImportOptions.TagImportOptions:
         
         is_default = self._use_default_dropdown.GetValue()
         
         if is_default:
             
-            tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+            tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
             
         else:
             
@@ -2371,7 +2372,7 @@ Please note that once you know what tags you like, you can (and should) set up t
             tag_blacklist = self._tag_blacklist_button.GetValue()
             tag_whitelist = list( self._tag_whitelist )
             
-            tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+            tag_import_options = TagImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
             
         
         return tag_import_options
@@ -2522,7 +2523,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: ClientImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2703,18 +2704,18 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._get_tags_filter_button.setEnabled( should_enable_filter )
         
     
-    def GetValue( self ) -> ClientImportOptions.ServiceTagImportOptions:
+    def GetValue( self ) -> TagImportOptions.ServiceTagImportOptions:
         
         get_tags = self._get_tags_checkbox.isChecked()
         
         get_tags_filter = self._get_tags_filter_button.GetValue()
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
         
         return service_tag_import_options
         
     
-    def SetValue( self, service_tag_import_options: ClientImportOptions.ServiceTagImportOptions ):
+    def SetValue( self, service_tag_import_options: TagImportOptions.ServiceTagImportOptions ):
         
         ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = service_tag_import_options.ToTuple()
         

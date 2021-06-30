@@ -444,6 +444,20 @@ class HydrusController( object ):
         return self._caches[ name ]
         
     
+    def GetJobSchedulerSnapshot( self, scheduler_name ):
+        
+        if scheduler_name == 'fast':
+            
+            scheduler = self._fast_job_scheduler
+            
+        else:
+            
+            scheduler = self._slow_job_scheduler
+            
+        
+        return scheduler.GetJobs()
+        
+    
     def GetManager( self, name ):
         
         return self._managers[ name ]

@@ -221,6 +221,8 @@ def THREADUploadPending( service_key ):
         
         HG.client_controller.pub( 'message', job_key )
         
+        no_results_found = result is None
+        
         while result is not None:
             
             nums_pending = HG.client_controller.Read( 'nums_pending' )
@@ -341,6 +343,13 @@ def THREADUploadPending( service_key ):
             result = HG.client_controller.Read( 'pending', service_key, content_types_to_request )
             
         
+        finished_all_uploads = result == None
+        
+        if initial_num_pending > 0 and no_results_found and service_type == HC.TAG_REPOSITORY:
+            
+            HydrusData.ShowText( 'Hey, your pending menu may have a miscount! It seems like you have pending count, but nothing was found in the database. Please run _database->regenerate->tag storage mappings cache (just pending, instant calculation) when convenient. Make sure it is the "instant, just pending" regeneration!' )
+            
+        
         job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.SetVariable( 'popup_text_1', 'upload done!' )
         
@@ -378,26 +387,29 @@ def THREADUploadPending( service_key ):
         
     finally:
         
-        if service_type == HC.TAG_REPOSITORY:
+        if finished_all_uploads:
             
-            types_to_delete = (
-                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
-                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
-                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
-                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
-                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
-                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS
-            )
+            if service_type == HC.TAG_REPOSITORY:
+                
+                types_to_delete = (
+                    HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
+                    HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
+                    HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
+                    HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
+                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
+                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS
+                )
+                
+            elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
+                
+                types_to_delete = (
+                    HC.SERVICE_INFO_NUM_PENDING_FILES,
+                    HC.SERVICE_INFO_NUM_PETITIONED_FILES
+                )
+                
             
-        elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
+            HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
             
-            types_to_delete = (
-                HC.SERVICE_INFO_NUM_PENDING_FILES,
-                HC.SERVICE_INFO_NUM_PETITIONED_FILES
-            )
-            
-        
-        HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
         
         HG.currently_uploading_pending = False
         HG.client_controller.pub( 'notify_new_pending' )
@@ -642,6 +654,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'pyparsing present: ', str( ClientNetworkingJobs.PYPARSING_OK ) ) )
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
+        library_versions.append( ( 'chardet present: ', str( HydrusText.CHARDET_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )

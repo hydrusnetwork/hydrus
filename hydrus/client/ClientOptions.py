@@ -6,15 +6,12 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientDownloading
 from hydrus.client import ClientDuplicates
-from hydrus.client.importing import ClientImporting
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -560,9 +557,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         present_already_in_inbox_files = False
         present_already_in_archive_files = False
         
-        from hydrus.client.importing import ClientImportOptions
+        from hydrus.client.importing.options import FileImportOptions
         
-        quiet_file_import_options = ClientImportOptions.FileImportOptions()
+        quiet_file_import_options = FileImportOptions.FileImportOptions()
         
         quiet_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
@@ -574,7 +571,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         present_already_in_inbox_files = True
         present_already_in_archive_files = True
         
-        loud_file_import_options = ClientImportOptions.FileImportOptions()
+        loud_file_import_options = FileImportOptions.FileImportOptions()
         
         loud_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         loud_file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )

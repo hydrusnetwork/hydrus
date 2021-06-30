@@ -12,7 +12,6 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientServices
 from hydrus.client.metadata import ClientTags
 
 class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):

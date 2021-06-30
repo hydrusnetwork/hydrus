@@ -9,9 +9,11 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportOptions
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
+from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingJobs
 
@@ -37,7 +39,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._watcher_keys_to_watchers = {}
         
@@ -171,13 +173,13 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
                 file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-                tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+                tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
                 
             except:
                 
                 checker_options = ClientImportOptions.CheckerOptions()
-                file_import_options = ClientImportOptions.FileImportOptions()
-                tag_import_options = ClientImportOptions.TagImportOptions()
+                file_import_options = FileImportOptions.FileImportOptions()
+                tag_import_options = TagImportOptions.TagImportOptions()
                 
             
             serialisable_checker_options = checker_options.GetSerialisableTuple()
@@ -519,10 +521,6 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        # something like:
-            # if any are dead, do some stuff with them based on some options here
-            # might want to have this work on a 30s period or something
-        
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_WATCHER_IMPORT ] = MultipleWatcherImport
 
@@ -551,7 +549,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         self._last_check_time = 0
         self._checking_status = ClientImporting.CHECKER_STATUS_OK
         self._subject = 'unknown subject'
@@ -1168,7 +1166,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             fsc = self._file_seed_cache
             
         
-        file_import_options = ClientImportOptions.FileImportOptions()
+        file_import_options = FileImportOptions.FileImportOptions()
         
         file_import_options.SetPresentationOptions( True, False, False )
         

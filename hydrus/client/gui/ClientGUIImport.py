@@ -37,7 +37,10 @@ from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportLocal
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
@@ -163,7 +166,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             # pull from an options default
             
-            filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
+            filename_tagging_options = TagImportOptions.FilenameTaggingOptions()
             
         
         QW.QWidget.__init__( self, parent )
@@ -193,7 +196,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
     
     def GetFilenameTaggingOptions( self ):
         
-        filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
+        filename_tagging_options = TagImportOptions.FilenameTaggingOptions()
         
         self._advanced_panel.UpdateFilenameTaggingOptions( filename_tagging_options )
         self._simple_panel.UpdateFilenameTaggingOptions( filename_tagging_options )
@@ -743,7 +746,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             for path in self._selected_paths:
                 
-                self._paths_to_single_tags[ path ] = tags
+                self._paths_to_single_tags[ path ].intersection_update( tags )
                 
             
             self.tagsChanged.emit()
@@ -1167,7 +1170,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
-            filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
+            filename_tagging_options = TagImportOptions.FilenameTaggingOptions()
             
             panel = EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
             
@@ -1700,8 +1703,8 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._file_limit.valueChanged.connect( self.EventFileLimit )
         self._file_limit.setToolTip( 'stop searching the gallery once this many files has been reached' )
         
-        file_import_options = ClientImportOptions.FileImportOptions()
-        tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        file_import_options = FileImportOptions.FileImportOptions()
+        tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         show_downloader_options = True
         
@@ -2133,7 +2136,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
             tag_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if not isinstance( tag_import_options, ClientImportOptions.TagImportOptions ):
+            if not isinstance( tag_import_options, TagImportOptions.TagImportOptions ):
                 
                 raise Exception( 'Not a Tag Import Options!' )
                 
@@ -2276,8 +2279,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._checker_download_control = ClientGUINetworkJobControl.NetworkJobControl( checker_panel )
         
-        file_import_options = ClientImportOptions.FileImportOptions()
-        tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        file_import_options = FileImportOptions.FileImportOptions()
+        tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         show_downloader_options = True
         

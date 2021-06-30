@@ -731,6 +731,13 @@ class HydrusDB( object ):
                 result = self._Write( action, *args, **kwargs )
                 
             
+            self._cursor_transaction_wrapper.Save()
+            
+            if job.IsSynchronous():
+                
+                job.PutResult( result )
+                
+            
             if self._cursor_transaction_wrapper.TimeToCommit():
                 
                 self._current_status = 'db committing'
@@ -739,17 +746,8 @@ class HydrusDB( object ):
                 
                 self._cursor_transaction_wrapper.CommitAndBegin()
                 
-            else:
-                
-                self._cursor_transaction_wrapper.Save()
-                
             
             self._DoAfterJobWork()
-            
-            if job.IsSynchronous():
-                
-                job.PutResult( result )
-                
             
         except Exception as e:
             

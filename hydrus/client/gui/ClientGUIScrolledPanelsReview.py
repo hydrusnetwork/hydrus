@@ -20,6 +20,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusText
+from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -3274,13 +3275,70 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
+class JobSchedulerPanel( QW.QWidget ):
+    
+    def __init__( self, parent, controller, scheduler_name ):
+        
+        self._controller = controller
+        self._scheduler_name = scheduler_name
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, 20, self._ConvertDataToListCtrlTuples )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        # maybe some buttons to control behaviour here for debug
+        
+        self._list_ctrl_panel.AddButton( 'refresh snapshot', self._RefreshSnapshot )
+        
+        #
+        
+        self._list_ctrl.Sort()
+        
+        self._RefreshSnapshot()
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, job: HydrusThreading.SchedulableJob ):
+        
+        job_type = job.PRETTY_CLASS_NAME
+        job_call = job.GetPrettyJob()
+        due = job.GetNextWorkTime()
+        
+        pretty_job_type = job_type
+        pretty_job_call = job_call
+        pretty_due = job.GetDueString()
+        
+        display_tuple = ( pretty_job_type, pretty_job_call, pretty_due )
+        sort_tuple = ( job_type, job_call, due )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _RefreshSnapshot( self ):
+        
+        jobs = self._controller.GetJobSchedulerSnapshot( self._scheduler_name )
+        
+        self._list_ctrl.SetData( jobs )
+        
+    
+class ThreadsPanel( QW.QWidget ):
     
     def __init__( self, parent, controller ):
         
         self._controller = controller
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -3304,7 +3362,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.widget().setLayout( vbox )
+        self.setLayout( vbox )
         
     
     def _ConvertDataToListCtrlTuples( self, thread ):
@@ -3328,5 +3386,30 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
         threads = self._controller.GetThreadsSnapshot()
         
         self._list_ctrl.SetData( threads )
+        
+    
+class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._notebook = ClientGUICommon.BetterNotebook( self )
+        
+        self._thread_panel = ThreadsPanel( self._notebook, controller )
+        
+        self._fast_scheduler_panel = JobSchedulerPanel( self._notebook, controller, 'fast' )
+        
+        self._slow_scheduler_panel = JobSchedulerPanel( self._notebook, controller, 'slow' )
+        
+        self._notebook.addTab( self._thread_panel, 'threads' )
+        self._notebook.addTab( self._fast_scheduler_panel, 'fast scheduler' )
+        self._notebook.addTab( self._slow_scheduler_panel, 'slow scheduler' )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
         
     

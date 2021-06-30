@@ -11,7 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
-from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportFiles
 from hydrus.client.metadata import ClientTags
 
 from hydrus.test import TestController
@@ -530,7 +530,7 @@ class TestClientDBTags( unittest.TestCase ):
         # class variable
         cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
     @classmethod
@@ -560,7 +560,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
     @classmethod
@@ -854,9 +854,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -950,9 +952,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -1047,9 +1051,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -1146,9 +1152,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -1244,9 +1252,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -2372,13 +2382,15 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 # doing this again tests a very simple add_file
                 
+                file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+                
                 for filename in ( 'muh_jpg.jpg', 'muh_png.png', 'muh_apng.png' ):
                     
                     path = os.path.join( HC.STATIC_DIR, 'testing', filename )
                     
-                    file_import_job = ClientImportFileSeeds.FileImportJob( path )
+                    file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
                     
-                    file_import_job.GenerateHashAndStatus()
+                    file_import_job.GeneratePreImportHashAndStatus()
                     
                     file_import_job.GenerateInfo()
                     

@@ -13,7 +13,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImporting
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import ClientImportOptions
 
 class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
     

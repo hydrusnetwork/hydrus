@@ -3,15 +3,9 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
-
-from hydrus.client.db import ClientDBServices
-from hydrus.client.metadata import ClientTags
 
 class ClientDBFilesMetadataBasic( HydrusDBModule.HydrusDBModule ):
     

@@ -18,7 +18,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
@@ -369,7 +369,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if tag_import_options is None:
             
-            tag_import_options = ClientImportOptions.TagImportOptions()
+            tag_import_options = TagImportOptions.TagImportOptions()
             
         
         if tag_service_keys_to_filename_tagging_options is None:
@@ -736,7 +736,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             # edited out tag carry-over to tio due to bit rot
             
-            tag_import_options = ClientImportOptions.TagImportOptions()
+            tag_import_options = TagImportOptions.TagImportOptions()
             
             serialisable_tag_import_options = tag_import_options.GetSerialisableTuple()
             
@@ -777,7 +777,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             for service_key in txt_parse_tag_service_keys:
                 
-                filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
+                filename_tagging_options = TagImportOptions.FilenameTaggingOptions()
                 
                 filename_tagging_options._load_from_neighbouring_txt_files = True
                 

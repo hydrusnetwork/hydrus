@@ -1,10 +1,8 @@
 import os
-import traceback
 
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client.gui import ClientGUIDialogsQuick

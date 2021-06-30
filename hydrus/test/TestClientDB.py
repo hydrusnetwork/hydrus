@@ -2,6 +2,8 @@ import os
 import time
 import unittest
 
+from mock import patch
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
@@ -18,8 +20,8 @@ from hydrus.client.gui.pages import ClientGUIManagement
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
-from hydrus.client.importing import ClientImportOptions
-from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportFiles
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientTags
 
 from hydrus.test import TestController
@@ -33,6 +35,8 @@ class TestClientDB( unittest.TestCase ):
         
         # class variable
         cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        
+        HG.test_controller.SetTestDB( cls._db )
         
     
     @classmethod
@@ -56,13 +60,15 @@ class TestClientDB( unittest.TestCase ):
         
         del cls._db
         
+        HG.test_controller.ClearTestDB()
+        
     
     @classmethod
     def setUpClass( cls ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
+        HG.test_controller.SetTestDB( cls._db )
         
     
     @classmethod
@@ -75,6 +81,8 @@ class TestClientDB( unittest.TestCase ):
     def _write( self, action, *args, **kwargs ): return TestClientDB._db.Write( action, True, *args, **kwargs )
     
     def test_autocomplete( self ):
+        
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
         
@@ -94,9 +102,9 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -333,13 +341,18 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
-        ( written_status, written_note ) = self._write( 'import_file', file_import_job )
+        file_import_status = self._write( 'import_file', file_import_job )
+        
+        written_status = file_import_status.status
+        written_note = file_import_status.note
         
         self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_AND_NEW )
         self.assertEqual( written_note, '' )
@@ -710,9 +723,11 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -762,9 +777,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -868,9 +885,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -998,7 +1017,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], FileImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
         
         management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
         
@@ -1188,38 +1207,31 @@ class TestClientDB( unittest.TestCase ):
         test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, { 3133, 1880, 1125, 1800 }, { 27, 47 }, False, None ) )
         test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, { 600 }, { 5 }, False, None ) )
         
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
         for ( filename, hex_hash, size, mime, width, height, durations, num_frames, has_audio, num_words ) in test_files:
+            
+            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
             hash = bytes.fromhex( hex_hash )
             
-            file_import_job = ClientImportFileSeeds.FileImportJob( path )
+            file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
             
-            file_import_job.GenerateHashAndStatus()
+            file_import_job.GeneratePreImportHashAndStatus()
             
             file_import_job.GenerateInfo()
             
-            ( written_status, written_note ) = self._write( 'import_file', file_import_job )
+            file_import_status = self._write( 'import_file', file_import_job )
+            
+            written_status = file_import_status.status
+            written_hash = file_import_job.GetHash()
+            written_note = file_import_status.note
             
             self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_AND_NEW )
             self.assertEqual( written_note, '' )
             self.assertEqual( file_import_job.GetHash(), hash )
-            
-            file_import_job = ClientImportFileSeeds.FileImportJob( path )
-            
-            file_import_job.GenerateHashAndStatus()
-            
-            file_import_job.GenerateInfo()
-            
-            ( written_status, written_note ) = self._write( 'import_file', file_import_job )
-            
-            # would be redundant, but triggers the 'it is missing from db' hook
-            self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_AND_NEW )
-            self.assertIn( 'already in the db', written_note )
-            self.assertEqual( file_import_job.GetHash(), hash )
-            
-            written_hash = file_import_job.GetHash()
             
             media_result = self._read( 'media_result', written_hash )
             
@@ -1311,15 +1323,22 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'hash_status', 'md5', md5 )
+        file_import_status = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_UNKNOWN, None, '' ) )
+        written_status = file_import_status.status
+        written_hash = file_import_status.hash
+        written_note = file_import_status.note
+        
+        self.assertEqual( written_status, CC.STATUS_UNKNOWN )
+        self.assertEqual( written_hash, None )
         
         #
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -1327,14 +1346,18 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, written_hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        file_import_status = self._read( 'hash_status', 'md5', md5 )
+        
+        written_status = file_import_status.status
+        written_hash = file_import_status.hash
+        written_note = file_import_status.note
         
         # would be redundant, but sometimes(?) triggers the 'it is missing from db' hook
-        self.assertIn( status, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+        self.assertIn( written_status, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
         self.assertEqual( written_hash, hash )
-        if status == CC.STATUS_UNKNOWN:
+        if written_status == CC.STATUS_UNKNOWN:
             
-            self.assertIn( 'already in the db', note )
+            self.assertIn( 'already in the db', written_note )
             
         
         #
@@ -1347,9 +1370,14 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        file_import_status = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( ( status, hash ), ( CC.STATUS_DELETED, hash ) )
+        written_status = file_import_status.status
+        written_hash = file_import_status.hash
+        written_note = file_import_status.note
+        
+        self.assertEqual( written_status, CC.STATUS_DELETED )
+        self.assertEqual( written_hash, hash )
         
         # now physical delete
         
@@ -1363,15 +1391,22 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'hash_status', 'md5', md5 )
+        file_import_status = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_UNKNOWN, None, '' ) )
+        written_status = file_import_status.status
+        written_hash = file_import_status.hash
+        written_note = file_import_status.note
+        
+        self.assertEqual( written_status, CC.STATUS_UNKNOWN )
+        self.assertEqual( written_hash, None )
         
         #
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         
@@ -1379,14 +1414,18 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, written_hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        file_import_status = self._read( 'hash_status', 'md5', md5 )
+        
+        written_status = file_import_status.status
+        written_hash = file_import_status.hash
+        written_note = file_import_status.note
         
         # would be redundant, but sometimes(?) triggers the 'it is missing from db' hook
-        self.assertIn( status, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+        self.assertIn( written_status, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
         self.assertEqual( written_hash, hash )
-        if status == CC.STATUS_UNKNOWN:
+        if written_status == CC.STATUS_UNKNOWN:
             
-            self.assertIn( 'already in the db', note )
+            self.assertIn( 'already in the db', written_note )
             
         
         #
@@ -1399,9 +1438,14 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        file_import_status = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( ( status, hash ), ( CC.STATUS_DELETED, hash ) )
+        written_status = file_import_status.status
+        written_hash = file_import_status.hash
+        written_note = file_import_status.note
+        
+        self.assertEqual( written_status, CC.STATUS_DELETED )
+        self.assertEqual( written_hash, hash )
         
     
     def test_media_results( self ):
@@ -1410,9 +1454,11 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportFileSeeds.FileImportJob( path )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        file_import_job.GenerateHashAndStatus()
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
         
         file_import_job.GenerateInfo()
         

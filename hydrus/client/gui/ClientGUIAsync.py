@@ -8,7 +8,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
-from hydrus.client import ClientData
 from hydrus.client.gui import QtPorting as QP
 
 # this does one thing neatly

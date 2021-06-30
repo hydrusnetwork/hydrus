@@ -1,6 +1,5 @@
 import itertools
 import os
-import traceback
 
 from qtpy import QtWidgets as QW
 

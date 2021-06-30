@@ -8,6 +8,47 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_445"><a href="#version_445">version 445</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed some weird bugs on the pathname tagging dialog related to removal and re-adding of tags with its 'tags just for selected files' list. previously, in some circumstances, all selected paths could accidentally share the same list of tags, so further edits on a subset selection could affect the entire former selection</li>
+					<li>furthermore, removing a tag from that list when the current path selection has differing tags should now successfully just remove that tag and not accidentally add anything</li>
+					<li>if your client has a pending menu with 'sticky' small tag count that does not seem to clear, the client now tries to recognise a specific miscount cause for this situation and gives you a little popup with instructions on the correct maintenance routine to fix it</li>
+					<li>when pending upload ends, it is now more careful about when it clears the pending count. this is a safety routine, but it not always needed</li>
+					<li>when pending count is recalculated from source, it now uses the older method of counting table rows again. the new 'optimised' count, which works great for current mappings, was working relatively very slow for pending count for large services like the PTR</li>
+					<li>fixed rendering images at >76800% zoom (usually 1x1 pixels in the media viewer), which had broke with the tile renderer</li>
+					<li>improved the serialised png load fix from last week--it now covers more situations</li>
+					<li>added a link, https://github.com/GoAwayNow/Iwara-Hydrus, to Iwara-Hydrus, a userscript to simplify sending Iwara videos to Hydrus Network, to the client api help</li>
+					<li>it should now again be possible to run the client on Windows when the exe is in a network location. it was a build issue related to modern versions of pyinstaller and shiboken2</li>
+					<li>thanks to a user's help, the UPnPc executable discoverer now searches your PATH, and also searches for 'upnpc' executable name as a possible alternative on linux and macOS</li>
+					<li>also thanks to a user, the test script process now exits with code 1 if the test is not OK</li>
+					<li>.</li>
+					<li>optimisations:</li>
+					<li>when a db job is reading data, if that db job happens to fall on a transaction boundary, the result is now returned before the transaction is committed. this should reduce random job lag when the client is busy</li>
+					<li>greatly reduced the amount of database time it takes to check if a file is 'already in db'. the db lookup here is pretty much always less than a millisecond, but the program double-checks against your actual file store (so it can neatly and silently fill in missing files with regular imports), however on an HDD with a couple million files, this could often be a 20ms request! (some user profiles I saw were 200ms!!! I presume this was high latency drives, and/or NAS storage, that was also very busy at the time). since many download queues will have bursts of a page or more of 'already in db' results (from url or hash lookups), this is why they typically only run 30-50 import items a second these days, and until this week, why this situation was blatting the db so hard. the path existence disk request is pulled out of precious db time, allowing other jobs to do other db work while the importer can wait for disk I/O on its thread. I suspect the key to getting the 20ms down to 8ms will be future granulation of the file store (more than 256 folders when you have more than x files per folder, etc...), which I have plans for. I know this change will de-clunk db access when a lot of importers are working, but we'll see this week if the queues actually process a little faster since they can now do file presence checks in parallel and with luck the OS/disk will order their I/O requests cleverly. it may or may not relieve the UI hangs some people have seen, but if these checks are causing trouble it should expose the next bottleneck</li>
+					<li>optimised a small test that checks if a single tag is in the parent/sibling system, typically before adding tags to a file (and hence sometimes spammed when downloaders were working). there was a now-unneeded safety check in here that I believe was throwing off the query planner in some situations</li>
+					<li>the 'review threads' debug UI now has two new tabs for the job schedulers. I will be working with UI-lag-experiencing users in future to see where the biggest problems are here. I suspect part of it will overhead from downloader thread spam, which I have more plans for</li>
+					<li>all jobs that threads schedule on main UI time are now profiled in 'callto' profile mode</li>
+					<li>.</li>
+					<li>site encoding fixes:</li>
+					<li>fixed a problem with webpages that report an encoding for which there is no available decoder. This error is now caught properly, and if 'chardet' is available to provide a supported encoding, it now steps in fixes things automatically. for most users, this fixes japanese sites that report their encoding as "Windows-31J", which seems to be a synonym for Shift-JIS. the 'non-failing unicode decode' function here is also now better at not failing, ha ha, and it delivers richer error descriptions when all attempts to decode are non-successful</li>
+					<li>fixed a problem detecting and decoding webpages with no specified encoding (which defaults to windows-1252 and/or ISO-8859-1 in some weird internet standards thing) using chardet</li>
+					<li>if chardet is not available and all else fails, windows-1252 is now attempted as a last resort</li>
+					<li>added chardet presence to help->about. requests needs it atm so you likely definitely have it, but I'll make it specific in requirements.txt and expand info about it in future</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>refactored the base file import job to its own file</li>
+					<li>client import options are moved to a new submodule, and file, tag, and the future note import options are refactored to their own files</li>
+					<li>wrote a new object to handle current import file status in a better way than the old 'toss a tuple around' method</li>
+					<li>implemented this file import status across most of the import pipeline and cleaned up a heap of import status, hash, mime, and note handling. rarely do downloaders now inspect raw file import status directly--they just ask the import and status object what they think should happen next based on current file import options etc...</li>
+					<li>a url file import's pre-import status urls are now tested main url first, file url second, then associable urls (previously it was pseudorandom)</li>
+					<li>a file import's pre-import status hashes are now tested sha256 first if that is available (previously it was pseudorandom). this probably doesn't matter 99.998% of the time, but maybe hitting 'try again' on a watcher import that failed on a previous boot and also had a dodgy hash parser, it might</li>
+					<li>misc pre-import status prediction logic cleanup, particularly when multiple urls disagree on status and 'exclude previously deleted' is _unchecked_</li>
+					<li>when a hash gives a file pre-import status, the import note now records which hash type it was</li>
+					<li>pulled the 'already in db but doesn't actually exist on disk' pre-import status check out of the db, fixing a long-time ugly file manager call and reducing db lock load significantly</li>
+					<li>updated a host of hacky file import unit tests to less hacky versions with the new status object</li>
+					<li>all scheduled jobs now print better information about themselves in debug code</li>
+				</ul>
 				<li><h3 id="version_444"><a href="#version_444">version 444</a></h3></li>
 				<ul>
 					<li>gave the 'access keys' and 'privacy' help pages a complete pass. the access keys section talks about the read-only shared key, and how to generate you own account, and the privacy section now compiles, as comprehensively as I could, our various discussions about multiple accounts, what you shouldn't upload to the PTR (basically your own name lol), self-signed https certificates, and what information is actually stored on an account</li>

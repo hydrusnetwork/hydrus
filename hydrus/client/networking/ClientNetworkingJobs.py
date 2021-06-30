@@ -1207,15 +1207,7 @@ class NetworkJob( object ):
                         
                         if response.encoding is not None:
                             
-                            encoding = response.encoding
-                            
-                            # we'll default to utf-8 rather than ISO-8859-1
-                            we_got_lame_iso_default_from_requests = encoding == 'ISO-8859-1' and ( self._content_type is None or encoding not in self._content_type )
-                            
-                            if not we_got_lame_iso_default_from_requests:
-                                
-                                self._encoding = encoding
-                                
+                            self._encoding = response.encoding
                             
                         
                         if self._temp_path is None:

@@ -1071,50 +1071,45 @@ class ClientFilesManager( object ):
         
         with self._rwlock.read:
             
-            return self.LocklessGetFilePath( hash, mime = mime, check_file_exists = check_file_exists )
+            if HG.file_report_mode:
+                
+                HydrusData.ShowText( 'File path request: ' + str( ( hash, mime ) ) )
+                
+            
+            if mime is None:
+                
+                ( path, mime ) = self._LookForFilePath( hash )
+                
+            else:
+                
+                path = self._GenerateExpectedFilePath( hash, mime )
+                
+                if check_file_exists and not os.path.exists( path ):
+                    
+                    try:
+                        
+                        # let's see if the file exists, but with the wrong ext!
+                        
+                        ( actual_path, old_mime ) = self._LookForFilePath( hash )
+                        
+                    except HydrusExceptions.FileMissingException:
+                        
+                        raise HydrusExceptions.FileMissingException( 'No file found at path {}!'.format( path ) )
+                        
+                    
+                    self._ChangeFileExt( hash, old_mime, mime )
+                    
+                    # we have now fixed the path, it is good to return
+                    
+                
+            
+            return path
             
         
     
     def GetMissing( self ):
         
         return self._missing_locations
-        
-    
-    def LocklessGetFilePath( self, hash, mime = None, check_file_exists = True ):
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'File path request: ' + str( ( hash, mime ) ) )
-            
-        
-        if mime is None:
-            
-            ( path, mime ) = self._LookForFilePath( hash )
-            
-        else:
-            
-            path = self._GenerateExpectedFilePath( hash, mime )
-            
-            if check_file_exists and not os.path.exists( path ):
-                
-                try:
-                    
-                    # let's see if the file exists, but with the wrong ext!
-                    
-                    ( actual_path, old_mime ) = self._LookForFilePath( hash )
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    raise HydrusExceptions.FileMissingException( 'No file found at path {}!'.format( path ) )
-                    
-                
-                self._ChangeFileExt( hash, old_mime, mime )
-                
-                # we have now fixed the path, it is good to return
-                
-            
-        
-        return path
         
     
     def GetThumbnailPath( self, media ):

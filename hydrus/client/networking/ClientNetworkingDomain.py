@@ -474,10 +474,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._second_level_domains_to_network_infrastructure_errors = collections.defaultdict( list )
         
-        from hydrus.client.importing import ClientImportOptions
+        from hydrus.client.importing.options import TagImportOptions
         
-        self._file_post_default_tag_import_options = ClientImportOptions.TagImportOptions()
-        self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
+        self._file_post_default_tag_import_options = TagImportOptions.TagImportOptions()
+        self._watchable_default_tag_import_options = TagImportOptions.TagImportOptions()
         
         self._url_class_keys_to_default_tag_import_options = {}
         
@@ -857,10 +857,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            from hydrus.client.importing import ClientImportOptions
+            from hydrus.client.importing.options import TagImportOptions
             
-            self._file_post_default_tag_import_options = ClientImportOptions.TagImportOptions()
-            self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
+            self._file_post_default_tag_import_options = TagImportOptions.TagImportOptions()
+            self._watchable_default_tag_import_options = TagImportOptions.TagImportOptions()
             
             self._url_class_keys_to_default_tag_import_options = {}
             

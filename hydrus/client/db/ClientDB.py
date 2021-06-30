@@ -39,7 +39,7 @@ from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBSerialisable
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBSimilarFiles
-from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -3828,7 +3828,7 @@ class DB( HydrusDB.HydrusDB ):
         
         cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
         
-        return self._c.execute( 'SELECT 1 FROM {} WHERE ( child_tag_id = ? OR ancestor_tag_id = ? ) AND child_tag_id != ancestor_tag_id;'.format( cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ideal_tag_id ) ).fetchone() is not None
+        return self._c.execute( 'SELECT 1 FROM {} WHERE child_tag_id = ? OR ancestor_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ideal_tag_id ) ).fetchone() is not None
         
     
     def _CacheTagParentsRegen( self, tag_service_ids ):
@@ -4801,7 +4801,7 @@ class DB( HydrusDB.HydrusDB ):
         
         cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
         
-        return self._c.execute( 'SELECT 1 FROM {} WHERE ( bad_tag_id = ? OR ideal_tag_id = ? ) AND bad_tag_id != ideal_tag_id;'.format( cache_tag_siblings_lookup_table_name ), ( tag_id, tag_id ) ).fetchone() is not None
+        return self._c.execute( 'SELECT 1 FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( tag_id, tag_id ) ).fetchone() is not None
         
     
     def _CacheTagSiblingsRegen( self, tag_service_ids ):
@@ -10800,7 +10800,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetHashIdStatus( self, hash_id, prefix = '' ):
+    def _GetHashIdStatus( self, hash_id, prefix = '' ) -> ClientImportFiles.FileImportStatus:
         
         if prefix != '':
             
@@ -10837,7 +10837,7 @@ class DB( HydrusDB.HydrusDB ):
                 note = 'Deleted from the client {} ({}), which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), file_deletion_reason, ClientData.TimestampToPrettyTimeDelta( timestamp ) )
                 
             
-            return ( CC.STATUS_DELETED, hash, prefix + note )
+            return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
         result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self.modules_services.trash_service_id, hash_id ) ).fetchone()
@@ -10848,7 +10848,7 @@ class DB( HydrusDB.HydrusDB ):
             
             note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusData.ConvertTimestampToPrettyTime( timestamp ), ClientData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
-            return ( CC.STATUS_DELETED, hash, prefix + note )
+            return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
         result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self.modules_services.combined_local_file_service_id, hash_id ) ).fetchone()
@@ -10859,26 +10859,15 @@ class DB( HydrusDB.HydrusDB ):
             
             mime = self.modules_files_metadata_basic.GetMime( hash_id )
             
-            try:
-                
-                self._controller.client_files_manager.LocklessGetFilePath( hash, mime )
-                
-            except HydrusExceptions.FileMissingException:
-                
-                note = 'The client believed this file was already in the db, but it was truly missing! Import will go ahead, in an attempt to fix the situation.'
-                
-                return ( CC.STATUS_UNKNOWN, hash, prefix + note )
-                
-            
             note = 'Imported at {}, which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), ClientData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
-            return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + note )
+            return ClientImportFiles.FileImportStatus( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, mime = mime, note = prefix + note )
             
         
-        return ( CC.STATUS_UNKNOWN, hash, '' )
+        return ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
         
     
-    def _GetHashStatus( self, hash_type, hash, prefix = None ):
+    def _GetHashStatus( self, hash_type, hash, prefix = None ) -> ClientImportFiles.FileImportStatus:
         
         if prefix is None:
             
@@ -10889,13 +10878,15 @@ class DB( HydrusDB.HydrusDB ):
             
             if not self._HashExists( hash ):
                 
-                return ( CC.STATUS_UNKNOWN, hash, '' )
+                f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+                
+                f.hash = hash
+                
+                return f
                 
             else:
                 
                 hash_id = self.modules_hashes_local_cache.GetHashId( hash )
-                
-                return self._GetHashIdStatus( hash_id, prefix = prefix )
                 
             
         else:
@@ -10904,13 +10895,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_id = self.modules_hashes.GetHashIdFromExtraHash( hash_type, hash )
                 
-                return self._GetHashIdStatus( hash_id, prefix = prefix )
-                
             except HydrusExceptions.DataMissing:
                 
-                return ( CC.STATUS_UNKNOWN, None, '' )
+                return ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
                 
             
+        
+        return self._GetHashIdStatus( hash_id, prefix = prefix )
         
     
     def _GetIdealClientFilesLocations( self ):
@@ -12141,22 +12132,26 @@ class DB( HydrusDB.HydrusDB ):
                         
                     elif info_type in ( HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ):
                         
-                        ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, service_id )
-                        
                         if info_type == HC.SERVICE_INFO_NUM_MAPPINGS:
+                            
+                            ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, service_id )
                             
                             column_name = 'current_count'
                             
+                            result = self._c.execute( 'SELECT SUM( {} ) FROM {};'.format( column_name, ac_cache_table_name ) ).fetchone()
+                            
+                            if result is None or result[0] is None:
+                                
+                                result = ( 0, )
+                                
+                            
                         elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS:
                             
-                            column_name = 'pending_count'
+                            # since pending is nearly always far smaller rowcount than current, if I pull this from a/c table, it is a HUGE waste of time and not faster than counting the raw table rows!
                             
-                        
-                        result = self._c.execute( 'SELECT SUM( {} ) FROM {};'.format( column_name, ac_cache_table_name ) ).fetchone()
-                        
-                        if result is None or result[0] is None:
+                            info = self.modules_mappings_storage.GetPendingCount( service_id )
                             
-                            result = ( 0, )
+                            result = ( info, )
                             
                         
                     elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM ' + deleted_mappings_table_name + ';' ).fetchone()
@@ -12885,7 +12880,7 @@ class DB( HydrusDB.HydrusDB ):
         return self.modules_hashes_local_cache.GetHashes( hash_ids )
         
     
-    def _GetURLStatuses( self, url ):
+    def _GetURLStatuses( self, url ) -> typing.List[ ClientImportFiles.FileImportStatus ]:
         
         search_urls = ClientNetworkingDomain.GetSearchURLs( url )
         
@@ -13274,7 +13269,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _ImportFile( self, file_import_job: ClientImportFileSeeds.FileImportJob ):
+    def _ImportFile( self, file_import_job: ClientImportFiles.FileImportJob ):
         
         if HG.file_import_report_mode:
             
@@ -13285,9 +13280,9 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
-        ( status, status_hash, note ) = self._GetHashIdStatus( hash_id, prefix = 'file recognised' )
+        file_import_status = self._GetHashIdStatus( hash_id, prefix = 'file recognised' )
         
-        if status != CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+        if not file_import_status.AlreadyInDB():
             
             if HG.file_import_report_mode:
                 
@@ -13389,15 +13384,15 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            status = CC.STATUS_SUCCESSFUL_AND_NEW
+            file_import_status = ClientImportFiles.FileImportStatus( CC.STATUS_SUCCESSFUL_AND_NEW, hash, mime = mime )
             
         
         if HG.file_import_report_mode:
             
-            HydrusData.ShowText( 'File import job done at db level, final status: {}, {}'.format( CC.status_string_lookup[ status ], note ) )
+            HydrusData.ShowText( 'File import job done at db level, final status: {}'.format( file_import_status.ToString() ) )
             
         
-        return ( status, note )
+        return file_import_status
         
     
     def _ImportUpdate( self, update_network_bytes, update_hash, mime ):

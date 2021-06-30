@@ -26,7 +26,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
 
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -594,7 +594,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         elif show == 'new':
             
-            file_import_options = ClientImportOptions.FileImportOptions()
+            file_import_options = FileImportOptions.FileImportOptions()
             
             file_import_options.SetPresentationOptions( True, False, False )
             

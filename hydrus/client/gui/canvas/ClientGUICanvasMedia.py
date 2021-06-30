@@ -1614,8 +1614,6 @@ class StaticImage( QW.QWidget ):
         
         self._is_rendered = False
         
-        self._first_background_drawn = False
-        
         self._canvas_tile_size = QC.QSize( 768, 768 )
         
         self._zoom = 1.0
@@ -1654,7 +1652,8 @@ class StaticImage( QW.QWidget ):
             
         else:
             
-            tile_dimension = round( ( 768 // self._zoom ) * self._zoom )
+            # the max( x, 1 ) bit here ensures that superzoomed 1px things just get one tile
+            tile_dimension = round( max( ( 768 // self._zoom ), 1 ) * self._zoom )
             
         
         self._canvas_tile_size = QC.QSize( tile_dimension, tile_dimension )
@@ -1662,8 +1661,6 @@ class StaticImage( QW.QWidget ):
         self._canvas_tiles = {}
         
         self._is_rendered = False
-        
-        self._first_background_drawn = False
         
     
     def _DrawBackground( self, painter ):
@@ -1673,8 +1670,6 @@ class StaticImage( QW.QWidget ):
         painter.setBackground( QG.QBrush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
         painter.eraseRect( painter.viewport() )
-        
-        self._first_background_drawn = True
         
     
     def _DrawTile( self, tile_coordinate ):

@@ -6,9 +6,7 @@ import numpy.core.multiarray # important this comes before cv!
 import cv2
 
 from hydrus.client import ClientConstants as CC
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
 

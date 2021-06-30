@@ -12,6 +12,8 @@ import json
 import os
 import re
 
+from hydrus.core import HydrusExceptions
+
 re_newlines = re.compile( '[\r\n]+' )
 re_multiple_spaces = re.compile( r'\s+' )
 # want to keep the 'leading space' part here, despite tag.strip() elsewhere, in case of some crazy '- test' tag
@@ -99,40 +101,114 @@ def LooksLikeJSON( file_data ):
 UNICODE_REPLACEMENT_CHARACTER = u'\ufffd'
 NULL_CHARACTER = '\x00'
 
+def ChardetDecode( data ):
+    
+    chardet_result = chardet.detect( data )
+    
+    chardet_confidence = chardet_result[ 'confidence' ]
+    
+    chardet_encoding = chardet_result[ 'encoding' ]
+    
+    chardet_text = str( data, chardet_encoding, errors = 'replace' )
+    
+    chardet_error_count = chardet_text.count( UNICODE_REPLACEMENT_CHARACTER )
+    
+    return ( chardet_text, chardet_encoding, chardet_confidence, chardet_error_count )
+
+def DefaultDecode( data ):
+    
+    default_encoding = 'windows-1252'
+    
+    default_text = str( data, default_encoding, errors = 'replace' )
+    
+    default_error_count = default_text.count( UNICODE_REPLACEMENT_CHARACTER )
+    
+    return ( default_text, default_encoding, default_error_count )
+    
 def NonFailingUnicodeDecode( data, encoding ):
+    
+    text = None
     
     try:
         
+        if encoding in ( 'ISO-8859-1', 'Windows-1252', None ):
+            
+            # ok, the site delivered one of these non-utf-8 'default' encodings. this is probably actually requests filling this in as default
+            # we don't want to trust these because they are very permissive sets and'll usually decode garbage without errors
+            # we want chardet to have a proper look
+            
+            raise LookupError()
+            
+        
         text = str( data, encoding )
         
-    except UnicodeDecodeError:
+    except ( UnicodeDecodeError, LookupError ) as e:
         
-        text = str( data, encoding, errors = 'replace' )
-        
-        error_count = text.count( UNICODE_REPLACEMENT_CHARACTER )
-        
-        if CHARDET_OK:
+        try:
             
-            chardet_result = chardet.detect( data )
+            if isinstance( e, UnicodeDecodeError ):
+                
+                text = str( data, encoding, errors = 'replace' )
+                
+                confidence = 0.7
+                error_count = text.count( UNICODE_REPLACEMENT_CHARACTER )
+                
+            else:
+                
+                confidence = None
+                error_count = None
+                
             
-            if chardet_result[ 'confidence' ] > 0.85:
+            if CHARDET_OK:
                 
-                chardet_encoding = chardet_result[ 'encoding' ]
+                ( chardet_text, chardet_encoding, chardet_confidence, chardet_error_count ) = ChardetDecode( data )
                 
-                chardet_text = str( data, chardet_encoding, errors = 'replace' )
-                
-                chardet_error_count = chardet_text.count( UNICODE_REPLACEMENT_CHARACTER )
-                
-                if chardet_error_count < error_count:
+                if chardet_error_count == 0:
                     
-                    if NULL_CHARACTER in chardet_text:
+                    chardet_is_better = True
+                    
+                else:
+                    
+                    chardet_confidence_is_better = confidence is None or chardet_confidence > confidence
+                    chardet_errors_is_better = error_count is None or chardet_error_count < error_count
+                    
+                    chardet_is_better = chardet_confidence_is_better and chardet_errors_is_better
+                    
+                
+                if chardet_is_better:
+                    
+                    text = chardet_text
+                    encoding = chardet_encoding
+                    
+                
+            else:
+                
+                if text is None:
+                    
+                    try:
                         
-                        chardet_text = chardet_text.replace( NULL_CHARACTER, '' )
+                        ( default_text, default_encoding, default_error_count ) = DefaultDecode( data )
+                        
+                        text = default_text
+                        encoding = default_encoding
+                        
+                    except:
+                        
+                        text = 'Could not decode the page--problem with given encoding "{}" and no chardet library available.'.format( encoding )
+                        encoding = 'utf-8'
                         
                     
-                    return ( chardet_text, chardet_encoding )
-                    
                 
+            
+            if text is None:
+                
+                raise Exception()
+                
+            
+        except Exception as e:
+            
+            text = 'Unfortunately, could not decode the page with given encoding "{}".'.format( encoding )
+            encoding = 'utf-8'
             
         
     

@@ -50,7 +50,7 @@ from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
-from hydrus.client.importing import ClientImportOptions
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing import ClientImportSimpleURLs
 from hydrus.client.importing import ClientImportWatchers
 from hydrus.client.media import ClientMedia
@@ -301,7 +301,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 automatic_archive = advanced_import_options[ 'automatic_archive' ]
                 associate_source_urls = True
                 
-                file_import_options = ClientImportOptions.FileImportOptions()
+                file_import_options = FileImportOptions.FileImportOptions()
                 
                 file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
                 file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )

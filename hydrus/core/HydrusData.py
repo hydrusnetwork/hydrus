@@ -43,6 +43,17 @@ def BuildKeyToSetDict( pairs ):
     
     return d
     
+def BytesToNoneOrHex( b: typing.Optional[ bytes ] ):
+    
+    if b is None:
+        
+        return None
+        
+    else:
+        
+        return b.hex()
+        
+    
 def CalculateScoreFromRating( count, rating ):
     
     # https://www.evanmiller.org/how-not-to-sort-by-average-rating.html

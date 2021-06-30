@@ -9,8 +9,8 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDB
-from hydrus.client.importing import ClientImportOptions
-from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing import ClientImportFiles
+from hydrus.client.importing.options import FileImportOptions
 
 from hydrus.test import TestController
 
@@ -52,7 +52,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
     @classmethod
@@ -95,15 +95,17 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
         for hash in self._all_hashes:
             
-            fake_file_import_job = ClientImportFileSeeds.FileImportJob( 'fake path' )
+            fake_file_import_job = ClientImportFiles.FileImportJob( 'fake path', file_import_options )
             
-            fake_file_import_job._hash = hash
+            fake_file_import_job._pre_import_file_status = ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
             fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
             fake_file_import_job._extra_hashes = ( b'abcd', b'abcd', b'abcd' )
             fake_file_import_job._phashes = [ phash ]
-            fake_file_import_job._file_import_options = ClientImportOptions.FileImportOptions()
+            fake_file_import_job._file_import_options = FileImportOptions.FileImportOptions()
             
             self._write( 'import_file', fake_file_import_job )
             

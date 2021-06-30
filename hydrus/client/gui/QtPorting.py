@@ -1246,7 +1246,16 @@ class CallAfterEventCatcher( QC.QObject ):
         
         if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
             
-            event.Execute()
+            if HG.callto_profile_mode:
+                
+                summary = 'Profiling CallAfter Event: {}'.format( event._fn )
+                
+                HydrusData.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = 3, show_summary = True )
+                
+            else:
+                
+                event.Execute()
+                
             
             event.accept()
             

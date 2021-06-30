@@ -1421,3 +1421,22 @@ register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.NEW,
 register_column_type( COLUMN_LIST_TAG_SIBLINGS.ID, COLUMN_LIST_TAG_SIBLINGS.NOTE, 'note', False, 40, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_TAG_SIBLINGS.ID ] = ( COLUMN_LIST_TAG_SIBLINGS.NEW, True )
+
+#
+
+class COLUMN_LIST_JOB_SCHEDULER_REVIEW( COLUMN_LIST_DEFINITION ):
+    
+    ID = 65
+    
+    TYPE = 0
+    JOB = 1
+    DUE = 2
+    
+
+column_list_type_name_lookup[ COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID ] = 'current jobs review'
+
+register_column_type( COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, COLUMN_LIST_JOB_SCHEDULER_REVIEW.TYPE, 'type', False, 10, True )
+register_column_type( COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, COLUMN_LIST_JOB_SCHEDULER_REVIEW.JOB, 'job', False, 30, True )
+register_column_type( COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, COLUMN_LIST_JOB_SCHEDULER_REVIEW.DUE, 'due', False, 30, True )
+
+default_column_list_sort_lookup[ COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID ] = ( COLUMN_LIST_JOB_SCHEDULER_REVIEW.DUE, True )
