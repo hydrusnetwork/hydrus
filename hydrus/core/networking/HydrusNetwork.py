@@ -1,5 +1,6 @@
 import collections
 import threading
+import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -13,6 +14,9 @@ from hydrus.core.networking import HydrusNetworking
 UPDATE_CHECKING_PERIOD = 240
 MIN_UPDATE_PERIOD = 600
 MAX_UPDATE_PERIOD = 100000 * 100 # three months or so jej
+
+MIN_NULLIFICATION_PERIOD = 86400
+MAX_NULLIFICATION_PERIOD = 86400 * 360
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -33,6 +37,9 @@ def GenerateDefaultServiceDictionary( service_type ):
             update_period = 100000
             
             dictionary[ 'service_options' ][ 'update_period' ] = update_period
+            
+            dictionary[ 'nullification_period' ] = 90 * 86400
+            dictionary[ 'next_nullification_update_index' ] = 0
             
             metadata = Metadata()
             
@@ -134,7 +141,7 @@ def GetPossiblePermissions( service_type ):
     
 class Account( object ):
     
-    def __init__( self, account_key, account_type, created, expires ):
+    def __init__( self, account_key: bytes, account_type: "AccountType", created: int, expires: typing.Optional[ int ] ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -403,6 +410,11 @@ class Account( object ):
                 text = 'Banned: {}'.format( text )
                 
             
+            if self._account_type.IsNullAccount():
+                
+                text = 'THIS IS NULL ACCOUNT: {}'.format( text )
+                
+            
             return text
             
         
@@ -470,6 +482,14 @@ class Account( object ):
                 
                 return False
                 
+            
+        
+    
+    def IsNullAccount( self ):
+        
+        with self._lock:
+            
+            return self._account_type.IsNullAccount()
             
         
     
@@ -541,6 +561,11 @@ class Account( object ):
         
     
     def ToString( self ):
+        
+        if self.IsNullAccount():
+            
+            return 'This is the NULL ACCOUNT. It takes possession of old content to anonymise it. It cannot be modified.'
+            
         
         with self._lock:
             
@@ -886,6 +911,7 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
             return ( 2, new_serialisable_info )
             
         
+    
     def BandwidthOK( self, bandwidth_tracker ):
         
         return self._bandwidth_rules.CanStartRequest( bandwidth_tracker )
@@ -903,31 +929,6 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
         num_created = self._auto_creation_history.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_delta )
         
         return num_created < num_accounts_per_time_delta
-        
-    
-    def HasPermission( self, content_type, permission ):
-        
-        if content_type not in self._permissions:
-            
-            return False
-            
-        
-        my_permission = self._permissions[ content_type ]
-        
-        if permission == HC.PERMISSION_ACTION_MODERATE:
-            
-            return my_permission == HC.PERMISSION_ACTION_MODERATE
-            
-        elif permission == HC.PERMISSION_ACTION_CREATE:
-            
-            return my_permission in ( HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE )
-            
-        elif permission == HC.PERMISSION_ACTION_PETITION:
-            
-            return my_permission in ( HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE )
-            
-        
-        return False
         
     
     def GetAutoCreateAccountHistory( self ) -> HydrusNetworking.BandwidthTracker:
@@ -957,14 +958,19 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
     
     def GetPermissions( self ):
         
-        return self._permissions
+        return { k : v for ( k, v ) in self._permissions.items() if k != 'null' }
         
     
     def GetPermissionStrings( self ):
         
+        if self.IsNullAccount():
+            
+            return [ 'is null account, cannot do anything' ]
+            
+        
         s = []
         
-        for ( content_type, action ) in self._permissions.items():
+        for ( content_type, action ) in self.GetPermissions().items():
             
             s.append( HC.permission_pair_string_lookup[ ( content_type, action ) ] )
             
@@ -977,12 +983,63 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
         return self._title
         
     
+    def HasPermission( self, content_type, permission ):
+        
+        if self.IsNullAccount():
+            
+            return False
+            
+        
+        if content_type not in self._permissions:
+            
+            return False
+            
+        
+        my_permission = self._permissions[ content_type ]
+        
+        if permission == HC.PERMISSION_ACTION_MODERATE:
+            
+            return my_permission == HC.PERMISSION_ACTION_MODERATE
+            
+        elif permission == HC.PERMISSION_ACTION_CREATE:
+            
+            return my_permission in ( HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE )
+            
+        elif permission == HC.PERMISSION_ACTION_PETITION:
+            
+            return my_permission in ( HC.PERMISSION_ACTION_PETITION, HC.PERMISSION_ACTION_CREATE, HC.PERMISSION_ACTION_MODERATE )
+            
+        
+        return False
+        
+    
+    def IsNullAccount( self ):
+        
+        # I had to tuck this in permissions dict because this was not during a network version update and I couldn't update the serialised object. bleargh
+        # ideally though, we move this sometime to a self._is_null_account boolean
+        
+        return 'null' in self._permissions
+        
+    
     def ReportAutoCreateAccount( self ):
         
         self._auto_creation_history.ReportRequestUsed()
         
     
+    def SetToNullAccount( self ):
+        
+        # I had to tuck this in permissions dict because this was not during a network version update and I couldn't update the serialised object. bleargh
+        # ideally though, we move this sometime to a self._is_null_account boolean
+        
+        self._permissions[ 'null' ] = True
+        
+    
     def SupportsAutoCreateAccount( self ):
+        
+        if self.IsNullAccount():
+            
+            return False
+            
         
         ( num_accounts_per_time_delta, time_delta ) = self._auto_creation_velocity
         
@@ -1027,6 +1084,22 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
         account_type_key = HydrusData.GenerateKey()
         
         return AccountType( account_type_key = account_type_key, title = title, permissions = permissions, bandwidth_rules = bandwidth_rules )
+        
+    
+    @staticmethod
+    def GenerateNullAccountType():
+        
+        account_type_key = HydrusData.GenerateKey()
+        
+        title = 'null account'
+        permissions = {}
+        bandwidth_rules = HydrusNetworking.BandwidthRules()
+        
+        at = AccountType( account_type_key = account_type_key, title = title, permissions = permissions, bandwidth_rules = bandwidth_rules )
+        
+        at.SetToNullAccount()
+        
+        return at
         
     
     @staticmethod
@@ -1604,6 +1677,31 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
         return connection_string
         
     
+    def GetPortedAddress( self ):
+        
+        if self._host.endswith( '/' ):
+            
+            host = self._host[:-1]
+            
+        else:
+            
+            host = self._host
+            
+        
+        if '/' in host:
+            
+            ( actual_host, gubbins ) = self._host.split( '/', 1 )
+            
+            address = '{}:{}/{}'.format( actual_host, self._port, gubbins )
+            
+        else:
+            
+            address = '{}:{}'.format( self._host, self._port )
+            
+        
+        return address
+        
+    
     def HasAccessKey( self ):
         
         return self._access_key is not None
@@ -2020,13 +2118,28 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetUpdateIndexBeginAndEnd( self, update_index ):
+        
+        with self._lock:
+            
+            if update_index in self._metadata:
+                
+                ( update_hashes, begin, end ) = self._metadata[ update_index ]
+                
+                return ( begin, end )
+                
+            
+            raise HydrusExceptions.DataMissing( 'That update index does not seem to exist!' )
+            
+        
+    
     def GetUpdateIndicesAndTimes( self ):
         
         with self._lock:
             
             result = []
             
-            for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()):
+            for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items():
                 
                 result.append( ( update_index, begin, end ) )
                 
@@ -2041,7 +2154,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             result = []
             
-            for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()):
+            for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items():
                 
                 result.append( ( update_index, update_hashes ) )
                 
@@ -2100,6 +2213,14 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             self._next_update_due = new_next_update_due
             self._biggest_end = self._CalculateBiggestEnd()
+            
+        
+    
+    def UpdateIsEmpty( self, update_index ):
+        
+        with self._lock:
+            
+            return len( self._GetUpdateHashes( update_index ) ) == 0
             
         
     
@@ -2483,6 +2604,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
         dictionary = ServerServiceRestricted._GetSerialisableDictionary( self )
         
         dictionary[ 'metadata' ] = self._metadata
+        dictionary[ 'next_nullification_update_index' ] = self._next_nullification_update_index
         
         return dictionary
         
@@ -2495,6 +2617,18 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             self._service_options[ 'update_period' ] = 100000
             
+        
+        if 'nullification_period' not in self._service_options:
+            
+            self._service_options[ 'nullification_period' ] = 90 * 86400
+            
+        
+        if 'next_nullification_update_index' not in dictionary:
+            
+            dictionary[ 'next_nullification_update_index' ] = 0
+            
+        
+        self._next_nullification_update_index = dictionary[ 'next_nullification_update_index' ]
         
         self._metadata = dictionary[ 'metadata' ]
         
@@ -2515,6 +2649,14 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
         
     
+    def GetNullificationPeriod( self ) -> int:
+        
+        with self._lock:
+            
+            return self._service_options[ 'nullification_period' ]
+            
+        
+    
     def GetUpdatePeriod( self ) -> int:
         
         with self._lock:
@@ -2528,6 +2670,116 @@ class ServerServiceRepository( ServerServiceRestricted ):
         with self._lock:
             
             return self._metadata.HasUpdateHash( update_hash )
+            
+        
+    
+    def NullifyHistory( self ):
+        
+        # when there is a huge amount to catch up on, we don't want to bosh the server for ages
+        # instead we'll hammer the server for an hour and then break (for ~three hours, should be)
+        
+        MAX_WAIT_TIME_WHEN_HEAVY_UPDATES = 120
+        
+        time_started_nullifying = HydrusData.GetNow()
+        time_to_stop_nullifying = time_started_nullifying + 3600
+        
+        while not HG.view_shutdown:
+            
+            with self._lock:
+                
+                next_update_index = self._metadata.GetNextUpdateIndex()
+                
+                # we are caught up on a server with update times longer than nullification_period
+                if self._next_nullification_update_index >= next_update_index:
+                    
+                    return
+                    
+                
+                ( nullification_begin, nullification_end ) = self._metadata.GetUpdateIndexBeginAndEnd( self._next_nullification_update_index )
+                
+                nullification_period = self._service_options[ 'nullification_period' ]
+                
+                # it isn't time to do the next yet!
+                if not HydrusData.TimeHasPassed( nullification_end + nullification_period ):
+                    
+                    return
+                    
+                
+                if self._metadata.UpdateIsEmpty( self._next_nullification_update_index ):
+                    
+                    HydrusData.Print( 'Account history for "{}" update {} was empty, so nothing to anonymise.'.format( self._name, self._next_nullification_update_index ) )
+                    
+                    self._next_nullification_update_index += 1
+                    
+                    self._SetDirty()
+                    
+                    continue
+                    
+                
+                service_key = self._service_key
+                
+            
+            locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
+            
+            if not locked:
+                
+                return
+                
+            
+            try:
+                
+                HydrusData.Print( 'Nullifying account history for "{}" update {}.'.format( self._name, self._next_nullification_update_index ) )
+                
+                update_started = HydrusData.GetNowFloat()
+                
+                HG.server_controller.WriteSynchronous( 'nullify_history', service_key, nullification_begin, nullification_end )
+                
+                update_took = HydrusData.GetNowFloat() - update_started
+                
+                with self._lock:
+                    
+                    HydrusData.Print( 'Account history for "{}" update {} was anonymised in {}.'.format( self._name, self._next_nullification_update_index, HydrusData.TimeDeltaToPrettyTimeDelta( update_took ) ) )
+                    
+                    self._next_nullification_update_index += 1
+                    
+                    self._SetDirty()
+                    
+                
+            finally:
+                
+                HG.server_busy.release()
+                
+            
+            if HydrusData.TimeHasPassed( time_to_stop_nullifying ):
+                
+                return
+                
+            
+            if update_took < 0.5:
+                
+                continue
+                
+            
+            time_to_wait = min( update_took, MAX_WAIT_TIME_WHEN_HEAVY_UPDATES )
+            
+            resume_timestamp = HydrusData.GetNowFloat() + time_to_wait
+            
+            while not HG.view_shutdown and not HydrusData.TimeHasPassedFloat( resume_timestamp ):
+                
+                time.sleep( 1 )
+                
+            
+        
+    
+    def SetNullificationPeriod( self, nullification_period: int ):
+        
+        with self._lock:
+            
+            self._service_options[ 'nullification_period' ] = nullification_period
+            
+            self._SetDirty()
+            
+            HG.server_controller.pub( 'notify_new_nullification' )
             
         
     
@@ -2551,6 +2803,8 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             update_due = self._metadata.UpdateDue()
             
+        
+        update_created = False
         
         if update_due:
             
@@ -2578,6 +2832,8 @@ class ServerServiceRepository( ServerServiceRestricted ):
                     
                     update_hashes = HG.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
                     
+                    update_created = True
+                    
                     next_update_due = end + update_period
                     
                     with self._lock:
@@ -2591,6 +2847,11 @@ class ServerServiceRepository( ServerServiceRestricted ):
             finally:
                 
                 HG.server_busy.release()
+                
+                if update_created:
+                    
+                    HG.server_controller.pub( 'notify_update_created' )
+                    
                 
             
             with self._lock:

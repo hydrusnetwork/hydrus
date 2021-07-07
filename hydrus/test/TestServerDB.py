@@ -38,18 +38,19 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_account_creation( self ):
         
-        result = self._read( 'account_types', self._tag_service_key, self._tag_service_account )
+        result = sorted( self._read( 'account_types', self._tag_service_key, self._tag_service_account ), key = lambda at: at.GetTitle() )
         
-        ( self._tag_service_admin_account_type, ) = result
+        ( self._tag_service_admin_account_type, self._null_account_type ) = result
         
         self.assertEqual( self._tag_service_admin_account_type.GetTitle(), 'administrator' )
+        self.assertEqual( self._null_account_type.GetTitle(), 'null account' )
         
         #
         
         self._regular_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'regular user', { HC.CONTENT_TYPE_MAPPINGS : HC.PERMISSION_ACTION_CREATE }, HydrusNetworking.BandwidthRules() )
         self._deletee_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'deletee user', {}, HydrusNetworking.BandwidthRules() )
         
-        new_account_types = [ self._tag_service_admin_account_type, self._regular_user_account_type, self._deletee_user_account_type ]
+        new_account_types = [ self._tag_service_admin_account_type, self._null_account_type, self._regular_user_account_type, self._deletee_user_account_type ]
         
         #
         
@@ -59,7 +60,7 @@ class TestServerDB( unittest.TestCase ):
         
         self.assertEqual(
             { at.GetAccountTypeKey() for at in edited_account_types },
-            { at.GetAccountTypeKey() for at in ( self._tag_service_admin_account_type, self._regular_user_account_type, self._deletee_user_account_type ) }
+            { at.GetAccountTypeKey() for at in ( self._tag_service_admin_account_type, self._null_account_type, self._regular_user_account_type, self._deletee_user_account_type ) }
         )
         
         #
@@ -81,7 +82,7 @@ class TestServerDB( unittest.TestCase ):
         
         deletee_account_type_keys_to_replacement_account_type_keys = { self._deletee_user_account_type.GetAccountTypeKey() : self._regular_user_account_type.GetAccountTypeKey() }
         
-        new_account_types = [ self._tag_service_admin_account_type, self._regular_user_account_type ]
+        new_account_types = [ self._tag_service_admin_account_type, self._null_account_type, self._regular_user_account_type ]
         
         self._write( 'account_types', self._tag_service_key, self._tag_service_account, new_account_types, deletee_account_type_keys_to_replacement_account_type_keys )
         

@@ -281,26 +281,29 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
+class GallerySeedLogButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
+    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_type_string, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.global_pixmaps().listctrl, self._ShowGallerySeedLogFrame )
+        ClientGUICommon.BetterButton.__init__( self, parent, '{} log'.format( gallery_type_string ), self._ShowGallerySeedLogFrame )
         
         self._controller = controller
         self._read_only = read_only
         self._can_generate_more_pages = can_generate_more_pages
+        self._gallery_type_string = gallery_type_string
         self._gallery_seed_log_get_callable = gallery_seed_log_get_callable
         self._gallery_seed_log_set_callable = gallery_seed_log_set_callable
         
-        self.setToolTip( 'open detailed gallery log--right-click for quick actions, if applicable' )
+        self.setToolTip( 'open detailed {} log--right-click for quick actions, if applicable'.format( self._gallery_type_string ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
     
     def _ClearGallerySeeds( self, statuses_to_remove ):
         
-        message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' gallery log entries? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit.'
+        st_text = '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) )
+        
+        message = 'Are you sure you want to delete all the {} {} log entries? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit.'.format( st_text, self._gallery_type_string )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -398,7 +401,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             num_urls = len( urls )
             num_removed = num_urls - len( filtered_urls )
             
-            message = 'Of the ' + HydrusData.ToHumanInt( num_urls ) + ' URLs you mean to add, ' + HydrusData.ToHumanInt( num_removed ) + ' are already in the gallery log. Would you like to only add new URLs or add everything (which will force a re-check of the duplicates)?'
+            message = 'Of the ' + HydrusData.ToHumanInt( num_urls ) + ' URLs you mean to add, ' + HydrusData.ToHumanInt( num_removed ) + ' are already in the search log. Would you like to only add new URLs or add everything (which will force a re-check of the duplicates)?'
             
             ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates', check_for_cancelled = True )
             
@@ -479,11 +482,13 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         tlw = self.window()
         
+        title = '{} log'.format( self._gallery_type_string )
+        
         if isinstance( tlw, QP.Dialog ):
             
             if self._gallery_seed_log_set_callable is None: # throw up a dialog that edits the gallery_seed log in place
                 
-                with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'gallery import log' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title ) as dlg:
                     
                     panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
                     
@@ -496,7 +501,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                 
                 dupe_gallery_seed_log = gallery_seed_log.Duplicate()
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'gallery import log' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
                     panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, dupe_gallery_seed_log )
                     
@@ -511,7 +516,6 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
         else: # throw up a frame that edits the gallery_seed log in place
             
-            title = 'gallery import log'
             frame_key = 'gallery_import_log'
             
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
@@ -534,7 +538,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         if event.button() != QC.Qt.RightButton:
             
-            ClientGUICommon.BetterBitmapButton.mouseReleaseEvent( self, event )
+            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
             
             return
             
@@ -580,7 +584,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
 class GallerySeedLogStatusControl( QW.QFrame ):
     
-    def __init__( self, parent, controller, read_only, can_generate_more_pages, page_key = None ):
+    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_type_string, page_key = None ):
         
         QW.QFrame.__init__( self, parent )
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
@@ -589,12 +593,13 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         self._read_only = read_only
         self._can_generate_more_pages = can_generate_more_pages
         self._page_key = page_key
+        self._gallery_type_string = gallery_type_string
         
         self._gallery_seed_log = None
         
         self._log_summary_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         
-        self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._can_generate_more_pages, self._GetGallerySeedLog )
+        self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._can_generate_more_pages, gallery_type_string, self._GetGallerySeedLog )
         
         #
         

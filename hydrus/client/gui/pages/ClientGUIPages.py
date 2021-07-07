@@ -934,10 +934,11 @@ class Page( QW.QSplitter ):
                 self._pre_initialisation_media_results = []
                 
             
+            # do this 'after' so on a long session setup, it all boots once session loaded
+            HG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
+            
             self._initialised = True
             self._initial_hashes = []
-            
-            QP.CallAfter( self._management_panel.Start ) # important this is callafter, so it happens after a heavy session load is done
             
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
@@ -953,9 +954,10 @@ class Page( QW.QSplitter ):
             
         else:
             
-            self._initialised = True
+            # do this 'after' so on a long session setup, it all boots once session loaded
+            HG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
             
-            QP.CallAfter( self._management_panel.Start ) # important this is callafter, so it happens after a heavy session load is done
+            self._initialised = True
             
         
     

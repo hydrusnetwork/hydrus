@@ -101,6 +101,8 @@ def GetTagServiceKeyForMaintenance( win: QW.QWidget ):
     
 def THREADUploadPending( service_key ):
     
+    finished_all_uploads = False
+    
     try:
         
         service = HG.client_controller.services_manager.GetService( service_key )
@@ -222,7 +224,7 @@ def THREADUploadPending( service_key ):
         HG.client_controller.pub( 'message', job_key )
         
         no_results_found = result is None
-        
+    
         while result is not None:
             
             nums_pending = HG.client_controller.Read( 'nums_pending' )
@@ -495,7 +497,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'NotifyNewPages', 'notify_new_pages' )
         self._controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
         self._controller.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
-        self._controller.sub( self, 'NotifyNewPermissions', 'notify_unknown_accounts' )
+        self._controller.sub( self, 'NotifyNewPermissions', 'notify_account_sync_due' )
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
@@ -2853,6 +2855,74 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _ManageServiceOptionsNullificationPeriod( self, service_key ):
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        nullification_period = service.GetNullificationPeriod()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit anonymisation period' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            height_num_chars = 20
+            
+            control = ClientGUITime.TimeDeltaCtrl( panel, min = HydrusNetwork.MIN_NULLIFICATION_PERIOD, days = True, hours = True, minutes = True, seconds = True )
+            
+            control.SetValue( nullification_period )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                nullification_period = control.GetValue()
+                
+                if nullification_period > HydrusNetwork.MAX_NULLIFICATION_PERIOD:
+                    
+                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
+                    
+                    return
+                    
+                
+                job_key = ClientThreading.JobKey()
+                
+                job_key.SetStatusTitle( 'setting anonymisation period' )
+                job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
+                
+                self._controller.pub( 'message', job_key )
+                
+                def work_callable():
+                    
+                    service.Request( HC.POST, 'options_nullification_period', { 'nullification_period' : nullification_period } )
+                    
+                    return 1
+                    
+                
+                def publish_callable( gumpf ):
+                    
+                    job_key.SetVariable( 'popup_text_1', 'done!' )
+                    
+                    job_key.Finish()
+                    
+                    service.SetAccountRefreshDueNow()
+                    
+                
+                def errback_ui_cleanup_callable():
+                    
+                    job_key.SetVariable( 'popup_text_1', 'error!' )
+                    
+                    job_key.Finish()
+                    
+                
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                
+                job.start()
+                
+            
+        
+    
     def _ManageServiceOptionsUpdatePeriod( self, service_key ):
         
         service = self._controller.services_manager.GetService( service_key )
@@ -2865,7 +2935,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             height_num_chars = 20
             
-            control = ClientGUITime.TimeDeltaCtrl( panel, min = HydrusNetwork.MIN_UPDATE_PERIOD, days = True, hours = True, minutes = True, seconds=True )
+            control = ClientGUITime.TimeDeltaCtrl( panel, min = HydrusNetwork.MIN_UPDATE_PERIOD, days = True, hours = True, minutes = True, seconds = True )
             
             control.SetValue( update_period )
             
@@ -2906,6 +2976,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     service.DoAFullMetadataResync()
                     
+                    service.SetAccountRefreshDueNow()
+                    
                 
                 def errback_ui_cleanup_callable():
                     
@@ -2929,7 +3001,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 text = '{} subscription queries had missing database data! This is a serious error!'.format( HydrusData.ToHumanInt( len( missing_query_log_container_names ) ) )
                 text += os.linesep * 2
-                text += 'If you continue, the client will now create and save empty file/gallery logs for those queries, essentially resetting them, but if you know you need to exit and fix your database in a different way, cancel out now.'
+                text += 'If you continue, the client will now create and save empty file/search logs for those queries, essentially resetting them, but if you know you need to exit and fix your database in a different way, cancel out now.'
                 text += os.linesep * 2
                 text += 'If you do not know why this happened, you may have had a hard drive fault. Please consult "install_dir/db/help my db is broke.txt", and you may want to contact hydrus dev.'
                 
@@ -5737,6 +5809,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( submenu, 'change update period', 'Change the update period for this service.', self._ManageServiceOptionsUpdatePeriod, service_key )
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'change anonymisation period', 'Change the account history nullification period for this service.', self._ManageServiceOptionsNullificationPeriod, service_key )
                         
                     
                     if can_overrule_services and service_type == HC.SERVER_ADMIN:

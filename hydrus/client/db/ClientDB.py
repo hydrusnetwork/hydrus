@@ -13280,7 +13280,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
-        file_import_status = self._GetHashIdStatus( hash_id, prefix = 'file recognised' )
+        file_import_status = self._GetHashIdStatus( hash_id, prefix = 'file recognised by database' )
         
         if not file_import_status.AlreadyInDB():
             
@@ -16566,7 +16566,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._AddService( service_key, service_type, name, dictionary )
             
-            self.pub_after_job( 'notify_unknown_accounts' )
+            self.pub_after_job( 'notify_account_sync_due' )
             self.pub_after_job( 'notify_new_pending' )
             self.pub_after_job( 'notify_new_services_data' )
             self.pub_after_job( 'notify_new_services_gui' )
@@ -19299,7 +19299,7 @@ class DB( HydrusDB.HydrusDB ):
             self._DeleteService( service_id )
             
         
-        self.pub_after_job( 'notify_unknown_accounts' )
+        self.pub_after_job( 'notify_account_sync_due' )
         self.pub_after_job( 'notify_new_services_data' )
         self.pub_after_job( 'notify_new_services_gui' )
         self.pub_after_job( 'notify_new_pending' )
@@ -19337,7 +19337,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self.pub_after_job( 'notify_unknown_accounts' )
+        self.pub_after_job( 'notify_account_sync_due' )
         self.pub_after_job( 'notify_new_services_data' )
         self.pub_after_job( 'notify_new_services_gui' )
         self.pub_after_job( 'notify_new_pending' )

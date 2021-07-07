@@ -1203,7 +1203,7 @@ class Controller( HydrusController.HydrusController ):
         
         job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
         job.ShouldDelayOnWakeup( True )
-        job.WakeOnPubSub( 'notify_unknown_accounts' )
+        job.WakeOnPubSub( 'notify_account_sync_due' )
         self._daemon_jobs[ 'synchronise_accounts' ] = job
         
         job = self.CallRepeating( 5.0, HydrusNetwork.UPDATE_CHECKING_PERIOD, self.SynchroniseRepositories )

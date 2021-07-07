@@ -30,6 +30,7 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         
         root.putChild( b'account_types', ServerServerResources.HydrusResourceRestrictedAccountTypes( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
+        root.putChild( b'options_nullification_period', ServerServerResources.HydrusResourceRestrictedOptionsModifyNullificationPeriod( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'options_update_period', ServerServerResources.HydrusResourceRestrictedOptionsModifyUpdatePeriod( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         root.putChild( b'registration_keys', ServerServerResources.HydrusResourceRestrictedRegistrationKeys( self._service, HydrusServer.REMOTE_DOMAIN ) )

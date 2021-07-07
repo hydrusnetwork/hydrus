@@ -56,7 +56,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( label, action ) in action_rows:
                 
-                choice_control.addItem( label, (content_type, action) )
+                choice_control.addItem( label, ( content_type, action ) )
                 
             
             if content_type in permissions:
@@ -262,9 +262,14 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertAccountTypeToTuples( self, account_type ):
+    def _ConvertAccountTypeToTuples( self, account_type: HydrusNetwork.AccountType ):
         
         title = account_type.GetTitle()
+        
+        if account_type.IsNullAccount():
+            
+            title = '{} (cannot be edited)'.format( title )
+            
         
         display_tuple = ( title, )
         sort_tuple = ( title, )
@@ -280,9 +285,16 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             account_types_about_to_delete = self._account_types_listctrl.GetData( only_selected = True )
             
-            all_account_types = set( self._account_types_listctrl.GetData() )
+            if True in ( at.IsNullAccount() for at in account_types_about_to_delete ):
+                
+                QW.QMessageBox.critical( self, 'Error', 'You cannot delete the null account type!' )
+                
+                return
+                
             
-            account_types_can_move_to = all_account_types.difference( account_types_about_to_delete )
+            all_real_account_types = set( [ at for at in self._account_types_listctrl.GetData() if not at.IsNullAccount() ] )
+            
+            account_types_can_move_to = all_real_account_types.difference( account_types_about_to_delete )
             
             if len( account_types_can_move_to ) == 0:
                 
@@ -327,6 +339,13 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         datas = self._account_types_listctrl.GetData( only_selected = True )
         
+        if True in ( at.IsNullAccount() for at in datas ):
+            
+            QW.QMessageBox.critical( self, 'Error', 'You cannot edit the null account type!' )
+            
+            return
+            
+        
         for account_type in datas:
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit account type' ) as dlg_edit:
@@ -351,7 +370,9 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        account_types = self._account_types_listctrl.GetData()
+        account_types = [ at for at in self._original_account_types if at.IsNullAccount() ]
+        
+        account_types.extend( [ at for at in self._account_types_listctrl.GetData() if not at.IsNullAccount() ] )
         
         def key_transfer_not_collapsed():
             

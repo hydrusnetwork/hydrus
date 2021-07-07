@@ -271,6 +271,11 @@ class Controller( HydrusController.HydrusController ):
         
         self._daemon_jobs[ 'delete_orphans' ] = job
         
+        job = self.CallRepeating( 120.0, 3600.0 * 4, self.NullifyHistory )
+        job.WakeOnPubSub( 'notify_new_nullification' )
+        
+        self._daemon_jobs[ 'nullify_history' ] = job
+        
     
     def JustWokeFromSleep( self ):
         
@@ -282,6 +287,16 @@ class Controller( HydrusController.HydrusController ):
         stop_time = HydrusData.GetNow() + 10
         
         self.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
+        
+    
+    def NullifyHistory( self ):
+        
+        repositories = [ service for service in self._services if service.GetServiceType() in HC.REPOSITORIES ]
+        
+        for service in repositories:
+            
+            service.NullifyHistory()
+            
         
     
     def ReportDataUsed( self, num_bytes ):

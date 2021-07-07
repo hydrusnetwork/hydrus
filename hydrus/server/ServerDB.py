@@ -101,6 +101,7 @@ class DB( HydrusDB.HydrusDB ):
             'modify_account_expires' : self._ModifyAccountExpires,
             'modify_account_set_message' : self._ModifyAccountSetMessage,
             'modify_account_unban' : self._ModifyAccountUnban,
+            'nullify_history' : self._RepositoryNullifyHistory,
             'services' : self._ModifyServices,
             'session' : self._AddSession,
             'update' : self._RepositoryProcessClientToServerUpdate,
@@ -108,6 +109,7 @@ class DB( HydrusDB.HydrusDB ):
         }
         
         self._service_ids_to_account_type_ids = collections.defaultdict( set )
+        self._service_ids_to_null_account_ids = {}
         self._account_type_ids_to_account_types = {}
         self._service_ids_to_account_type_keys_to_account_type_ids = collections.defaultdict( dict )
         
@@ -189,11 +191,33 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._c.lastrowid
         
+        #
+        
+        service_null_account_type = HydrusNetwork.AccountType.GenerateNullAccountType()
+        
+        service_null_account_type_id = self._AddAccountType( service_id, service_null_account_type )
+        
+        self._RefreshAccountInfoCache()
+        
+        expires = None
+        
+        [ registration_key ] = self._GenerateRegistrationKeys( service_id, 1, service_null_account_type_id, expires )
+        
+        null_access_key = self._GetAccessKey( service_key, registration_key )
+        
+        null_account = self._GetAccountKeyFromAccessKey( service_key, null_access_key )
+        
+        # the null access key disappears in this method, never to be seen again
+        
+        self._RefreshAccountInfoCache()
+        
+        #
+        
         service_admin_account_type = HydrusNetwork.AccountType.GenerateAdminAccountType( service_type )
         
         service_admin_account_type_id = self._AddAccountType( service_id, service_admin_account_type )
         
-        self._RefreshAccountTypeCache()
+        self._RefreshAccountInfoCache()
         
         if service_type == HC.SERVER_ADMIN:
             
@@ -204,16 +228,16 @@ class DB( HydrusDB.HydrusDB ):
             force_registration_key = None
             
         
-        [ registration_key ] = self._GenerateRegistrationKeys( service_id, 1, service_admin_account_type_id, None, force_registration_key )
+        [ registration_key ] = self._GenerateRegistrationKeys( service_id, 1, service_admin_account_type_id, expires, force_registration_key )
         
-        access_key = self._GetAccessKey( service_key, registration_key )
+        admin_access_key = self._GetAccessKey( service_key, registration_key )
         
         if service_type in HC.REPOSITORIES:
             
             self._RepositoryCreate( service_id )
             
         
-        return access_key
+        return admin_access_key
         
     
     def _AddSession( self, session_key, service_key, account_key, expires ):
@@ -471,6 +495,20 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _GenerateRegistrationKeys( self, service_id, num, account_type_id, expires, force_registration_key = None ):
+        
+        account_type = self._GetAccountType( service_id, account_type_id )
+        
+        if account_type.IsNullAccount():
+            
+            result = self._c.execute( 'SELECT 1 FROM accounts WHERE account_type_id = ?;', ( account_type_id, ) ).fetchone()
+            
+            if result is not None:
+                
+                # null account already exists
+                
+                raise HydrusExceptions.BadRequestException( 'You cannot create new null accounts!' )
+                
+            
         
         if force_registration_key is None:
             
@@ -1102,13 +1140,18 @@ class DB( HydrusDB.HydrusDB ):
         self._over_monthly_data = False
         self._services_over_monthly_data = set()
         
-        self._RefreshAccountTypeCache()
+        self._RefreshAccountInfoCache()
         
     
     def _InitExternalDatabases( self ):
         
         self._db_filenames[ 'external_mappings' ] = 'server.mappings.db'
         self._db_filenames[ 'external_master' ] = 'server.master.db'
+        
+    
+    def _IsNullAccount( self, service_id, account_id ):
+        
+        return self._service_ids_to_null_account_ids[ service_id ] == account_id
         
     
     def _ManageDBError( self, job, e ):
@@ -1161,13 +1204,24 @@ class DB( HydrusDB.HydrusDB ):
         
         subject_account_id = self._GetAccountId( subject_account_key )
         
+        if self._IsNullAccount( service_id, subject_account_id ):
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot reassign the null account!' )
+            
+        
         subject_account = self._GetAccount( service_id, subject_account_id )
         
         current_account_type_id = self._GetAccountTypeId( service_id, subject_account.GetAccountType().GetAccountTypeKey() )
         new_account_type_id = self._GetAccountTypeId( service_id, new_account_type_key )
         
         current_account_type = self._GetAccountType( service_id, current_account_type_id )
+        
         new_account_type = self._GetAccountType( service_id, new_account_type_id )
+        
+        if new_account_type.IsNullAccount():
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot reassign anyone to the null account!' )
+            
         
         self._c.execute( 'UPDATE accounts SET account_type_id = ? WHERE account_id = ?;', ( new_account_type_id, subject_account_id ) )
         
@@ -1188,6 +1242,11 @@ class DB( HydrusDB.HydrusDB ):
         service_id = self._GetServiceId( service_key )
         
         subject_account_id = self._GetAccountId( subject_account_key )
+        
+        if self._IsNullAccount( service_id, subject_account_id ):
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot ban the null account!' )
+            
         
         subject_account = self._GetAccount( service_id, subject_account_id )
         
@@ -1222,6 +1281,11 @@ class DB( HydrusDB.HydrusDB ):
         
         subject_account_id = self._GetAccountId( subject_account_key )
         
+        if self._IsNullAccount( service_id, subject_account_id ):
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot modify the null account!' )
+            
+        
         ( current_expires, ) = self._c.execute( 'SELECT expires FROM accounts WHERE account_id = ?;', ( subject_account_id, ) ).fetchone()
         
         self._c.execute( 'UPDATE accounts SET expires = ? WHERE account_id = ?;', ( new_expires, subject_account_id ) )
@@ -1242,9 +1306,14 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        account_id = self._GetAccountId( subject_account_key )
+        subject_account_id = self._GetAccountId( subject_account_key )
         
-        subject_account = self._GetAccount( service_id, account_id )
+        if self._IsNullAccount( service_id, subject_account_id ):
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot tell the null account anything!' )
+            
+        
+        subject_account = self._GetAccount( service_id, subject_account_id )
         
         now = HydrusData.GetNow()
         
@@ -1275,9 +1344,14 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        account_id = self._GetAccountId( subject_account_key )
+        subject_account_id = self._GetAccountId( subject_account_key )
         
-        subject_account = self._GetAccount( service_id, account_id )
+        if self._IsNullAccount( service_id, subject_account_id ):
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot unban the null account!' )
+            
+        
+        subject_account = self._GetAccount( service_id, subject_account_id )
         
         subject_account.Unban()
         
@@ -1295,9 +1369,15 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ModifyAccountTypes( self, service_key, admin_account, account_types, deletee_account_type_keys_to_replacement_account_type_keys ):
         
-        service_id = self._GetServiceId( service_key )
-        
         current_account_types = self._GetAccountTypes( service_key, admin_account )
+        
+        account_types = [ at for at in account_types if not at.IsNullAccount() ]
+        
+        account_types.extend( [ at for at in current_account_types if at.IsNullAccount() ] )
+        
+        #
+        
+        service_id = self._GetServiceId( service_key )
         
         current_account_type_keys_to_account_types = { account_type.GetAccountTypeKey() : account_type for account_type in current_account_types }
         
@@ -1313,12 +1393,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if deletee_account_type_key not in deletee_account_type_keys_to_replacement_account_type_keys:
                 
-                raise HydrusExceptions.DataMissing( 'Was missing a replacement account_type_key.' )
+                raise HydrusExceptions.BadRequestException( 'Was missing a replacement account_type_key.' )
                 
             
             if deletee_account_type_keys_to_replacement_account_type_keys[ deletee_account_type_key ] not in future_account_type_keys:
                 
-                raise HydrusExceptions.DataMissing( 'Was a replacement account_type_key was not in the future account types.' )
+                raise HydrusExceptions.BadRequestException( 'Was a replacement account_type_key was not in the future account types.' )
+                
+            
+            if future_account_type_keys_to_account_types[ deletee_account_type_keys_to_replacement_account_type_keys[ deletee_account_type_key ] ].IsNullAccount():
+                
+                raise HydrusExceptions.BadRequestException( 'You cannot assign people to the null account!' )
                 
             
         
@@ -1344,18 +1429,23 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                dump = account_type.DumpToString()
-                
                 account_type_id = modification_account_type_keys_to_account_type_ids[ account_type_key ]
                 
-                self._c.execute( 'UPDATE account_types SET dump = ? WHERE service_id = ? AND account_type_id = ?;', ( dump, service_id, account_type_id ) )
+                dump = account_type.DumpToString()
                 
-                HydrusData.Print(
-                    'Account {} confirmed/updated the account type, "{}".'.format(
-                        admin_account.GetAccountKey().hex(),
-                        account_type.GetTitle()
+                ( existing_dump, ) = self._c.execute( 'SELECT dump FROM account_types WHERE service_id = ? AND account_type_id = ?;', ( service_id, account_type_id ) ).fetchone()
+                
+                if dump != existing_dump:
+                    
+                    self._c.execute( 'UPDATE account_types SET dump = ? WHERE service_id = ? AND account_type_id = ?;', ( dump, service_id, account_type_id ) )
+                    
+                    HydrusData.Print(
+                        'Account {} updated the account type, "{}".'.format(
+                            admin_account.GetAccountKey().hex(),
+                            account_type.GetTitle()
+                        )
                     )
-                )
+                    
                 
             
         
@@ -1384,7 +1474,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
         # now we are done, no rollback, so let's update the cache
-        self._RefreshAccountTypeCache()
+        self._RefreshAccountInfoCache()
         
         self.pub_after_job( 'update_all_session_accounts', service_key )
         
@@ -1457,9 +1547,10 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _RefreshAccountTypeCache( self ):
+    def _RefreshAccountInfoCache( self ):
         
         self._service_ids_to_account_type_ids = collections.defaultdict( set )
+        self._service_ids_to_null_account_ids = {}
         self._account_type_ids_to_account_types = {}
         self._service_ids_to_account_type_keys_to_account_type_ids = collections.defaultdict( dict )
         
@@ -1472,6 +1563,18 @@ class DB( HydrusDB.HydrusDB ):
             self._service_ids_to_account_type_ids[ service_id ].add( account_type_id )
             self._account_type_ids_to_account_types[ account_type_id ] = account_type
             self._service_ids_to_account_type_keys_to_account_type_ids[ service_id ][ account_type.GetAccountTypeKey() ] = account_type_id
+            
+            if account_type.IsNullAccount():
+                
+                result = self._c.execute( 'SELECT account_id FROM accounts WHERE account_type_id = ?;', ( account_type_id, ) ).fetchone()
+                
+                if result is not None:
+                    
+                    ( null_account_id, ) = result
+                    
+                    self._service_ids_to_null_account_ids[ service_id ] = null_account_id
+                    
+                
             
         
     
@@ -2712,6 +2815,56 @@ class DB( HydrusDB.HydrusDB ):
         return ( True, mime )
         
     
+    def _RepositoryNullifyHistory( self, service_key, begin, end ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        self._RepositoryNullifyHistoryFiles( service_id, begin, end )
+        self._RepositoryNullifyHistoryTagParents( service_id, begin, end )
+        self._RepositoryNullifyHistoryTagSiblings( service_id, begin, end )
+        self._RepositoryNullifyHistoryMappings( service_id, begin, end )
+        
+    
+    def _RepositoryNullifyHistoryFiles( self, service_id, begin, end ):
+        
+        null_account_id = self._service_ids_to_null_account_ids[ service_id ]
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+        
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE file_timestamp BETWEEN ? AND ?;'.format( current_files_table_name ), ( null_account_id, begin, end ) )
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE file_timestamp BETWEEN ? AND ?;'.format( deleted_files_table_name ), ( null_account_id, begin, end ) )
+        
+    
+    def _RepositoryNullifyHistoryMappings( self, service_id, begin, end ):
+        
+        null_account_id = self._service_ids_to_null_account_ids[ service_id ]
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+        
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE mapping_timestamp BETWEEN ? AND ?;'.format( current_mappings_table_name ), ( null_account_id, begin, end ) )
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE mapping_timestamp BETWEEN ? AND ?;'.format( deleted_mappings_table_name ), ( null_account_id, begin, end ) )
+        
+    
+    def _RepositoryNullifyHistoryTagParents( self, service_id, begin, end ):
+        
+        null_account_id = self._service_ids_to_null_account_ids[ service_id ]
+        
+        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+        
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE parent_timestamp BETWEEN ? AND ?;'.format( current_tag_parents_table_name ), ( null_account_id, begin, end ) )
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE parent_timestamp BETWEEN ? AND ?;'.format( deleted_tag_parents_table_name ), ( null_account_id, begin, end ) )
+        
+    
+    def _RepositoryNullifyHistoryTagSiblings( self, service_id, begin, end ):
+        
+        null_account_id = self._service_ids_to_null_account_ids[ service_id ]
+        
+        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+        
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE sibling_timestamp BETWEEN ? AND ?;'.format( current_tag_siblings_table_name ), ( null_account_id, begin, end ) )
+        self._c.execute( 'UPDATE {} SET account_id = ? WHERE sibling_timestamp BETWEEN ? AND ?;'.format( deleted_tag_siblings_table_name ), ( null_account_id, begin, end ) )
+        
+    
     def _RepositoryPendTagParent( self, service_id, account_id, child_master_tag_id, parent_master_tag_id, reason_id ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
@@ -3379,6 +3532,34 @@ class DB( HydrusDB.HydrusDB ):
                 dump = account_type.DumpToString()
                 
                 self._c.execute( 'INSERT INTO account_types ( account_type_id, service_id, dump ) VALUES ( ?, ?, ? );', ( account_type_id, service_id, dump ) )
+                
+            
+        
+        if version == 445:
+            
+            # ok, time for null account!
+            
+            service_ids = self._GetServiceIds()
+            
+            for service_id in service_ids:
+                
+                service_key = self._GetServiceKey( service_id )
+                
+                service_null_account_type = HydrusNetwork.AccountType.GenerateNullAccountType()
+                
+                service_null_account_type_id = self._AddAccountType( service_id, service_null_account_type )
+                
+                self._RefreshAccountInfoCache()
+                
+                expires = None
+                
+                [ registration_key ] = self._GenerateRegistrationKeys( service_id, 1, service_null_account_type_id, expires )
+                
+                null_access_key = self._GetAccessKey( service_key, registration_key )
+                
+                null_account = self._GetAccountKeyFromAccessKey( service_key, null_access_key )
+                
+                self._RefreshAccountInfoCache()
                 
             
         

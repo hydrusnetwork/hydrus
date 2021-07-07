@@ -209,7 +209,7 @@ class COLUMN_LIST_FILE_SEED_CACHE( COLUMN_LIST_DEFINITION ):
     NOTE = 6
     
 
-column_list_type_name_lookup[ COLUMN_LIST_FILE_SEED_CACHE.ID ] = 'file imports'
+column_list_type_name_lookup[ COLUMN_LIST_FILE_SEED_CACHE.ID ] = 'file log'
 
 register_column_type( COLUMN_LIST_FILE_SEED_CACHE.ID, COLUMN_LIST_FILE_SEED_CACHE.NUMBER, '#', False, 3, True )
 register_column_type( COLUMN_LIST_FILE_SEED_CACHE.ID, COLUMN_LIST_FILE_SEED_CACHE.SOURCE, 'source', False, 30, True )
@@ -235,7 +235,7 @@ class COLUMN_LIST_GALLERY_SEED_LOG( COLUMN_LIST_DEFINITION ):
     NOTE = 5
     
 
-column_list_type_name_lookup[ COLUMN_LIST_GALLERY_SEED_LOG.ID ] = 'gallery log'
+column_list_type_name_lookup[ COLUMN_LIST_GALLERY_SEED_LOG.ID ] = 'search log'
 
 register_column_type( COLUMN_LIST_GALLERY_SEED_LOG.ID, COLUMN_LIST_GALLERY_SEED_LOG.NUMBER, '#', False, 3, True )
 register_column_type( COLUMN_LIST_GALLERY_SEED_LOG.ID, COLUMN_LIST_GALLERY_SEED_LOG.URL, 'url', False, 30, True )

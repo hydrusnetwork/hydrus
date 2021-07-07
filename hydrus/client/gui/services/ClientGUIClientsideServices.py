@@ -556,9 +556,9 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
         
         def do_it():
             
-            ( host, port ) = credentials.GetAddress()
+            full_host = credentials.GetPortedAddress()
             
-            url = scheme + host + ':' + str( port ) + '/' + request
+            url = scheme + full_host + '/' + request
             
             if self._service_type == HC.IPFS:
                 
@@ -745,9 +745,9 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            ( host, port ) = credentials.GetAddress()
+            full_host = credentials.GetPortedAddress()
             
-            url = 'https://{}:{}/auto_create_account_types'.format( host, port )
+            url = 'https://{}/auto_create_account_types'.format( full_host )
             
             network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
             
@@ -834,11 +834,11 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            ( host, port ) = credentials.GetAddress()
+            full_host = credentials.GetPortedAddress()
             
             # get a registration token
             
-            url = 'https://{}:{}/auto_create_registration_key?account_type_key={}'.format( host, port, account_type.GetAccountTypeKey().hex() )
+            url = 'https://{}/auto_create_registration_key?account_type_key={}'.format( full_host, account_type.GetAccountTypeKey().hex() )
             
             network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
             
@@ -886,9 +886,9 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            ( host, port ) = credentials.GetAddress()
+            full_host = credentials.GetPortedAddress()
             
-            url = 'https://{}:{}/access_key?registration_key={}'.format( host, port, registration_key.hex() )
+            url = 'https://{}/access_key?registration_key={}'.format( full_host, registration_key.hex() )
             
             network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
             
@@ -2196,9 +2196,9 @@ class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
         
         credentials = self._service.GetCredentials()
         
-        ( host, port ) = credentials.GetAddress()
+        full_host = credentials.GetPortedAddress()
         
-        self._address.setText( host+':'+str(port) )
+        self._address.setText( full_host )
         
         ( is_ok, status_string ) = self._service.GetStatusInfo()
         
@@ -2530,7 +2530,14 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         self._content_panel = QW.QWidget( self )
         
-        self._update_period_st = ClientGUICommon.BetterStaticText( self )
+        self._repo_options_st = ClientGUICommon.BetterStaticText( self )
+        
+        tt = 'The update period is how often the repository bundles its recent uploads into a package for users to download. Anything you upload may take this long for other people to see.'
+        tt += os.linesep * 2
+        tt += 'The anonymisation period is how long it takes for account information to be scrubbed from content. After this time, server admins/janitors cannot tell which account uploaded something.'
+        
+        self._repo_options_st.setToolTip( tt )
+        
         self._metadata_st = ClientGUICommon.BetterStaticText( self )
         
         self._download_progress = ClientGUICommon.TextAndGauge( self )
@@ -2585,7 +2592,7 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         QP.AddToLayout( hbox, self._reset_downloading_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._reset_processing_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self.Add( self._update_period_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._repo_options_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._update_downloading_paused_button, CC.FLAGS_ON_RIGHT )
@@ -2764,16 +2771,31 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         #
         
+        repo_options_text_components = []
+        
         try:
             
             update_period = self._service.GetUpdatePeriod()
             
-            self._update_period_st.setText( 'update period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( update_period ) ) )
+            repo_options_text_components.append( 'update period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( update_period ) ) )
             
         except HydrusExceptions.DataMissing:
             
-            self._update_period_st.setText( 'Unknown update period.' )
+            repo_options_text_components.append( 'Unknown update period.' )
             
+        
+        try:
+            
+            nullification_period = self._service.GetNullificationPeriod()
+            
+            repo_options_text_components.append( 'anonymisation period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( nullification_period ) ) )
+            
+        except HydrusExceptions.DataMissing:
+            
+            repo_options_text_components.append( 'Unknown anonymisation period.' )
+            
+        
+        self._repo_options_st.setText( ', '.join( repo_options_text_components ) )
         
         self._metadata_st.setText( self._service.GetNextUpdateDueString() )
         

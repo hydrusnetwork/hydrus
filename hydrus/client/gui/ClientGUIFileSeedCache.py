@@ -368,17 +368,17 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
+class FileSeedCacheButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, controller, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.global_pixmaps().listctrl, self._ShowFileSeedCacheFrame )
+        ClientGUICommon.BetterButton.__init__( self, parent, 'file log', self._ShowFileSeedCacheFrame )
         
         self._controller = controller
         self._file_seed_cache_get_callable = file_seed_cache_get_callable
         self._file_seed_cache_set_callable = file_seed_cache_set_callable
         
-        self.setToolTip( 'open detailed file import status--right-click for quick actions, if applicable' )
+        self.setToolTip( 'open detailed file log--right-click for quick actions, if applicable' )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -541,11 +541,13 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         tlw = self.window()
         
+        title = 'file log'
+        
         if isinstance( tlw, QP.Dialog ):
             
             if self._file_seed_cache_set_callable is None: # throw up a dialog that edits the file_seed cache in place
                 
-                with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'file import status' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title ) as dlg:
                     
                     panel = EditFileSeedCachePanel( dlg, self._controller, file_seed_cache )
                     
@@ -558,7 +560,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                 
                 dupe_file_seed_cache = file_seed_cache.Duplicate()
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'file import status' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
                     panel = EditFileSeedCachePanel( dlg, self._controller, dupe_file_seed_cache )
                     
@@ -573,7 +575,6 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         else: # throw up a frame that edits the file_seed cache in place
             
-            title = 'file import status'
             frame_key = 'file_import_status'
             
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
@@ -619,7 +620,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         if event.button() != QC.Qt.RightButton:
             
-            ClientGUICommon.BetterBitmapButton.mouseReleaseEvent( self, event )
+            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
             
             return
             

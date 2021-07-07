@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_446"><a href="#version_446">version 446</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed a typo bug in the latest pending upload routine when it was cancelled/errors out early</li>
+					<li>fixed a problem with the new subscription gap downloader, where when the page opens with the first query, it could sometimes assign 'already in db' to items in that query that were actually 'successful'. some other downloaders may have been rarely hit by this, but it was mostly the gap downloader</li>
+					<li>the client _should_ now support a service host that has path components (e.g. one hosted on a proxy), like myserver.com/hydrus_repo. the port will now be correctly inserted in the address before all requests. hydrus and ipfs both should work, fingers crossed</li>
+					<li>when an admin modifies the account types, the server now only prints the 'updated account type' log record if there were actual changes</li>
+					<li>.</li>
+					<li>downloader UI:</li>
+					<li>the confusingly named 'file import status' and 'gallery search log' in the downloader system are now renamed 'file log'/'search log'/'check log' for the file import queue, gallery downloader, and watcher respectively. the 'table' bitmap buttons are also replaced with simple easy (and easy to refer to!) label buttons.</li>
+					<li>when you open the file/search/check logs from the downloader page list right-click menu, they now spawn properly inside regular windows, not modal dialogs (which were inhibiting interaction with the rest of the program while open)</li>
+					<li>relabelled the awkward 'even if url/hash recognised' checkboxes in file import options. 'do not skip if' becomes 'force download even if', and the text matches that in tag import options for page content. also improved the tooltip on these checkboxes</li>
+					<li>all of the downloader layout boxes have also been renamed and harmonised with each other. gone are overly technical 'import queue' and 'gallery parsing'. now it is generally 'imports' up top and 'search' or 'checker' etc... below</li>
+					<li>layouts have also been harmonised a little. the url downloader page now has boxes for file vs search URLs, the hard drive import pause button is moved up as other pages have, and several off-by-a-pixel sizer layouts have been fixed</li>
+					<li>.</li>
+					<li>null account:</li>
+					<li>to further improve server privacy, particularly after the PTR's multiple account switch, all repositories now forget which accounts uploaded which content after a certain age. by default it is 90 days, but you can check in _review services_ once a server updates. this defends against a variety of hypothetical attacks where someone very clever gains access to the raw server database files, maybe years from now, and tries to crawl its anonymous account history for derivable information--now there is no history!</li>
+					<li>it will take some time to retroactively scrub a huge server like the PTR. for the PTR, it is mostly a relative no-op of moving account ids from the old public shared account to a new 'null' account, but it'll still be about 1.2 billion rows! this happens in the background, so the server will still be useable most of the time, but it will have spikes of 'busy' for about one hour every four (i.e. one hour of mostly busy, three hours of free), probably for several days. it may be a pain to try uploading a bunch of stuff in that time, so if you have a million pending mappings, you might like to just give the PTR a break for a few days. once it has fully caught up, the anonymisation should only be 20-60 seconds of 'busy' a day</li>
+					<li>the way the anonymisation works is all serverside services now have a single non-useable 'null account' that will take possession of all content after the delay. the original uploader is lost, and the whole historical record is merged together.</li>
+					<li>the privacy help doc has been updated to talk about the new anonymising system. overall, I think the null account pretty much eliminates the speculative account cross-referencing worries we had, and I am happy</li>
+					<li>.</li>
+					<li>admin/janny info:</li>
+					<li>for admins, all repositories now have an 'anonymisation period' option that you can edit in the service admin menu, defaulting to 90 days (min 1, max 360). you'll also see summary statements in the server logs as updates are anonymised. anonymisation will kick in two minutes after boot, so if you want to change this value immediately on update, get ready and be quick about it!</li>
+					<li>for jannies who can see accounts, you will see the null account pop up in reference to older content (moreso in future when I expand janny UI and permissions). it being special is highlighted, and various account modifying UI shows it cannot be edited</li>
+					<li>also for jannies/admins, I had to do some wickity woo to get the null account to work without a network update for everyone. if you try to look at the null account on 445 you may get an error. normal users won't run into this, but there's a kind of 'soft' network version update for you today</li>
+				</ul>
 				<li><h3 id="version_445"><a href="#version_445">version 445</a></h3></li>
 				<ul>
 					<li>misc:</li>

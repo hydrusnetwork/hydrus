@@ -461,6 +461,31 @@ class Credentials( HydrusData.HydrusYAMLBase ):
         return connection_string
         
     
+    def GetPortedAddress( self ):
+        
+        if self._host.endswith( '/' ):
+            
+            host = self._host[:-1]
+            
+        else:
+            
+            host = self._host
+            
+        
+        if '/' in host:
+            
+            ( actual_host, gubbins ) = self._host.split( '/', 1 )
+            
+            address = '{}:{}/{}'.format( actual_host, self._port, gubbins )
+            
+        else:
+            
+            address = '{}:{}'.format( self._host, self._port )
+            
+        
+        return address
+        
+    
     def HasAccessKey( self ): return self._access_key is not None and self._access_key != ''
     
     def SetAccessKey( self, access_key ): self._access_key = access_key

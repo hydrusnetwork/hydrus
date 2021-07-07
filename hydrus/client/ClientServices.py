@@ -732,9 +732,9 @@ class ServiceRemote( Service ):
     
     def _GetBaseURL( self ):
         
-        ( host, port ) = self._credentials.GetAddress()
+        full_host = self._credentials.GetPortedAddress()
         
-        base_url = 'https://' + host + ':' + str( port ) + '/'
+        base_url = 'https://{}/'.format( full_host )
         
         return base_url
         
@@ -862,7 +862,7 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateUnknownAccount( account_key )
         
-        HG.client_controller.pub( 'notify_unknown_accounts' )
+        HG.client_controller.pub( 'notify_account_sync_due' )
         
         self._next_account_sync = HydrusData.GetNow()
         
@@ -943,9 +943,11 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateUnknownAccount( account_key )
         
-        HG.client_controller.pub( 'notify_unknown_accounts' )
-        
         self._next_account_sync = HydrusData.GetNow()
+        
+        self._SetDirty()
+        
+        HG.client_controller.pub( 'notify_account_sync_due' )
         
     
     def _GetSerialisableDictionary( self ):
@@ -1257,6 +1259,18 @@ class ServiceRestricted( ServiceRemote ):
             
             raise
             
+        
+    
+    def SetAccountRefreshDueNow( self ):
+        
+        with self._lock:
+            
+            self._next_account_sync = HydrusData.GetNow()
+            
+            self._SetDirty()
+            
+        
+        HG.client_controller.pub( 'notify_account_sync_due' )
         
     
     def SetClean( self ):
@@ -2164,6 +2178,28 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
+    def GetNullificationPeriod( self ) -> int:
+        
+        with self._lock:
+            
+            if 'nullification_period' in self._service_options:
+                
+                nullification_period = self._service_options[ 'nullification_period' ]
+                
+                if not isinstance( nullification_period, int ):
+                    
+                    raise HydrusExceptions.DataMissing( 'This service has a bad anonymisation period! Try refreshing your account!' )
+                    
+                
+                return nullification_period
+                
+            else:
+                
+                raise HydrusExceptions.DataMissing( 'This service does not seem to have an anonymisation period! Try refreshing your account!' )
+                
+            
+        
+    
     def GetUpdateHashes( self ):
         
         with self._lock:
@@ -2331,7 +2367,7 @@ class ServiceRepository( ServiceRestricted ):
             self._SetDirty()
             
         
-        HG.client_controller.pub( 'notify_unknown_accounts' )
+        HG.client_controller.pub( 'notify_account_sync_due' )
         HG.client_controller.pub( 'important_dirt_to_clean' )
         
         HG.client_controller.Write( 'reset_repository', self )
@@ -2500,9 +2536,9 @@ class ServiceIPFS( ServiceRemote ):
     
     def _GetAPIBaseURL( self ):
         
-        ( host, port ) = self._credentials.GetAddress()
+        full_host = self._credentials.GetPortedAddress()
         
-        api_base_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
+        api_base_url = 'http://{}/api/v0/'.format( full_host )
         
         return api_base_url
         

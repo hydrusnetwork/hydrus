@@ -62,6 +62,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._AddWatcher( watcher )
             
         
+        self._have_started = False
+        
         self._last_time_watchers_changed = HydrusData.GetNowPrecise()
         
         self._last_pubbed_value_range = ( 0, 0 )
@@ -461,22 +463,29 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            if self._have_started:
+                
+                return
+                
+            
             self._page_key = page_key
             
-        
-        # set a 2s period so the page value/range is breddy snappy
-        self._watchers_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 2.0, self.REPEATINGWorkOnWatchers )
-        
-        for watcher in self._watchers:
+            # set a 2s period so the page value/range is breddy snappy
+            self._watchers_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 2.0, self.REPEATINGWorkOnWatchers )
             
-            publish_to_page = False
-            
-            if self._highlighted_watcher_url is not None and watcher.GetURL() == self._highlighted_watcher_url:
+            for watcher in self._watchers:
                 
-                publish_to_page = True
+                publish_to_page = False
+                
+                if self._highlighted_watcher_url is not None and watcher.GetURL() == self._highlighted_watcher_url:
+                    
+                    publish_to_page = True
+                    
+                
+                watcher.Start( page_key, publish_to_page )
                 
             
-            watcher.Start( page_key, publish_to_page )
+            self._have_started = True
             
         
     
@@ -573,6 +582,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._watcher_status = ''
         
         self._watcher_key = HydrusData.GenerateKey()
+        
+        self._have_started = False
         
         self._lock = threading.Lock()
         
@@ -1515,18 +1526,28 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key, publish_to_page ):
         
-        self._page_key = page_key
-        self._publish_to_page = publish_to_page
-        
-        self._UpdateNextCheckTime()
-        
-        self._UpdateFileVelocityStatus()
-        
-        self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
-        self._checker_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnChecker )
-        
-        self._files_repeating_job.SetThreadSlotType( 'watcher_files' )
-        self._checker_repeating_job.SetThreadSlotType( 'watcher_check' )
+        with self._lock:
+            
+            if self._have_started:
+                
+                return
+                
+            
+            self._page_key = page_key
+            self._publish_to_page = publish_to_page
+            
+            self._UpdateNextCheckTime()
+            
+            self._UpdateFileVelocityStatus()
+            
+            self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
+            self._checker_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnChecker )
+            
+            self._files_repeating_job.SetThreadSlotType( 'watcher_files' )
+            self._checker_repeating_job.SetThreadSlotType( 'watcher_check' )
+            
+            self._have_started = True
+            
         
     
     def REPEATINGWorkOnFiles( self ):
