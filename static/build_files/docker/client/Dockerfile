@@ -1,4 +1,4 @@
-FROM ghcr.io/suika/opencv-video-minimal:4.5-py3.8
+FROM ghcr.io/suika/opencv-video-minimal:4.5.2-py3.9
 
 ARG UID
 ARG GID
@@ -7,10 +7,11 @@ HEALTHCHECK --interval=20s --timeout=10s --retries=3 --start-period=30s CMD ! su
 ENTRYPOINT ["/bin/sh", "/opt/hydrus/static/build_files/docker/client/entrypoint.sh"]
 LABEL git="https://github.com/hydrusnetwork/hydrus"
 
-RUN apk --no-cache add jq fvwm x11vnc xvfb supervisor py3-beautifulsoup4 py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml qt5-qtcharts py3-lz4 ffmpeg  py3-pillow py3-numpy py3-numpy py3-qt5 py3-openssl openssl mpv mpv-libs nodejs patch \
- && apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/community font-noto font-noto-emoji \
- && apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/community font-noto-cjk
-RUN pip install qtpy Send2Trash html5lib twisted python-mpv cloudscrape cloudscraper pyparsing
+RUN apk --no-cache add fvwm x11vnc xvfb supervisor opencv mpv mpv-libs ffmpeg jq \
+ openssl nodejs patch font-noto font-noto-emoji font-noto-cjk \
+ py3-pyside2 py3-beautifulsoup4 py3-pillow py3-numpy py3-openssl py3-pip \
+ py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 py3-html5lib 
+RUN pip install qtpy Send2Trash python-mpv cloudscrape cloudscraper pyparsing
 
 RUN set -xe \
     && mkdir -p /opt/hydrus \
