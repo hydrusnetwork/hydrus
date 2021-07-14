@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientExporting
 from hydrus.client.gui import ClientGUIFunctions
@@ -250,46 +251,64 @@ class FileDropTarget( QC.QObject ):
 
             result = QC.Qt.MoveAction
             '''
-        elif urls_dnd and self._filenames_callable is not None:
+        elif urls_dnd or text_dnd:
             
             paths = []
             urls = []
             
-            for url in mime_data.urls():
+            if urls_dnd:
                 
-                if url.isLocalFile():
+                dnd_items = mime_data.urls()
+                
+                for dnd_item in dnd_items:
                     
-                    paths.append( os.path.normpath( url.toLocalFile() ) )
+                    if dnd_item.isLocalFile():
+                        
+                        paths.append( os.path.normpath( dnd_item.toLocalFile() ) )
+                        
+                    else:
+                        
+                        urls.append( dnd_item.url() )
+                        
                     
-                else:
+                
+            else:
+                
+                text = mime_data.text()
+                
+                text_lines = HydrusText.DeserialiseNewlinedTexts( text )
+                
+                for text_line in text_lines:
                     
-                    urls.append( url.url() )
+                    if text_line.startswith( 'http' ):
+                        
+                        urls.append( text_line )
+                        
+                        # ignore 'paths'
+                        
                     
                 
             
-            if len( paths ) > 0:
+            if self._filenames_callable is not None:
                 
-                QP.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
+                if len( paths ) > 0:
+                    
+                    QP.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
+                    
                 
             
-            if len( urls ) > 0:
+            if self._url_callable is not None:
                 
-                for url in urls:
+                if len( urls ) > 0:
                     
-                    QP.CallAfter( self._url_callable, url ) # callafter to terminate dnd event now
+                    for url in urls:
+                        
+                        QP.CallAfter( self._url_callable, url ) # callafter to terminate dnd event now
+                        
                     
                 
             
             result = QC.Qt.IgnoreAction
-            
-        elif text_dnd and self._url_callable is not None:
-            
-            text = mime_data.text()
-            
-            QP.CallAfter( self._url_callable, text ) # callafter to terminate dnd event now
-            
-            result = QC.Qt.CopyAction
-            
             
         else:
             

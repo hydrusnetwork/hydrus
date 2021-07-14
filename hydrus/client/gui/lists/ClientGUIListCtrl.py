@@ -242,6 +242,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         LAST_COLUMN_SNAP_DISTANCE_CHARS = 5
         
+        total_fixed_columns_width = 0
+        
         for visual_index in range( num_columns ):
             
             logical_index = header.logicalIndex( visual_index )
@@ -252,18 +254,22 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             if visual_index == last_column_index:
                 
-                if self.verticalScrollBar().isVisible():
-                    
-                    width_pixels += max( 0, min( self.verticalScrollBar().width(), 20 ) )
-                    
+                # testing if scrollbar is visible is unreliable, since we don't know if it is laid out correct yet (we could be doing that now!)
+                # so let's just hack it
+                
+                width_pixels = self.width() - ( self.frameWidth() * 2 ) - total_fixed_columns_width
+                
+            else:
+                
+                total_fixed_columns_width += width_pixels
                 
             
             width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
             
             if visual_index == last_column_index:
                 
-                # here's the snap magic
-                width_chars = round( width_chars // LAST_COLUMN_SNAP_DISTANCE_CHARS ) * LAST_COLUMN_SNAP_DISTANCE_CHARS
+                # here's the snap magic. final width_chars is always a multiple of 5
+                width_chars = round( width_chars / LAST_COLUMN_SNAP_DISTANCE_CHARS ) * LAST_COLUMN_SNAP_DISTANCE_CHARS
                 
             
             columns.append( ( column_type, width_chars, shown ) )
@@ -751,6 +757,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         width = 0
         
+        width += self.frameWidth() * 2
+        
         # all but last column
         
         for i in range( self.columnCount() - 1 ):
@@ -772,6 +780,10 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             width += self.columnWidth( self.columnCount() - 1 )
             
+            # this is a hack to stop the thing suddenly growing to screen width in a weird resize loop
+            # I couldn't reproduce this error, so I assume it is a QSS or whatever font/style/scrollbar on some systems that caused inaccurate columnWidth result
+            width = min( width, self.width() )
+            
         else:
             
             last_column_chars = self._original_column_list_status.GetColumnWidth( last_column_type )
@@ -782,8 +794,6 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
         #
-        
-        width += self.frameWidth() * 2
         
         if self._forced_height_num_chars is None:
             

@@ -2,6 +2,7 @@ import collections
 import itertools
 import os
 import random
+import re
 import threading
 import time
 import traceback
@@ -91,11 +92,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _CheckTagsVeto( self, tags, tag_import_options: TagImportOptions.TagImportOptions ):
         
-        tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, tags )
-        
-        all_chain_tags = set( itertools.chain.from_iterable( tags_to_siblings.values() ) )
-        
-        tag_import_options.CheckTagsVeto( tags, all_chain_tags )
+        if len( tags ) > 0:
+            
+            tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, tags )
+            
+            all_chain_tags = set( itertools.chain.from_iterable( tags_to_siblings.values() ) )
+            
+            tag_import_options.CheckTagsVeto( tags, all_chain_tags )
+            
         
     
     def _GetSerialisableInfo( self ):
@@ -2330,13 +2334,21 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self.NotifyFileSeedsUpdated( failed_file_seeds )
         
     
-    def RetryIgnored( self ):
+    def RetryIgnored( self, ignored_regex = None ):
         
         with self._lock:
             
             ignored_file_seeds = self._GetFileSeeds( CC.STATUS_VETOED )
             
             for file_seed in ignored_file_seeds:
+                
+                if ignored_regex is not None:
+                    
+                    if re.search( ignored_regex, file_seed.note ) is None:
+                        
+                        continue
+                        
+                    
                 
                 file_seed.SetStatus( CC.STATUS_UNKNOWN )
                 

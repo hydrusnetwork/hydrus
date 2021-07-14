@@ -731,12 +731,12 @@ class HydrusDB( object ):
                 result = self._Write( action, *args, **kwargs )
                 
             
-            self._cursor_transaction_wrapper.Save()
-            
             if job.IsSynchronous():
                 
                 job.PutResult( result )
                 
+            
+            self._cursor_transaction_wrapper.Save()
             
             if self._cursor_transaction_wrapper.TimeToCommit():
                 
@@ -997,16 +997,16 @@ class HydrusDB( object ):
                     
                     if HG.db_report_mode:
                         
-                        summary = 'Running ' + job.ToString()
+                        summary = 'Running db job: ' + job.ToString()
                         
                         HydrusData.ShowText( summary )
                         
                     
-                    if HG.db_profile_mode:
+                    if HG.profile_mode:
                         
-                        summary = 'Profiling ' + job.ToString()
+                        summary = 'Profiling db job: ' + job.ToString()
                         
-                        HydrusData.Profile( summary, 'self._ProcessJob( job )', globals(), locals(), show_summary = True )
+                        HydrusData.Profile( summary, 'self._ProcessJob( job )', globals(), locals(), min_duration_ms = HG.db_profile_min_job_time_ms )
                         
                     else:
                         

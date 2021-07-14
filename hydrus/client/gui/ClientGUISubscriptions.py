@@ -998,16 +998,25 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _STARTRetryIgnored( self ):
         
+        try:
+            
+            ignored_regex = ClientGUIFileSeedCache.GetRetryIgnoredParam( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
         selected_query_headers = self._query_headers.GetData( only_selected = True )
         
         query_headers = [ query_header for query_header in selected_query_headers if query_header.CanRetryIgnored() ]
         
-        call = HydrusData.Call( self._RetryIgnored, query_headers )
+        call = HydrusData.Call( self._RetryIgnored, query_headers, ignored_regex )
         
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryIgnored( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _RetryIgnored( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], ignored_regex = typing.Optional[ str ] ):
         
         for query_header in query_headers:
             
@@ -1020,7 +1029,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             query_log_container = self._names_to_edited_query_log_containers[ query_log_container_name ]
             
-            query_log_container.GetFileSeedCache().RetryIgnored()
+            query_log_container.GetFileSeedCache().RetryIgnored( ignored_regex = ignored_regex )
             
             query_header.UpdateFileStatus( query_log_container )
             
@@ -1889,6 +1898,15 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _STARTRetryIgnored( self ):
         
+        try:
+            
+            ignored_regex = ClientGUIFileSeedCache.GetRetryIgnoredParam( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
         query_headers = []
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
@@ -1900,12 +1918,12 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query_headers = [ query_header for query_header in query_headers if query_header.CanRetryIgnored() ]
         
-        call = HydrusData.Call( self._RetryIgnored, query_headers )
+        call = HydrusData.Call( self._RetryIgnored, query_headers, ignored_regex )
         
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryIgnored( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _RetryIgnored( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], ignored_regex: typing.Optional[ str ] ):
         
         for query_header in query_headers:
             
@@ -1918,7 +1936,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             query_log_container = self._names_to_edited_query_log_containers[ query_log_container_name ]
             
-            query_log_container.GetFileSeedCache().RetryIgnored()
+            query_log_container.GetFileSeedCache().RetryIgnored( ignored_regex = ignored_regex )
             
             query_header.UpdateFileStatus( query_log_container )
             

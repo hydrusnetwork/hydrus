@@ -1,4 +1,5 @@
 import collections
+import itertools
 import random
 import typing
 
@@ -74,25 +75,6 @@ def GetDuplicateComparisonScore( shown_media, comparison_media ):
     
     return total_score
     
-NICE_RESOLUTIONS = {}
-
-NICE_RESOLUTIONS[ ( 640, 480 ) ] = '480p'
-NICE_RESOLUTIONS[ ( 1280, 720 ) ] = '720p'
-NICE_RESOLUTIONS[ ( 1920, 1080 ) ] = '1080p'
-NICE_RESOLUTIONS[ ( 3840, 2060 ) ] = '4k'
-
-NICE_RATIOS = {}
-
-NICE_RATIOS[ 1 ] = '1:1'
-NICE_RATIOS[ 4 / 3 ] = '4:3'
-NICE_RATIOS[ 5 / 4 ] = '5:4'
-NICE_RATIOS[ 16 / 9 ] = '16:9'
-NICE_RATIOS[ 21 / 9 ] = '21:9'
-NICE_RATIOS[ 47 / 20 ] = '2.35:1'
-NICE_RATIOS[ 9 / 16 ] = '9:16'
-NICE_RATIOS[ 2 / 3 ] = '2:3'
-NICE_RATIOS[ 4 / 5 ] = '4:5'
-
 def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     new_options = HG.client_controller.new_options
@@ -252,9 +234,9 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = -duplicate_comparison_score_higher_resolution
             
         
-        if s_res in NICE_RESOLUTIONS:
+        if s_res in HC.NICE_RESOLUTIONS:
             
-            s_string = NICE_RESOLUTIONS[ s_res ]
+            s_string = HC.NICE_RESOLUTIONS[ s_res ]
             
         else:
             
@@ -266,9 +248,9 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
             
         
-        if c_res in NICE_RESOLUTIONS:
+        if c_res in HC.NICE_RESOLUTIONS:
             
-            c_string = NICE_RESOLUTIONS[ c_res ]
+            c_string = HC.NICE_RESOLUTIONS[ c_res ]
             
         else:
             
@@ -289,14 +271,14 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         s_ratio = s_w / s_h
         c_ratio = c_w / c_h
         
-        s_nice = s_ratio in NICE_RATIOS
-        c_nice = c_ratio in NICE_RATIOS
+        s_nice = s_ratio in HC.NICE_RATIOS
+        c_nice = c_ratio in HC.NICE_RATIOS
         
         if s_nice or c_nice:
             
             if s_nice:
                 
-                s_string = NICE_RATIOS[ s_ratio ]
+                s_string = HC.NICE_RATIOS[ s_ratio ]
                 
             else:
                 
@@ -305,7 +287,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             if c_nice:
                 
-                c_string = NICE_RATIOS[ c_ratio ]
+                c_string = HC.NICE_RATIOS[ c_ratio ]
                 
             else:
                 
@@ -413,7 +395,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = 0
             
         
-        statement = '{} {} {}'.format( ClientData.TimestampToPrettyTimeDelta( s_ts ), operator, ClientData.TimestampToPrettyTimeDelta( c_ts ) )
+        statement = '{}, {} {}'.format( ClientData.TimestampToPrettyTimeDelta( s_ts, history_suffix = ' old' ), operator, ClientData.TimestampToPrettyTimeDelta( c_ts, history_suffix = ' old' ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
@@ -814,6 +796,7 @@ class MediaList( object ):
         self._file_service_key = file_service_key
         
         self._hashes = set()
+        self._hashes_ordered = []
         
         self._hashes_to_singleton_media = {}
         self._hashes_to_collected_media = {}
@@ -985,29 +968,34 @@ class MediaList( object ):
     def _RecalcHashes( self ):
         
         self._hashes = set()
+        self._hashes_ordered = []
         
         self._hashes_to_singleton_media = {}
         self._hashes_to_collected_media = {}
         
-        for media in self._collected_media:
+        for m in self._sorted_media:
             
-            hashes = media.GetHashes()
-            
-            self._hashes.update( hashes )
-            
-            for hash in hashes:
+            if isinstance( m, MediaCollection ):
                 
-                self._hashes_to_collected_media[ hash ] = media
+                hashes = m.GetHashes( ordered = True )
                 
-            
-        
-        for media in self._singleton_media:
-            
-            hash = media.GetHash()
-            
-            self._hashes.add( hash )
-            
-            self._hashes_to_singleton_media[ hash ] = media
+                self._hashes.update( hashes )
+                self._hashes_ordered.extend( hashes )
+                
+                for hash in hashes:
+                    
+                    self._hashes_to_collected_media[ hash ] = m
+                    
+                
+            else:
+                
+                hash = m.GetHash()
+                
+                self._hashes.add( hash )
+                self._hashes_ordered.append( hash )
+                
+                self._hashes_to_singleton_media[ hash ] = m
+                
             
         
     
@@ -1068,6 +1056,7 @@ class MediaList( object ):
             addable_media.append( media )
             
             self._hashes.add( hash )
+            self._hashes_ordered.append( hash )
             
             self._hashes_to_singleton_media[ hash ] = media
             
@@ -1490,9 +1479,16 @@ class MediaList( object ):
     
     def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
         
-        if has_location is None and discriminant is None and not_uploaded_to is None and not ordered:
+        if has_location is None and discriminant is None and not_uploaded_to is None:
             
-            return self._hashes
+            if ordered:
+                
+                return self._hashes_ordered
+                
+            else:
+                
+                return self._hashes
+                
             
         else:
             
@@ -1563,7 +1559,7 @@ class MediaList( object ):
         return self._sorted_media
         
     
-    def HasAnyOfTheseHashes( self, hashes ):
+    def HasAnyOfTheseHashes( self, hashes: set ):
         
         return not hashes.isdisjoint( self._hashes )
         
@@ -2431,7 +2427,10 @@ class MediaSingleton( Media ):
         
         info_string = HydrusData.ToHumanBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
-        if width is not None and height is not None: info_string += ' (' + HydrusData.ToHumanInt( width ) + 'x' + HydrusData.ToHumanInt( height ) + ')'
+        if width is not None and height is not None:
+            
+            info_string += ' ({})'.format( HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) )
+            
         
         if duration is not None:
             

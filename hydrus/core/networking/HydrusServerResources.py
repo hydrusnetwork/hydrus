@@ -301,7 +301,7 @@ class HydrusResource( Resource ):
             return request
             
         
-        if HG.server_profile_mode:
+        if HG.profile_mode:
             
             d = deferToThread( self._profileJob, self._threadDoGETJob, request )
             
@@ -324,7 +324,7 @@ class HydrusResource( Resource ):
             return request
             
         
-        if HG.server_profile_mode:
+        if HG.profile_mode:
             
             d = deferToThread( self._profileJob, self._threadDoOPTIONSJob, request )
             
@@ -347,7 +347,7 @@ class HydrusResource( Resource ):
             return request
             
         
-        if HG.server_profile_mode:
+        if HG.profile_mode:
             
             d = deferToThread( self._profileJob, self._threadDoPOSTJob, request )
             
@@ -590,7 +590,7 @@ class HydrusResource( Resource ):
     
     def _profileJob( self, call, request: HydrusServerRequest.HydrusRequest ):
         
-        HydrusData.Profile( 'client api {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = 3, show_summary = True )
+        HydrusData.Profile( 'Profiling client api: {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
         
         return request.result_lmao
         

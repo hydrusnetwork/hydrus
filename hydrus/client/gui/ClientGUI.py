@@ -4759,17 +4759,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.cache_report_mode = not HG.cache_report_mode
             
-        elif name == 'callto_profile_mode':
-            
-            HG.callto_profile_mode = not HG.callto_profile_mode
-            
         elif name == 'db_report_mode':
             
             HG.db_report_mode = not HG.db_report_mode
-            
-        elif name == 'db_profile_mode':
-            
-            HG.db_profile_mode = not HG.db_profile_mode
             
         elif name == 'db_ui_hang_relief_mode':
             
@@ -4795,10 +4787,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.media_load_report_mode = not HG.media_load_report_mode
             
-        elif name == 'menu_profile_mode':
-            
-            HG.menu_profile_mode = not HG.menu_profile_mode
-            
         elif name == 'network_report_mode':
             
             HG.network_report_mode = not HG.network_report_mode
@@ -4807,17 +4795,39 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.phash_generation_report_mode = not HG.phash_generation_report_mode
             
+        elif name == 'profile_mode':
+            
+            if not HG.profile_mode:
+                
+                now = HydrusData.GetNow()
+                
+                with HG.profile_counter_lock:
+                    
+                    HG.profile_start_time = now
+                    HG.profile_slow_count = 0
+                    HG.profile_fast_count = 0
+                    
+                
+                
+                HG.profile_mode = True
+                
+                HydrusData.ShowText( 'Profile mode on!' )
+                
+            else:
+                
+                HG.profile_mode = False
+                
+                with HG.profile_counter_lock:
+                    
+                    ( slow, fast ) = ( HG.profile_slow_count, HG.profile_fast_count )
+                    
+                
+                HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusData.ToHumanInt( slow ), HydrusData.ToHumanInt( fast ) ) )
+                
+            
         elif name == 'pubsub_report_mode':
             
             HG.pubsub_report_mode = not HG.pubsub_report_mode
-            
-        elif name == 'pubsub_profile_mode':
-            
-            HG.pubsub_profile_mode = not HG.pubsub_profile_mode
-            
-        elif name == 'server_profile_mode':
-            
-            HG.server_profile_mode = not HG.server_profile_mode
             
         elif name == 'shortcut_report_mode':
             
@@ -4834,19 +4844,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'thumbnail_debug_mode':
             
             HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
-            
-        elif name == 'ui_timer_profile_mode':
-            
-            HG.ui_timer_profile_mode = not HG.ui_timer_profile_mode
-            
-            if HG.ui_timer_profile_mode:
-                
-                HydrusData.ShowText( 'ui timer profile mode activated' )
-                
-            else:
-                
-                HydrusData.ShowText( 'ui timer profile mode deactivated' )
-                
             
         elif name == 'force_idle_mode':
             
@@ -5339,11 +5336,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 try:
                     
-                    if HG.ui_timer_profile_mode:
+                    if HG.profile_mode:
                         
                         summary = 'Profiling animation timer: ' + repr( window )
                         
-                        HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = 3, show_summary = True )
+                        HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
                         
                     else:
                         
@@ -5943,23 +5940,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
             
-            profile_modes = QW.QMenu( debug )
+            profiling = QW.QMenu( debug )
             
-            profile_mode_message = 'If something is running slow, you can turn on one of these modes to have hydrus gather information on how long each part takes to run. You probably want \'db profile mode\'.'
+            profile_mode_message = 'If something is running slow, you can turn on profile mode to have hydrus gather information on how long many jobs take to run.'
             profile_mode_message += os.linesep * 2
-            profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what in your case is running slow.'
+            profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
             profile_mode_message += os.linesep * 2
             profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
             
-            ClientGUIMenus.AppendMenuItem( profile_modes, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'callto profile mode', 'Run detailed \'profiles\' on most threaded jobs and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you in UI!).', HG.callto_profile_mode, self._SwitchBoolean, 'callto_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'client api profile mode', 'Run detailed \'profiles\' on every client api query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.server_profile_mode, self._SwitchBoolean, 'server_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you in the DB!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
+            ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
+            ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, self._SwitchBoolean, 'profile_mode' )
             
-            ClientGUIMenus.AppendMenu( debug, profile_modes, 'profile modes' )
+            ClientGUIMenus.AppendMenu( debug, profiling, 'profiling' )
             
             report_modes = QW.QMenu( debug )
             
@@ -7184,11 +7176,11 @@ Try to keep this below 10 million!'''
         
         if page is not None:
             
-            if HG.ui_timer_profile_mode:
+            if HG.profile_mode:
                 
                 summary = 'Profiling page timer: ' + repr( page )
                 
-                HydrusData.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = 3, show_summary = True )
+                HydrusData.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
                 
             else:
                 
@@ -7229,11 +7221,11 @@ Try to keep this below 10 million!'''
             
             try:
                 
-                if HG.ui_timer_profile_mode:
+                if HG.profile_mode:
                     
                     summary = 'Profiling ui update timer: ' + repr( window )
                     
-                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = 3, show_summary = True )
+                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
                     
                 else:
                     

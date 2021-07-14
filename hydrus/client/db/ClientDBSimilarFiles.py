@@ -10,10 +10,15 @@ from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientThreading
+from hydrus.client.db import ClientDBFilesStorage
+from hydrus.client.db import ClientDBServices
 
 class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
+        
+        self.modules_services = modules_services
+        self.modules_files_storage = modules_files_storage
         
         HydrusDBModule.HydrusDBModule.__init__( self, 'client similar files', cursor )
         
@@ -548,7 +553,9 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
             
             job_key.SetVariable( 'popup_text_1', 'purging search info of orphans' )
             
-            self._c.execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id NOT IN ( SELECT hash_id FROM current_files );' )
+            ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = ClientDBFilesStorage.GenerateFilesTableNames( self.modules_services.combined_local_file_service_id )
+            
+            self._c.execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ) )
             
             job_key.SetVariable( 'popup_text_1', 'gathering all leaves' )
             

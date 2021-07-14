@@ -1349,11 +1349,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def RetryIgnored( self ):
+    def RetryIgnored( self, ignored_regex = None ):
         
         for query_header in self._query_headers:
             
-            query_header.RetryIgnored()
+            query_header.RetryIgnored( ignored_regex = ignored_regex )
             
         
     

@@ -2422,6 +2422,11 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
+            if self._service_type != HC.FILE_REPOSITORY:
+                
+                return
+                
+            
             if not self._CanSyncDownload():
                 
                 return

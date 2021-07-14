@@ -1,3 +1,4 @@
+import collections
 import threading
 
 controller = None
@@ -26,12 +27,23 @@ db_synchronous = 2
 import_folders_running = False
 export_folders_running = False
 
+profile_mode = False
+
+db_profile_min_job_time_ms = 16
+callto_profile_min_job_time_ms = 5
+server_profile_min_job_time_ms = 5
+menu_profile_min_job_time_ms = 16
+pubsub_profile_min_job_time_ms = 5
+ui_timer_profile_min_job_time_ms = 5
+
+profile_start_time = 0
+profile_slow_count = 0
+profile_fast_count = 0
+profile_counter_lock = threading.Lock()
+
 db_ui_hang_relief_mode = False
 callto_report_mode = False
-server_profile_mode = False
 db_report_mode = False
-db_profile_mode = False
-callto_profile_mode = False
 file_report_mode = False
 media_load_report_mode = False
 gui_report_mode = False
@@ -42,11 +54,8 @@ subscription_report_mode = False
 hover_window_report_mode = False
 file_import_report_mode = False
 phash_generation_report_mode = False
-menu_profile_mode = False
 network_report_mode = False
 pubsub_report_mode = False
-pubsub_profile_mode = False
-ui_timer_profile_mode = False
 daemon_report_mode = False
 force_idle_mode = False
 no_page_limit_mode = False

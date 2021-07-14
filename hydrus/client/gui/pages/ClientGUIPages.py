@@ -811,20 +811,6 @@ class Page( QW.QSplitter ):
             
         
     
-    def ShowHideSplit( self ):
-        
-        if QP.SplitterVisibleCount( self ) > 1:
-            
-            QP.Unsplit( self, self._search_preview_split )
-            
-            self._media_panel.SetFocusedMedia( None )
-            
-        else:
-            
-            self.SetSplitterPositions()
-            
-        
-    
     def SetMediaFocus( self ):
         
         self._media_panel.setFocus( QC.Qt.OtherFocusReason )
@@ -870,6 +856,20 @@ class Page( QW.QSplitter ):
         if HC.options[ 'hide_preview' ]:
             
             QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
+            
+        
+    
+    def ShowHideSplit( self ):
+        
+        if QP.SplitterVisibleCount( self ) > 1:
+            
+            QP.Unsplit( self, self._search_preview_split )
+            
+            self._media_panel.SetFocusedMedia( None )
+            
+        else:
+            
+            self.SetSplitterPositions()
             
         
     

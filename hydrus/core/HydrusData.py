@@ -244,9 +244,14 @@ def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
 def ConvertResolutionToPrettyString( resolution ):
     
+    if resolution in HC.NICE_RESOLUTIONS:
+        
+        return HC.NICE_RESOLUTIONS[ resolution ]
+        
+    
     ( width, height ) = resolution
     
-    return ToHumanInt( width ) + 'x' + ToHumanInt( height )
+    return '{}x{}'.format( ToHumanInt( width ), ToHumanInt( height ) )
     
 def ConvertStatusToPrefix( status ):
     
@@ -429,7 +434,7 @@ def ConvertTimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = 
         return 'unparseable time {}'.format( timestamp )
         
     
-def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, show_seconds = True, no_prefix = False ):
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
     
     if timestamp is None:
         
@@ -454,7 +459,7 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
         
         if TimeHasPassed( timestamp ):
             
-            return time_delta_string + ' ago'
+            return '{}{}'.format( time_delta_string, history_suffix )
             
         else:
             
@@ -1210,19 +1215,30 @@ def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
         
         details = output.read()
         
+        with HG.profile_counter_lock:
+            
+            HG.profile_slow_count += 1
+            
+        
         if show_summary:
             
             ShowText( summary )
             
         
+        HG.controller.PrintProfile( summary, details )
+        
     else:
         
-        summary += ' - It took ' + TimeDeltaToPrettyTimeDelta( time_took ) + '.'
+        with HG.profile_counter_lock:
+            
+            HG.profile_fast_count += 1
+            
         
-        details = ''
+        if show_summary:
+            
+            HG.controller.PrintProfile( summary, details )
+            
         
-    
-    HG.controller.PrintProfile( summary, details )
     
 def PullNFromIterator( iterator, n ):
     

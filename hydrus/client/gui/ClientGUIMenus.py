@@ -163,11 +163,11 @@ def GetEventCallable( callable, *args, **kwargs ):
     
     def event_callable( checked_state ):
         
-        if HG.menu_profile_mode:
+        if HG.profile_mode:
             
             summary = 'Profiling menu: ' + repr( callable )
             
-            HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = 3, show_summary = True )
+            HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = HG.menu_profile_min_job_time_ms )
             
         else:
             

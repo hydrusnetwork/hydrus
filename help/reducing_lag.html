@@ -8,6 +8,7 @@
 		<div class="content">
 			<h3 id="intro"><a href="#intro">hydrus is cpu and hdd hungry</a></h3>
 			<p>The hydrus client manages a lot of complicated data and gives you a lot of power over it. To add millions of files and tags to its database, and then to perform difficult searches over that information, it needs to use a lot of CPU time and hard drive time--sometimes in small laggy blips, and occasionally in big 100% CPU chunks. I don't put training wheels or limiters on the software either, so if you search for 300,000 files, the client will try to fetch that many.</p>
+                        <p>Furthermore, I am just one unprofessional guy dealing with a lot of legacy code from when I was even worse at programming. I am always working to reduce lag and other inconveniences, and improve UI feedback when many things are going on, but there is still a lot for me to do.</p>
 			<p>In general, the client works best on snappy computers with low-latency hard drives where it does not have to constantly compete with other CPU- or HDD- heavy programs. Running hydrus on your games computer is no problem at all, but if you leave the client on all the time, then make sure under the options it is set not to do idle work while your CPU is busy, so your games can run freely. Similarly, if you run two clients on the same computer, you should have them set to work at different times, because if they both try to process 500,000 tags at once on the same hard drive, they will each slow to a crawl.</p>
 			<p>If you run on an HDD, keeping it defragged is very important, and good practice for all your programs anyway. Make sure you know what this is and that you do it.</p>
 			<h3 id="maintenance_and_processing"><a href="#maintenance_and_processing">maintenance and processing</a></h3>
@@ -16,22 +17,20 @@
 			<p>If you have an old, slower computer though, or if your hard drive is high latency, make sure these options are set for whatever is best for your situation. Turning off idle time completely is often helpful as some older computers are slow to even recognise--mid task--that you want to use the client again, or take too long to abandon a big task half way through. If you set your client to only do work on shutdown, then you can control exactly when that happens.</p>
 			<h3 id="reducing_lag"><a href="#reducing_lag">reducing search and general gui lag</a></h3>
 			<p>Searching for tags via the autocomplete dropdown and searching for files in general can sometimes take a very long time. It depends on many things. In general, the more predicates (tags and system:something) you have active for a search, and the more specific they are, the faster it will be.</p>
-			<p>You can also look at <i>file->options->speed and memory</i>, again especially if you have a slow computer. Increasing the autocomplete thresholds is very often helpful. You can even force autocompletes to only fetch results when you manually ask for them.</p>
+			<p>You can also look at <i>file->options->speed and memory</i>. Increasing the autocomplete thresholds under <i>tags->manage tag display and search</i> is also often helpful. You can even force autocompletes to only fetch results when you manually ask for them.</p>
 			<p>Having lots of thumbnails open or downloads running can slow many things down. Check the 'pages' menu to see your current session weight. If it is about 50,000, or you have individual pages with more than 10,000 files or download URLs, try cutting down a bit.</p>
 			<h3 id="profiles"><a href="#profiles">finally - profiles</a></h3>
-			<p>Lots of my code remains unoptimised for certain situations. My development environment only has a few thousand images and a few million tags. As I write code, I am usually more concerned with getting it to work at all rather than getting it to work fast for every possible scenario. So, if something is running slow for you, but your computer is otherwise working fine, let me know and I can almost always speed it up.</p>
-			<p>Let me know:</p>
+			<p>Programming is all about re-editing your first, second, third drafts of an idea. You are always going back to old code and adding new features or making it work better. If something is running slow for you, I can almost always speed it up or at least improve the way it schedules that chunk of work.</p>
+                        <p>However figuring out exactly why something is running slow or holding up the UI is tricky and often gives an unexpected result. I can guess what might be running inefficiently from reports, but what I really need to be sure is a <i>profile</i>, which drills down into every function of a job, counting how many times they are called and timing how long they take. A profile for a single call looks like <a href="profile_example.txt">this</a>.</p>
+			<p>So, please let me know:</p>
 			<ul>
 				<li>The general steps to reproduce the problem (e.g. "Running system:numtags>4 is ridiculously slow on its own on 'all known tags'.")</li>
-				<li>Your operating system and its version (e.g. "Windows 8.1")</li>
-				<li>Your computer's general power (e.g. "A couple of years old. It runs most stuff ok.")</li>
+				<li>Your client's approximate overall size (e.g. "500k files, and it syncs to the PTR.")</li>
 				<li>The type of hard drive you are running hydrus from. (e.g. "A 2TB 7200rpm drive that is 20% full. I regularly defrag it.")</li>
 				<li>Any <i>profiles</i> you have collected.</li>
 			</ul>
-			<p>A <i>profile</i> is a large block of debug text that lets me know which parts of my code are running slow for you. A profile for a single call looks like <a href="profile_example.txt">this</a>.</p>
-			<p>It is very helpful to me to have a profile. You can generate one by going <i>help->debug->xxx profile mode</i>, which tells the client to generate profile information for every subsequent xxx request. This can be spammy, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).</p>
-			<p>For most problems, you probably want <i>db profile mode</i>.</p>
-			<p>Turn on a profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then check your database folder (most likely <i>install_dir/db</i>) for a new 'client profile - DATE.log' file. This file will be filled with several sets of tables with timing information. Please send that whole file to me, or if it is too large, cut what seems important. It should not contain any personal information, but feel free to look through it.</p>
+			<p>You can generate a profile by hitting <i>help->debug->profile mode</i>, which tells the client to generate profile information for almost all of its behind the scenes jobs. This can be spammy, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).</p>
+			<p>Turn on profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then check your database folder (most likely <i>install_dir/db</i>) for a new 'client profile - DATE.log' file. This file will be filled with several sets of tables with timing information. Please send that whole file to me, or if it is too large, cut what seems important. It should not contain any personal information, but feel free to look through it.</p>
 			<p>There are several ways to <a href="contact.html">contact me</a>.</p>
 		</div>
 	</body>

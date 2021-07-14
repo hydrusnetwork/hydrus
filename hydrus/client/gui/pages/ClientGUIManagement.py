@@ -2136,9 +2136,18 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _RetryIgnored( self ):
         
+        try:
+            
+            ignored_regex = ClientGUIFileSeedCache.GetRetryIgnoredParam( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
         for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
             
-            gallery_import.RetryIgnored()
+            gallery_import.RetryIgnored( ignored_regex = ignored_regex )
             
         
     
@@ -2967,9 +2976,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _RetryIgnored( self ):
         
+        try:
+            
+            ignored_regex = ClientGUIFileSeedCache.GetRetryIgnoredParam( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
         for watcher in self._watchers_listctrl.GetData( only_selected = True ):
             
-            watcher.RetryIgnored()
+            watcher.RetryIgnored( ignored_regex = ignored_regex )
             
         
     

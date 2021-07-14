@@ -1246,11 +1246,11 @@ class CallAfterEventCatcher( QC.QObject ):
         
         if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
             
-            if HG.callto_profile_mode:
+            if HG.profile_mode:
                 
                 summary = 'Profiling CallAfter Event: {}'.format( event._fn )
                 
-                HydrusData.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = 3, show_summary = True )
+                HydrusData.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
                 
             else:
                 

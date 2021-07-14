@@ -1443,11 +1443,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def RetryIgnored( self ):
+    def RetryIgnored( self, ignored_regex = None ):
         
         with self._lock:
             
-            self._file_seed_cache.RetryIgnored()
+            self._file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
             
         
     

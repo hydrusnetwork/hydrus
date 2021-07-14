@@ -375,7 +375,7 @@ def ShowTextClient( text ):
     
     HG.client_controller.pub( 'message', job_key )
     
-def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_now_threshold = 3, show_seconds = True, no_prefix = False ):
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
     
     if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
         
@@ -383,7 +383,7 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_no
         
     else:
         
-        return HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, show_seconds = show_seconds, no_prefix = no_prefix )
+        return HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, history_suffix = history_suffix, show_seconds = show_seconds, no_prefix = no_prefix )
         
     
 class Booru( HydrusData.HydrusYAMLBase ):

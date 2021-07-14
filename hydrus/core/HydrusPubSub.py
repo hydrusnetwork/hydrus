@@ -113,19 +113,15 @@ class HydrusPubSub( object ):
                         HydrusData.ShowText( ( topic, args, kwargs, callable_tuples ) )
                         
                     
-                    if HG.pubsub_profile_mode and not_a_report:
+                    if HG.profile_mode and not_a_report:
                         
-                        summary = 'Profiling ' + HydrusData.ToHumanInt( len( callable_tuples ) ) + ' x ' + topic
-                        
-                        HydrusData.ShowText( summary )
-                        
-                        per_summary = 'Profiling ' + topic
+                        summary = 'Profiling pubsub: {}'.format( topic )
                         
                         for ( obj, callable ) in callable_tuples:
                             
                             try:
                                 
-                                HydrusData.Profile( per_summary, 'callable( *args, **kwargs )', globals(), locals() )
+                                HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = HG.pubsub_profile_min_job_time_ms )
                                 
                             except HydrusExceptions.ShutdownException:
                                 

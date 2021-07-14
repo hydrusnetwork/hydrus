@@ -28,6 +28,16 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
 
+def GetRetryIgnoredParam( window ):
+    
+    choice_tuples = [
+        ( 'retry all', None, 'retry all' ),
+        ( 'retry 404s', '^404', 'retry all 404s' ),
+        ( 'retry blacklisted', 'blacklisted!$', 'retry all blacklisted' )
+    ]
+    
+    return ClientGUIDialogsQuick.SelectFromListButtons( window, 'select what to retry', choice_tuples )
+    
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, controller, file_seed_cache ):
@@ -523,16 +533,18 @@ class FileSeedCacheButton( ClientGUICommon.BetterButton ):
     
     def _RetryIgnored( self ):
         
-        message = 'Are you sure you want to retry all the files that were ignored/vetoed?'
+        try:
+            
+            ignored_regex = GetRetryIgnoredParam( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        file_seed_cache = self._file_seed_cache_get_callable()
         
-        if result == QW.QDialog.Accepted:
-            
-            file_seed_cache = self._file_seed_cache_get_callable()
-            
-            file_seed_cache.RetryIgnored()
-            
+        file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
         
     
     def _ShowFileSeedCacheFrame( self ):

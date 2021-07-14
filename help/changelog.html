@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_447"><a href="#version_447">version 447</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed drag and dropping multiple newline separated urls onto the client when those urls come from a generic text source</li>
+					<li>pages now cache their 'ordered' file id list. this speeds up several little jobs, but most importantly should reduce session save time for sessions with tens of thousands of files</li>
+					<li>common file resolutions such as 1920x1080 are now replaced in labels with '1080p' strings as already used in the duplicate system. also added 'vertical' variants of 720p, 1080p, and 4k</li>
+					<li>when a page preview viewer gets a call to clear its current media when it is not currently the page in view, it now recognises that properly. this was happening (a 'sticky' preview) on drag and drops that navigated and terminated on other pages</li>
+					<li>the various 'retry ignored' commands on downloaders now give an interstitial dialog where you can choose to retry 'all', '404s', or 'blacklisted' files only</li>
+					<li>manage tag siblings/parents now disables its import button until its data is loaded. imports that were clicked through before loading were being forgotten due to tangled logic, so for now I'll just disable the button!</li>
+					<li>reduced some more spiky database I/O overhead from the UI's perspective (now savepoints are performed after a result is returned, just like I recently did with transaction commit)</li>
+					<li>duplicate potentials search will now update the y in its x/y progress display if many files have been imported since the search was started and x becomes larger than y (due to y secretly growing)</li>
+					<li>fixed the default 'gelbooru md5' file lookup script. if you have a lookup script with this name, it will be updated to my new default automatically. I don't really like fixing this old system, but I am not sure when I will fit in my big rewrite that will merge it with the normal downloader system, so this is a quick fix for the meantime</li>
+					<li>if you are one of the users who had weird unfixable 404 update file problems with the PTR, please try unpausing and doing a metadata resync one more time this week. fingers crossed, this is fixed. please let me know how you get on too, fixed or not, and also if you have had 'malformed' database problems in the past</li>
+					<li>.</li>
+					<li>multi column lists:</li>
+					<li>improved the precision of longer text pixel_width->text and text->pixel_width calculations, which are particularly used in the multi-column list state saving system. another multi-column size calculation bug, where lists could grow by 1 character's width on >~60 character width columns on every dialog reopen, is now fixed</li>
+					<li>multi-column lists should now calculate last column width more precisely and accurately regardless of vertical scrollbar presence or recent show/hide</li>
+					<li>the snapping system that locks last column size to 5-character multiples can now snap up or down, increasing error tolerance</li>
+					<li>I added a hack to stop the bug some people had of multi-column lists suddenly growing wide, up to screen width, in a resize loop. I think it works, but as I cannot reproduce this error, please let me know how you get on. resizing the options->external programs panel seems to initiate it reliably for those users affected</li>
+					<li>.</li>
+					<li>profile mode:</li>
+					<li>all debug profile modes (callto, db, server, menu, pubsub, and ui) are now merged into one mode under help->debug</li>
+					<li>this new mode no longer spams popups, and it only prints 'slow' jobs to the profile log</li>
+					<li>it also makes a new profile log every time it is turned on, using mode start timestamp rather than client boot timestamp, and when profile mode is turned off, there is a popup summary of how many fast and slow jobs passed through during the log time</li>
+					<li>touched up profile code, timing thresholds, summary statements, and the help</li>
+					<li>.</li>
+					<li>special update rule this week:</li>
+					<li>due to the big file storage rework this week, there's some bit rot in older update routines. 447 cannot update databases older than 411, and it _may_ have trouble updating before 436. if this applies to you, the client will error out or warn you before continuing. I'd like to know what happens to you if you are v411-435 so I can refine these messages</li>
+					<li>.</li>
+					<li>boring database refactoring:</li>
+					<li>the primary current, deleted, pending, and petitioned files tables are now split according to service, much as I have done with mapping tables in the past. this saves a little space and accelerates many file calculations on large clients. if you have a client database script or patch that inspects 'current_files' or 'deleted_files', you'll now be looking at client_files_x etc.., where x is the service_id, and they obviously no longer have a service_id column</li>
+					<li>a new file storage database module manages these tables, and also some misc file deletion metadata</li>
+					<li>refactored all raw file storage updates, filters, and searches to the new module</li>
+					<li>the mappings and new file storage database modules are now responsible for various 'num files/mappings' metadata calculations</li>
+					<li>most file operations on smaller domains, typically trash or repository update files, will be significantly faster (since the much larger 'my files' table data isn't fattening the relevant indices, and worst case query planning is so much better)</li>
+					<li>cleaned up a ton of file domain filtering code as a result of all this</li>
+					<li>physical file deletion is now much faster when the client has many pending file uploads to a file repository or IPFS service</li>
+					<li>complicated duplicate file operations of many sorts should be a _little_ faster now, particularly on large clients</li>
+					<li>searching files with 'file import time' sort should be a little faster in many situations</li>
+					<li>tag repositories no longer bother going down to the database level to to see if they have any thumbnails to sync with</li>
+					<li>everyone also gets a local file id cache regen this week, it may take a few seconds on update</li>
+				</ul>
 				<li><h3 id="version_446"><a href="#version_446">version 446</a></h3></li>
 				<ul>
 					<li>misc:</li>

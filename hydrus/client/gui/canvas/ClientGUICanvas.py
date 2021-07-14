@@ -1819,11 +1819,20 @@ class CanvasPanel( Canvas ):
         self.ShowMenu()
         
     
+    def ClearMedia( self ):
+        
+        self._hidden_page_current_media = None
+        
+        Canvas.ClearMedia( self )
+        
+    
     def PageHidden( self ):
         
-        self._hidden_page_current_media = self._current_media
+        hidden_page_current_media = self._current_media
         
         self.ClearMedia()
+        
+        self._hidden_page_current_media = hidden_page_current_media
         
     
     def PageShown( self ):

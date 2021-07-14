@@ -174,6 +174,25 @@ class DuplicatesManager( object ):
                 
                 num_searched_estimate += num_done
                 
+                if num_searched_estimate > total_num_files:
+                    
+                    similar_files_maintenance_status = HG.client_controller.Read( 'similar_files_maintenance_status' )
+                    
+                    if similar_files_maintenance_status is None:
+                        
+                        break
+                        
+                    
+                    with self._lock:
+                        
+                        self._similar_files_maintenance_status = similar_files_maintenance_status
+                        
+                        searched_distances_to_count = self._similar_files_maintenance_status
+                        
+                        total_num_files = max( num_searched_estimate, sum( searched_distances_to_count.values() ) )
+                        
+                    
+                
                 text = 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
                 job_key.SetVariable( 'popup_text_1', text )
                 job_key.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
@@ -183,7 +202,7 @@ class DuplicatesManager( object ):
                     break
                     
                 
-                time.sleep( time_it_took ) # ideally 0.5s, but potentially longer
+                time.sleep( min( 5, time_it_took ) ) # ideally 0.5s, but potentially longer
                 
             
             job_key.Delete()

@@ -75,22 +75,48 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         self._CreateIndex( petitioned_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
         
     
-    def GetPendingCount( self, service_id ):
+    def GetCurrentFilesCount( self, service_id: int ) -> int:
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        result = self._c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM {};'.format( current_mappings_table_name ) ).fetchone()
+        
+        ( count, ) = result
+        
+        return count
+        
+    
+    def GetDeletedMappingsCount( self, service_id: int ) -> int:
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( deleted_mappings_table_name ) ).fetchone()
+        
+        ( count, ) = result
+        
+        return count
+        
+    
+    def GetPendingMappingsCount( self, service_id: int ) -> int:
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
         result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( pending_mappings_table_name ) ).fetchone()
         
-        if result is None:
-            
-            return 0
-            
-        else:
-            
-            ( count, ) = result
-            
-            return count
-            
+        ( count, ) = result
+        
+        return count
+        
+    
+    def GetPetitionedMappingsCount( self, service_id: int ) -> int:
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( petitioned_mappings_table_name ) ).fetchone()
+        
+        ( count, ) = result
+        
+        return count
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
