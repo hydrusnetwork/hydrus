@@ -20,21 +20,6 @@ body:
         required: true
 
     - type: dropdown
-      id: install_method
-      attributes:
-        label: Install method
-        description: Which install method did you use?
-        options:
-          - Linux executable
-          - MacOS app
-          - Windows extract
-          - Windows installer
-          - Running from source
-          - Third party (AUR, Docker, Chocolatey, etc. Specify in comments)
-      validations:
-        required: true
-
-    - type: dropdown
       id: os
       attributes:
         label: Operating system
@@ -48,6 +33,20 @@ body:
           - MacOS 10.15 "Catalina"
           - MacOS, older (Specify in comments)
           - Linux (Specify distro and version in comments)
+          - Other (aka none of the above, specify in the comments)
+      validations:
+        required: true
+
+    - type: dropdown
+      id: install_method
+      attributes:
+        label: Install method
+        description: Which install method did you use?
+        options:
+          - Installer
+          - Extract
+          - Running from source
+          - Third party (AUR, Docker, Chocolatey, etc. Specify in comments)
       validations:
         required: true
 
