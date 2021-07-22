@@ -1,0 +1,78 @@
+name: Bug report
+description: File a bug report
+title: "[Bug]: "
+labels: [bug]
+
+body:
+    - type: markdown
+      attributes:
+        value: |
+          # Bug report
+          Thanks for taking the time to file a bug report. Provide as much information as possible to help dev identify and solve the problem.
+
+    - type: input
+      id: hydrus_version
+      attributes:
+        label: Hydrus version
+        description: Your version of Hydrus. Kindly update to the latest version before filing a report.
+        placeholder: v447 or just 447 are both acceptable.
+      validations:
+        required: true
+
+    - type: dropdown
+      id: install_method
+      attributes:
+        label: Install method
+        description: Which install method did you use?
+        options:
+          - Linux executable
+          - MacOS app
+          - Windows extract
+          - Windows installer
+          - Running from source
+          - Third party (AUR, Docker, Chocolatey, etc. Specify in comments)
+      validations:
+        required: true
+
+    - type: dropdown
+      id: os
+      attributes:
+        label: Operating system
+        description: What operating system do you use?
+        options:
+          - Windows 10
+          - Windows 11
+          - Windows, older. (Specify in comments)
+          - MacOS 11 "Big Sur" x86
+          - MacOS 11 "Big Sur" ARM
+          - MacOS 10.15 "Catalina"
+          - MacOS, older (Specify in comments)
+          - Linux (Specify distro and version in comments)
+      validations:
+        required: true
+
+    - type: textarea
+      id: os_install
+      attributes:
+        label: Install and OS comments
+        description: Optional comments about OS and installation method
+
+    - type: textarea
+      id: bug_description
+      attributes:
+        label: Bug description and reproduction
+        description: Describe your issue in as much detail as you can. When did it happen? How did it happen? Does it keep happening? You can also post relevant text files or images here.
+        placeholder: | 
+          1. 
+          2. 
+          3. 
+          ...
+      validations:
+        required: true          
+
+    - type: textarea
+      id: logs
+      attributes:
+        label: Log output
+        description: Either copypaste relevant log sections here or upload the file in the bug description above.
+        render: shell
