@@ -48,7 +48,7 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           file: ./static/build_files/docker/client/Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/386,linux/arm/v7
+          platforms: linux/amd64,linux/386,linux/arm/v7,linux/arm64
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
 
@@ -97,6 +97,6 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           file: ./static/build_files/docker/server/Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/386,linux/arm/v7
+          platforms: linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
