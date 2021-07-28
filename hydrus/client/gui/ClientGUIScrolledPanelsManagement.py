@@ -1732,7 +1732,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
             self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
             self._idle_mode_client_api_timeout = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore client api' )
-            self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 5, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
+            self._system_busy_cpu_percent = QP.MakeQSpinBox( self._idle_panel, min = 5, max = 99 )
+            self._system_busy_cpu_count = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, min = 1, max = 64, unit = 'cores', none_phrase = 'ignore cpu usage' )
             
             #
             
@@ -1775,7 +1776,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_period.SetValue( HC.options['idle_period'] )
             self._idle_mouse_period.SetValue( HC.options['idle_mouse_period'] )
             self._idle_mode_client_api_timeout.SetValue( self._new_options.GetNoneableInteger( 'idle_mode_client_api_timeout' ) )
-            self._idle_cpu_max.SetValue( HC.options['idle_cpu_max'] )
+            self._system_busy_cpu_percent.setValue( self._new_options.GetInteger( 'system_busy_cpu_percent' ) )
+            self._system_busy_cpu_count.SetValue( self._new_options.GetNoneableInteger( 'system_busy_cpu_count' ) )
             
             self._idle_shutdown.SetValue( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.setValue( HC.options['idle_shutdown_max_minutes'] )
@@ -1807,7 +1809,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Permit idle mode if no general browsing activity has occurred in the past: ', self._idle_period ) )
             rows.append( ( 'Permit idle mode if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
             rows.append( ( 'Permit idle mode if no Client API requests in the past: ', self._idle_mode_client_api_timeout ) )
-            rows.append( ( 'Consider the system busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
+            
+            hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( hbox, self._system_busy_cpu_percent, CC.FLAGS_CENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._idle_panel, label = '% on ' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( hbox, self._system_busy_cpu_count, CC.FLAGS_CENTER )
+            
+            import psutil
+            
+            num_cores = psutil.cpu_count()
+            
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._idle_panel, label = '(you appear to have {} cores)'.format( num_cores ) ), CC.FLAGS_CENTER )
+            
+            rows.append( ( 'Consider the system busy if CPU usage is above: ', hbox ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
             
@@ -1878,6 +1893,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._EnableDisableIdleNormal()
             self._EnableDisableIdleShutdown()
             
+            self._system_busy_cpu_count.valueChanged.connect( self._EnableDisableCPUPercent )
+            
+        
+        def _EnableDisableCPUPercent( self ):
+            
+            enabled = self._system_busy_cpu_count.isEnabled() and self._system_busy_cpu_count.GetValue() is not None
+            
+            self._system_busy_cpu_percent.setEnabled( enabled )
+            
         
         def _EnableDisableIdleNormal( self ):
             
@@ -1886,7 +1910,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_period.setEnabled( enabled )
             self._idle_mouse_period.setEnabled( enabled )
             self._idle_mode_client_api_timeout.setEnabled( enabled )
-            self._idle_cpu_max.setEnabled( enabled )
+            self._system_busy_cpu_count.setEnabled( enabled )
+            
+            self._EnableDisableCPUPercent()
             
         
         def _EnableDisableIdleShutdown( self ):
@@ -1904,7 +1930,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'idle_period' ] = self._idle_period.GetValue()
             HC.options[ 'idle_mouse_period' ] = self._idle_mouse_period.GetValue()
             self._new_options.SetNoneableInteger( 'idle_mode_client_api_timeout', self._idle_mode_client_api_timeout.GetValue() )
-            HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
+            
+            self._new_options.SetInteger( 'system_busy_cpu_percent', self._system_busy_cpu_percent.value() )
+            self._new_options.SetNoneableInteger( 'system_busy_cpu_count', self._system_busy_cpu_count.GetValue() )
             
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetValue()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.value()

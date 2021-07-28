@@ -8,6 +8,50 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_448"><a href="#version_448">version 448</a></h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>/get_files/search_files now supports most system predicates! simply submit normal system predicate text in your taglist (check the expanded api help for a list of what is supported now) and they should be converted to proper system preds automatically. anything that doesn't parse will give 400 response. this is thanks to a user that submitted a system predicate parser a long time ago and which I did not catch up on until now. with this framework established, in future I will be able to add more predicate types and allow this parsing in normal autocomplete typing (issue #351)</li>
+					<li>this is a complicated system with many possible inputs and outputs! I have tried to convert all the object types over and fill out unit tests, but there are likely some typos or bad error handling for some unusual predicates. let me know what problems you run into, and I'll fix it up!</li>
+					<li>the old system_inbox and system_archive parameters on /get_files/search_files are now obselete. they still work, but I recommend you just use tags now. I'll deprecate them fully in future</li>
+					<li>/get_files/search_files now disables the implicit system limit that most clients apply to all searches (by default, 10,000), so if you ask for a million files, you'll (eventually) get it</li>
+					<li>a new call /manage_pages/add_files now allows you to add files to any media page, just like a file drag and drop</li>
+					<li>in the /get_files/file_metadata call, the tag lists in the different 'statuses' Objects are now human-sorted</li>
+					<li>added a link to https://github.com/floogulinc/hyextract to the client api help. this lets you extract from imported archives and reimport with tags and URLs</li>
+					<li>the client api is now ok if you POST with a utf-8 charset content-type "application/json;charset=utf-8"</li>
+					<li>the client api now tests the types of items within list parameters (e.g. file_ids should be a list of _integers_), raising an appropriate exception if they are incorrect</li>
+					<li>client api version is now 18</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>hydrus now supports wave (.wav) audio files! they play in mpv fine too</li>
+					<li>simple psd files now have thumbnails! complicated ones will get a stretched version of the old default psd filetype thumbnail, much like how flash works. all your psd files are queued up for thumbnail regen on update, so they should figure themselves out in the background. this is thanks to ffmpeg, which it turns out can handle simple psds!</li>
+					<li>vacuum returns as a manual operation. there's some new gui under _database->db maintenance->review vacuum data_. it talks about vacuum, shows current free space for each file, gives an estimate of how long vacuum will take, and allows you to launch vacuum on particular files</li>
+					<li>the 'maintenance and processing' option that checks CPU usage for 'system busy' status now lets you choose how many CPU cores must exceed the % value (previously, one core exceeding the value would cause 'busy'). maybe 4 > 25% is more useful than 1 > 50% in some situations?</li>
+					<li>removed the warning when updating from v411-v436. user reports and more study suggest this range was most likely ok in the end!</li>
+					<li>double-clicking the autocomplete tag list, or the current/pending/etc.. buttons, should now restore keyboard focus back to the text input afterwards, in float mode or not</li>
+					<li>the thumbnail 'remote services' menu, if you have file repositories or ipfs services, now appears on the top level, just below 'manage'</li>
+					<li>the file maintenance menu is shuffled up the 'database' menubar menu</li>
+					<li>fixed mr bones! I knew I was going to make a file status typo in 447, and he got it</li>
+					<li>in the downloader system, if a download object has any hashes, it now no longer consults urls for pre-import predictions. this saves a little time looking up urls and ensures that the logically stronger hashes take precedence over urls in all cases (previously, they only took precedence when a non-'looks new' status was found)</li>
+					<li>fixed an ugly bug in manage tag siblings/parents where tags imported from clipboard or .txt were not being cleaned, so all sorts of garbage with capital letters or leading spaces could be entered. all pairs are now cleaned, and anything invalid skipped over</li>
+					<li>the manage tag filter dialog now cleans all imported tag rules when using the 'import' button (issue #768)</li>
+					<li>the manage tag filter dialog now allows you to export the current tag filter with the export button</li>
+					<li>fixed the 'edit json parse rule' dialog layout so if you transition from a short display to a string match that has complicated controls, it should now expand properly to show them all</li>
+					<li>I think I fixed an odd bug where when uploading pending mappings while more mappings were being added, the x/y progress could accurately but unhelpfully continually reset to 0/y, with an ever-decreasing y until it was equal to the value it had at start. y should now always grow</li>
+					<li>hydrus servers now put their server header on a second header 'Hydrus-Server', which should allow them to be properly detectable through a proxy that overrides 'Server'</li>
+					<li>optimised a critical call in the tag mappings update database routine. for a service with many siblings and parents, I estimate repository processing is 2-7% faster</li>
+					<li>optimised the 'add/delete file' database routines in multiple ways, particularly when the file(s) have many deleted tags, and for the local file services, and when the client has multiple tag services</li>
+					<li>brushed up a couple of system predicate texts--things like num_pixels to 'number of pixels'</li>
+					<li>.</li>
+					<li>boring database refactoring:</li>
+					<li>repository update file tracking and service id normalisation is now pulled out to a new 'repositories' database module</li>
+					<li>file maintenance tracking and database-level file info updates is now pulled out to a new 'files maintenance' database module</li>
+					<li>analyse and vacuum tracking and information generation is now pulled out to a new 'db maintenance' database module</li>
+					<li>moved more commands to the 'similar files' module</li>
+					<li>the 'metadata regeneration' file maintenance job is now a little faster to save back to the database</li>
+					<li>cleared out some defunct/bad database code related to these two modules</li>
+					<li>misc code cleanup, particularly around the stuff I optimised this week</li>
+				</ul>
 				<li><h3 id="version_447"><a href="#version_447">version 447</a></h3></li>
 				<ul>
 					<li>misc:</li>

@@ -27,15 +27,15 @@ def CheckCanVacuumCursor( db_path, c, stop_time = None ):
     ( page_count, ) = c.execute( 'PRAGMA page_count;' ).fetchone()
     ( freelist_count, ) = c.execute( 'PRAGMA freelist_count;' ).fetchone()
     
-    db_size = ( page_count - freelist_count ) * page_size
+    CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_time = stop_time )
     
-    vacuum_estimate = int( db_size * 1.2 )
+def CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_time = None ):
+    
+    db_size = ( page_count - freelist_count ) * page_size
     
     if stop_time is not None:
         
-        approx_vacuum_speed_mb_per_s = 1048576 * 1
-        
-        approx_vacuum_duration = vacuum_estimate // approx_vacuum_speed_mb_per_s
+        approx_vacuum_duration = GetApproxVacuumDuration( db_size )
         
         time_i_will_have_to_start = stop_time - approx_vacuum_duration
         
@@ -47,7 +47,17 @@ def CheckCanVacuumCursor( db_path, c, stop_time = None ):
     
     db_dir = os.path.dirname( db_path )
     
-    HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, vacuum_estimate )
+    HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, db_size )
+    
+def GetApproxVacuumDuration( db_size ):
+    
+    vacuum_estimate = int( db_size * 1.2 )
+    
+    approx_vacuum_speed_mb_per_s = 1048576 * 1
+    
+    approx_vacuum_duration = vacuum_estimate // approx_vacuum_speed_mb_per_s
+    
+    return approx_vacuum_duration
     
 def GetRowCount( c: sqlite3.Cursor ):
     
@@ -827,30 +837,6 @@ class HydrusDB( object ):
         # strip singleton tuples to a set
         
         return { item for ( item, ) in iterable_cursor }
-        
-    
-    def _TableHasAtLeastRowCount( self, name, row_count ):
-        
-        cursor = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
-        
-        for i in range( row_count ):
-            
-            r = cursor.fetchone()
-            
-            if r is None:
-                
-                return False
-                
-            
-        
-        return True
-        
-    
-    def _TableIsEmpty( self, name ):
-        
-        result = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
-        
-        return result is None
         
     
     def _UnloadModules( self ):

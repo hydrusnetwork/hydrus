@@ -25,7 +25,6 @@ def GetClientDefaultOptions():
     options[ 'default_gui_session' ] = 'last session'
     options[ 'idle_period' ] = 60 * 30
     options[ 'idle_mouse_period' ] = 60 * 10
-    options[ 'idle_cpu_max' ] = 50
     options[ 'idle_normal' ] = True
     options[ 'idle_shutdown' ] = CC.IDLE_ON_SHUTDOWN_ASK_FIRST
     options[ 'idle_shutdown_max_minutes' ] = 5

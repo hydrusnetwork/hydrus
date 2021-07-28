@@ -353,6 +353,10 @@ def GetMime( path ):
         
         return HC.AUDIO_FLAC
         
+    elif mime_text == 'wav':
+        
+        return HC.AUDIO_WAVE
+        
     elif mime_text == 'mp3':
         
         return HC.AUDIO_MP3
@@ -407,6 +411,50 @@ def HasVideoStream( path ):
     lines = GetFFMPEGInfoLines( path )
     
     return ParseFFMPEGHasVideo( lines )
+    
+def RenderImageToPNGPath( path, temp_png_path ):
+    
+    # -y to overwrite the temp path
+    cmd = [ FFMPEG_PATH, '-y', "-i", path, temp_png_path ]
+    
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
+    try:
+        
+        process = subprocess.Popen( cmd, bufsize = 10**5, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        
+    except FileNotFoundError as e:
+        
+        global FFMPEG_MISSING_ERROR_PUBBED
+        
+        if not FFMPEG_MISSING_ERROR_PUBBED:
+            
+            message = 'FFMPEG, which hydrus uses to parse and render video, was not found! This may be due to it not being available on your system, or hydrus being unable to find it.'
+            message += os.linesep * 2
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                message += 'You are on Windows, so there should be a copy of ffmpeg.exe in your install_dir/bin folder. If not, please check if your anti-virus has removed it and restore it through a new install.'
+                
+            else:
+                
+                message += 'If you are certain that FFMPEG is installed on your OS and accessible in your PATH, please let hydrus_dev know, as this problem is likely due to an environment problem. You may be able to solve this problem immediately by putting a static build of the ffmpeg executable in your install_dir/bin folder.'
+                
+            
+            message += os.linesep * 2
+            message += 'You can check your current FFMPEG status through help->about.'
+            
+            HydrusData.ShowText( message )
+            
+            FFMPEG_MISSING_ERROR_PUBBED = True
+            
+        
+        raise FileNotFoundError( 'Cannot interact with video because FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
+        
+    
+    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
     
 def ParseFFMPEGDuration( lines ):
     

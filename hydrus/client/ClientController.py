@@ -740,7 +740,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
+        self.Write( 'register_shutdown_work' )
         
     
     def Exit( self ):
@@ -1935,9 +1935,10 @@ class Controller( HydrusController.HydrusController ):
             return False
             
         
-        max_cpu = self.options[ 'idle_cpu_max' ]
+        system_busy_cpu_percent = self.new_options.GetInteger( 'system_busy_cpu_percent' )
+        system_busy_cpu_count = self.new_options.GetNoneableInteger( 'system_busy_cpu_count' )
         
-        if max_cpu is None:
+        if system_busy_cpu_count is None:
             
             self._system_busy = False
             
@@ -1947,7 +1948,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 cpu_times = psutil.cpu_percent( percpu = True )
                 
-                if True in ( cpu_time > max_cpu for cpu_time in cpu_times ):
+                if len( [ 1 for cpu_time in cpu_times if cpu_time > system_busy_cpu_percent ] ) >= system_busy_cpu_count:
                     
                     self._system_busy = True
                     

@@ -1199,7 +1199,7 @@ class ServiceRestricted( ServiceRemote ):
             
             content_type = network_job.GetContentType()
             
-            if content_type == 'application/json':
+            if content_type is not None and content_type.startswith( 'application/json' ):
                 
                 parsed_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
                 

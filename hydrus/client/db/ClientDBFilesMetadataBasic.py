@@ -123,6 +123,18 @@ class ClientDBFilesMetadataBasic( HydrusDBModule.HydrusDBModule ):
         return sum( ( 1 for mime in result if mime in HC.SEARCHABLE_MIMES ) )
         
     
+    def GetResolution( self, hash_id: int ):
+        
+        result = self._c.execute( 'SELECT width, height FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            return ( None, None )
+            
+        
+        return result
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         if HC.CONTENT_TYPE_HASH:

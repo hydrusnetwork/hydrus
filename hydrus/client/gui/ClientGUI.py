@@ -218,6 +218,7 @@ def THREADUploadPending( service_key ):
             
         
         initial_num_pending = sum( nums_pending_for_this_service.values() )
+        num_to_do = initial_num_pending
         
         result = HG.client_controller.Read( 'pending', service_key, content_types_to_request )
         
@@ -234,12 +235,12 @@ def THREADUploadPending( service_key ):
             remaining_num_pending = sum( nums_pending_for_this_service.values() )
             
             # sometimes more come in while we are pending, -754/1,234 ha ha
-            num_to_do = max( initial_num_pending, remaining_num_pending )
+            num_to_do = max( num_to_do, remaining_num_pending )
             
-            done_num_pending = num_to_do - remaining_num_pending
+            num_done = num_to_do - remaining_num_pending
             
-            job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( done_num_pending, num_to_do ) )
-            job_key.SetVariable( 'popup_gauge_1', ( done_num_pending, num_to_do ) )
+            job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+            job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
             
             while job_key.IsPaused() or job_key.IsCancelled():
                 
@@ -3914,6 +3915,42 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         frame.SetPanel( panel )
         
     
+    def _ReviewVacuumData( self ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        def work_callable():
+            
+            vacuum_data = self._controller.Read( 'vacuum_data' )
+            
+            return vacuum_data
+            
+        
+        def publish_callable( vacuum_data ):
+            
+            if job_key.IsCancelled():
+                
+                return
+                
+            
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review vacuum data' )
+            
+            panel = ClientGUIScrolledPanelsReview.ReviewVacuumData( frame, self._controller, vacuum_data )
+            
+            frame.SetPanel( panel )
+            
+            job_key.Delete()
+            
+        
+        job_key.SetVariable( 'popup_text_1', 'loading database data' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
+        
+    
     def _RunExportFolder( self, name = None ):
         
         if self._controller.options[ 'pause_export_folders_sync' ]:
@@ -4172,8 +4209,29 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     self.ProposeSaveGUISession( 'last session' )
                     
+                    page = self._notebook.NewPageQuery( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    return page.GetPageKey()
+                    
                 
-                HG.client_controller.CallBlockingToQt( HG.client_controller.gui, qt_session_gubbins )
+                page_key = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, qt_session_gubbins )
+                
+                #
+                
+                request_args = {}
+                
+                request_args[ 'page_key' ] = page_key.hex()
+                request_args[ 'hashes' ] = [ '78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538' ]
+                
+                data = json.dumps( request_args )
+                
+                r = s.post( '{}/manage_pages/add_files'.format( api_base ), data = data )
+                
+                time.sleep( 0.25 )
+                
+                r = s.post( '{}/manage_pages/add_files'.format( api_base ), data = data )
+                
+                time.sleep( 0.25 )
                 
             finally:
                 
@@ -5523,9 +5581,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            submenu = QW.QMenu( menu )
-            
-            file_maintenance_menu = QW.QMenu( submenu )
+            file_maintenance_menu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'manage scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
             ClientGUIMenus.AppendSeparator( file_maintenance_menu )
@@ -5544,67 +5600,69 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
             
-            ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'files' )
+            ClientGUIMenus.AppendMenu( menu, file_maintenance_menu, 'file maintenance' )
             
-            #ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
-            ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+            maintenance_submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendSeparator( submenu )
+            ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+            ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'review vacuum data', 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+            ClientGUIMenus.AppendSeparator( maintenance_submenu )
+            
+            ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
+            ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
             
             if self._controller.new_options.GetBoolean( 'advanced_mode' ):
                 
-                ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
+                ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
                 
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan hashed serialisables', 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
+            ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan hashed serialisables', 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'maintainance' )
+            ClientGUIMenus.AppendMenu( menu, maintenance_submenu, 'db maintenance' )
             
-            submenu = QW.QMenu( menu )
+            check_submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
-            ClientGUIMenus.AppendMenuItem( submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
-            ClientGUIMenus.AppendMenuItem( submenu, 'fix logically inconsistent mappings', 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
-            ClientGUIMenus.AppendMenuItem( submenu, 'fix invalid tags', 'Scan the database for invalid tags.', self._RepairInvalidTags )
+            ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
+            ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
+            ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings', 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
+            ClientGUIMenus.AppendMenuItem( check_submenu, 'fix invalid tags', 'Scan the database for invalid tags.', self._RepairInvalidTags )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'check and repair' )
+            ClientGUIMenus.AppendMenu( menu, check_submenu, 'check and repair' )
             
-            submenu = QW.QMenu( menu )
+            regen_submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'total pending count, in the pending menu', 'Regenerate the pending count up top.', self._DeleteServiceInfo, only_pending = True )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache (all, with deferred siblings & parents calculation)', 'Delete and recreate the tag mappings cache, fixing bad tags or miscounts.', self._RegenerateTagMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag storage mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagPendingMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache (subtags repopulation)', 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
-            ClientGUIMenus.AppendMenuItem( submenu, 'tag text search cache (searchable subtag maps)', 'Regenerate the searchable subtag maps.', self._RegenerateTagCacheSearchableSubtagsMaps )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'total pending count, in the pending menu', 'Regenerate the pending count up top.', self._DeleteServiceInfo, only_pending = True )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (all, with deferred siblings & parents calculation)', 'Delete and recreate the tag mappings cache, fixing bad tags or miscounts.', self._RegenerateTagMappingsCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagPendingMappingsCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (subtags repopulation)', 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (searchable subtag maps)', 'Regenerate the searchable subtag maps.', self._RegenerateTagCacheSearchableSubtagsMaps )
             
-            ClientGUIMenus.AppendSeparator( submenu )
+            ClientGUIMenus.AppendSeparator( regen_submenu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'local hash cache', 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hash cache', 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
             
-            ClientGUIMenus.AppendSeparator( submenu )
+            ClientGUIMenus.AppendSeparator( regen_submenu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
-            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+            ClientGUIMenus.AppendMenuItem( regen_submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
+            ClientGUIMenus.AppendMenu( menu, regen_submenu, 'regenerate' )
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            submenu = QW.QMenu( menu )
+            file_viewing_submenu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
-            ClientGUIMenus.AppendMenuItem( submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
+            ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+            ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
+            ClientGUIMenus.AppendMenu( menu, file_viewing_submenu, 'file viewing statistics' )
             
             return ( menu, '&database' )
             
@@ -6493,6 +6551,11 @@ Try to keep this below 10 million!'''
             
         
         return mpv_widget
+        
+    
+    def GetPageFromPageKey( self, page_key ):
+        
+        return self._notebook.GetPageFromPageKey( page_key )
         
     
     def GetPageAPIInfoDict( self, page_key, simple ):
@@ -7542,7 +7605,7 @@ Try to keep this below 10 million!'''
                             else:
                                 
                                 # if they said no, don't keep asking
-                                self._controller.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
+                                self._controller.Write( 'register_shutdown_work' )
                                 
                             
                         

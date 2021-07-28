@@ -1662,7 +1662,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '<'
+        sign = 'wider than'
         width = 16
         height = 9
         

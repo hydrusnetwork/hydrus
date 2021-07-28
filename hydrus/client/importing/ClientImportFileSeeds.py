@@ -387,9 +387,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> ClientImportFiles.FileImportStatus:
         
+        hash_match_found = False
+        
         if file_import_options.DoNotCheckHashesBeforeImporting() or len( self._hashes ) == 0:
             
-            return ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+            return ( hash_match_found, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
         
         # hashes
@@ -417,6 +419,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             file_import_status = HG.client_controller.Read( 'hash_status', hash_type, found_hash, prefix = '{} hash recognised'.format( hash_type ) )
             
+            hash_match_found = True
+            
             file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
             
             if first_result is None:
@@ -426,18 +430,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if not file_import_status.ShouldImport( file_import_options ):
                 
-                return file_import_status
+                return ( hash_match_found, file_import_status )
                 
             
         
         # we do first_result gubbins rather than generating a fresh unknown one to capture correct sha256 hash and mime if db provided it
         if first_result is None:
             
-            return ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+            return ( hash_match_found, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
         else:
             
-            return first_result
+            return ( hash_match_found, first_result )
             
         
     
@@ -725,16 +729,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def PredictPreImportStatus( self, file_import_options: FileImportOptions.FileImportOptions, tag_import_options: TagImportOptions.TagImportOptions, file_url = None ):
         
-        url_file_import_status = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
-        hash_file_import_status = self.GetPreImportStatusPredictionHash( file_import_options )
+        ( hash_match_found, hash_file_import_status ) = self.GetPreImportStatusPredictionHash( file_import_options )
         
         # now let's set the prediction
         
-        if not hash_file_import_status.ShouldImport( file_import_options ): # trust hashes over urls m8
+        url_file_import_status = None
+        
+        if hash_match_found: # trust hashes over urls m8
             
             file_import_status = hash_file_import_status
             
         else:
+            
+            url_file_import_status = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
             
             file_import_status = url_file_import_status
             
@@ -748,7 +755,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         # but if we otherwise still want to force some tags, let's do it
         if not should_download_metadata and tag_import_options.WorthFetchingTags():
             
-            url_override = url_file_import_status.AlreadyInDB() and tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+            url_override = False
+            
+            if tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB():
+                
+                if url_file_import_status is None:
+                    
+                    url_file_import_status = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
+                    
+                    url_file_import_status.AlreadyInDB()
+                    
+                
+            
             hash_override = hash_file_import_status.AlreadyInDB() and tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB()
             
             if url_override or hash_override:

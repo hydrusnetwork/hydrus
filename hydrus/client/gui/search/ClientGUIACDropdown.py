@@ -916,6 +916,20 @@ class AutoCompleteDropdown( QW.QWidget ):
         raise NotImplementedError()
         
     
+    def _RestoreTextCtrlFocus( self ):
+        
+        # if an event came from clicking the dropdown, we want to put focus back on textctrl
+        
+        if self._float_mode:
+            
+            self.window().activateWindow()
+            
+        else:
+            
+            ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+            
+        
+    
     def _ScheduleResultsRefresh( self, delay ):
         
         if self._schedule_results_refresh_job is not None:
@@ -1042,6 +1056,8 @@ class AutoCompleteDropdown( QW.QWidget ):
     def BroadcastChoices( self, predicates, shift_down = False ):
         
         self._BroadcastChoices( predicates, shift_down )
+        
+        self._RestoreTextCtrlFocus()
         
     
     def CancelCurrentResultsFetchJob( self ):
@@ -1520,6 +1536,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         CGC.core().PopupMenu( self._file_repo_button, menu )
         
+        self._RestoreTextCtrlFocus()
+        
     
     def NotifyNewServices( self ):
         
@@ -1570,6 +1588,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
         CGC.core().PopupMenu( self._tag_repo_button, menu )
+        
+        self._RestoreTextCtrlFocus()
         
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
@@ -2195,6 +2215,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._SignalNewSearchState()
         
+        self._RestoreTextCtrlFocus()
+        
     
     def SetIncludePending( self, value ):
         
@@ -2204,15 +2226,21 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._SignalNewSearchState()
         
+        self._RestoreTextCtrlFocus()
+        
     
     def SetSynchronised( self, value ):
         
         self._SignalNewSearchState()
         
+        self._RestoreTextCtrlFocus()
+        
     
     def PausePlaySearch( self ):
         
         self._search_pause_play.Flip()
+        
+        self._RestoreTextCtrlFocus()
         
     
     def ShowCancelSearchButton( self, show ):

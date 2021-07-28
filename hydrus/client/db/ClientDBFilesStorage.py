@@ -564,9 +564,9 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
+        tables_and_columns = []
+        
         if HC.CONTENT_TYPE_HASH:
-            
-            tables_and_columns = []
             
             for service_id in self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES ):
                 
@@ -580,10 +580,8 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
                 ] )
                 
             
-            return tables_and_columns
-            
         
-        return []
+        return tables_and_columns
         
     
     def GetUndeleteRows( self, service_id, hash_ids ):

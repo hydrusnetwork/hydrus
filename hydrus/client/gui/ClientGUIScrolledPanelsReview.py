@@ -3413,3 +3413,174 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
+class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller, vacuum_data ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._controller = controller
+        self._vacuum_data = vacuum_data
+        
+        self._currently_vacuuming = False
+        
+        #
+        
+        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The content of the database is copied to a new file, which then has tightly packed pages and no empty 'free' pages.
+
+Because the new database is tightly packed, it will generally be smaller than the original file. This is currently the only way to truncate a hydrus database file.
+
+Vacuuming is an expensive operation. It requires lots of free space on your drive(s), hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it on files with a lot of free space.'''
+        
+        st = ClientGUICommon.BetterStaticText( self, label = info_message )
+        
+        st.setWordWrap( True )
+        
+        vacuum_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrl( vacuum_listctrl_panel, CGLC.COLUMN_LIST_VACUUM_DATA.ID, 6, self._ConvertNameToListCtrlTuples )
+        
+        vacuum_listctrl_panel.SetListCtrl( self._vacuum_listctrl )
+        
+        vacuum_listctrl_panel.AddButton( 'vacuum', self._Vacuum, enabled_check_func = self._CanVacuum )
+        
+        #
+        
+        self._vacuum_listctrl.SetData( list( self._vacuum_data.keys() ) )
+        
+        self._vacuum_listctrl.Sort()
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, vacuum_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _CanVacuumName( self, name ):
+        
+        from hydrus.core import HydrusDB
+        
+        try:
+            
+            vacuum_dict = self._vacuum_data[ name ]
+            
+            path = vacuum_dict[ 'path' ]
+            page_size = vacuum_dict[ 'page_size' ]
+            page_count = vacuum_dict[ 'page_count' ]
+            freelist_count = vacuum_dict[ 'freelist_count' ]
+            
+            HydrusDB.CheckCanVacuumData( path, page_size, page_count, freelist_count )
+            
+        except Exception as e:
+            
+            return ( False, str( e ) )
+            
+        
+        return ( True, 'yes!' )
+        
+    
+    def _CanVacuum( self ):
+        
+        names = self._vacuum_listctrl.GetData( only_selected = True )
+        
+        if len( names ) == 0:
+            
+            return False
+            
+        
+        for name in names:
+            
+            ( result, info ) = self._CanVacuumName( name )
+            
+            if not result:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def _ConvertNameToListCtrlTuples( self, name ):
+        
+        vacuum_dict = self._vacuum_data[ name ]
+        
+        page_size = vacuum_dict[ 'page_size' ]
+        
+        sort_name = name
+        pretty_name = name
+        
+        sort_total_size = page_size * vacuum_dict[ 'page_count' ]
+        pretty_total_size = HydrusData.ToHumanBytes( sort_total_size )
+        
+        sort_free_size = page_size * vacuum_dict[ 'freelist_count' ]
+        pretty_free_size = HydrusData.ToHumanBytes( sort_free_size )
+        
+        if sort_total_size > 0:
+            
+            pretty_free_size = '{} ({})'.format( pretty_free_size, HydrusData.ConvertFloatToPercentage( sort_free_size / sort_total_size ) )
+            
+        
+        sort_last_vacuumed = vacuum_dict[ 'last_vacuumed' ]
+        
+        if sort_last_vacuumed == 0 or sort_last_vacuumed is None:
+            
+            sort_last_vacuumed = 0
+            pretty_last_vacuumed = 'never done'
+            
+        else:
+            
+            pretty_last_vacuumed = HydrusData.TimestampToPrettyTimeDelta( sort_last_vacuumed )
+            
+        
+        ( result, info ) = self._CanVacuumName( name )
+        
+        sort_can_vacuum = result
+        pretty_can_vacuum = info
+        
+        ( sort_vacuum_time_estimate, pretty_vacuum_time_estimate ) = self._GetVacuumTimeEstimate( sort_total_size )
+        
+        display_tuple = ( pretty_name, pretty_total_size, pretty_free_size, pretty_last_vacuumed, pretty_can_vacuum, pretty_vacuum_time_estimate )
+        sort_tuple = ( sort_name, sort_total_size, sort_free_size, sort_last_vacuumed, sort_can_vacuum, sort_vacuum_time_estimate )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _GetVacuumTimeEstimate( self, db_size ):
+        
+        from hydrus.core import HydrusDB
+        
+        vacuum_time_estimate = HydrusDB.GetApproxVacuumDuration( db_size )
+        
+        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 40 ), HydrusData.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
+        
+        return ( vacuum_time_estimate, pretty_vacuum_time_estimate )
+        
+    
+    def _Vacuum( self ):
+        
+        names = list( self._vacuum_listctrl.GetData( only_selected = True ) )
+        
+        if len( names ) > 0:
+            
+            total_size = sum( ( vd[ 'page_size' ] * vd[ 'page_count' ] for vd in ( self._vacuum_data[ name ] for name in names ) ) )
+            
+            ( sort_time_estimate, pretty_time_estimate ) = self._GetVacuumTimeEstimate( total_size )
+            
+            message = 'Do vacuum now? Estimated time to vacuum is {}.'.format( pretty_time_estimate )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result == QW.QDialog.Accepted:
+                
+                self._controller.Write( 'vacuum', names )
+                
+                self._OKParent()
+                
+            
+        
+    

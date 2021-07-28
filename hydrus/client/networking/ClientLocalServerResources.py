@@ -22,6 +22,7 @@ from hydrus.core.networking import HydrusServerResources
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
+from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -131,6 +132,12 @@ def ParseClientAPIPOSTArgs( request ):
         
         content_type = content_types[0]
         
+        if ';' in content_type:
+            
+            # lmao: application/json;charset=utf-8
+            content_type = content_type.split( ';', 1 )[0]
+            
+        
         try:
             
             mime = HC.mime_enum_lookup[ content_type ]
@@ -196,18 +203,24 @@ def ParseClientAPISearchPredicates( request ):
     system_inbox = request.parsed_request_args[ 'system_inbox' ]
     system_archive = request.parsed_request_args[ 'system_archive' ]
     
+    system_predicate_strings = [ tag for tag in tags if tag.startswith( 'system:' ) ]
+    tags = [ tag for tag in tags if not tag.startswith( 'system:' ) ]
+    
     negated_tags = [ tag for tag in tags if tag.startswith( '-' ) ]
     tags = [ tag for tag in tags if not tag.startswith( '-' ) ]
     
     negated_tags = HydrusTags.CleanTags( negated_tags )
     tags = HydrusTags.CleanTags( tags )
     
+    # check positive tags, not negative!
     request.client_api_permissions.CheckCanSearchTags( tags )
     
     search_tags = [ ( True, tag ) for tag in tags ]
     search_tags.extend( ( ( False, tag ) for tag in negated_tags ) )
     
     predicates = []
+    
+    predicates.extend( ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( system_predicate_strings ) )
     
     for ( inclusive, tag ) in search_tags:
         
@@ -598,7 +611,7 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
         
         name = request.parsed_request_args.GetValue( 'name', str )
         
-        basic_permissions = request.parsed_request_args.GetValue( 'basic_permissions', list )
+        basic_permissions = request.parsed_request_args.GetValue( 'basic_permissions', list, expected_list_type = int )
         
         basic_permissions = [ int( value ) for value in basic_permissions ]
         
@@ -914,7 +927,7 @@ class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClien
         
         if 'hashes' in request.parsed_request_args:
             
-            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             hashes.update( more_hashes )
             
@@ -948,7 +961,7 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
         
         if 'hashes' in request.parsed_request_args:
             
-            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             hashes.update( more_hashes )
             
@@ -984,7 +997,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceCli
         
         if 'hashes' in request.parsed_request_args:
             
-            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             hashes.update( more_hashes )
             
@@ -1018,7 +1031,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
         
         if 'hashes' in request.parsed_request_args:
             
-            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             hashes.update( more_hashes )
             
@@ -1061,7 +1074,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
         
         if 'hashes' in request.parsed_request_args:
             
-            more_hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            more_hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             hashes.update( more_hashes )
             
@@ -1243,7 +1256,7 @@ class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPI
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        tags = request.parsed_request_args.GetValue( 'tags', list )
+        tags = request.parsed_request_args.GetValue( 'tags', list, expected_list_type = str )
         
         tags = list( HydrusTags.CleanTags( tags ) )
         
@@ -1282,7 +1295,7 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
         
         if 'urls_to_add' in request.parsed_request_args:
             
-            urls = request.parsed_request_args.GetValue( 'urls_to_add', list )
+            urls = request.parsed_request_args.GetValue( 'urls_to_add', list, expected_list_type = str )
             
             for url in urls:
                 
@@ -1306,7 +1319,7 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
         
         if 'urls_to_delete' in request.parsed_request_args:
             
-            urls = request.parsed_request_args.GetValue( 'urls_to_delete', list )
+            urls = request.parsed_request_args.GetValue( 'urls_to_delete', list, expected_list_type = str )
             
             for url in urls:
                 
@@ -1346,7 +1359,7 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
         
         if 'hashes' in request.parsed_request_args:
             
-            hashes = request.parsed_request_args.GetValue( 'hashes', list )
+            hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             applicable_hashes.extend( hashes )
             
@@ -1473,7 +1486,7 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
             
             request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
             
-            filterable_tags = request.parsed_request_args.GetValue( 'filterable_tags', list )
+            filterable_tags = request.parsed_request_args.GetValue( 'filterable_tags', list, expected_list_type = str )
             
             filterable_tags = HydrusTags.CleanTags( filterable_tags )
             
@@ -1578,7 +1591,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
         # newest first
         sort_by = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), sort_order = CC.SORT_DESC )
         
-        hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by )
+        hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by, apply_implicit_limit = False )
         
         request.client_api_permissions.SetLastSearchResults( hash_ids )
         
@@ -1656,7 +1669,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
             if 'file_ids' in request.parsed_request_args:
                 
-                file_ids = request.parsed_request_args.GetValue( 'file_ids', list )
+                file_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
                 
                 request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
                 
@@ -1673,7 +1686,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 request.client_api_permissions.CheckCanSeeAllFiles()
                 
-                hashes = request.parsed_request_args.GetValue( 'hashes', list )
+                hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
                 
                 if only_return_identifiers:
                     
@@ -1782,7 +1795,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
                         
                     
-                    statuses_to_tags_json_serialisable = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
+                    statuses_to_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
                     
                     if len( statuses_to_tags_json_serialisable ) > 0:
                         
@@ -1809,7 +1822,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     
                     service_name = service_keys_to_names[ service_key ]
                     
-                    service_names_to_statuses_to_tags[ service_name ] = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() }
+                    service_names_to_statuses_to_tags[ service_name ] = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() }
                     
                 
                 metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
@@ -2092,6 +2105,67 @@ class HydrusResourceClientAPIRestrictedManagePages( HydrusResourceClientAPIRestr
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES )
+        
+    
+class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        def do_it( page_key, media_results ):
+            
+            page = HG.client_controller.gui.GetPageFromPageKey( page_key )
+            
+            from hydrus.client.gui.pages import ClientGUIPages
+            
+            if page is None:
+                
+                raise HydrusExceptions.DataMissing()
+                
+            
+            if not isinstance( page, ClientGUIPages.Page ):
+                
+                raise HydrusExceptions.BadRequestException( 'That page key was not for a normal media page!' )
+                
+            
+            page.AddMediaResults( media_results )
+            
+        
+        if 'page_key' not in request.parsed_request_args:
+            
+            raise HydrusExceptions.BadRequestException( 'You need a page key for this request!' )
+            
+        
+        page_key = request.parsed_request_args.GetValue( 'page_key', bytes )
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes )
+            
+        elif 'file_ids' in request.parsed_request_args:
+            
+            hash_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+            
+            media_results = HG.client_controller.Read( 'media_results_from_ids', hash_ids )
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'You need hashes or hash_ids for this request!' )
+            
+        
+        try:
+            
+            HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it, page_key, media_results )
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that page!' )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
         
     
 class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClientAPIRestrictedManagePages ):

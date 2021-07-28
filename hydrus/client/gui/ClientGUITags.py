@@ -991,15 +991,15 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu = QW.QMenu()
         
-        if len( names_to_tag_filters ) == 0:
+        ClientGUIMenus.AppendMenuItem( menu, 'this tag filter', 'export this tag filter', HG.client_controller.pub, 'clipboard', 'text', self.GetValue().DumpToString() )
+        
+        if len( names_to_tag_filters ) > 0:
             
-            ClientGUIMenus.AppendMenuLabel( menu, 'no favourites set!' )
-            
-        else:
+            ClientGUIMenus.AppendSeparator( menu )
             
             for ( name, tag_filter ) in names_to_tag_filters.items():
                 
-                ClientGUIMenus.AppendMenuItem( menu, name, 'load {}'.format( name ), HG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
+                ClientGUIMenus.AppendMenuItem( menu, name, 'export {}'.format( name ), HG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
                 
             
         
@@ -1053,6 +1053,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         tag_filter = obj
+        
+        tag_filter.CleanRules()
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the favourite.' ) as dlg:
             
@@ -3321,7 +3323,17 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             for i in range( len( tags ) // 2 ):
                 
-                pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
+                try:
+                    
+                    pair = (
+                        HydrusTags.CleanTag( tags[ 2 * i ] ),
+                        HydrusTags.CleanTag( tags[ ( 2 * i ) + 1 ] )
+                    )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 pairs.append( pair )
                 
@@ -4320,7 +4332,17 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             for i in range( len( tags ) // 2 ):
                 
-                pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
+                try:
+                    
+                    pair = (
+                        HydrusTags.CleanTag( tags[ 2 * i ] ),
+                        HydrusTags.CleanTag( tags[ ( 2 * i ) + 1 ] )
+                    )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 pairs.append( pair )
                 

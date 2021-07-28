@@ -386,6 +386,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'ac_read_list_height_num_chars' ] = 19
         self._dictionary[ 'integers' ][ 'ac_write_list_height_num_chars' ] = 11
         
+        self._dictionary[ 'integers' ][ 'system_busy_cpu_percent' ] = 50
+        
         #
         
         self._dictionary[ 'keys' ] = {}
@@ -419,6 +421,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'media_viewer_cursor_autohide_time_ms' ] = 700
         
         self._dictionary[ 'noneable_integers' ][ 'idle_mode_client_api_timeout' ] = None
+        
+        self._dictionary[ 'noneable_integers' ][ 'system_busy_cpu_count' ] = 1
         
         #
         

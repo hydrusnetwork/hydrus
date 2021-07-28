@@ -1600,6 +1600,22 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetURLClassFromName( self, name ):
+        
+        with self._lock:
+            
+            for url_class in self._url_classes:
+                
+                if url_class.GetName() == name:
+                    
+                    return url_class
+                    
+                
+            
+        
+        raise HydrusExceptions.DataMissing( 'Did not find URL Class called "{}"!'.format( name ) )
+        
+    
     def GetURLClassHeaders( self, url ):
         
         with self._lock:

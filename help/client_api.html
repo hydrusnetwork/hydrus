@@ -24,6 +24,7 @@
                                 <li><a href="https://github.com/GoAwayNow/Iwara-Hydrus">https://github.com/GoAwayNow/Iwara-Hydrus</a> - Iwara-Hydrus, a userscript to simplify sending Iwara videos to Hydrus Network</li>
 				<li><a href="https://gitgud.io/koto/hydrus-archive-delete">https://gitgud.io/koto/hydrus-archive-delete</a> - Archive/Delete filter in your web browser</li>
 				<li><a href="https://gitgud.io/koto/hydrus-dd">https://gitgud.io/koto/hydrus-dd</a> - DeepDanbooru neural network tagging for Hydrus</li>
+                                <li><a href="https://github.com/floogulinc/hyextract">https://github.com/floogulinc/hyextract</a> - Extract archives from Hydrus and reimport with tags and URL associations</li>
 				<li><a href="https://gitgud.io/prkc/dolphin-hydrus-actions">https://gitgud.io/prkc/dolphin-hydrus-actions</a> - Adds Hydrus right-click context menu actions to Dolphin file manager.</li>
 			</ul>
 			<h3 id="modules"><a href="#modules">Library modules created by hydrus users:</a></h3>
@@ -88,6 +89,7 @@
 					<ul>
 						<li><a href="#manage_pages_get_pages">GET /manage_pages/get_pages</a></li>
 						<li><a href="#manage_pages_get_page_info">GET /manage_pages/get_page_info</a></li>
+						<li><a href="#manage_pages_add_files">POST /manage_pages/add_files</a></li>
 						<li><a href="#manage_pages_focus_page">POST /manage_pages/focus_page</a></li>
 					</ul>
 					<h4><a href="#searching_files">Searching and Fetching Files</a></h4>
@@ -1047,6 +1049,40 @@
 				</ul>
 			</div>
 			<div class="apiborder">
+				<h3 id="manage_pages_add_files"><a href="#manage_pages_add_files"><b>POST /manage_pages/add_files</b></a></h3>
+				<p><i>Add files to a page.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Pages permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in JSON):</p>
+						<ul>
+							<li>page_key : (the page key for the page you wish to add files to)</li>
+							<li>file_ids : (selective, a list of numerical file ids)</li>
+							<li>hashes : (selective, a list of hexadecimal SHA256 hashes)</li>
+						</ul>
+					</li>
+					<p>You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the <a href="#manage_pages_get_pages">/manage_pages/get_pages</a> call.</p>
+					<li>
+						<p>Example request body:</p>
+						<ul>
+							<li>
+<pre>{
+	"page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+	"file_ids" : [ 123, 124, 125 ]
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<li><p>Response description: 200 with no content. If the page key is not found, this will 404.</p></li>
+				</ul>
+			</div>
+			<div class="apiborder">
 				<h3 id="manage_pages_focus_page"><a href="#manage_pages_focus_page"><b>POST /manage_pages/focus_page</b></a></h3>
 				<p><i>'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made.</i></p>
 				<ul>
@@ -1089,18 +1125,92 @@
 						<p>Arguments (in percent-encoded JSON):</p>
 						<ul>
 							<li>tags : (a list of tags you wish to search for)</li>
-							<li>system_inbox : true or false (optional, defaulting to false)</li>
-							<li>system_archive : true or false (optional, defaulting to false)</li>
+							<li><i>system_inbox : true or false (obsolete, use tags)</i></li>
+							<li><i>system_archive : true or false (obsolete, use tags)</i></li>
 						</ul>
 					</li>
 					<li>
-						<p>Example request for all files in the inbox with tags "blue eyes", "blonde hair", and "&#1082;&#1080;&#1085;&#1086;":</p>
+						<p>Example request for 16 files (system:limit=16) in the inbox with tags "blue eyes", "blonde hair", and "&#1082;&#1080;&#1085;&#1086;":</p>
 						<ul>
-							<li><p>/get_files/search_files?system_inbox=true&tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%5D</p></li>
+							<li><p>/get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D</p></li>
 						</ul>
 					</li>
 					<p>If the access key's permissions only permit search for certain tags, at least one whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.</p>
-                                        <p>Wildcards and namespace searches are now supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.</p>
+					<p>Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.</p>
+					<p>Many system predicates are also supported using a text parser! The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). Here's a big list of current formats supported:</p>
+					<ul>
+						<li>system:everything</li>
+						<li>system:inbox</li>
+						<li>system:archive</li>
+						<li>system:has duration</li>
+						<li>system:no duration</li>
+						<li>system:is the best quality file of its duplicate group</li>
+						<li>system:is not the best quality file of its duplicate group</li>
+						<li>system:has audio</li>
+						<li>system:no audio</li>
+						<li>system:has tags</li>
+						<li>system:no tags</li>
+						<li>system:untagged</li>
+						<li>system:number of tags &gt; 5</li>
+						<li>system:number of tags ~= 10</li>
+						<li>system:number of tags &gt; 0</li>
+						<li>system:number of words &lt; 2</li>
+						<li>system:height = 600</li>
+						<li>system:height &gt; 900</li>
+						<li>system:width &lt; 200</li>
+						<li>system:width &gt; 1000</li>
+						<li>system:filesize ~= 50 kilobytes</li>
+						<li>system:filesize &gt; 10megabytes</li>
+						<li>system:filesize &lt; 1 GB</li>
+						<li>system:filesize &gt; 0 B</li>
+						<li>system:similar to abcdef01 abcdef02 abcdef03, abcdef04 with distance 3</li>
+						<li>system:similar to abcdef distance 5</li>
+						<li>system:limit = 100</li>
+						<li>system:filetype = image/jpg, image/png, apng</li>
+						<li>system:hash = abcdef01 abcdef02 abcdef03 <i>(this does sha256)</i></li>
+						<li>system:hash = abcdef01 abcdef02 md5</li>
+						<li>system:modified date &lt; 7 years 45 days 7h</li>
+						<li>system:modified date &gt; 2011-06-04</li>
+						<li>system:date modified &gt; 7 years 2 months</li>
+						<li>system:date modified &lt; 0 years 1 month 1 day 1 hour</li>
+						<li>system:time imported &lt; 7 years 45 days 7h</li>
+						<li>system:time imported &gt; 2011-06-04</li>
+						<li>system:time imported &gt; 7 years 2 months</li>
+						<li>system:time imported &lt; 0 years 1 month 1 day 1 hour</li>
+						<li>system:time imported ~= 2011-1-3</li>
+						<li>system:time imported ~= 1996-05-2</li>
+						<li>system:duration &lt; 5 seconds</li>
+						<li>system:duration ~= 600 msecs</li>
+						<li>system:duration &gt; 3 milliseconds</li>
+						<li>system:file service is pending to my files</li>
+						<li>system:file service currently in my files</li>
+						<li>system:file service is not currently in my files</li>
+						<li>system:file service is not pending to my files</li>
+						<li>system:num file relationships &lt; 3 alternates</li>
+						<li>system:number of file relationships &gt; 3 false positives</li>
+						<li>system:ratio is wider than 16:9</li>
+						<li>system:ratio is 16:9</li>
+						<li>system:ratio taller than 1:1</li>
+						<li>system:num pixels &gt; 50 px</li>
+						<li>system:num pixels &lt; 1 megapixels </li>
+						<li>system:num pixels ~= 5 kilopixel</li>
+						<li>system:media views ~= 10</li>
+						<li>system:all views &gt; 0</li>
+						<li>system:preview views &lt; 10 </li>
+						<li>system:media viewtime &lt; 1 days 1 hour 0 minutes</li>
+						<li>system:all viewtime &gt; 1 hours 100 seconds</li>
+						<li>system:preview viewtime ~= 1 day 30 hours 100 minutes 90s</li>
+						<li>system:has url matching regex reg.*ex </li>
+						<li>system:does not have a url matching regex test</li>
+						<li>system:has url https://test.test/</li>
+						<li>system:does not have url https://test.test/</li>
+						<li>system:has domain test.com</li>
+						<li>system:does not have domain test.com</li>
+						<li>system:has a url with class safebooru file page</li>
+						<li>system:does not have a url with url class safebooru file page</li>
+						<li>system:tag as number page &lt; 5</li>
+					</ul>
+					<p>More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.</p>
 					<p>Response description: The full list of numerical file ids that match the search.</p>
 					<li>
 						<p>Example response:</p>
@@ -1114,7 +1224,7 @@
 					</li>
 					<p>File ids are internal and specific to an individual client. For a client, a file with hash H always has the same file id N, but two clients will have different ideas about which N goes with which H. They are a bit faster than hashes to retrieve and search with <i>en masse</i>, which is why they are exposed here.</p>
 					<p>The search will be performed on the 'local files' file domain and 'all known tags' tag domain. At current, they will be sorted in import time order, newest to oldest (if you would like to paginate them before fetching metadata), but sort options will expand in future.</p>
-					<p>Note that most clients will have an invisible system:limit of 10,000 files on all queries. I expect to add more system predicates to help searching for untagged files, but it is tricky to fetch all files under any circumstance. Large queries may take several seconds to respond.</p>
+					<p>This search does <b>not</b> apply the implicit limit that most clients set to all searches (usually 10,000), so if you do system:everything on a client with millions of files, expect to get boshed. Even with a system:limit included, large queries may take several seconds to respond.</p>
 				</ul>
 			</div>
 			<div class="apiborder">
@@ -1126,8 +1236,8 @@
 					<li>
 						<p>Arguments (in percent-encoded JSON):</p>
 						<ul>
-							<li>file_ids : (a list of numerical file ids)</li>
-							<li>hashes : (a list of hexadecimal SHA256 hashes)</li>
+							<li>file_ids : (selective, a list of numerical file ids)</li>
+							<li>hashes : (selective, a list of hexadecimal SHA256 hashes)</li>
 							<li>only_return_identifiers : true or false (optional, defaulting to false)</li>
 							<li>detailed_url_information : true or false (optional, defaulting to false)</li>
 						</ul>

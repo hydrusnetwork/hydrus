@@ -121,9 +121,9 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
+        tables_and_columns = []
+        
         if HC.CONTENT_TYPE_HASH:
-            
-            tables_and_columns = []
             
             for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
                 
@@ -137,11 +137,7 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
                 ] )
                 
             
-            return tables_and_columns
-            
         elif HC.CONTENT_TYPE_TAG:
-            
-            tables_and_columns = []
             
             for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
                 
@@ -155,9 +151,7 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
                 ] )
                 
             
-            return tables_and_columns
-            
         
-        return []
+        return tables_and_columns
         
     

@@ -428,6 +428,14 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ( phash_id, ) for phash_id in useless_phash_ids ) )
         
     
+    def FileIsInSystem( self, hash_id ):
+        
+        result = self._c.execute( 'SELECT 1 FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    
     def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
         
         expected_table_names = []
@@ -446,7 +454,10 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         
         if HC.CONTENT_TYPE_HASH:
             
-            return [ ( 'shape_perceptual_hash_map', 'hash_id' ) ]
+            return [
+                ( 'shape_perceptual_hash_map', 'hash_id' ),
+                ( 'shape_search_cache', 'hash_id' )
+            ]
             
         
         return []
@@ -766,5 +777,14 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
             
             self.AssociatePHashes( hash_id, phashes )
             
+        
+    
+    def StopSearchingFile( self, hash_id ):
+        
+        phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+        
+        self.DisassociatePHashes( hash_id, phash_ids )
+        
+        self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
         
     

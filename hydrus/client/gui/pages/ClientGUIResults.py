@@ -3691,97 +3691,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
             
-            len_interesting_remote_service_keys = 0
-            
-            len_interesting_remote_service_keys += len( downloadable_file_service_keys )
-            len_interesting_remote_service_keys += len( uploadable_file_service_keys )
-            len_interesting_remote_service_keys += len( pending_file_service_keys )
-            len_interesting_remote_service_keys += len( petitionable_file_service_keys )
-            len_interesting_remote_service_keys += len( petitioned_file_service_keys )
-            len_interesting_remote_service_keys += len( deletable_file_service_keys )
-            len_interesting_remote_service_keys += len( modifyable_file_service_keys )
-            len_interesting_remote_service_keys += len( pinnable_ipfs_service_keys )
-            len_interesting_remote_service_keys += len( pending_ipfs_service_keys )
-            len_interesting_remote_service_keys += len( unpinnable_ipfs_service_keys )
-            len_interesting_remote_service_keys += len( petitioned_ipfs_service_keys )
-            
-            if multiple_selected:
-                
-                len_interesting_remote_service_keys += len( ipfs_service_keys )
-                
-            
-            if len_interesting_remote_service_keys > 0:
-                
-                remote_action_menu = QW.QMenu( manage_menu )
-                
-                if len( downloadable_file_service_keys ) > 0:
-                    
-                    ClientGUIMenus.AppendMenuItem( remote_action_menu, download_phrase, 'Download all possible selected files.', self._DownloadSelected )
-                    
-                
-                if some_downloading:
-                    
-                    ClientGUIMenus.AppendMenuItem( remote_action_menu, rescind_download_phrase, 'Stop downloading any of the selected files.', self._RescindDownloadSelected )
-                    
-                
-                if len( uploadable_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
-                    
-                
-                if len( pending_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
-                    
-                
-                if len( petitionable_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
-                    
-                
-                if len( petitioned_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
-                    
-                
-                if len( deletable_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
-                    
-                
-                if len( modifyable_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
-                    
-                
-                if len( pinnable_ipfs_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
-                    
-                
-                if len( pending_ipfs_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
-                    
-                
-                if len( unpinnable_ipfs_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
-                    
-                
-                if len( petitioned_ipfs_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
-                    
-                
-                if multiple_selected and len( ipfs_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
-                    
-                
-                ClientGUIMenus.AppendMenu( manage_menu, remote_action_menu, 'remote services' )
-                
-            
             duplicates_menu = QW.QMenu( manage_menu )
             
             focused_hash = focus_singleton.GetHash()
@@ -4005,6 +3914,99 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'regenerate' )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
+            
+            #
+            
+            len_interesting_remote_service_keys = 0
+            
+            len_interesting_remote_service_keys += len( downloadable_file_service_keys )
+            len_interesting_remote_service_keys += len( uploadable_file_service_keys )
+            len_interesting_remote_service_keys += len( pending_file_service_keys )
+            len_interesting_remote_service_keys += len( petitionable_file_service_keys )
+            len_interesting_remote_service_keys += len( petitioned_file_service_keys )
+            len_interesting_remote_service_keys += len( deletable_file_service_keys )
+            len_interesting_remote_service_keys += len( modifyable_file_service_keys )
+            len_interesting_remote_service_keys += len( pinnable_ipfs_service_keys )
+            len_interesting_remote_service_keys += len( pending_ipfs_service_keys )
+            len_interesting_remote_service_keys += len( unpinnable_ipfs_service_keys )
+            len_interesting_remote_service_keys += len( petitioned_ipfs_service_keys )
+            
+            if multiple_selected:
+                
+                len_interesting_remote_service_keys += len( ipfs_service_keys )
+                
+            
+            if len_interesting_remote_service_keys > 0:
+                
+                remote_action_menu = QW.QMenu( menu )
+                
+                if len( downloadable_file_service_keys ) > 0:
+                    
+                    ClientGUIMenus.AppendMenuItem( remote_action_menu, download_phrase, 'Download all possible selected files.', self._DownloadSelected )
+                    
+                
+                if some_downloading:
+                    
+                    ClientGUIMenus.AppendMenuItem( remote_action_menu, rescind_download_phrase, 'Stop downloading any of the selected files.', self._RescindDownloadSelected )
+                    
+                
+                if len( uploadable_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
+                    
+                
+                if len( pending_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
+                    
+                
+                if len( petitionable_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
+                    
+                
+                if len( petitioned_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
+                    
+                
+                if len( deletable_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
+                    
+                
+                if len( modifyable_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
+                    
+                
+                if len( pinnable_ipfs_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
+                    
+                
+                if len( pending_ipfs_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
+                    
+                
+                if len( unpinnable_ipfs_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
+                    
+                
+                if len( petitioned_ipfs_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
+                    
+                
+                if multiple_selected and len( ipfs_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, remote_action_menu, 'remote services' )
+                
             
             #
             

@@ -18,6 +18,8 @@ from hydrus.client import ClientData
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
+from hydrus.external import SystemPredicateParser
+
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
 PREDICATE_TYPE_PARENT = 2
@@ -2231,7 +2233,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
                 
-                base = 'num_pixels'
+                base = 'number of pixels'
                 
                 if self._value is not None:
                     
@@ -2493,19 +2495,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     if include_media and include_previews:
                         
-                        domain = 'all '
+                        domain = 'all'
                         
                     elif include_media:
                         
-                        domain = 'media '
+                        domain = 'media'
                         
                     elif include_previews:
                         
-                        domain = 'preview '
+                        domain = 'preview'
                         
                     else:
                         
-                        domain = 'unknown '
+                        domain = 'unknown'
                         
                     
                     if view_type == 'views':
@@ -2517,7 +2519,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         value_string = HydrusData.TimeDeltaToPrettyTimeDelta( viewing_value )
                         
                     
-                    base = domain + view_type + operator + value_string
+                    base = '{} {} {} {}'.format( domain, view_type, operator, value_string )
                     
                 
             

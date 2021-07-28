@@ -1,5 +1,6 @@
 import collections
 import threading
+import typing
 
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
@@ -96,6 +97,11 @@ class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaul
             
             self[ bytes.fromhex( service_key_hex ) ] = set( tags_list )
             
+        
+    
+    def Duplicate( self ) -> "ServiceKeysToTags":
+        
+        return ServiceKeysToTags( { service_key : set( tags ) for ( service_key, tags ) in self.items() } )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS ] = ServiceKeysToTags

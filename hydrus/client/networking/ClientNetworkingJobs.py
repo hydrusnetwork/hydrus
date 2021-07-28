@@ -1614,12 +1614,18 @@ class NetworkJobHydrus( NetworkJob ):
         
         headers = response.headers
         
-        if 'server' not in headers or service_string not in headers[ 'server' ]:
+        if 'server' in headers and service_string in headers[ 'server' ]:
+            
+            server_header = headers[ 'server' ]
+            
+        elif 'hydrus-server' in headers and service_string in headers[ 'hydrus-server' ]:
+            
+            server_header = headers[ 'hydrus-server' ]
+            
+        else:
             
             raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
             
-        
-        server_header = headers[ 'server' ]
         
         ( service_string_gumpf, network_version ) = server_header.split( '/' )
         

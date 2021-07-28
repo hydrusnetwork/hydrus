@@ -59,6 +59,7 @@ class HydrusService( Site ):
     def getResourceFor( self, request: Request ):
         
         request.setHeader( 'Server', self._server_version_string )
+        request.setHeader( 'Hydrus-Server', self._server_version_string )
         
         return Site.getResourceFor( self, request )
         

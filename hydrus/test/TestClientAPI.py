@@ -1911,6 +1911,22 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
         
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'green', 'system:archive' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        
+        expected_predicates = []
+        
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+        self.assertEqual( set( predicates ), set( expected_predicates ) )
+        
         # test file metadata
         
         api_permissions = set_up_permissions[ 'search_green_files' ]
@@ -2010,7 +2026,7 @@ class TestClientAPI( unittest.TestCase ):
                 
                 service_name = service_keys_to_names[ service_key ]
                 
-                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() }
+                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() }
                 
             
             metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
@@ -2028,7 +2044,7 @@ class TestClientAPI( unittest.TestCase ):
                 
                 service_name = service_keys_to_names[ service_key ]
                 
-                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() }
+                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() }
                 
             
             metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags

@@ -16,43 +16,44 @@ from hydrus.core.networking import HydrusNetwork
 
 # Mime
 
-header_and_mime = [
-    ( 0, b'\xff\xd8', HC.IMAGE_JPEG ),
-    ( 0, b'GIF87a', HC.IMAGE_GIF ),
-    ( 0, b'GIF89a', HC.IMAGE_GIF ),
-    ( 0, b'\x89PNG', HC.UNDETERMINED_PNG ),
-    ( 8, b'WEBP', HC.IMAGE_WEBP ),
-    ( 0, b'II*\x00', HC.IMAGE_TIFF ),
-    ( 0, b'MM\x00*', HC.IMAGE_TIFF ),
-    ( 0, b'BM', HC.IMAGE_BMP ),
-    ( 0, b'\x00\x00\x01\x00', HC.IMAGE_ICON ),
-    ( 0, b'\x00\x00\x02\x00', HC.IMAGE_ICON ),
-    ( 0, b'CWS', HC.APPLICATION_FLASH ),
-    ( 0, b'FWS', HC.APPLICATION_FLASH ),
-    ( 0, b'ZWS', HC.APPLICATION_FLASH ),
-    ( 0, b'FLV', HC.VIDEO_FLV ),
-    ( 0, b'%PDF', HC.APPLICATION_PDF ),
-    ( 0, b'8BPS\x00\x01', HC.APPLICATION_PSD ),
-    ( 0, b'8BPS\x00\x02', HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
-    ( 0, b'CSFCHUNK', HC.APPLICATION_CLIP ),
-    ( 0, b'PK\x03\x04', HC.APPLICATION_ZIP ),
-    ( 0, b'PK\x05\x06', HC.APPLICATION_ZIP ),
-    ( 0, b'PK\x07\x08', HC.APPLICATION_ZIP ),
-    ( 0, b'7z\xBC\xAF\x27\x1C', HC.APPLICATION_7Z ),
-    ( 0, b'\x52\x61\x72\x21\x1A\x07\x00', HC.APPLICATION_RAR ),
-    ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00', HC.APPLICATION_RAR ),
-    ( 0, b'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( 4, b'ftypmp4', HC.VIDEO_MP4 ),
-    ( 4, b'ftypisom', HC.VIDEO_MP4 ),
-    ( 4, b'ftypM4V', HC.VIDEO_MP4 ),
-    ( 4, b'ftypMSNV', HC.VIDEO_MP4 ),
-    ( 4, b'ftypavc1', HC.VIDEO_MP4 ),
-    ( 4, b'ftypFACE', HC.VIDEO_MP4 ),
-    ( 4, b'ftypdash', HC.VIDEO_MP4 ),
-    ( 4, b'ftypqt', HC.VIDEO_MOV ),
-    ( 0, b'fLaC', HC.AUDIO_FLAC ),
-    ( 8, b'AVI ', HC.VIDEO_AVI ),
-    ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
+headers_and_mime = [
+    ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
+    ( ( ( 0, b'GIF87a' ), ), HC.IMAGE_GIF ),
+    ( ( ( 0, b'GIF89a' ), ), HC.IMAGE_GIF ),
+    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG ),
+    ( ( ( 8, b'WEBP' ), ), HC.IMAGE_WEBP ),
+    ( ( ( 0, b'II*\x00' ), ), HC.IMAGE_TIFF ),
+    ( ( ( 0, b'MM\x00*' ), ), HC.IMAGE_TIFF ),
+    ( ( ( 0, b'BM' ), ), HC.IMAGE_BMP ),
+    ( ( ( 0, b'\x00\x00\x01\x00' ), ), HC.IMAGE_ICON ),
+    ( ( ( 0, b'\x00\x00\x02\x00' ), ), HC.IMAGE_ICON ),
+    ( ( ( 0, b'CWS' ), ), HC.APPLICATION_FLASH ),
+    ( ( ( 0, b'FWS' ), ), HC.APPLICATION_FLASH ),
+    ( ( ( 0, b'ZWS' ), ), HC.APPLICATION_FLASH ),
+    ( ( ( 0, b'FLV' ), ), HC.VIDEO_FLV ),
+    ( ( ( 0, b'%PDF' ), ), HC.APPLICATION_PDF ),
+    ( ( ( 0, b'8BPS\x00\x01' ), ), HC.APPLICATION_PSD ),
+    ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
+    ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
+    ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
+    ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
+    ( ( ( 0, b'PK\x07\x08' ), ), HC.APPLICATION_ZIP ),
+    ( ( ( 0, b'7z\xBC\xAF\x27\x1C' ), ), HC.APPLICATION_7Z ),
+    ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x00' ), ), HC.APPLICATION_RAR ),
+    ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
+    ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( ( ( 4, b'ftypmp4' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypisom' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypM4V' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypMSNV' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypavc1' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypFACE' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypdash' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypqt' ), ), HC.VIDEO_MOV ),
+    ( ( ( 0, b'fLaC' ), ), HC.AUDIO_FLAC ),
+    ( ( ( 0, b'RIFF' ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
+    ( ( ( 8, b'AVI ' ), ), HC.VIDEO_AVI ),
+    ( ( ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C' ), ), HC.UNDETERMINED_WM )
     ]
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
@@ -60,6 +61,27 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ): # not apng atm
         
         thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime )
+        
+    elif mime == HC.APPLICATION_PSD:
+        
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath( suffix = '.png' )
+        
+        try:
+            
+            HydrusVideoHandling.RenderImageToPNGPath( path, temp_path )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
+            
+        except:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
+            
+        finally:
+            
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            
         
     else:
         
@@ -276,11 +298,11 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         bit_to_check = f.read( 256 )
         
     
-    for ( offset, header, mime ) in header_and_mime:
+    for ( offsets_and_headers, mime ) in headers_and_mime:
         
-        offset_bit_to_check = bit_to_check[ offset: ]
+        it_passes = False not in ( bit_to_check[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
         
-        if offset_bit_to_check.startswith( header ):
+        if it_passes:
             
             if mime == HC.UNDETERMINED_WM:
                 

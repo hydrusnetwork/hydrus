@@ -1440,3 +1440,28 @@ register_column_type( COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, COLUMN_LIST_JOB_SCHED
 register_column_type( COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, COLUMN_LIST_JOB_SCHEDULER_REVIEW.DUE, 'due', False, 30, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID ] = ( COLUMN_LIST_JOB_SCHEDULER_REVIEW.DUE, True )
+
+#
+
+class COLUMN_LIST_VACUUM_DATA( COLUMN_LIST_DEFINITION ):
+    
+    ID = 66
+    
+    NAME = 0
+    SIZE = 1
+    FREE_SPACE = 2
+    LAST_VACUUM = 3
+    CAN_VACUUM = 4
+    VACUUM_TIME_ESTIMATE = 5
+    
+
+column_list_type_name_lookup[ COLUMN_LIST_VACUUM_DATA.ID ] = 'vacuum data'
+
+register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.NAME, 'name', False, 32, True )
+register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.SIZE, 'size', False, 8, True )
+register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.FREE_SPACE, 'free space', False, 14, True )
+register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.LAST_VACUUM, 'last vacuum', False, 32, True )
+register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.CAN_VACUUM, 'can vacuum?', False, 64, True )
+register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.VACUUM_TIME_ESTIMATE, 'vacuum time estimate', False, 48, True )
+
+default_column_list_sort_lookup[ COLUMN_LIST_VACUUM_DATA.ID ] = ( COLUMN_LIST_VACUUM_DATA.NAME, True )
