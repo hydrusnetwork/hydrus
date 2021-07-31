@@ -143,7 +143,7 @@ SYSTEM_PREDICATES = {
     'has duration': (Predicate.HAS_DURATION, None, None, None),
     'no duration': (Predicate.NO_DURATION, None, None, None),
     '(is the )?best quality( file)? of( its)?( duplicate)? group': (Predicate.BEST_QUALITY_OF_GROUP, None, None, None),
-    '((is )?not)|(isn\'t)( the)? best quality( file)? of( its)?( duplicate)? group': (Predicate.NOT_BEST_QUALITY_OF_GROUP, None, None, None),
+    '(((is )?not)|(isn\'t))( the)? best quality( file)? of( its)?( duplicate)? group': (Predicate.NOT_BEST_QUALITY_OF_GROUP, None, None, None),
     'has audio': (Predicate.HAS_AUDIO, None, None, None),
     'no audio': (Predicate.NO_AUDIO, None, None, None),
     'has tags': (Predicate.HAS_TAGS, None, None, None),
