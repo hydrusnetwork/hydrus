@@ -130,19 +130,11 @@ def THREADUploadPending( service_key ):
         
         nums_pending_for_this_service = nums_pending[ service_key ]
         
-        content_types_for_this_service = set()
-        
-        if service_type in ( HC.IPFS, HC.FILE_REPOSITORY ):
-            
-            content_types_for_this_service = { HC.CONTENT_TYPE_FILES }
-            
-        elif service_type == HC.TAG_REPOSITORY:
-            
-            content_types_for_this_service = { HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS }
-            
+        content_types_for_this_service = set( HC.REPOSITORY_CONTENT_TYPES[ service_type ] )
         
         if service_type in HC.REPOSITORIES:
             
+            paused_content_types = set()
             unauthorised_content_types = set()
             content_types_to_request = set()
             
@@ -171,7 +163,14 @@ def THREADUploadPending( service_key ):
                     
                     if account.HasPermission( content_type, permission ):
                         
-                        content_types_to_request.add( content_type )
+                        if service.IsPausedUpdateProcessing( content_type ):
+                            
+                            paused_content_types.add( content_type )
+                            
+                        else:
+                            
+                            content_types_to_request.add( content_type )
+                            
                         
                     else:
                         
@@ -212,9 +211,23 @@ def THREADUploadPending( service_key ):
                 HG.client_controller.pub( 'message', unauthorised_job_key )
                 
             
+            if len( paused_content_types ) > 0:
+                
+                message = 'You have some pending content of type ({}), but processing for that is currently paused! No worries, but I won\'t upload the paused stuff. If you want to upload it, please unpause in _review services_ and then catch up processing.'.format(
+                    ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in paused_content_types ) )
+                )
+                
+                HydrusData.ShowText( message )
+                
+            
         else:
             
             content_types_to_request = content_types_for_this_service
+            
+        
+        if len( content_types_to_request ) == 0:
+            
+            return
             
         
         initial_num_pending = sum( nums_pending_for_this_service.values() )

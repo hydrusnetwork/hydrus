@@ -4955,6 +4955,8 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 num_items_to_regen = num_siblings_to_sync + num_parents_to_sync
                 
+                sync_halted = False
+                
                 if num_items_to_regen == 0:
                     
                     message = 'All synced!'
@@ -4970,6 +4972,14 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 else:
                     
                     message = '{} siblings and {} parents to sync.'.format( HydrusData.ToHumanInt( num_siblings_to_sync ), HydrusData.ToHumanInt( num_parents_to_sync ) )
+                    
+                
+                if len( status[ 'waiting_on_tag_repos' ] ) > 0:
+                    
+                    message += os.linesep * 2
+                    message += os.linesep.join( status[ 'waiting_on_tag_repos' ] )
+                    
+                    sync_halted = True
                     
                 
                 self._siblings_and_parents_st.setText( message )
@@ -4993,7 +5003,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     value = 1
                     range = 1
                     
-                    sync_possible = False
+                    sync_work_to_do = False
                     
                 else:
                     
@@ -5015,15 +5025,15 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                             
                         
                     
-                    sync_possible = True
+                    sync_work_to_do = True
                     
                 
                 self._progress.SetValue( message, value, range )
                 
                 self._refresh_button.setEnabled( True )
                 
-                self._go_faster_button.setVisible( sync_possible )
-                self._go_faster_button.setEnabled( sync_possible )
+                self._go_faster_button.setVisible( sync_work_to_do and not sync_halted )
+                self._go_faster_button.setEnabled( sync_work_to_do and not sync_halted )
                 
                 if HG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ):
                     

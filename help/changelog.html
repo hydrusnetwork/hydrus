@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_449"><a href="#version_449">version 449</a></h3></li>
+				<ul>
+					<li>this is an experimental release! please do not use this unless you are an advanced user who has a good backup, syncs with a repository (e.g. the PTR), and would like to help me out. if this is you, I don't need you to do anything too special, just please use the client and repo as normal, downloading and uploading, and let me know if anything messes up during normal operation</li>
+					<li>repository processing split:</li>
+					<li>tl;dr: nothing has changed, you don't have to do anything. with luck, your PTR service is going to fix some bad siblings and parents over the next couple of days</li>
+					<li>repositories now track what they have processed on a per-content basis. this gives some extra maintenance tools to, for instance, quickly reset and reprocess your ~150k tag siblings on the PTR without having to clear and reprocess all 1.3 billion mappings too</li>
+					<li>in review services, you now see definition updates and all a repository's content types processing progress independently (just files for a file repo, but mappings, siblings, and parents for a tag repo). most of the time they will all be the same, but each can be paused separately. it is now possible (though not yet super efficient, since definitions still run 100%) to sync with the PTR and only grab siblings and parents by simply pausing mappings in review services</li>
+					<li>I have also split the 'network' and 'processing' sync progress gauges and their buttons into separate boxes for clarity</li>
+					<li>the 'fill in content gaps' maintenance job now lets you choose which content types to do it for</li>
+					<li>also, a new 'reset content' maintenance job lets you choose to delete and reprocess by content type. the nuclear 'complete' reset is now really just for critical situations where definitions or database tables are irrevocably messed up</li>
+					<li>all users have their siblings and parents processing reset this week. next time you have update processing, they should blitz back in your next processing time within seconds, and with luck we'll wipe out some years-old legacy bugs and hopefully discover some info about the remaining bugs. most importantly, we can re-trigger this reprocess in just a few seconds to quickly test future fixes</li>
+					<li>a variety of tests such as 'service is mostly caught up' are now careful just to test for the currently unpaused content types</li>
+					<li>if you try to commit some content that is currently processing-paused, the client now says 'hey, sorry this is paused, I won't upload that stuff right now' but still upload everything else that isn't paused. this is a ' service is caught up' issue</li>
+					<li>tag display sync, which does background work to make sure siblings and parents appear as they should, will now not run for a service if any of the services it relies on for siblings or parents is not process synced. when this happens, it is also shown on the tag display sync review panel. this stops big changes like the new sibling/parent reset from causing display sync to do a whole bunch of work before the service is ready and happy with what it has. with luck it will also smooth out new users' first PTR sync too</li>
+					<li>clients now process the sub-updates of a repository update step in the order they were generated on the server, which _may_ fix some non-determinant update bugs we are trying to pin down</li>
+					<li>all update processing tracking is overhauled. all related code and database access techniques have been brushed up and should use less CPU and fail more gracefully</li>
+				</ul>
 				<li><h3 id="version_448"><a href="#version_448">version 448</a></h3></li>
 				<ul>
 					<li>client api:</li>

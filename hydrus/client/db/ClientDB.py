@@ -574,6 +574,13 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_hashes_local_cache.AddHashIdsToCache( new_hash_ids )
                 
             
+            # if adding an update file, repo manager wants to know
+            
+            if service_id == self.modules_services.local_update_service_id:
+                
+                self.modules_repositories.NotifyUpdatesImported( new_hash_ids )
+                
+            
             # if we track tags for this service, update the a/c cache
             
             if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
@@ -602,10 +609,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self.modules_services.AddService( service_key, service_type, name, dictionary )
         
-        if service_type in HC.SPECIFIC_FILE_SERVICES:
-            
-            self.modules_files_storage.GenerateFilesTables( service_id )
-            
+        self._AddServiceCreateFiles( service_id, service_type )
         
         if service_type in HC.REPOSITORIES:
             
@@ -614,9 +618,14 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in HC.REAL_TAG_SERVICES:
             
-            self.modules_mappings_storage.GenerateMappingsTables( service_id )
+            self._CacheTagsGenerate( self.modules_services.combined_file_service_id, service_id )
             
-            #
+            file_service_ids = self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for file_service_id in file_service_ids:
+                
+                self._CacheTagsGenerate( file_service_id, service_id )
+                
             
             self._c.execute( 'INSERT OR IGNORE INTO tag_sibling_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', ( service_id, 0, service_id ) )
             self._c.execute( 'INSERT OR IGNORE INTO tag_parent_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', ( service_id, 0, service_id ) )
@@ -626,27 +635,11 @@ class DB( HydrusDB.HydrusDB ):
             self._service_ids_to_parent_applicable_service_ids = None
             self._service_ids_to_parent_interested_service_ids = None
             
-            self._CacheTagSiblingsGenerate( service_id )
-            self._CacheTagParentsGenerate( service_id )
+            self._AddServiceCreateTagParents( service_id )
+            self._AddServiceCreateTagSiblings( service_id )
             
-            self._CacheTagsGenerate( self.modules_services.combined_file_service_id, service_id )
-            
-            self._CacheCombinedFilesMappingsGenerate( service_id )
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
-            
-            for file_service_id in file_service_ids:
-                
-                self._CacheTagsGenerate( file_service_id, service_id )
-                
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
-            
-            for file_service_id in file_service_ids:
-                
-                self._CacheSpecificMappingsGenerate( file_service_id, service_id )
-                
-            
+        
+        self._AddServiceCreateMappings( service_id, service_type )
         
         if service_type in HC.TAG_CACHE_SPECIFIC_FILE_SERVICES:
             
@@ -658,6 +651,14 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+    
+    def _AddServiceCreateFiles( self, service_id, service_type ):
+        
+        if service_type in HC.SPECIFIC_FILE_SERVICES:
+            
+            self.modules_files_storage.GenerateFilesTables( service_id )
+            
+        
         if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
             
             tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
@@ -667,6 +668,33 @@ class DB( HydrusDB.HydrusDB ):
                 self._CacheSpecificMappingsGenerate( service_id, tag_service_id )
                 
             
+        
+    
+    def _AddServiceCreateMappings( self, service_id, service_type ):
+        
+        if service_type in HC.REAL_TAG_SERVICES:
+            
+            self.modules_mappings_storage.GenerateMappingsTables( service_id )
+            
+            self._CacheCombinedFilesMappingsGenerate( service_id )
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for file_service_id in file_service_ids:
+                
+                self._CacheSpecificMappingsGenerate( file_service_id, service_id )
+                
+            
+        
+    
+    def _AddServiceCreateTagParents( self, service_id ):
+        
+        self._CacheTagParentsGenerate( service_id )
+        
+    
+    def _AddServiceCreateTagSiblings( self, service_id ):
+        
+        self._CacheTagSiblingsGenerate( service_id )
         
     
     def _AddTagParents( self, service_id, pairs, defer_cache_update = False ):
@@ -913,6 +941,13 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _CacheCombinedFilesDisplayMappingsClear( self, tag_service_id ):
+        
+        combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( combined_display_ac_cache_table_name ) )
+        
+    
     def _CacheCombinedFilesDisplayMappingsDrop( self, tag_service_id ):
         
         combined_display_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
@@ -1071,6 +1106,15 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CacheMappingsReduceACCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, ac_cache_changes )
             
+        
+    
+    def _CacheCombinedFilesMappingsClear( self, tag_service_id ):
+        
+        combined_ac_cache_table_name = GenerateCombinedFilesMappingsACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, tag_service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( combined_ac_cache_table_name ) )
+        
+        self._CacheCombinedFilesDisplayMappingsClear( tag_service_id )
         
     
     def _CacheCombinedFilesMappingsDrop( self, tag_service_id ):
@@ -1586,6 +1630,17 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _CacheSpecificDisplayMappingsClear( self, file_service_id, tag_service_id ):
+        
+        specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
+        
+        ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( specific_display_ac_cache_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( cache_display_current_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( cache_display_pending_mappings_table_name ) )
+        
+    
     def _CacheSpecificDisplayMappingsDrop( self, file_service_id, tag_service_id ):
         
         specific_display_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
@@ -1593,9 +1648,7 @@ class DB( HydrusDB.HydrusDB ):
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
         self._c.execute( 'DROP TABLE IF EXISTS {};'.format( specific_display_ac_cache_table_name ) )
-        
         self._c.execute( 'DROP TABLE IF EXISTS {};'.format( cache_display_current_mappings_table_name ) )
-        
         self._c.execute( 'DROP TABLE IF EXISTS {};'.format( cache_display_pending_mappings_table_name ) )
         
     
@@ -2112,6 +2165,23 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _CacheSpecificMappingsClear( self, file_service_id, tag_service_id ):
+        
+        cache_files_table_name = GenerateSpecificFilesTableName( file_service_id, tag_service_id )
+        
+        specific_ac_cache_table_name = GenerateSpecificACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
+        
+        ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( cache_files_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( cache_current_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( cache_deleted_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( cache_pending_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( specific_ac_cache_table_name ) )
+        
+        self._CacheSpecificDisplayMappingsClear( file_service_id, tag_service_id )
+        
+    
     def _CacheSpecificMappingsDrop( self, file_service_id, tag_service_id ):
         
         cache_files_table_name = GenerateSpecificFilesTableName( file_service_id, tag_service_id )
@@ -2500,6 +2570,27 @@ class DB( HydrusDB.HydrusDB ):
         status[ 'num_parents_to_sync' ] = len( parent_rows_to_add ) + len( parent_rows_to_remove )
         status[ 'num_actual_rows' ] = num_actual_rows
         status[ 'num_ideal_rows' ] = num_ideal_rows
+        
+        status[ 'waiting_on_tag_repos' ] = []
+        
+        for ( applicable_service_ids, content_type ) in [
+            ( self._CacheTagParentsGetApplicableServiceIds( service_id ), HC.CONTENT_TYPE_TAG_PARENTS ),
+            ( self._CacheTagSiblingsGetApplicableServiceIds( service_id ), HC.CONTENT_TYPE_TAG_SIBLINGS )
+        ]:
+            
+            for applicable_service_id in applicable_service_ids:
+                
+                service = self.modules_services.GetService( applicable_service_id )
+                
+                if service.GetServiceType() == HC.TAG_REPOSITORY:
+                    
+                    if self.modules_repositories.HasLotsOfOutstandingLocalProcessing( applicable_service_id, ( content_type, ) ):
+                        
+                        status[ 'waiting_on_tag_repos' ].append( 'waiting on {} for {} processing'.format( service.GetName(), HC.content_type_string_lookup[ content_type ] ) )
+                        
+                    
+                
+            
         
         return status
         
@@ -5392,62 +5483,28 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
         self._c.execute( 'DELETE FROM recent_tags WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM service_filenames WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM service_directories WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM service_directory_file_map WHERE service_id = ?;', ( service_id, ) )
         self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
-        self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
         
-        if service_type in HC.SPECIFIC_FILE_SERVICES:
-            
-            self.modules_files_storage.DropFilesTables( service_id )
-            
+        self._DeleteServiceDropFiles( service_id, service_type )
         
         if service_type in HC.REPOSITORIES:
             
             self.modules_repositories.DropRepositoryTables( service_id )
             
         
+        self._DeleteServiceDropMappings( service_id, service_type )
+        
         if service_type in HC.REAL_TAG_SERVICES:
             
-            self.modules_mappings_storage.DropMappingsTables( service_id )
+            self._DeleteServiceDropTagParents( service_id )
             
-            #
-            
-            self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
-            self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
-            self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
-            self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
-            
-            self._CacheTagSiblingsDrop( service_id )
-            self._CacheTagParentsDrop( service_id )
-            
-            self._CacheTagsDrop( self.modules_services.combined_file_service_id, service_id )
-            
-            self._CacheCombinedFilesMappingsDrop( service_id )
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
-            
-            for file_service_id in file_service_ids:
-                
-                self._CacheTagsDrop( file_service_id, service_id )
-                
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
-            
-            for file_service_id in file_service_ids:
-                
-                self._CacheSpecificMappingsDrop( file_service_id, service_id )
-                
+            self._DeleteServiceDropTagSiblings( service_id )
             
             interested_service_ids = set( self._CacheTagDisplayGetInterestedServiceIds( service_id ) )
             
             interested_service_ids.discard( service_id ) # lmao, not any more!
             
+            # we have to do this after the above since we need to know _what_ to regen with these new application rules in a sec
             self._c.execute( 'DELETE FROM tag_sibling_application WHERE master_service_id = ? OR application_service_id = ?;', ( service_id, service_id ) )
             self._c.execute( 'DELETE FROM tag_parent_application WHERE master_service_id = ? OR application_service_id = ?;', ( service_id, service_id ) )
             
@@ -5461,6 +5518,15 @@ class DB( HydrusDB.HydrusDB ):
                 self._RegenerateTagSiblingsCache( only_these_service_ids = interested_service_ids )
                 
             
+            self._CacheTagsDrop( self.modules_services.combined_file_service_id, service_id )
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for file_service_id in file_service_ids:
+                
+                self._CacheTagsDrop( file_service_id, service_id )
+                
+            
         
         if service_type in HC.TAG_CACHE_SPECIFIC_FILE_SERVICES:
             
@@ -5469,16 +5535,6 @@ class DB( HydrusDB.HydrusDB ):
             for tag_service_id in tag_service_ids:
                 
                 self._CacheTagsDrop( service_id, tag_service_id )
-                
-            
-        
-        if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for tag_service_id in tag_service_ids:
-                
-                self._CacheSpecificMappingsDrop( service_id, tag_service_id )
                 
             
         
@@ -5497,6 +5553,69 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'DELETE FROM service_directories WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
         self._c.execute( 'DELETE FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
+        
+    
+    def _DeleteServiceDropFiles( self, service_id, service_type ):
+        
+        if service_type == HC.FILE_REPOSITORY:
+            
+            self._c.execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
+            
+        
+        if service_type == HC.IPFS:
+            
+            self._c.execute( 'DELETE FROM service_filenames WHERE service_id = ?;', ( service_id, ) )
+            self._c.execute( 'DELETE FROM service_directories WHERE service_id = ?;', ( service_id, ) )
+            self._c.execute( 'DELETE FROM service_directory_file_map WHERE service_id = ?;', ( service_id, ) )
+            
+        
+        if service_type in HC.SPECIFIC_FILE_SERVICES:
+            
+            self.modules_files_storage.DropFilesTables( service_id )
+            
+        
+        if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                self._CacheSpecificMappingsDrop( service_id, tag_service_id )
+                
+            
+        
+    
+    def _DeleteServiceDropMappings( self, service_id, service_type ):
+        
+        if service_type in HC.REAL_TAG_SERVICES:
+            
+            self.modules_mappings_storage.DropMappingsTables( service_id )
+            
+            self._CacheCombinedFilesMappingsDrop( service_id )
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for file_service_id in file_service_ids:
+                
+                self._CacheSpecificMappingsDrop( file_service_id, service_id )
+                
+            
+        
+    
+    def _DeleteServiceDropTagParents( self, service_id ):
+        
+        self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+        
+        self._CacheTagParentsDrop( service_id )
+        
+    
+    def _DeleteServiceDropTagSiblings( self, service_id ):
+        
+        self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
+        
+        self._CacheTagSiblingsDrop( service_id )
         
     
     def _DeleteServiceInfo( self, service_key = None, types_to_delete = None ):
@@ -12888,7 +13007,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_repositories = ClientDBRepositories.ClientDBRepositories( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_files_storage, self.modules_hashes_local_cache, self.modules_tags_local_cache, self.modules_files_maintenance )
+        self.modules_repositories = ClientDBRepositories.ClientDBRepositories( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_files_storage, self.modules_files_metadata_basic, self.modules_hashes_local_cache, self.modules_tags_local_cache, self.modules_files_maintenance )
         
         self._modules.append( self.modules_repositories )
         
@@ -13899,7 +14018,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _ProcessRepositoryContent( self, service_key, content_hash, content_iterator_dict, job_key, work_time ):
+    def _ProcessRepositoryContent( self, service_key, content_hash, content_iterator_dict, content_types_to_process, job_key, work_time ):
         
         FILES_INITIAL_CHUNK_SIZE = 20
         MAPPINGS_INITIAL_CHUNK_SIZE = 50
@@ -13911,136 +14030,142 @@ class DB( HydrusDB.HydrusDB ):
         
         num_rows_processed = 0
         
-        if 'new_files' in content_iterator_dict:
+        if HC.CONTENT_TYPE_FILES in content_types_to_process:
             
-            has_audio = None # hack until we figure this out better
-            
-            i = content_iterator_dict[ 'new_files' ]
-            
-            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+            if 'new_files' in content_iterator_dict:
                 
-                files_info_rows = []
-                files_rows = []
+                has_audio = None # hack until we figure this out better
                 
-                for ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in chunk:
+                i = content_iterator_dict[ 'new_files' ]
+                
+                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
-                    hash_id = self.modules_repositories.NormaliseServiceHashId( service_id, service_hash_id )
+                    files_info_rows = []
+                    files_rows = []
                     
-                    files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) )
+                    for ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in chunk:
+                        
+                        hash_id = self.modules_repositories.NormaliseServiceHashId( service_id, service_hash_id )
+                        
+                        files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) )
+                        
+                        files_rows.append( ( hash_id, timestamp ) )
+                        
                     
-                    files_rows.append( ( hash_id, timestamp ) )
+                    self.modules_files_metadata_basic.AddFilesInfo( files_info_rows )
                     
-                
-                self.modules_files_metadata_basic.AddFilesInfo( files_info_rows )
-                
-                self._AddFiles( service_id, files_rows )
-                
-                num_rows_processed += len( files_rows )
-                
-                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    self._AddFiles( service_id, files_rows )
                     
-                    return num_rows_processed
+                    num_rows_processed += len( files_rows )
                     
-                
-            
-            del content_iterator_dict[ 'new_files' ]
-            
-        
-        #
-        
-        if 'deleted_files' in content_iterator_dict:
-            
-            i = content_iterator_dict[ 'deleted_files' ]
-            
-            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
-                
-                service_hash_ids = chunk
-                
-                hash_ids = self.modules_repositories.NormaliseServiceHashIds( service_id, service_hash_ids )
-                
-                self._DeleteFiles( service_id, hash_ids )
-                
-                num_rows_processed += len( hash_ids )
-                
-                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
-                    
-                    return num_rows_processed
+                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        
+                        return num_rows_processed
+                        
                     
                 
-            
-            del content_iterator_dict[ 'deleted_files' ]
-            
-        
-        #
-        
-        if 'new_mappings' in content_iterator_dict:
-            
-            i = content_iterator_dict[ 'new_mappings' ]
-            
-            for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                del content_iterator_dict[ 'new_files' ]
                 
-                mappings_ids = []
+            
+            #
+            
+            if 'deleted_files' in content_iterator_dict:
                 
-                num_rows = 0
+                i = content_iterator_dict[ 'deleted_files' ]
                 
-                # yo, I can save time if I merge these ids so we only have one round of normalisation
-                
-                for ( service_tag_id, service_hash_ids ) in chunk:
+                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
-                    tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_tag_id )
+                    service_hash_ids = chunk
+                    
                     hash_ids = self.modules_repositories.NormaliseServiceHashIds( service_id, service_hash_ids )
                     
-                    mappings_ids.append( ( tag_id, hash_ids ) )
+                    self._DeleteFiles( service_id, hash_ids )
                     
-                    num_rows += len( service_hash_ids )
+                    num_rows_processed += len( hash_ids )
                     
-                
-                self._UpdateMappings( service_id, mappings_ids = mappings_ids )
-                
-                num_rows_processed += num_rows
-                
-                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
-                    
-                    return num_rows_processed
+                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        
+                        return num_rows_processed
+                        
                     
                 
-            
-            del content_iterator_dict[ 'new_mappings' ]
+                del content_iterator_dict[ 'deleted_files' ]
+                
             
         
         #
         
-        if 'deleted_mappings' in content_iterator_dict:
+        if HC.CONTENT_TYPE_MAPPINGS in content_types_to_process:
             
-            i = content_iterator_dict[ 'deleted_mappings' ]
+            if 'new_mappings' in content_iterator_dict:
+                
+                i = content_iterator_dict[ 'new_mappings' ]
+                
+                for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                    
+                    mappings_ids = []
+                    
+                    num_rows = 0
+                    
+                    # yo, I can save time if I merge these ids so we only have one round of normalisation
+                    
+                    for ( service_tag_id, service_hash_ids ) in chunk:
+                        
+                        tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_tag_id )
+                        hash_ids = self.modules_repositories.NormaliseServiceHashIds( service_id, service_hash_ids )
+                        
+                        mappings_ids.append( ( tag_id, hash_ids ) )
+                        
+                        num_rows += len( service_hash_ids )
+                        
+                    
+                    self._UpdateMappings( service_id, mappings_ids = mappings_ids )
+                    
+                    num_rows_processed += num_rows
+                    
+                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        
+                        return num_rows_processed
+                        
+                    
+                
+                del content_iterator_dict[ 'new_mappings' ]
+                
             
-            for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
-                
-                deleted_mappings_ids = []
-                
-                num_rows = 0
-                
-                for ( service_tag_id, service_hash_ids ) in chunk:
-                    
-                    tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_tag_id )
-                    hash_ids = self.modules_repositories.NormaliseServiceHashIds( service_id, service_hash_ids )
-                    
-                    deleted_mappings_ids.append( ( tag_id, hash_ids ) )
-                    
-                    num_rows += len( service_hash_ids )
-                    
-                
-                self._UpdateMappings( service_id, deleted_mappings_ids = deleted_mappings_ids )
-                
-                num_rows_processed += num_rows
-                
-                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
-                    
-                    return num_rows_processed
-                    
-                
+            #
             
-            del content_iterator_dict[ 'deleted_mappings' ]
+            if 'deleted_mappings' in content_iterator_dict:
+                
+                i = content_iterator_dict[ 'deleted_mappings' ]
+                
+                for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                    
+                    deleted_mappings_ids = []
+                    
+                    num_rows = 0
+                    
+                    for ( service_tag_id, service_hash_ids ) in chunk:
+                        
+                        tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_tag_id )
+                        hash_ids = self.modules_repositories.NormaliseServiceHashIds( service_id, service_hash_ids )
+                        
+                        deleted_mappings_ids.append( ( tag_id, hash_ids ) )
+                        
+                        num_rows += len( service_hash_ids )
+                        
+                    
+                    self._UpdateMappings( service_id, deleted_mappings_ids = deleted_mappings_ids )
+                    
+                    num_rows_processed += num_rows
+                    
+                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        
+                        return num_rows_processed
+                        
+                    
+                
+                del content_iterator_dict[ 'deleted_mappings' ]
+                
             
         
         #
@@ -14049,138 +14174,144 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            if 'new_parents' in content_iterator_dict:
+            if HC.CONTENT_TYPE_TAG_PARENTS in content_types_to_process:
                 
-                i = content_iterator_dict[ 'new_parents' ]
-                
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                if 'new_parents' in content_iterator_dict:
                     
-                    parent_ids = []
+                    i = content_iterator_dict[ 'new_parents' ]
                     
-                    for ( service_child_tag_id, service_parent_tag_id ) in chunk:
+                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
-                        child_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_child_tag_id )
-                        parent_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_parent_tag_id )
+                        parent_ids = []
                         
-                        parent_ids.append( ( child_tag_id, parent_tag_id ) )
+                        for ( service_child_tag_id, service_parent_tag_id ) in chunk:
+                            
+                            child_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_child_tag_id )
+                            parent_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_parent_tag_id )
+                            
+                            parent_ids.append( ( child_tag_id, parent_tag_id ) )
+                            
                         
-                    
-                    self._AddTagParents( service_id, parent_ids )
-                    
-                    parents_or_siblings_changed = True
-                    
-                    num_rows_processed += len( parent_ids )
-                    
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        self._AddTagParents( service_id, parent_ids )
                         
-                        return num_rows_processed
+                        parents_or_siblings_changed = True
                         
-                    
-                
-                del content_iterator_dict[ 'new_parents' ]
-                
-            
-            #
-            
-            if 'deleted_parents' in content_iterator_dict:
-                
-                i = content_iterator_dict[ 'deleted_parents' ]
-                
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
-                    
-                    parent_ids = []
-                    
-                    for ( service_child_tag_id, service_parent_tag_id ) in chunk:
+                        num_rows_processed += len( parent_ids )
                         
-                        child_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_child_tag_id )
-                        parent_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_parent_tag_id )
-                        
-                        parent_ids.append( ( child_tag_id, parent_tag_id ) )
+                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                            
+                            return num_rows_processed
+                            
                         
                     
-                    self._DeleteTagParents( service_id, parent_ids )
-                    
-                    parents_or_siblings_changed = True
-                    
-                    num_rows = len( parent_ids )
-                    
-                    num_rows_processed += num_rows
-                    
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
-                        
-                        return num_rows_processed
-                        
+                    del content_iterator_dict[ 'new_parents' ]
                     
                 
-                del content_iterator_dict[ 'deleted_parents' ]
+                #
                 
-            
-            #
-            
-            if 'new_siblings' in content_iterator_dict:
-                
-                i = content_iterator_dict[ 'new_siblings' ]
-                
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                if 'deleted_parents' in content_iterator_dict:
                     
-                    sibling_ids = []
+                    i = content_iterator_dict[ 'deleted_parents' ]
                     
-                    for ( service_bad_tag_id, service_good_tag_id ) in chunk:
+                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
-                        bad_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_bad_tag_id )
-                        good_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_good_tag_id )
+                        parent_ids = []
                         
-                        sibling_ids.append( ( bad_tag_id, good_tag_id ) )
+                        for ( service_child_tag_id, service_parent_tag_id ) in chunk:
+                            
+                            child_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_child_tag_id )
+                            parent_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_parent_tag_id )
+                            
+                            parent_ids.append( ( child_tag_id, parent_tag_id ) )
+                            
                         
-                    
-                    self._AddTagSiblings( service_id, sibling_ids )
-                    
-                    parents_or_siblings_changed = True
-                    
-                    num_rows = len( sibling_ids )
-                    
-                    num_rows_processed += num_rows
-                    
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        self._DeleteTagParents( service_id, parent_ids )
                         
-                        return num_rows_processed
+                        parents_or_siblings_changed = True
+                        
+                        num_rows = len( parent_ids )
+                        
+                        num_rows_processed += num_rows
+                        
+                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                            
+                            return num_rows_processed
+                            
                         
                     
-                
-                del content_iterator_dict[ 'new_siblings' ]
+                    del content_iterator_dict[ 'deleted_parents' ]
+                    
                 
             
             #
             
-            if 'deleted_siblings' in content_iterator_dict:
+            if HC.CONTENT_TYPE_TAG_SIBLINGS in content_types_to_process:
                 
-                i = content_iterator_dict[ 'deleted_siblings' ]
+                if 'new_siblings' in content_iterator_dict:
+                    
+                    i = content_iterator_dict[ 'new_siblings' ]
+                    
+                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                        
+                        sibling_ids = []
+                        
+                        for ( service_bad_tag_id, service_good_tag_id ) in chunk:
+                            
+                            bad_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_bad_tag_id )
+                            good_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_good_tag_id )
+                            
+                            sibling_ids.append( ( bad_tag_id, good_tag_id ) )
+                            
+                        
+                        self._AddTagSiblings( service_id, sibling_ids )
+                        
+                        parents_or_siblings_changed = True
+                        
+                        num_rows = len( sibling_ids )
+                        
+                        num_rows_processed += num_rows
+                        
+                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                            
+                            return num_rows_processed
+                            
+                        
+                    
+                    del content_iterator_dict[ 'new_siblings' ]
+                    
                 
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
-                    
-                    sibling_ids = []
-                    
-                    for ( service_bad_tag_id, service_good_tag_id ) in chunk:
-                        
-                        bad_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_bad_tag_id )
-                        good_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_good_tag_id )
-                        
-                        sibling_ids.append( ( bad_tag_id, good_tag_id ) )
-                        
-                    
-                    self._DeleteTagSiblings( service_id, sibling_ids )
-                    
-                    parents_or_siblings_changed = True
-                    
-                    num_rows_processed += len( sibling_ids )
-                    
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
-                        
-                        return num_rows_processed
-                        
-                    
+                #
                 
-                del content_iterator_dict[ 'deleted_siblings' ]
+                if 'deleted_siblings' in content_iterator_dict:
+                    
+                    i = content_iterator_dict[ 'deleted_siblings' ]
+                    
+                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                        
+                        sibling_ids = []
+                        
+                        for ( service_bad_tag_id, service_good_tag_id ) in chunk:
+                            
+                            bad_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_bad_tag_id )
+                            good_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_good_tag_id )
+                            
+                            sibling_ids.append( ( bad_tag_id, good_tag_id ) )
+                            
+                        
+                        self._DeleteTagSiblings( service_id, sibling_ids )
+                        
+                        parents_or_siblings_changed = True
+                        
+                        num_rows_processed += len( sibling_ids )
+                        
+                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                            
+                            return num_rows_processed
+                            
+                        
+                    
+                    del content_iterator_dict[ 'deleted_siblings' ]
+                    
                 
             
         finally:
@@ -14191,7 +14322,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self.modules_repositories.SetUpdateProcessed( service_id, content_hash )
+        self.modules_repositories.SetUpdateProcessed( service_id, content_hash, content_types_to_process )
         
         return num_rows_processed
         
@@ -14257,7 +14388,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'random_potential_duplicate_hashes': result = self._DuplicatesGetRandomPotentialDuplicateHashes( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'repository_progress': result = self.modules_repositories.GetRepositoryProgress( *args, **kwargs )
-        elif action == 'repository_unprocessed_hashes': result = self.modules_repositories.GetRepositoryUpdateHashesUnprocessed( *args, **kwargs )
         elif action == 'repository_update_hashes_to_process': result = self.modules_repositories.GetRepositoryUpdateHashesICanProcess( *args, **kwargs )
         elif action == 'serialisable': result = self.modules_serialisable.GetJSONDump( *args, **kwargs )
         elif action == 'serialisable_simple': result = self.modules_serialisable.GetJSONSimple( *args, **kwargs )
@@ -15745,6 +15875,130 @@ class DB( HydrusDB.HydrusDB ):
             
             self.pub_after_job( 'notify_account_sync_due' )
             self.pub_after_job( 'notify_new_pending' )
+            self.pub_after_job( 'notify_new_services_data' )
+            self.pub_after_job( 'notify_new_services_gui' )
+            
+            job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
+            
+        finally:
+            
+            job_key.Finish()
+            
+        
+    
+    def _ResetRepositoryProcessing( self, service_key: bytes, content_types ):
+        
+        service_id = self.modules_services.GetServiceId( service_key )
+        
+        service = self.modules_services.GetService( service_id )
+        
+        service_type = service.GetServiceType()
+        
+        prefix = 'resetting content'
+        
+        job_key = ClientThreading.JobKey()
+        
+        try:
+            
+            job_key.SetVariable( 'popup_text_1', '{}: calculating'.format( prefix ) )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            # note that siblings/parents do not do a cachetags clear-regen because they only actually delete ideal, not actual
+            
+            if HC.CONTENT_TYPE_FILES in content_types:
+                
+                self._c.execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
+                
+                if service_type in HC.SPECIFIC_FILE_SERVICES:
+                    
+                    self.modules_files_storage.ClearFilesTables( service_id )
+                    
+                
+                if service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
+                    
+                    tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                    
+                    for tag_service_id in tag_service_ids:
+                        
+                        self._CacheSpecificMappingsClear( service_id, tag_service_id )
+                        
+                        # not clear since siblings and parents can contribute
+                        self._CacheTagsDrop( service_id, tag_service_id )
+                        self._CacheTagsGenerate( service_id, tag_service_id )
+                        self._CacheTagsPopulate( service_id, tag_service_id )
+                        
+                    
+                
+            
+            if HC.CONTENT_TYPE_MAPPINGS in content_types:
+                
+                if service_type in HC.REAL_TAG_SERVICES:
+                    
+                    self.modules_mappings_storage.ClearMappingsTables( service_id )
+                    
+                    self._CacheCombinedFilesMappingsClear( service_id )
+                    
+                    self._CacheTagsDrop( self.modules_services.combined_file_service_id, service_id )
+                    self._CacheTagsGenerate( self.modules_services.combined_file_service_id, service_id )
+                    self._CacheTagsPopulate( self.modules_services.combined_file_service_id, service_id )
+                    
+                    file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+                    
+                    for file_service_id in file_service_ids:
+                        
+                        self._CacheSpecificMappingsClear( file_service_id, service_id )
+                        
+                        # not clear since siblings and parents can contribute
+                        self._CacheTagsDrop( file_service_id, service_id )
+                        self._CacheTagsGenerate( file_service_id, service_id )
+                        self._CacheTagsPopulate( file_service_id, service_id )
+                        
+                    
+                
+            
+            if HC.CONTENT_TYPE_TAG_PARENTS in content_types:
+                
+                self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+                
+                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
+                
+                # do not delete from actual!
+                self._c.execute( 'DELETE FROM {};'.format( cache_ideal_tag_parents_lookup_table_name ) )
+                
+            
+            if HC.CONTENT_TYPE_TAG_SIBLINGS in content_types:
+                
+                self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
+                
+                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
+                
+                self._c.execute( 'DELETE FROM {};'.format( cache_ideal_tag_siblings_lookup_table_name ) )
+                
+            
+            #
+            
+            job_key.SetVariable( 'popup_text_1', '{}: recalculating'.format( prefix ) )
+            
+            if HC.CONTENT_TYPE_TAG_PARENTS in content_types or HC.CONTENT_TYPE_TAG_SIBLINGS in content_types:
+                
+                interested_service_ids = set( self._CacheTagDisplayGetInterestedServiceIds( service_id ) )
+                
+                self._service_ids_to_sibling_applicable_service_ids = None
+                self._service_ids_to_sibling_interested_service_ids = None
+                self._service_ids_to_parent_applicable_service_ids = None
+                self._service_ids_to_parent_interested_service_ids = None
+                
+                if len( interested_service_ids ) > 0:
+                    
+                    self._RegenerateTagSiblingsCache( only_these_service_ids = interested_service_ids )
+                    
+                
+            
+            self.modules_repositories.ReprocessRepository( service_key, content_types )
+            
             self.pub_after_job( 'notify_new_services_data' )
             self.pub_after_job( 'notify_new_services_gui' )
             
@@ -17455,6 +17709,82 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 448:
+            
+            for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
+                
+                service_type = self.modules_services.GetService( service_id ).GetServiceType()
+                
+                ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = ClientDBRepositories.GenerateRepositoryUpdatesTableNames( service_id )
+                
+                result = self._c.execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( repository_unregistered_updates_table_name, ) ).fetchone()
+                
+                if result is not None:
+                    
+                    continue
+                    
+                
+                all_data = self._c.execute( 'SELECT update_index, hash_id, processed FROM {};'.format( repository_updates_table_name ) ).fetchall()
+                
+                self._c.execute( 'DROP TABLE {};'.format( repository_updates_table_name ) )
+                
+                #
+                
+                self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, PRIMARY KEY ( update_index, hash_id ) );'.format( repository_updates_table_name ) )
+                self._CreateIndex( repository_updates_table_name, [ 'hash_id' ] )   
+                
+                self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( repository_unregistered_updates_table_name ) )
+                
+                self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, content_type INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( hash_id, content_type ) );'.format( repository_updates_processed_table_name ) )
+                self._CreateIndex( repository_updates_processed_table_name, [ 'content_type' ] )
+                
+                #
+                
+                for ( update_index, hash_id, processed ) in all_data:
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), ( update_index, hash_id ) )
+                    
+                    try:
+                        
+                        mime = self.modules_files_metadata_basic.GetMime( hash_id )
+                        
+                    except HydrusExceptions.DataMissing:
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( hash_id, ) )
+                        
+                        continue
+                        
+                    
+                    if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+                        
+                        content_types = ( HC.CONTENT_TYPE_DEFINITIONS, )
+                        
+                    else:
+                        
+                        if service_type == HC.FILE_REPOSITORY:
+                            
+                            content_types = ( HC.CONTENT_TYPE_FILES, )
+                            
+                        else:
+                            
+                            content_types = ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS )
+                            
+                        
+                    
+                    self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), ( ( hash_id, content_type, processed ) for content_type in content_types ) )
+                    
+                
+            
+            self.modules_repositories.DoOutstandingUpdateRegistration()
+            
+            for service in self.modules_services.GetServices( ( HC.TAG_REPOSITORY, ) ):
+                
+                service_key = service.GetServiceKey()
+                
+                self._ResetRepositoryProcessing( service_key, ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ) )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -17989,6 +18319,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'repair_invalid_tags': self._RepairInvalidTags( *args, **kwargs )
         elif action == 'reprocess_repository': self.modules_repositories.ReprocessRepository( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
+        elif action == 'reset_repository_processing': self._ResetRepositoryProcessing( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
         elif action == 'serialisable': self.modules_serialisable.SetJSONDump( *args, **kwargs )

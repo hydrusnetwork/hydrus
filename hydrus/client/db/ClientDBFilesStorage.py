@@ -86,6 +86,16 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         return num_deleted
         
     
+    def ClearFilesTables( self, service_id: int ):
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( current_files_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( deleted_files_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( pending_files_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( petitioned_files_table_name ) )
+        
+    
     def ClearLocalDeleteRecord( self, hash_ids = None ):
         
         # we delete from everywhere, but not for files currently in the trash
@@ -140,6 +150,24 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     def CreateInitialTables( self ):
         
         self._c.execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
+        
+    
+    def DeletePending( self, service_id: int ):
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( pending_files_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( petitioned_files_table_name ) )
+        
+    
+    def DropFilesTables( self, service_id: int ):
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( current_files_table_name ) )
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( deleted_files_table_name ) )
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( pending_files_table_name ) )
+        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_files_table_name ) )
         
     
     def FilterAllCurrentHashIds( self, hash_ids, just_these_service_ids = None ):
@@ -230,24 +258,6 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             
         
         return pending_hash_ids
-        
-    
-    def DeletePending( self, service_id: int ):
-        
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
-        
-        self._c.execute( 'DELETE FROM {};'.format( pending_files_table_name ) )
-        self._c.execute( 'DELETE FROM {};'.format( petitioned_files_table_name ) )
-        
-    
-    def DropFilesTables( self, service_id: int ):
-        
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
-        
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( current_files_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( deleted_files_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( pending_files_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_files_table_name ) )
         
     
     def GenerateFilesTables( self, service_id: int ):

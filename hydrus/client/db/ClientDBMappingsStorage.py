@@ -48,6 +48,16 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         return expected_table_names
         
     
+    def ClearMappingsTables( self, service_id: int ):
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        self._c.execute( 'DELETE FROM {};'.format( current_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( deleted_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( pending_mappings_table_name ) )
+        self._c.execute( 'DELETE FROM {};'.format( petitioned_mappings_table_name ) )
+        
+    
     def DropMappingsTables( self, service_id: int ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
