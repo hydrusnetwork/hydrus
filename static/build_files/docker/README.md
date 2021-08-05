@@ -16,7 +16,7 @@ As of `v359` hydrus understands IPFS `nocopy`. And can be easily run with go-ipf
 Read [Hydrus IPFS help](https://hydrusnetwork.github.io/hydrus/help/ipfs.html). Mount `HOST_PATH_DB/client_files` to `/data/client_files` in ipfs. Go manage the ipfs service and set the path to `/data/client_files`, you'll know where to put it in.
 
 Example compose file:
-```
+```yml
 version: '3.8'
 volumes:
   tor-config:
