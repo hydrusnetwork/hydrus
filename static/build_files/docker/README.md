@@ -53,11 +53,6 @@ services:
     image: ghcr.io/hydrusnetwork/hydrus:server
     container_name: hydrusserver
     restart: unless-stopped
-    labels:
-      - "traefik.port=45870"
-      - "traefik.frontend.rule=Host:hydrus-server.suika.lan"
-      - "traefik.frontend.entryPoints=http,https"
-      - "traefik.frontend.headers.SSLRedirect=true"
     volumes:
       - hydrus-server:/opt/hydrus/db
 
