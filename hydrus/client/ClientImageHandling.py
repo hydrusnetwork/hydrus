@@ -61,17 +61,13 @@ def GenerateShapePerceptualHashes( path, mime ):
         
         numpy_alpha_float = numpy_alpha / 255.0
         
-        numpy_image_bgr = numpy_image[ :, :, :3 ]
+        numpy_alpha_inverted = 255.0 - numpy_alpha
         
-        numpy_image_gray_bare = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_RGB2GRAY )
+        numpy_image_gray_bare = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2GRAY )
         
-        # create a white greyscale canvas
+        # paste the grayscale image onto the white canvas using: pixel * alpha + inverted_alpha
         
-        white = numpy.ones( ( y, x ) ) * 255.0
-        
-        # paste the grayscale image onto the white canvas using: pixel * alpha + white * ( 1 - alpha )
-        
-        numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * numpy_alpha_float ) + ( white * ( numpy.ones( ( y, x ) ) - numpy_alpha_float ) ) )
+        numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * numpy_alpha_float ) + numpy_alpha_inverted )
         
     else:
         
