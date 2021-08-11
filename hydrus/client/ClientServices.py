@@ -995,6 +995,11 @@ class ServiceRestricted( ServiceRemote ):
         self._service_options = dictionary[ 'service_options' ]
         
     
+    def _SetNewServiceOptions( self, service_options ):
+        
+        self._service_options = service_options
+        
+    
     def CanSyncAccount( self, including_external_communication = True ):
         
         with self._lock:
@@ -1269,7 +1274,7 @@ class ServiceRestricted( ServiceRemote ):
         
         with self._lock:
             
-            self._next_account_sync = HydrusData.GetNow()
+            self._next_account_sync = HydrusData.GetNow() - 1
             
             self._SetDirty()
             
@@ -1350,7 +1355,9 @@ class ServiceRestricted( ServiceRemote ):
                     
                     with self._lock:
                         
-                        self._service_options = options_response[ 'service_options' ]
+                        service_options = options_response[ 'service_options' ]
+                        
+                        self._SetNewServiceOptions( service_options )
                         
                     
                 except HydrusExceptions.SerialisationException:
@@ -1541,6 +1548,18 @@ class ServiceRepository( ServiceRestricted ):
         
         HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
         job_key.SetVariable( 'popup_text_2', popup_message )
+        
+    
+    def _SetNewServiceOptions( self, service_options ):
+        
+        if 'update_period' in service_options and 'update_period' in self._service_options and service_options[ 'update_period' ] != self._service_options[ 'update_period' ]:
+            
+            update_period = service_options[ 'update_period' ]
+            
+            self._metadata.CalculateNewNextUpdateDue( update_period )
+            
+        
+        ServiceRestricted._SetNewServiceOptions( self, service_options )
         
     
     def _SyncDownloadMetadata( self ):

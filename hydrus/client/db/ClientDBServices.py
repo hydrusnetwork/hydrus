@@ -37,9 +37,9 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
     
     def _InitCaches( self ):
         
-        if self._c.execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'services', ) ).fetchone() is not None:
+        if self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'services', ) ).fetchone() is not None:
             
-            all_data = self._c.execute( 'SELECT service_id, service_key, service_type, name, dictionary_string FROM services;' ).fetchall()
+            all_data = self._Execute( 'SELECT service_id, service_key, service_type, name, dictionary_string FROM services;' ).fetchall()
             
             for ( service_id, service_key, service_type, name, dictionary_string ) in all_data:
                 
@@ -62,7 +62,7 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
     
     def CreateInitialTables( self ):
         
-        self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );' )
+        self._Execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );' )
         
     
     def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
@@ -78,9 +78,9 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
         
         dictionary_string = dictionary.DumpToString()
         
-        self._c.execute( 'INSERT INTO services ( service_key, service_type, name, dictionary_string ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, dictionary_string ) )
+        self._Execute( 'INSERT INTO services ( service_key, service_type, name, dictionary_string ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, dictionary_string ) )
         
-        service_id = self._c.lastrowid
+        service_id = self._GetLastRowId()
         
         service = ClientServices.GenerateService( service_key, service_type, name, dictionary )
         
@@ -125,7 +125,7 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
                 
             
         
-        self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+        self._Execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
     
     def GetNonDupeName( self, name ) -> str:
@@ -188,7 +188,7 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
         
         dictionary_string = dictionary.DumpToString()
         
-        self._c.execute( 'UPDATE services SET name = ?, dictionary_string = ? WHERE service_id = ?;', ( name, dictionary_string, service_id ) )
+        self._Execute( 'UPDATE services SET name = ?, dictionary_string = ? WHERE service_id = ?;', ( name, dictionary_string, service_id ) )
         
         self._service_ids_to_services[ service_id ] = service
         

@@ -1972,15 +1972,21 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             self._metadata[ update_index ] = ( update_hashes, begin, end )
             
         
-        for update_index in sorted( self._metadata.keys() ):
-            
-            ( update_hashes, begin, end ) = self._metadata[ update_index ]
+        self._RecalcHashes()
+        
+        self._biggest_end = self._CalculateBiggestEnd()
+        
+    
+    def _RecalcHashes( self ):
+        
+        self._update_hashes = set()
+        self._update_hashes_ordered = []
+        
+        for ( update_index, ( update_hashes, begin, end ) ) in sorted( self._metadata.items() ):
             
             self._update_hashes.update( update_hashes )
             self._update_hashes_ordered.extend( update_hashes )
             
-        
-        self._biggest_end = self._CalculateBiggestEnd()
         
     
     def AppendUpdate( self, update_hashes, begin, end, next_update_due ):
@@ -2021,9 +2027,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            data = sorted( self._metadata.items() )
-            
-            for ( update_index, ( update_hashes, begin, end ) ) in data:
+            for ( update_index, ( update_hashes, begin, end ) ) in sorted( self._metadata.items() ):
                 
                 if HydrusData.SetsIntersect( hashes, update_hashes ):
                     
@@ -2228,6 +2232,8 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             self._next_update_due = new_next_update_due
             self._biggest_end = self._CalculateBiggestEnd()
+            
+            self._RecalcHashes()
             
         
     

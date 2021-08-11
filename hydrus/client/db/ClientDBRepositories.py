@@ -125,13 +125,13 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         if hash_ids is None:
             
-            hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_unregistered_updates_table_name ) ) )
+            hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_unregistered_updates_table_name ) ) )
             
         else:
             
-            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                 
-                hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, repository_unregistered_updates_table_name ) ) )
+                hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, repository_unregistered_updates_table_name ) ) )
                 
             
         
@@ -141,9 +141,9 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
             service_type = self.modules_services.GetService( service_id ).GetServiceType()
             
-            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                 
-                hash_ids_to_mimes = { hash_id : mime for ( hash_id, mime ) in self._c.execute( 'SELECT hash_id, mime FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
+                hash_ids_to_mimes = { hash_id : mime for ( hash_id, mime ) in self._Execute( 'SELECT hash_id, mime FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
                 
             
             if len( hash_ids_to_mimes ) > 0:
@@ -165,8 +165,8 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                     inserts.extend( ( ( hash_id, content_type, processed ) for content_type in content_types ) )
                     
                 
-                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), inserts )
-                self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids_to_mimes.keys() ) )
+                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), inserts )
+                self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids_to_mimes.keys() ) )
                 
             
         
@@ -175,7 +175,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        self._c.executemany( 'UPDATE {} SET processed = ? WHERE content_type = ?;'.format( repository_updates_processed_table_name ), ( ( False, content_type ) for content_type in content_types ) )
+        self._ExecuteMany( 'UPDATE {} SET processed = ? WHERE content_type = ?;'.format( repository_updates_processed_table_name ), ( ( False, content_type ) for content_type in content_types ) )
         
         self._ClearOutstandingWorkCache( service_id )
         
@@ -186,7 +186,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
         
-        update_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
+        update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
         self.modules_files_maintenance.AddJobs( update_hash_ids, job_type )
         
@@ -208,9 +208,9 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
             ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
             
-            self._c.executemany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
             
-            self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
             
         
         self._RegisterUpdates( service_id )
@@ -225,14 +225,14 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( repository_unregistered_updates_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_processed_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_unregistered_updates_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_processed_table_name ) )
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
         
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( hash_id_map_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( tag_id_map_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( hash_id_map_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( tag_id_map_table_name ) )
         
         self._ClearOutstandingWorkCache( service_id )
         
@@ -249,18 +249,18 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, PRIMARY KEY ( update_index, hash_id ) );'.format( repository_updates_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, PRIMARY KEY ( update_index, hash_id ) );'.format( repository_updates_table_name ) )
         self._CreateIndex( repository_updates_table_name, [ 'hash_id' ] )   
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( repository_unregistered_updates_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( repository_unregistered_updates_table_name ) )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, content_type INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( hash_id, content_type ) );'.format( repository_updates_processed_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, content_type INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( hash_id, content_type ) );'.format( repository_updates_processed_table_name ) )
         self._CreateIndex( repository_updates_processed_table_name, [ 'content_type' ] )
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( service_hash_id INTEGER PRIMARY KEY, hash_id INTEGER );'.format( hash_id_map_table_name ) )
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );'.format( tag_id_map_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( service_hash_id INTEGER PRIMARY KEY, hash_id INTEGER );'.format( hash_id_map_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );'.format( tag_id_map_table_name ) )
         
     
     def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
@@ -277,14 +277,14 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        ( num_updates, ) = self._c.execute( 'SELECT COUNT( * ) FROM {}'.format( repository_updates_table_name ) ).fetchone()
+        ( num_updates, ) = self._Execute( 'SELECT COUNT( * ) FROM {}'.format( repository_updates_table_name ) ).fetchone()
         
         table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
         
-        ( num_local_updates, ) = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( table_join ) ).fetchone()
+        ( num_local_updates, ) = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( table_join ) ).fetchone()
         
-        content_types_to_num_updates = collections.Counter( dict( self._c.execute( 'SELECT content_type, COUNT( * ) FROM {} GROUP BY content_type;'.format( repository_updates_processed_table_name ) ) ) )
-        content_types_to_num_processed_updates = collections.Counter( dict( self._c.execute( 'SELECT content_type, COUNT( * ) FROM {} WHERE processed = ? GROUP BY content_type;'.format( repository_updates_processed_table_name ), ( True, ) ) ) )
+        content_types_to_num_updates = collections.Counter( dict( self._Execute( 'SELECT content_type, COUNT( * ) FROM {} GROUP BY content_type;'.format( repository_updates_processed_table_name ) ) ) )
+        content_types_to_num_processed_updates = collections.Counter( dict( self._Execute( 'SELECT content_type, COUNT( * ) FROM {} WHERE processed = ? GROUP BY content_type;'.format( repository_updates_processed_table_name ), ( True, ) ) ) )
         
         # little helpful thing that pays off later
         for content_type in content_types_to_num_updates:
@@ -307,17 +307,17 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        result = self._c.execute( 'SELECT 1 FROM {} WHERE content_type = ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( HC.CONTENT_TYPE_DEFINITIONS, True ) ).fetchone()
+        result = self._Execute( 'SELECT 1 FROM {} WHERE content_type = ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( HC.CONTENT_TYPE_DEFINITIONS, True ) ).fetchone()
         
         this_is_first_definitions_work = result is None
         
-        result = self._c.execute( 'SELECT 1 FROM {} WHERE content_type != ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( HC.CONTENT_TYPE_DEFINITIONS, True ) ).fetchone()
+        result = self._Execute( 'SELECT 1 FROM {} WHERE content_type != ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( HC.CONTENT_TYPE_DEFINITIONS, True ) ).fetchone()
         
         this_is_first_content_work = result is None
         
         min_unregistered_update_index = None
         
-        result = self._c.execute( 'SELECT MIN( update_index ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( repository_unregistered_updates_table_name, repository_updates_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT MIN( update_index ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( repository_unregistered_updates_table_name, repository_updates_table_name ) ).fetchone()
         
         if result is not None:
             
@@ -336,12 +336,12 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         query = 'SELECT update_index, hash_id, content_type FROM {} CROSS JOIN {} USING ( hash_id ) WHERE {};'.format( repository_updates_processed_table_name, repository_updates_table_name, predicate_phrase )
         
-        rows = self._c.execute( query ).fetchall()
+        rows = self._Execute( query ).fetchall()
         
         update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( ( ( update_index, hash_id ) for ( update_index, hash_id, content_type ) in rows ) )
         hash_ids_to_content_types_to_process = HydrusData.BuildKeyToSetDict( ( ( hash_id, content_type ) for ( update_index, hash_id, content_type ) in rows ) )
         
-        all_hash_ids = set( itertools.chain.from_iterable( update_indices_to_unprocessed_hash_ids.values() ) )
+        all_hash_ids = set( hash_ids_to_content_types_to_process.keys() )
         
         all_local_hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.local_update_service_id, all_hash_ids )
         
@@ -400,11 +400,11 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        all_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} ORDER BY update_index ASC;'.format( repository_updates_table_name ) ) )
+        all_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} ORDER BY update_index ASC;'.format( repository_updates_table_name ) ) )
         
         table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
         
-        existing_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
+        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
         needed_hash_ids = [ hash_id for hash_id in all_hash_ids if hash_id not in existing_hash_ids ]
         
@@ -455,7 +455,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
             if content_type not in content_types_to_outstanding_local_processing:
                 
-                result = self._STL( self._c.execute( 'SELECT 1 FROM {} WHERE content_type = ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( content_type, False ) ).fetchmany( 20 ) )
+                result = self._STL( self._Execute( 'SELECT 1 FROM {} WHERE content_type = ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( content_type, False ) ).fetchmany( 20 ) )
                 
                 content_types_to_outstanding_local_processing[ content_type ] = len( result ) >= 20
                 
@@ -473,7 +473,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         hash_id_map_table_name = GenerateRepositoryFileDefinitionTableName( service_id )
         
-        result = self._c.execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
+        result = self._Execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
         
         if result is None:
             
@@ -489,10 +489,10 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         hash_id_map_table_name = GenerateRepositoryFileDefinitionTableName( service_id )
         
-        with HydrusDB.TemporaryIntegerTable( self._c, service_hash_ids, 'service_hash_id' ) as temp_table_name:
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_table_name:
             
             # temp service hashes to lookup
-            hash_ids_potentially_dupes = self._STL( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_table_name, hash_id_map_table_name ) ) )
+            hash_ids_potentially_dupes = self._STL( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_table_name, hash_id_map_table_name ) ) )
             
         
         # every service_id can only exist once, but technically a hash_id could be mapped to two service_ids
@@ -502,7 +502,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
             for service_hash_id in service_hash_ids:
                 
-                result = self._c.execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
+                result = self._Execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
                 
                 if result is None:
                     
@@ -522,7 +522,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         tag_id_map_table_name = GenerateRepositoryTagDefinitionTableName( service_id )
         
-        result = self._c.execute( 'SELECT tag_id FROM {} WHERE service_tag_id = ?;'.format( tag_id_map_table_name ), ( service_tag_id, ) ).fetchone()
+        result = self._Execute( 'SELECT tag_id FROM {} WHERE service_tag_id = ?;'.format( tag_id_map_table_name ), ( service_tag_id, ) ).fetchone()
         
         if result is None:
             
@@ -569,7 +569,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                     inserts.append( ( service_hash_id, hash_id ) )
                     
                 
-                self._c.executemany( 'REPLACE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
+                self._ExecuteMany( 'REPLACE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
                 
                 num_rows_processed += len( inserts )
                 
@@ -606,7 +606,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                     inserts.append( ( service_tag_id, tag_id ) )
                     
                 
-                self._c.executemany( 'REPLACE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
+                self._ExecuteMany( 'REPLACE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
                 
                 num_rows_processed += len( inserts )
                 
@@ -644,15 +644,15 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        current_update_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
+        current_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
         
         all_future_update_hash_ids = self.modules_hashes_local_cache.GetHashIds( metadata.GetUpdateHashes() )
         
         deletee_hash_ids = current_update_hash_ids.difference( all_future_update_hash_ids )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
         
         inserts = []
         
@@ -664,7 +664,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                 
                 if hash_id in current_update_hash_ids:
                     
-                    self._c.execute( 'UPDATE {} SET update_index = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( update_index, hash_id ) )
+                    self._Execute( 'UPDATE {} SET update_index = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( update_index, hash_id ) )
                     
                 else:
                     
@@ -673,8 +673,8 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                 
             
         
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
         
         self._RegisterUpdates( service_id )
         
@@ -687,7 +687,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         update_hash_id = self.modules_hashes_local_cache.GetHashId( update_hash )
         
-        self._c.executemany( 'UPDATE {} SET processed = ? WHERE hash_id = ? AND content_type = ?;'.format( repository_updates_processed_table_name ), ( ( True, update_hash_id, content_type ) for content_type in content_types ) )
+        self._ExecuteMany( 'UPDATE {} SET processed = ? WHERE hash_id = ? AND content_type = ?;'.format( repository_updates_processed_table_name ), ( ( True, update_hash_id, content_type ) for content_type in content_types ) )
         
         for content_type in content_types:
             

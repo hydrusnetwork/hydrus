@@ -15,6 +15,7 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
 from hydrus.client import ClientSearch
+from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -770,6 +771,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         to_do = self._paths.GetData()
         
+        to_do = [ ( ordering_index, media, self._GetPath( media ) ) for ( ordering_index, media ) in to_do ]
+        
         num_to_do = len( to_do )
         
         def qt_update_label( text ):
@@ -799,18 +802,32 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def do_it( directory, neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards ):
             
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetStatusTitle( 'file export' )
+            
+            HG.client_controller.pub( 'message', job_key )
+            
             pauser = HydrusData.BigJobPauser()
             
-            for ( index, ( ordering_index, media ) ) in enumerate( to_do ):
+            for ( index, ( ordering_index, media, path ) ) in enumerate( to_do ):
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
                 
                 try:
                     
-                    QP.CallAfter( qt_update_label, HydrusData.ConvertValueRangeToPrettyString(index+1,num_to_do) )
+                    x_of_y = HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do )
+                    
+                    job_key.SetVariable( 'popup_text_1', 'Done {}'.format( x_of_y ) )
+                    job_key.SetVariable( 'popup_gauge_1', ( index + 1, num_to_do ) )
+                    
+                    QP.CallAfter( qt_update_label, x_of_y )
                     
                     hash = media.GetHash()
                     mime = media.GetMime()
-                    
-                    path = self._GetPath( media )
                     
                     path = os.path.normpath( path )
                     
@@ -869,7 +886,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 pauser.Pause()
                 
             
-            if delete_afterwards:
+            if not job_key.IsCancelled() and delete_afterwards:
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
@@ -877,11 +894,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if delete_lock_for_archived_files:
                     
-                    deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do if not media.HasArchive() }
+                    deletee_hashes = { media.GetHash() for ( ordering_index, media, path ) in to_do if not media.HasArchive() }
                     
                 else:
                     
-                    deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do }
+                    deletee_hashes = { media.GetHash() for ( ordering_index, media, path ) in to_do }
                     
                 
                 chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
@@ -895,6 +912,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
                     
                 
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_key.SetVariable( 'popup_text_1', 'Done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
             
             QP.CallAfter( qt_update_label, 'done!' )
             

@@ -241,7 +241,10 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             publish_to_page = False
             
-            watcher.Start( self._page_key, publish_to_page )
+            if self._have_started:
+                
+                watcher.Start( self._page_key, publish_to_page )
+                
             
             self._AddWatcher( watcher )
             

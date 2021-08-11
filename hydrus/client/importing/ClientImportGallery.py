@@ -1389,7 +1389,10 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             publish_to_page = False
             
-            gallery_import.Start( self._page_key, publish_to_page )
+            if self._have_started:
+                
+                gallery_import.Start( self._page_key, publish_to_page )
+                
             
             self._AddGalleryImport( gallery_import )
             
@@ -1459,7 +1462,10 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 publish_to_page = False
                 
-                gallery_import.Start( self._page_key, publish_to_page )
+                if self._have_started:
+                    
+                    gallery_import.Start( self._page_key, publish_to_page )
+                    
                 
                 self._AddGalleryImport( gallery_import )
                 

@@ -4896,6 +4896,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusData.ToHumanInt( slow ), HydrusData.ToHumanInt( fast ) ) )
                 
             
+        elif name == 'query_planner_mode':
+            
+            if not HG.query_planner_mode:
+                
+                now = HydrusData.GetNow()
+                
+                HG.query_planner_start_time = now
+                HG.query_planner_query_count = 0
+                
+                HG.query_planner_mode = True
+                
+                HydrusData.ShowText( 'Query Planner mode on!' )
+                
+            else:
+                
+                HG.query_planner_mode = False
+                
+                HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusData.ToHumanInt( HG.query_planner_query_count ) ) )
+                
+            
         elif name == 'pubsub_report_mode':
             
             HG.pubsub_report_mode = not HG.pubsub_report_mode
@@ -6017,10 +6037,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             profile_mode_message += os.linesep * 2
             profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
             profile_mode_message += os.linesep * 2
+            profile_mode_message += 'A new Query Planner mode also makes very detailed database analysis. This is an alternate profiling mode hydev is testing.'
+            profile_mode_message += os.linesep * 2
             profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
             
             ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
             ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, self._SwitchBoolean, 'profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HG.query_planner_mode, self._SwitchBoolean, 'query_planner_mode' )
             
             ClientGUIMenus.AppendMenu( debug, profiling, 'profiling' )
             

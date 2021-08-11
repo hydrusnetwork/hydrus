@@ -260,7 +260,7 @@ def parse_value(string, spec):
             return string[len(match[0]):], (hashes, distance)
         raise ValueError("Invalid value, expected a list of hashes with distance")
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
-        match = re.match('(?P<hashes>([0-9a-f]+(\s|,)+)+[0-9a-f]+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string)
+        match = re.match('(?P<hashes>[0-9a-f]+((\s|,)+[0-9a-f]+)*)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string)
         if match:
             hashes = set(hsh.strip() for hsh in re.sub('\s', ' ', match['hashes'].replace(',', ' ')).split(' ') if len(hsh) > 0)
             algorithm = match['algorithm'] if len(match['algorithm']) > 0 else 'sha256'

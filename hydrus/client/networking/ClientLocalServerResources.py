@@ -37,10 +37,10 @@ LOCAL_BOORU_STRING_PARAMS = set()
 LOCAL_BOORU_JSON_PARAMS = set()
 LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
-CLIENT_API_INT_PARAMS = { 'file_id' }
-CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key' }
+CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple', 'file_sort_asc' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
 def ParseLocalBooruGETArgs( requests_args ):
@@ -1580,16 +1580,121 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        # optionally pull this from the params, obviously
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        if 'file_service_key' in request.parsed_request_args or 'file_service_name' in request.parsed_request_args:
+            
+            if 'file_service_key' in request.parsed_request_args:
+                
+                file_service_key = request.parsed_request_args[ 'file_service_key' ]
+                
+            else:
+                
+                file_service_name = request.parsed_request_args[ 'file_service_name' ]
+                
+                try:
+                    
+                    file_service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.ALL_FILE_SERVICES, file_service_name )
+                    
+                except:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( file_service_name ) )
+                    
+                
+            
+            try:
+                
+                service = HG.client_controller.services_manager.GetService( file_service_key )
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'Could not find that file service!' )
+                
+            
+            if service.GetServiceType() not in HC.ALL_FILE_SERVICES:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, that service key did not give a file service!' )
+                
+            
+        else:
+            
+            # I guess ideally we would go for the 'all local services' umbrella, or a list of them, or however we end up doing that
+            # for now we'll fudge it
+            
+            file_service_key = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )[0]
+            
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+        if 'tag_service_key' in request.parsed_request_args or 'tag_service_name' in request.parsed_request_args:
+            
+            if 'tag_service_key' in request.parsed_request_args:
+                
+                tag_service_key = request.parsed_request_args[ 'tag_service_key' ]
+                
+            else:
+                
+                tag_service_name = request.parsed_request_args[ 'tag_service_name' ]
+                
+                try:
+                    
+                    tag_service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.ALL_TAG_SERVICES, tag_service_name )
+                    
+                except:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( tag_service_name ) )
+                    
+                
+            
+            try:
+                
+                service = HG.client_controller.services_manager.GetService( tag_service_key )
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'Could not find that tag service!' )
+                
+            
+            if service.GetServiceType() not in HC.ALL_TAG_SERVICES:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, that service key did not give a tag service!' )
+                
+            
+        else:
+            
+            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, search for all known tags over all known files is not supported!' )
+            
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+        tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
         predicates = ParseClientAPISearchPredicates( request )
         
         file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = predicates )
         
+        file_sort_type = CC.SORT_FILES_BY_IMPORT_TIME
+        
+        if 'file_sort_type' in request.parsed_request_args:
+            
+            file_sort_type = request.parsed_request_args[ 'file_sort_type' ]
+            
+        
+        if file_sort_type not in CC.SYSTEM_SORT_TYPES:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, did not understand that sort type!' )
+            
+        
+        file_sort_asc = False
+        
+        if 'file_sort_asc' in request.parsed_request_args:
+            
+            file_sort_asc = request.parsed_request_args.GetValue( 'file_sort_asc', bool )
+            
+        
+        sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
+        
         # newest first
-        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), sort_order = CC.SORT_DESC )
+        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', file_sort_type ), sort_order = CC.SORT_DESC )
         
         hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by, apply_implicit_limit = False )
         

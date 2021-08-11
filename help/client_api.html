@@ -1125,6 +1125,12 @@
 						<p>Arguments (in percent-encoded JSON):</p>
 						<ul>
 							<li>tags : (a list of tags you wish to search for)</li>
+							<li>file_service_name : (optional, selective, string, the file domain on which to search)</li>
+							<li>file_service_key : (optional, selective, hexadecimal, the file domain on which to search)</li>
+							<li>tag_service_name : (optional, selective, string, the tag domain on which to search)</li>
+							<li>tag_service_key : (optional, selective, hexadecimal, the tag domain on which to search)</li>
+							<li>file_sort_type : (optional, integer, the results sort method)</li>
+							<li>file_sort_asc : true or false (optional, the results sort order)</li>
 							<li><i>system_inbox : true or false (obsolete, use tags)</i></li>
 							<li><i>system_archive : true or false (obsolete, use tags)</i></li>
 						</ul>
@@ -1135,7 +1141,7 @@
 							<li><p>/get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D</p></li>
 						</ul>
 					</li>
-					<p>If the access key's permissions only permit search for certain tags, at least one whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.</p>
+                                        <p>If the access key's permissions only permit search for certain tags, at least one whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.</p>
 					<p>Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.</p>
 					<p>Many system predicates are also supported using a text parser! The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). Here's a big list of current formats supported:</p>
 					<ul>
@@ -1196,21 +1202,43 @@
 						<li>system:num pixels ~= 5 kilopixel</li>
 						<li>system:media views ~= 10</li>
 						<li>system:all views &gt; 0</li>
-						<li>system:preview views &lt; 10 </li>
+						<li>system:preview views &lt; 10</li>
 						<li>system:media viewtime &lt; 1 days 1 hour 0 minutes</li>
 						<li>system:all viewtime &gt; 1 hours 100 seconds</li>
 						<li>system:preview viewtime ~= 1 day 30 hours 100 minutes 90s</li>
-						<li>system:has url matching regex reg.*ex </li>
-						<li>system:does not have a url matching regex test</li>
-						<li>system:has url https://test.test/</li>
-						<li>system:does not have url https://test.test/</li>
-						<li>system:has domain test.com</li>
-						<li>system:does not have domain test.com</li>
+						<li>system:has url matching regex index\.php</li>
+						<li>system:does not have a url matching regex index\.php</li>
+						<li>system:has url https://safebooru.donmai.us/posts/4695284</li>
+						<li>system:does not have url https://safebooru.donmai.us/posts/4695284</li>
+						<li>system:has domain safebooru.com</li>
+						<li>system:does not have domain safebooru.com</li>
 						<li>system:has a url with class safebooru file page</li>
 						<li>system:does not have a url with url class safebooru file page</li>
 						<li>system:tag as number page &lt; 5</li>
 					</ul>
 					<p>More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.</p>
+                                        <p>The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'my files' and 'all known tags', and you can use either key or name as in <a href="#get_services">GET /get_services</a>, whichever is easiest for your situation.</p>
+                                        <p>file_sort_type is an integer according to this enum (default is import time):</p>
+                                        <ul>
+                                            <li>0 - file size</li>
+                                            <li>1 - duration</li>
+                                            <li>2 - import time</li>
+                                            <li>3 - filetype</li>
+                                            <li>4 - random</li>
+                                            <li>5 - width</li>
+                                            <li>6 - height</li>
+                                            <li>7 - ratio</li>
+                                            <li>8 - number of pixels</li>
+                                            <li>9 - number of tags (on the current tag domain)</li>
+                                            <li>10 - number of media viewers</li>
+                                            <li>11 - total media viewtime</li>
+                                            <li>12 - approximate bitrate</li>
+                                            <li>13 - has audio</li>
+                                            <li>14 - modified time</li>
+                                            <li>15 - framerate</li>
+                                            <li>16 - number of frames</li>
+                                        </ul>
+                                        <p>file_sort_asc is 'true' for ascending, and 'false' for descending. The default is descending. What ascending or descending means in a context can be complicated (e.g. for ratio), so you might want to play around with it or double-check the UI in the client to figure it out.</p>
 					<p>Response description: The full list of numerical file ids that match the search.</p>
 					<li>
 						<p>Example response:</p>
@@ -1223,8 +1251,7 @@
 						</ul>
 					</li>
 					<p>File ids are internal and specific to an individual client. For a client, a file with hash H always has the same file id N, but two clients will have different ideas about which N goes with which H. They are a bit faster than hashes to retrieve and search with <i>en masse</i>, which is why they are exposed here.</p>
-					<p>The search will be performed on the 'local files' file domain and 'all known tags' tag domain. At current, they will be sorted in import time order, newest to oldest (if you would like to paginate them before fetching metadata), but sort options will expand in future.</p>
-					<p>This search does <b>not</b> apply the implicit limit that most clients set to all searches (usually 10,000), so if you do system:everything on a client with millions of files, expect to get boshed. Even with a system:limit included, large queries may take several seconds to respond.</p>
+					<p>This search does <b>not</b> apply the implicit limit that most clients set to all searches (usually 10,000), so if you do system:everything on a client with millions of files, expect to get boshed. Even with a system:limit included, complicated queries with large result sets may take several seconds to respond. Just like the client itself.</p>
 				</ul>
 			</div>
 			<div class="apiborder">

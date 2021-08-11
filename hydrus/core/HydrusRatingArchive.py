@@ -51,7 +51,7 @@ class HydrusRatingArchive( object ):
         if not os.path.exists( self._path ): create_db = True
         else: create_db = False
         
-        self._InitDBCursor()
+        self._InitDBConnection()
         
         if create_db: self._InitDB()
         
@@ -65,7 +65,7 @@ class HydrusRatingArchive( object ):
         self._c.execute( 'CREATE TABLE ratings ( hash BLOB PRIMARY KEY, rating REAL );' )
         
     
-    def _InitDBCursor( self ):
+    def _InitDBConnection( self ):
         
         self._db = sqlite3.connect( self._path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         

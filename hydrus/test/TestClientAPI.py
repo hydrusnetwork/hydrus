@@ -1761,9 +1761,7 @@ class TestClientAPI( unittest.TestCase ):
     
     def _test_search_files( self, connection, set_up_permissions ):
         
-        hash_ids = [ 1, 2, 3, 4, 5, 10 ]
-        
-        HG.test_controller.SetRead( 'file_query_ids', set( hash_ids ) )
+        hash_ids = [ 1, 2, 3, 4, 5, 10, 15, 16, 17, 18, 19, 20, 21, 25, 100, 101, 150 ]
         
         # search files failed tag permission
         
@@ -1774,6 +1772,10 @@ class TestClientAPI( unittest.TestCase ):
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
         
         #
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = []
         
@@ -1789,6 +1791,10 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
         tags = [ 'kino' ]
         
         path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
@@ -1802,6 +1808,10 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 403 )
         
         # search files
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -1819,9 +1829,139 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = { 'file_ids' : hash_ids }
+        expected_answer = { 'file_ids' : list( sample_hash_ids ) }
         
         self.assertEqual( d, expected_answer )
+        
+        # sort
+        
+        # this just tests if it parses, we don't have a full test for read params yet
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&file_sort_type={}'.format( urllib.parse.quote( json.dumps( tags ) ), CC.SORT_FILES_BY_FRAMERATE )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        # sort
+        
+        # this just tests if it parses, we don't have a full test for read params yet
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}'.format( urllib.parse.quote( json.dumps( tags ) ), CC.SORT_FILES_BY_FRAMERATE, 'true' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        # file domain
+        
+        # this just tests if it parses, we don't have a full test for read params yet
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_name={}'.format(
+            urllib.parse.quote( json.dumps( tags ) ),
+            CC.SORT_FILES_BY_FRAMERATE,
+            'true',
+            'trash'
+        )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        # file and tag domain
+        
+        # this just tests if it parses, we don't have a full test for read params yet
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_key={}&tag_service_name={}'.format(
+            urllib.parse.quote( json.dumps( tags ) ),
+            CC.SORT_FILES_BY_FRAMERATE,
+            'true',
+            CC.TRASH_SERVICE_KEY.hex(),
+            'all%20known%20tags'
+        )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        # file and tag domain
+        
+        # this just tests if it parses, we don't have a full test for read params yet
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_key={}&tag_service_key={}'.format(
+            urllib.parse.quote( json.dumps( tags ) ),
+            CC.SORT_FILES_BY_FRAMERATE,
+            'true',
+            CC.COMBINED_FILE_SERVICE_KEY.hex(),
+            CC.COMBINED_TAG_SERVICE_KEY.hex()
+        )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 400 )
+        
+    
+    def _test_search_files_predicate_parsing( self, connection, set_up_permissions ):
         
         # some file search param parsing
         
@@ -1926,6 +2066,9 @@ class TestClientAPI( unittest.TestCase ):
         expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
+        
+    
+    def _test_file_metadata( self, connection, set_up_permissions ):
         
         # test file metadata
         
@@ -2192,8 +2335,12 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_detailed_known_urls_metadata_result )
         
+    
+    def _test_get_files( self, connection, set_up_permissions ):
+        
         # files and thumbs
         
+        file_id = 1
         hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         hash_hex = hash.hex()
         
@@ -2532,6 +2679,9 @@ class TestClientAPI( unittest.TestCase ):
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
+        self._test_search_files_predicate_parsing( connection, set_up_permissions )
+        self._test_file_metadata( connection, set_up_permissions )
+        self._test_get_files( connection, set_up_permissions )
         self._test_permission_failures( connection, set_up_permissions )
         self._test_cors_fails( connection )
         
