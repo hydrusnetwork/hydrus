@@ -8,6 +8,61 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_450"><a href="#version_450">version 450</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>when exporting files from the file export window, a cancellable popup job with progress updates is also created. if you close the window, you can still cancel the job from the popup</li>
+					<li>fixed a crash bug in file export window</li>
+					<li>system:num file relationships (duplicates) now correctly only returns files in the current file search domain (previously, it returned all files, including those previously deleted etc...)</li>
+					<li>I rearranged some of the thumbnail menu file relationships actions menu. I'm not really happy with this, but a shuffle is easier than a full rework</li>
+					<li>fixed the '4k' resolution label replacer, which was looking at 2060 height not 2160 by mistake</li>
+					<li>the phash generation routine (part of the duplicates system, happens on image imports) now uses less memory and CPU for images with an alpha channel (pngs and still gifs), and if those images are taller or wider than 1:30 or 30:1, the phashes are also better quality</li>
+					<li>the 'fill in subscription gap' popup button now correctly boots its created downloader when the action also opens a new downloader page. previously, due to overactive safety code, it would hang on 'pending' until a client restart. related similar 'start downloader after creating page' actions off drag and drop or client api should also be more reliable</li>
+					<li>.</li>
+					<li>repositories (also the various improvements in 449-experimental are folded in):</li>
+					<li>fixed an issue with some 'force repository account refresh' code not kicking in immediately</li>
+					<li>when a client sees repository update period change, it now recalculates the metadata next check time</li>
+					<li>fixed a bug with the new repo sync where updates just added from additive sync were not being processed until client restart. related long-term buggy 'do we have this hash in updates?' and 'how many updates are there?' tests for update metadata are also fixed</li>
+					<li>the experimental by-content-type repository reset from last week now leaves pending content in place</li>
+					<li>the reset also now clears cached service info counts for files, tags, and mappings</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the /get_files/search_files command now takes six new parameters for file/tag domain selection and file sort type and order</li>
+					<li>I wrote out some simple help and added some hacky unit tests for these new parameters. it needs another pass for potential bug fixes and readability/specificity (e.g. what does 'asc' for 'sort by ratio' mean?), but let me know how you get on anyway</li>
+					<li>fixed the new system predicate parsing for system:hash with only one hash</li>
+					<li>improved the url system predicate examples in client api documentation</li>
+					<li>client api version is now 19</li>
+					<li>.</li>
+					<li>mr bones:</li>
+					<li>mr bones now reports the correct numbers for your 'my files' again (and will continue to do so as multiple local file services are added)</li>
+					<li>mr bones now reports total files deleted and their total size</li>
+					<li>mr bones now reports your earliest recorded file import time</li>
+					<li>mr bones now has separate tabs for different stats types. this neatly ditches the giant stack of numbers this was becoming, but I may revisit it. some people who take mr bones screens will prefer all the info in one easy shot, while I others I know would rather the 'viewing habits' stuff were not immediately there. maybe expanding boxes?</li>
+					<li>fixed some mr bones layout</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>made a new base class for the different database modules to hold cursor and collect common administrative functions</li>
+					<li>all database queries (about 1,200 of them) now go through a single location in the new class</li>
+					<li>a new profile mode, 'query planner' mode, now prints query text and EXPLAIN QUERY PLAN lines to a new profile log. this is a new experimental thing, extremely spammy, but will help with diagnosing very unusually slow queries on individual clients (it'll most likely show up odd sqlite versions, weird data distributions, or un-analysed tables)</li>
+					<li>updated a core function in 'all known files' mappings change autocomplete count adjustment. this seemed to have extremely bad worst case time, and I think it might have been giving some bad counts in unusual situations</li>
+				</ul>
+				<li><h3 id="version_449"><a href="#version_449">version 449</a></h3></li>
+				<ul>
+					<li>this is an experimental release! please do not use this unless you are an advanced user who has a good backup, syncs with a repository (e.g. the PTR), and would like to help me out. if this is you, I don't need you to do anything too special, just please use the client and repo as normal, downloading and uploading, and let me know if anything messes up during normal operation</li>
+					<li>repository processing split:</li>
+					<li>tl;dr: nothing has changed, you don't have to do anything. with luck, your PTR service is going to fix some bad siblings and parents over the next couple of days</li>
+					<li>repositories now track what they have processed on a per-content basis. this gives some extra maintenance tools to, for instance, quickly reset and reprocess your ~150k tag siblings on the PTR without having to clear and reprocess all 1.3 billion mappings too</li>
+					<li>in review services, you now see definition updates and all a repository's content types processing progress independently (just files for a file repo, but mappings, siblings, and parents for a tag repo). most of the time they will all be the same, but each can be paused separately. it is now possible (though not yet super efficient, since definitions still run 100%) to sync with the PTR and only grab siblings and parents by simply pausing mappings in review services</li>
+					<li>I have also split the 'network' and 'processing' sync progress gauges and their buttons into separate boxes for clarity</li>
+					<li>the 'fill in content gaps' maintenance job now lets you choose which content types to do it for</li>
+					<li>also, a new 'reset content' maintenance job lets you choose to delete and reprocess by content type. the nuclear 'complete' reset is now really just for critical situations where definitions or database tables are irrevocably messed up</li>
+					<li>all users have their siblings and parents processing reset this week. next time you have update processing, they'll come back in over about fifteen minutes, and with luck we'll wipe out some years-old legacy bugs and hopefully discover some info about the remaining bugs. most importantly, we can re-trigger this reprocess in just a few seconds to quickly test future fixes</li>
+					<li>a variety of tests such as 'service is mostly caught up' are now careful just to test for the currently unpaused content types</li>
+					<li>if you try to commit some content that is currently processing-paused, the client now says 'hey, sorry this is paused, I won't upload that stuff right now' but still upload everything else that isn't paused. this is a ' service is caught up' issue</li>
+					<li>tag display sync, which does background work to make sure siblings and parents appear as they should, will now not run for a service if any of the services it relies on for siblings or parents is not process synced. when this happens, it is also shown on the tag display sync review panel. this stops big changes like the new sibling/parent reset from causing display sync to do a whole bunch of work before the service is ready and happy with what it has. with luck it will also smooth out new users' first PTR sync too</li>
+					<li>clients now process the sub-updates of a repository update step in the order they were generated on the server, which _may_ fix some non-determinant update bugs we are trying to pin down</li>
+					<li>all update processing tracking is overhauled. all related code and database access techniques have been brushed up and should use less CPU and fail more gracefully</li>
+				</ul>
 				<li><h3 id="version_448"><a href="#version_448">version 448</a></h3></li>
 				<ul>
 					<li>client api:</li>

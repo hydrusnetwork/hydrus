@@ -1589,7 +1589,7 @@ class ReviewServicePanel( QW.QWidget ):
         
         if service_type in HC.REPOSITORIES:
             
-            subpanels.append( ( ReviewServiceRepositorySubPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
+            subpanels.append( ( ReviewServiceRepositorySubPanel( self, service ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR ) )
             
         
         if service_type == HC.IPFS:
@@ -2518,19 +2518,19 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
         
     
-class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
+class ReviewServiceRepositorySubPanel( QW.QWidget ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'repository sync' )
+        QW.QWidget.__init__( self, parent )
         
         self._service = service
         
         self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
         
-        self._content_panel = QW.QWidget( self )
+        self._network_panel = ClientGUICommon.StaticBox( self, 'network sync' )
         
-        self._repo_options_st = ClientGUICommon.BetterStaticText( self )
+        self._repo_options_st = ClientGUICommon.BetterStaticText( self._network_panel )
         
         tt = 'The update period is how often the repository bundles its recent uploads into a package for users to download. Anything you upload may take this long for other people to see.'
         tt += os.linesep * 2
@@ -2538,35 +2538,62 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         self._repo_options_st.setToolTip( tt )
         
-        self._metadata_st = ClientGUICommon.BetterStaticText( self )
+        self._metadata_st = ClientGUICommon.BetterStaticText( self._network_panel )
         
-        self._download_progress = ClientGUICommon.TextAndGauge( self )
+        self._download_progress = ClientGUICommon.TextAndGauge( self._network_panel )
         
-        self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
+        self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self._network_panel, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
         self._update_downloading_paused_button.setToolTip( 'pause/play update downloading' )
         
-        self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing )
-        self._update_processing_paused_button.setToolTip( 'pause/play update processing' )
-        
-        self._processing_progress = ClientGUICommon.TextAndGauge( self )
-        self._is_mostly_caught_up_st = ClientGUICommon.BetterStaticText( self )
-        
-        self._sync_remote_now_button = ClientGUICommon.BetterButton( self, 'download now', self._SyncRemoteNow )
-        self._sync_processing_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncProcessingNow )
-        self._export_updates_button = ClientGUICommon.BetterButton( self, 'export updates', self._ExportUpdates )
+        self._sync_remote_now_button = ClientGUICommon.BetterButton( self._network_panel, 'download now', self._SyncRemoteNow )
         
         reset_menu_items = []
         
         reset_menu_items.append( ( 'normal', 'do a full metadata resync', 'Resync all update information.', self._DoAFullMetadataResync ) )
         
-        self._reset_downloading_button = ClientGUIMenuButton.MenuButton( self, 'reset downloading', reset_menu_items )
+        self._reset_downloading_button = ClientGUIMenuButton.MenuButton( self._network_panel, 'reset downloading', reset_menu_items )
+        
+        self._export_updates_button = ClientGUICommon.BetterButton( self._network_panel, 'export updates', self._ExportUpdates )
+        
+        #
+        
+        self._processing_panel = ClientGUICommon.StaticBox( self, 'processing sync' )
+        
+        self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing )
+        self._update_processing_paused_button.setToolTip( 'pause/play all update processing' )
+        
+        self._processing_definitions_progress = ClientGUICommon.TextAndGauge( self._processing_panel )
+        
+        #
+        
+        content_types = tuple( HC.REPOSITORY_CONTENT_TYPES[ self._service.GetServiceType() ] )
+        
+        self._content_types_to_gauges_and_buttons = {}
+        
+        for content_type in content_types:
+            
+            processing_progress = ClientGUICommon.TextAndGauge( self._processing_panel )
+            
+            processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing, content_type )
+            processing_paused_button.setToolTip( 'pause/play update processing for {}'.format( HC.content_type_string_lookup[ content_type ] ) )
+            
+            self._content_types_to_gauges_and_buttons[ content_type ] = ( processing_progress, processing_paused_button )
+            
+        
+        #
+        
+        self._is_mostly_caught_up_st = ClientGUICommon.BetterStaticText( self._processing_panel )
+        
+        self._sync_processing_now_button = ClientGUICommon.BetterButton( self._processing_panel, 'process now', self._SyncProcessingNow )
         
         reset_menu_items = []
         
         reset_menu_items.append( ( 'normal', 'fill in definition gaps', 'Reprocess all definitions.', self._ReprocessDefinitions ) )
         reset_menu_items.append( ( 'normal', 'fill in content gaps', 'Reprocess all content.', self._ReprocessContent ) )
         reset_menu_items.append( ( 'separator', None, None, None ) )
-        reset_menu_items.append( ( 'normal', 'wipe database data and reprocess from update files', 'Reset entire repository.', self._Reset ) )
+        reset_menu_items.append( ( 'normal', 'delete and reprocess specific content', 'Reset some of the repository\'s content.', self._ResetProcessing ) )
+        reset_menu_items.append( ( 'separator', None, None, None ) )
+        reset_menu_items.append( ( 'normal', 'wipe all database data and reprocess', 'Reset entire repository.', self._Reset ) )
         
         self._reset_processing_button = ClientGUIMenuButton.MenuButton( self, 'reset processing', reset_menu_items )
         
@@ -2584,22 +2611,55 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
             self._reset_processing_button.hide()
             
         
+        self._network_panel.Add( self._repo_options_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._network_panel.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._network_panel.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._network_panel.Add( self._update_downloading_paused_button, CC.FLAGS_ON_RIGHT )
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._sync_remote_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sync_processing_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._reset_downloading_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self._network_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
+        
+        #
+        
+        self._processing_panel.Add( self._processing_definitions_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._processing_panel, label = 'pause/play all processing: ' ), CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._update_processing_paused_button, CC.FLAGS_CENTER )
+        
+        self._processing_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
+        
+        for content_type in content_types:
+            
+            ( gauge, button ) = self._content_types_to_gauges_and_buttons[ content_type ]
+            
+            self._processing_panel.Add( gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._processing_panel.Add( button, CC.FLAGS_ON_RIGHT )
+            
+        
+        self._processing_panel.Add( self._is_mostly_caught_up_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._sync_processing_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._reset_processing_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self.Add( self._repo_options_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._update_downloading_paused_button, CC.FLAGS_ON_RIGHT )
-        self.Add( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._update_processing_paused_button, CC.FLAGS_ON_RIGHT )
-        self.Add( self._is_mostly_caught_up_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( hbox, CC.FLAGS_ON_RIGHT )
+        self._processing_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._network_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.setLayout( vbox )
         
         HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
         
@@ -2732,9 +2792,9 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         self._service.PausePlayUpdateDownloading()
         
     
-    def _PausePlayUpdateProcessing( self ):
+    def _PausePlayUpdateProcessing( self, content_type = None ):
         
-        self._service.PausePlayUpdateProcessing()
+        self._service.PausePlayUpdateProcessing( content_type = content_type )
         
     
     def _Refresh( self ):
@@ -2760,13 +2820,34 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        if self._service.IsPausedUpdateProcessing():
+        all_processing_paused = self._service.IsPausedUpdateProcessing()
+        
+        if all_processing_paused:
             
             ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().play )
             
         else:
             
             ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().pause )
+            
+        
+        for ( gauge, button ) in self._content_types_to_gauges_and_buttons.values():
+            
+            button.setEnabled( not all_processing_paused )
+            
+        
+        #
+        
+        for ( content_type, ( gauge, button ) ) in self._content_types_to_gauges_and_buttons.items():
+            
+            if self._service.IsPausedUpdateProcessing( content_type ):
+                
+                ClientGUIFunctions.SetBitmapButtonBitmap( button, CC.global_pixmaps().play )
+                
+            else:
+                
+                ClientGUIFunctions.SetBitmapButtonBitmap( button, CC.global_pixmaps().pause )
+                
             
         
         #
@@ -2808,7 +2889,7 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
             
             service_key = service.GetServiceKey()
             
-            HG.client_controller.WriteSynchronous( 'reprocess_repository', service_key, ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) )
+            HG.client_controller.WriteSynchronous( 'reprocess_repository', service_key, ( HC.CONTENT_TYPE_DEFINITIONS, ) )
             
             my_updater.Update()
             
@@ -2829,26 +2910,33 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
     
     def _ReprocessContent( self ):
         
-        def do_it( service, my_updater ):
+        def do_it( service, my_updater, content_types_to_reset ):
             
             service_key = service.GetServiceKey()
             
-            HG.client_controller.WriteSynchronous( 'reprocess_repository', service_key, ( HC.APPLICATION_HYDRUS_UPDATE_CONTENT, ) )
+            HG.client_controller.WriteSynchronous( 'reprocess_repository', service_key, content_types_to_reset )
             
             my_updater.Update()
             
         
+        content_types = self._SelectContentTypes()
+        
+        if len( content_types ) == 0:
+            
+            return
+            
+        
         name = self._service.GetName()
         
-        message = 'This will command the client to reprocess all content updates for {}. It will not delete anything.'.format( name )
+        message = 'This will command the client to reprocess ({}) for {}. It will not delete anything.'.format( ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in content_types ) ), name )
         message += os.linesep * 2
-        message += 'This is a only useful as a debug tool for filling in \'gaps\'. If you do not understand what this does, turn back now.'
+        message += 'This is a only useful as a debug tool for filling in \'gaps\' caused by processing bugs or database damage. If you do not understand what this does, turn back now.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
         if result == QW.QDialog.Accepted:
             
-            HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
+            HG.client_controller.CallToThread( do_it, self._service, self._my_updater, content_types )
             
         
     
@@ -2856,7 +2944,7 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
         
         name = self._service.GetName()
         
-        message = 'This will delete all the processed information for ' + name + ' from the database.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything from your downloaded update files. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
+        message = 'This will delete all the processed information for ' + name + ' from the database, including definitions.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything from your downloaded update files. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'This is a severe maintenance task that is only appropriate after trying to recover from critical database error. If you do not understand what this does, click no!'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -2871,6 +2959,56 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
                 self._service.Reset()
                 
             
+        
+    
+    def _ResetProcessing( self ):
+        
+        def do_it( service, my_updater, content_types_to_reset ):
+            
+            service_key = service.GetServiceKey()
+            
+            HG.client_controller.WriteSynchronous( 'reset_repository_processing', service_key, content_types_to_reset )
+            
+            my_updater.Update()
+            
+        
+        content_types = self._SelectContentTypes()
+        
+        if len( content_types ) == 0:
+            
+            return
+            
+        
+        name = self._service.GetName()
+        
+        message = 'You are about to delete and reprocess ({}) for {}.'.format( ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in content_types ) ), name )
+        message += os.linesep * 2
+        message += 'It may take some time to delete it all, and then future idle time to reprocess. It is only worth doing this if you believe there are logical problems in the initial process. If you just want to fill in gaps, use that simpler maintenance task, which runs much faster.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == QW.QDialog.Accepted:
+            
+            HG.client_controller.CallToThread( do_it, self._service, self._my_updater, content_types )
+            
+        
+    
+    def _SelectContentTypes( self ):
+        
+        choice_tuples = [ ( HC.content_type_string_lookup[ content_type ], content_type, False ) for content_type in self._content_types_to_gauges_and_buttons.keys() ]
+        
+        try:
+            
+            result = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select the content to delete and reprocess', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return []
+            
+        
+        content_types = result
+        
+        return content_types
         
     
     def _SyncRemoteNow( self ):
@@ -2922,15 +3060,46 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
     
     def THREADFetchInfo( self, service ):
         
-        def qt_code( download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up ):
+        def qt_code( num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up ):
             
             if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            self._download_progress.SetValue( download_text, download_value, range )
-            self._processing_progress.SetValue( processing_text, processing_value, range )
+            download_text = 'downloaded {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_local_updates, num_updates ) )
+            
+            self._download_progress.SetValue( download_text, num_local_updates, num_updates )
+            
+            processing_work_to_do = False
+            
+            d_value = content_types_to_num_processed_updates[ HC.CONTENT_TYPE_DEFINITIONS ]
+            d_range = content_types_to_num_updates[ HC.CONTENT_TYPE_DEFINITIONS ]
+            
+            if d_value < d_range:
+                
+                processing_work_to_do = True
+                
+            
+            definitions_text = 'definitions: {}'.format( HydrusData.ConvertValueRangeToPrettyString( d_value, d_range ) )
+            
+            self._processing_definitions_progress.SetValue( definitions_text, d_value, d_range )
+            
+            for ( content_type, ( gauge, button ) ) in self._content_types_to_gauges_and_buttons.items():
+                
+                c_value = content_types_to_num_processed_updates[ content_type ]
+                c_range = content_types_to_num_updates[ content_type ]
+                
+                if not self._service.IsPausedUpdateProcessing( content_type ) and c_value < c_range:
+                    
+                    # there is work to do on downloads that we have on disk
+                    processing_work_to_do = True
+                    
+                
+                content_text = '{}: {}'.format( HC.content_type_string_lookup[ content_type ], HydrusData.ConvertValueRangeToPrettyString( c_value, c_range ) )
+                
+                gauge.SetValue( content_text, c_value, c_range )
+                
             
             if is_mostly_caught_up:
                 
@@ -2943,26 +3112,10 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
             
             self._is_mostly_caught_up_st.setText( caught_up_text )
             
-            if download_value == 0:
-                
-                self._export_updates_button.setEnabled( False )
-                
-            else:
-                
-                self._export_updates_button.setEnabled( True )
-                
-            
-            if processing_value == 0:
-                
-                self._reset_processing_button.setEnabled( False )
-                
-            else:
-                
-                self._reset_processing_button.setEnabled( True )
-                
+            self._export_updates_button.setEnabled( d_value > 0 )
             
             metadata_due = self._service.GetMetadata().UpdateDue( from_client = True )
-            updates_due = download_value < range
+            updates_due = num_local_updates < num_updates
             
             download_work_to_do = metadata_due or updates_due
             
@@ -2977,8 +3130,6 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
                 self._sync_remote_now_button.setEnabled( False )
                 
             
-            processing_work_to_do = processing_value < download_value
-            
             can_sync_process = self._service.CanSyncProcess()
             
             if processing_work_to_do and can_sync_process:
@@ -2991,15 +3142,11 @@ class ReviewServiceRepositorySubPanel( ClientGUICommon.StaticBox ):
                 
             
         
-        ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', service.GetServiceKey() )
+        ( num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates ) = HG.client_controller.Read( 'repository_progress', service.GetServiceKey() )
         
         is_mostly_caught_up = service.IsMostlyCaughtUp()
         
-        download_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
-        
-        processing_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( processing_value, range )
-        
-        QP.CallAfter( qt_code, download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up )
+        QP.CallAfter( qt_code, num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up )
         
     
 

@@ -130,19 +130,11 @@ def THREADUploadPending( service_key ):
         
         nums_pending_for_this_service = nums_pending[ service_key ]
         
-        content_types_for_this_service = set()
-        
-        if service_type in ( HC.IPFS, HC.FILE_REPOSITORY ):
-            
-            content_types_for_this_service = { HC.CONTENT_TYPE_FILES }
-            
-        elif service_type == HC.TAG_REPOSITORY:
-            
-            content_types_for_this_service = { HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS }
-            
+        content_types_for_this_service = set( HC.REPOSITORY_CONTENT_TYPES[ service_type ] )
         
         if service_type in HC.REPOSITORIES:
             
+            paused_content_types = set()
             unauthorised_content_types = set()
             content_types_to_request = set()
             
@@ -171,7 +163,14 @@ def THREADUploadPending( service_key ):
                     
                     if account.HasPermission( content_type, permission ):
                         
-                        content_types_to_request.add( content_type )
+                        if service.IsPausedUpdateProcessing( content_type ):
+                            
+                            paused_content_types.add( content_type )
+                            
+                        else:
+                            
+                            content_types_to_request.add( content_type )
+                            
                         
                     else:
                         
@@ -212,9 +211,23 @@ def THREADUploadPending( service_key ):
                 HG.client_controller.pub( 'message', unauthorised_job_key )
                 
             
+            if len( paused_content_types ) > 0:
+                
+                message = 'You have some pending content of type ({}), but processing for that is currently paused! No worries, but I won\'t upload the paused stuff. If you want to upload it, please unpause in _review services_ and then catch up processing.'.format(
+                    ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in paused_content_types ) )
+                )
+                
+                HydrusData.ShowText( message )
+                
+            
         else:
             
             content_types_to_request = content_types_for_this_service
+            
+        
+        if len( content_types_to_request ) == 0:
+            
+            return
             
         
         initial_num_pending = sum( nums_pending_for_this_service.values() )
@@ -4883,6 +4896,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusData.ToHumanInt( slow ), HydrusData.ToHumanInt( fast ) ) )
                 
             
+        elif name == 'query_planner_mode':
+            
+            if not HG.query_planner_mode:
+                
+                now = HydrusData.GetNow()
+                
+                HG.query_planner_start_time = now
+                HG.query_planner_query_count = 0
+                
+                HG.query_planner_mode = True
+                
+                HydrusData.ShowText( 'Query Planner mode on!' )
+                
+            else:
+                
+                HG.query_planner_mode = False
+                
+                HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusData.ToHumanInt( HG.query_planner_query_count ) ) )
+                
+            
         elif name == 'pubsub_report_mode':
             
             HG.pubsub_report_mode = not HG.pubsub_report_mode
@@ -6004,10 +6037,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             profile_mode_message += os.linesep * 2
             profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
             profile_mode_message += os.linesep * 2
+            profile_mode_message += 'A new Query Planner mode also makes very detailed database analysis. This is an alternate profiling mode hydev is testing.'
+            profile_mode_message += os.linesep * 2
             profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
             
             ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
             ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, self._SwitchBoolean, 'profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HG.query_planner_mode, self._SwitchBoolean, 'query_planner_mode' )
             
             ClientGUIMenus.AppendMenu( debug, profiling, 'profiling' )
             

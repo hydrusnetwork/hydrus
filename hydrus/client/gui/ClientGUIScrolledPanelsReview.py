@@ -2585,8 +2585,10 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         num_inbox = boned_stats[ 'num_inbox' ]
         num_archive = boned_stats[ 'num_archive' ]
+        num_deleted = boned_stats[ 'num_deleted' ]
         size_inbox = boned_stats[ 'size_inbox' ]
         size_archive = boned_stats[ 'size_archive' ]
+        size_deleted = boned_stats[ 'size_deleted' ]
         total_viewtime = boned_stats[ 'total_viewtime' ]
         total_alternate_files = boned_stats[ 'total_alternate_files' ]
         total_duplicate_files = boned_stats[ 'total_duplicate_files' ]
@@ -2594,6 +2596,9 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         num_total = num_archive + num_inbox
         size_total = size_archive + size_inbox
+        
+        num_supertotal = num_total + num_deleted
+        size_supertotal = size_total + size_deleted
         
         vbox = QP.VBoxLayout()
         
@@ -2630,13 +2635,21 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
+            notebook = ClientGUICommon.BetterNotebook( self )
+            
+            #
+            
+            panel = QW.QWidget( notebook )
+            
+            panel_vbox = QP.VBoxLayout()
+            
             average_filesize = size_total // num_total
             
             summary_label = 'Total: {} files, totalling {}, averaging {}'.format( HydrusData.ToHumanInt( num_total ), HydrusData.ToHumanBytes( size_total ), HydrusData.ToHumanBytes( average_filesize ) )
             
-            summary_st = ClientGUICommon.BetterStaticText( self, label = summary_label )
+            summary_st = ClientGUICommon.BetterStaticText( panel, label = summary_label )
             
-            QP.AddToLayout( vbox, summary_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, summary_st, CC.FLAGS_CENTER )
             
             num_archive_percent = num_archive / num_total
             size_archive_percent = size_archive / size_total
@@ -2644,42 +2657,97 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             num_inbox_percent = num_inbox / num_total
             size_inbox_percent = size_inbox / size_total
             
-            archive_label = 'Archive: ' + HydrusData.ToHumanInt( num_archive ) + ' files (' + ClientData.ConvertZoomToPercentage( num_archive_percent ) + '), totalling ' + HydrusData.ToHumanBytes( size_archive ) + '(' + ClientData.ConvertZoomToPercentage( size_archive_percent ) + ')'
+            num_deleted_percent = num_deleted / num_supertotal
+            size_deleted_percent = size_deleted / size_supertotal
             
-            archive_st = ClientGUICommon.BetterStaticText( self, label = archive_label )
+            archive_label = 'Archive: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_archive ), ClientData.ConvertZoomToPercentage( num_archive_percent ), HydrusData.ToHumanBytes( size_archive ), ClientData.ConvertZoomToPercentage( size_archive_percent ) )
             
-            inbox_label = 'Inbox: ' + HydrusData.ToHumanInt( num_inbox ) + ' files (' + ClientData.ConvertZoomToPercentage( num_inbox_percent ) + '), totalling ' + HydrusData.ToHumanBytes( size_inbox ) + '(' + ClientData.ConvertZoomToPercentage( size_inbox_percent ) + ')'
+            archive_st = ClientGUICommon.BetterStaticText( panel, label = archive_label )
             
-            inbox_st = ClientGUICommon.BetterStaticText( self, label = inbox_label )
+            inbox_label = 'Inbox: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_inbox ), ClientData.ConvertZoomToPercentage( num_inbox_percent ), HydrusData.ToHumanBytes( size_inbox ), ClientData.ConvertZoomToPercentage( size_inbox_percent ) )
             
-            QP.AddToLayout( vbox, archive_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( vbox, inbox_st, CC.FLAGS_CENTER )
+            inbox_st = ClientGUICommon.BetterStaticText( panel, label = inbox_label )
+            
+            deleted_label = 'Deleted: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_deleted ), ClientData.ConvertZoomToPercentage( num_deleted_percent ), HydrusData.ToHumanBytes( size_deleted ), ClientData.ConvertZoomToPercentage( size_deleted_percent ) )
+            
+            deleted_st = ClientGUICommon.BetterStaticText( panel, label = deleted_label )
+            
+            QP.AddToLayout( panel_vbox, archive_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, inbox_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, deleted_st, CC.FLAGS_CENTER )
+            
+            if 'earliest_import_time' in boned_stats:
+                
+                eit = boned_stats[ 'earliest_import_time' ]
+                
+                eit_label = 'Earliest file import: {} ({})'.format( HydrusData.ConvertTimestampToPrettyTime( eit ), HydrusData.TimestampToPrettyTimeDelta( eit ) )
+                
+                eit_st = ClientGUICommon.BetterStaticText( panel, label = eit_label )
+                
+                QP.AddToLayout( panel_vbox, eit_st, CC.FLAGS_CENTER )
+                
+            
+            panel_vbox.addStretch( 1 )
+            
+            panel.setLayout( panel_vbox )
+            
+            notebook.addTab( panel, 'files' )
+            
+            #
+            
+            panel = QW.QWidget( notebook )
+            
+            panel_vbox = QP.VBoxLayout()
             
             ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
             
             media_label = 'Total media views: ' + HydrusData.ToHumanInt( media_views ) + ', totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( media_viewtime )
             
-            media_st = ClientGUICommon.BetterStaticText( self, label = media_label )
+            media_st = ClientGUICommon.BetterStaticText( panel, label = media_label )
             
             preview_label = 'Total preview views: ' + HydrusData.ToHumanInt( preview_views ) + ', totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( preview_viewtime )
             
-            preview_st = ClientGUICommon.BetterStaticText( self, label = preview_label )
+            preview_st = ClientGUICommon.BetterStaticText( panel, label = preview_label )
             
-            QP.AddToLayout( vbox, media_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( vbox, preview_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, media_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, preview_st, CC.FLAGS_CENTER )
+            
+            panel_vbox.addStretch( 1 )
+            
+            panel.setLayout( panel_vbox )
+            
+            notebook.addTab( panel, 'views' )
+            
+            #
+            
+            panel = QW.QWidget( notebook )
+            
+            panel_vbox = QP.VBoxLayout()
             
             potentials_label = 'Total duplicate potential pairs: {}'.format( HydrusData.ToHumanInt( total_potential_pairs ) )
             duplicates_label = 'Total files set duplicate: {}'.format( HydrusData.ToHumanInt( total_duplicate_files ) )
             alternates_label = 'Total duplicate file groups set alternate: {}'.format( HydrusData.ToHumanInt( total_alternate_files ) )
             
-            potentials_st = ClientGUICommon.BetterStaticText( self, label = potentials_label )
-            duplicates_st = ClientGUICommon.BetterStaticText( self, label = duplicates_label )
-            alternates_st = ClientGUICommon.BetterStaticText( self, label = alternates_label )
+            potentials_st = ClientGUICommon.BetterStaticText( panel, label = potentials_label )
+            duplicates_st = ClientGUICommon.BetterStaticText( panel, label = duplicates_label )
+            alternates_st = ClientGUICommon.BetterStaticText( panel, label = alternates_label )
             
-            QP.AddToLayout( vbox, potentials_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( vbox, duplicates_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( vbox, alternates_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, potentials_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, duplicates_st, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, alternates_st, CC.FLAGS_CENTER )
             
+            panel_vbox.addStretch( 1 )
+            
+            panel.setLayout( panel_vbox )
+            
+            notebook.addTab( panel, 'duplicates' )
+            
+            #
+            
+            QP.AddToLayout( vbox, notebook, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         

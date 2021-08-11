@@ -49,9 +49,13 @@ def GenerateShapePerceptualHashes( path, mime ):
     if depth == 4:
         
         # doing this on 10000x10000 pngs eats ram like mad
-        target_resolution = HydrusImageHandling.GetThumbnailResolution( ( x, y ), ( 1024, 1024 ) )
+        # we don't want to do GetThumbnailResolution as for extremely wide or tall images, we'll then scale below 32 pixels for one dimension, losing information!
+        # however, it does not matter if we stretch the image a bit, since we'll be coercing 32x32 in a minute
         
-        numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
+        new_x = min( 256, x )
+        new_y = min( 256, y )
+        
+        numpy_image = cv2.resize( numpy_image, ( new_x, new_y ), interpolation = cv2.INTER_AREA )
         
         ( y, x, depth ) = numpy_image.shape
         
@@ -59,22 +63,30 @@ def GenerateShapePerceptualHashes( path, mime ):
         
         numpy_alpha = numpy_image[ :, :, 3 ]
         
-        numpy_alpha_float = numpy_alpha / 255.0
+        numpy_image_rgb = numpy_image[ :, :, :3 ]
         
-        numpy_image_bgr = numpy_image[ :, :, :3 ]
-        
-        numpy_image_gray_bare = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_RGB2GRAY )
+        numpy_image_gray_bare = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
         
         # create a white greyscale canvas
         
-        white = numpy.ones( ( y, x ) ) * 255.0
+        white = numpy.full( ( y, x ), 255.0 )
         
-        # paste the grayscale image onto the white canvas using: pixel * alpha + white * ( 1 - alpha )
+        # paste the grayscale image onto the white canvas using: pixel * alpha_float + white * ( 1 - alpha_float )
         
-        numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * numpy_alpha_float ) + ( white * ( numpy.ones( ( y, x ) ) - numpy_alpha_float ) ) )
+        # note alpha 255 = opaque, alpha 0 = transparent
+        
+        # also, note:
+        # white * ( 1 - alpha_float )
+        # =
+        # 255 * ( 1 - ( alpha / 255 ) )
+        # =
+        # 255 - alpha
+        
+        numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * ( numpy_alpha / 255.0 ) ) + ( white - numpy_alpha ) )
         
     else:
         
+        # this single step is nice and fast, so we won't scale to 256x256 beforehand
         numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2GRAY )
         
     

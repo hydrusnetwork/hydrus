@@ -47,12 +47,12 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
         
         for deletee_job_type in deletee_job_types:
             
-            self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, deletee_job_type ) for hash_id in hash_ids ) )
+            self._ExecuteMany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, deletee_job_type ) for hash_id in hash_ids ) )
             
         
         #
         
-        self._c.executemany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
         
     
     def AddJobsHashes( self, hashes, job_type, time_can_start = 0 ):
@@ -64,17 +64,17 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
     
     def CancelFiles( self, hash_ids ):
         
-        self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
     def CancelJobs( self, job_type ):
         
-        self._c.execute( 'DELETE FROM file_maintenance_jobs WHERE job_type = ?;', ( job_type, ) )
+        self._Execute( 'DELETE FROM file_maintenance_jobs WHERE job_type = ?;', ( job_type, ) )
         
     
     def CreateInitialTables( self ):
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.file_maintenance_jobs ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );' )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.file_maintenance_jobs ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );' )
         
     
     def ClearJobs( self, cleared_job_tuples ):
@@ -108,7 +108,7 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
                             self.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
                             
                         
-                        result = self._c.execute( 'SELECT 1 FROM file_modified_timestamps WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                        result = self._Execute( 'SELECT 1 FROM file_modified_timestamps WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                         
                         if result is None:
                             
@@ -131,7 +131,7 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
                     
                     file_modified_timestamp = additional_data
                     
-                    self._c.execute( 'REPLACE INTO file_modified_timestamps ( hash_id, file_modified_timestamp ) VALUES ( ?, ? );', ( hash_id, file_modified_timestamp ) )
+                    self._Execute( 'REPLACE INTO file_modified_timestamps ( hash_id, file_modified_timestamp ) VALUES ( ?, ? );', ( hash_id, file_modified_timestamp ) )
                     
                     new_file_info.add( ( hash_id, hash ) )
                     
@@ -170,7 +170,7 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
             
             job_types_to_delete.extend( ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ] )
             
-            self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, job_type_to_delete ) for job_type_to_delete in job_types_to_delete ) )
+            self._ExecuteMany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, job_type_to_delete ) for job_type_to_delete in job_types_to_delete ) )
             
         
         if len( new_file_info ) > 0:
@@ -216,7 +216,7 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
         
         for job_type in possible_job_types:
             
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), 256 ) ) )
+            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), 256 ) ) )
             
             if len( hash_ids ) > 0:
                 
@@ -231,7 +231,7 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
     
     def GetJobCounts( self ):
         
-        result = self._c.execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusData.GetNow(), ) ).fetchall()
+        result = self._Execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusData.GetNow(), ) ).fetchall()
         
         job_types_to_count = dict( result )
         

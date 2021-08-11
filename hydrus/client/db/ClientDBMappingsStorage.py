@@ -48,30 +48,40 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         return expected_table_names
         
     
+    def ClearMappingsTables( self, service_id: int ):
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        self._Execute( 'DELETE FROM {};'.format( current_mappings_table_name ) )
+        self._Execute( 'DELETE FROM {};'.format( deleted_mappings_table_name ) )
+        self._Execute( 'DELETE FROM {};'.format( pending_mappings_table_name ) )
+        self._Execute( 'DELETE FROM {};'.format( petitioned_mappings_table_name ) )
+        
+    
     def DropMappingsTables( self, service_id: int ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( current_mappings_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( deleted_mappings_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( pending_mappings_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_mappings_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( current_mappings_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( deleted_mappings_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( pending_mappings_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_mappings_table_name ) )
         
     
     def GenerateMappingsTables( self, service_id: int ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( current_mappings_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( current_mappings_table_name ) )
         self._CreateIndex( current_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( deleted_mappings_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( deleted_mappings_table_name ) )
         self._CreateIndex( deleted_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( pending_mappings_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( pending_mappings_table_name ) )
         self._CreateIndex( pending_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( petitioned_mappings_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( petitioned_mappings_table_name ) )
         self._CreateIndex( petitioned_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
         
     
@@ -79,7 +89,7 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM {};'.format( current_mappings_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( DISTINCT hash_id ) FROM {};'.format( current_mappings_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -90,7 +100,7 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( deleted_mappings_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( deleted_mappings_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -101,7 +111,7 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( pending_mappings_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( pending_mappings_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -112,7 +122,7 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( petitioned_mappings_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( petitioned_mappings_table_name ) ).fetchone()
         
         ( count, ) = result
         

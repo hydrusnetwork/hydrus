@@ -1,72 +1,22 @@
 import sqlite3
 import typing
 
-class HydrusDBModule( object ):
+from hydrus.core import HydrusDBBase
+
+class HydrusDBModule( HydrusDBBase.DBBase ):
     
     def __init__( self, name, cursor: sqlite3.Cursor ):
         
+        HydrusDBBase.DBBase.__init__( self )
+        
         self.name = name
-        self._c = cursor
         
-    
-    def _CreateIndex( self, table_name, columns, unique = False ):
-        
-        if '.' in table_name:
-            
-            table_name_simple = table_name.split( '.' )[1]
-            
-        else:
-            
-            table_name_simple = table_name
-            
-        
-        index_name = self._GenerateIndexName( table_name, columns )
-        
-        if unique:
-            
-            create_phrase = 'CREATE UNIQUE INDEX IF NOT EXISTS '
-            
-        else:
-            
-            create_phrase = 'CREATE INDEX IF NOT EXISTS '
-            
-        
-        on_phrase = ' ON ' + table_name_simple + ' (' + ', '.join( columns ) + ');'
-        
-        statement = create_phrase + index_name + on_phrase
-        
-        self._c.execute( statement )
+        self._SetCursor( cursor )
         
     
     def _GetInitialIndexGenerationTuples( self ):
         
         raise NotImplementedError()
-        
-    
-    def _GenerateIndexName( self, table_name, columns ):
-        
-        return '{}_{}_index'.format( table_name, '_'.join( columns ) )
-        
-    
-    def _STI( self, iterable_cursor ):
-        
-        # strip singleton tuples to an iterator
-        
-        return ( item for ( item, ) in iterable_cursor )
-        
-    
-    def _STL( self, iterable_cursor ):
-        
-        # strip singleton tuples to a list
-        
-        return [ item for ( item, ) in iterable_cursor ]
-        
-    
-    def _STS( self, iterable_cursor ):
-        
-        # strip singleton tuples to a set
-        
-        return { item for ( item, ) in iterable_cursor }
         
     
     def CreateInitialIndices( self ):

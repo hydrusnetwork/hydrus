@@ -36,6 +36,10 @@ menu_profile_min_job_time_ms = 16
 pubsub_profile_min_job_time_ms = 5
 ui_timer_profile_min_job_time_ms = 5
 
+query_planner_mode = False
+
+query_planner_start_time = 0
+query_planner_query_count = 0
 profile_start_time = 0
 profile_slow_count = 0
 profile_fast_count = 0

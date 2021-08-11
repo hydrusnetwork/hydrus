@@ -66,11 +66,11 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
         
-        self._c.executemany( 'INSERT OR IGNORE INTO {} VALUES ( ?, ? );'.format( current_files_table_name ), ( ( hash_id, timestamp ) for ( hash_id, timestamp ) in insert_rows ) )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} VALUES ( ?, ? );'.format( current_files_table_name ), ( ( hash_id, timestamp ) for ( hash_id, timestamp ) in insert_rows ) )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( pending_files_table_name ), ( ( hash_id, ) for ( hash_id, timestamp ) in insert_rows ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( pending_files_table_name ), ( ( hash_id, ) for ( hash_id, timestamp ) in insert_rows ) )
         
-        pending_changed = HydrusDB.GetRowCount( self._c ) > 0
+        pending_changed = self._GetRowCount() > 0
         
         return pending_changed
         
@@ -79,11 +79,26 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( deleted_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( deleted_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
-        num_deleted = HydrusDB.GetRowCount( self._c )
+        num_deleted = self._GetRowCount()
         
         return num_deleted
+        
+    
+    def ClearFilesTables( self, service_id: int, keep_pending = False ):
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        self._Execute( 'DELETE FROM {};'.format( current_files_table_name ) )
+        self._Execute( 'DELETE FROM {};'.format( deleted_files_table_name ) )
+        
+        if not keep_pending:
+            
+            self._Execute( 'DELETE FROM {};'.format( pending_files_table_name ) )
+            
+        
+        self._Execute( 'DELETE FROM {};'.format( petitioned_files_table_name ) )
         
     
     def ClearLocalDeleteRecord( self, hash_ids = None ):
@@ -102,14 +117,14 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
                 
                 deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
                 
-                self._c.execute( 'DELETE FROM {} WHERE hash_id NOT IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name, trash_current_files_table_name ) )
+                self._Execute( 'DELETE FROM {} WHERE hash_id NOT IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name, trash_current_files_table_name ) )
                 
-                num_cleared = HydrusDB.GetRowCount( self._c )
+                num_cleared = self._GetRowCount()
                 
                 service_ids_to_nums_cleared[ service_id ] = num_cleared
                 
             
-            self._c.execute( 'DELETE FROM local_file_deletion_reasons WHERE hash_id NOT IN ( SELECT hash_id FROM {} );'.format( trash_current_files_table_name ) )
+            self._Execute( 'DELETE FROM local_file_deletion_reasons WHERE hash_id NOT IN ( SELECT hash_id FROM {} );'.format( trash_current_files_table_name ) )
             
         else:
             
@@ -123,14 +138,14 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
                     
                     deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
                     
-                    self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( deleted_files_table_name ), ( ( hash_id, ) for hash_id in ok_to_clear_hash_ids ) )
+                    self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( deleted_files_table_name ), ( ( hash_id, ) for hash_id in ok_to_clear_hash_ids ) )
                     
-                    num_cleared = HydrusDB.GetRowCount( self._c )
+                    num_cleared = self._GetRowCount()
                     
                     service_ids_to_nums_cleared[ service_id ] = num_cleared
                     
                 
-                self._c.executemany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in ok_to_clear_hash_ids ) )
+                self._ExecuteMany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in ok_to_clear_hash_ids ) )
                 
             
         
@@ -139,7 +154,25 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     
     def CreateInitialTables( self ):
         
-        self._c.execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
+        self._Execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
+        
+    
+    def DeletePending( self, service_id: int ):
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        self._Execute( 'DELETE FROM {};'.format( pending_files_table_name ) )
+        self._Execute( 'DELETE FROM {};'.format( petitioned_files_table_name ) )
+        
+    
+    def DropFilesTables( self, service_id: int ):
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( current_files_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( deleted_files_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( pending_files_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_files_table_name ) )
         
     
     def FilterAllCurrentHashIds( self, hash_ids, just_these_service_ids = None ):
@@ -155,13 +188,13 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         current_hash_ids = set()
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
             for service_id in service_ids:
                 
                 current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
                 
-                hash_id_iterator = self._STI( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+                hash_id_iterator = self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
                 
                 current_hash_ids.update( hash_id_iterator )
                 
@@ -183,13 +216,13 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         pending_hash_ids = set()
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
             for service_id in service_ids:
                 
                 pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
                 
-                hash_id_iterator = self._STI( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ) )
+                hash_id_iterator = self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ) )
                 
                 pending_hash_ids.update( hash_id_iterator )
                 
@@ -205,11 +238,11 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             return set( hash_ids )
             
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
             current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
             
-            current_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+            current_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
             
         
         return current_hash_ids
@@ -222,48 +255,30 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             return set( hash_ids )
             
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
             pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
             
-            pending_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ) )
+            pending_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ) )
             
         
         return pending_hash_ids
-        
-    
-    def DeletePending( self, service_id: int ):
-        
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
-        
-        self._c.execute( 'DELETE FROM {};'.format( pending_files_table_name ) )
-        self._c.execute( 'DELETE FROM {};'.format( petitioned_files_table_name ) )
-        
-    
-    def DropFilesTables( self, service_id: int ):
-        
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
-        
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( current_files_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( deleted_files_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( pending_files_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_files_table_name ) )
         
     
     def GenerateFilesTables( self, service_id: int ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );'.format( current_files_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );'.format( current_files_table_name ) )
         self._CreateIndex( current_files_table_name, [ 'timestamp' ] )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER, original_timestamp INTEGER );'.format( deleted_files_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER, original_timestamp INTEGER );'.format( deleted_files_table_name ) )
         self._CreateIndex( deleted_files_table_name, [ 'timestamp' ] )
         self._CreateIndex( deleted_files_table_name, [ 'original_timestamp' ] )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( pending_files_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( pending_files_table_name ) )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );'.format( petitioned_files_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );'.format( petitioned_files_table_name ) )
         self._CreateIndex( petitioned_files_table_name, [ 'reason_id' ] )
         
     
@@ -271,7 +286,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
         
-        result = self._c.execute( 'SELECT hash_id FROM {};'.format( pending_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT hash_id FROM {};'.format( pending_files_table_name ) ).fetchone()
         
         if result is None:
             
@@ -289,7 +304,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         petitioned_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PETITIONED )
         
-        result = self._c.execute( 'SELECT hash_id FROM {};'.format( petitioned_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT hash_id FROM {};'.format( petitioned_files_table_name ) ).fetchone()
         
         if result is None:
             
@@ -310,11 +325,11 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         if only_viewable:
             
             # hashes to mimes
-            result = self._c.execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( current_files_table_name, HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) ) ).fetchone()
+            result = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( current_files_table_name, HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) ) ).fetchone()
             
         else:
             
-            result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( current_files_table_name ) ).fetchone()
+            result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( current_files_table_name ) ).fetchone()
             
         
         ( count, ) = result
@@ -326,7 +341,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN file_inbox USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN file_inbox USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -337,7 +352,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         
-        hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {};'.format( current_files_table_name ) ) )
+        hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( current_files_table_name ) ) )
         
         return hash_ids
         
@@ -347,7 +362,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         
         # hashes to size
-        result = self._c.execute( 'SELECT SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -358,9 +373,9 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            rows = dict( self._c.execute( 'SELECT hash_id, timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+            rows = dict( self._Execute( 'SELECT hash_id, timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
             
         
         return rows
@@ -377,7 +392,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         
-        result = self._c.execute( 'SELECT timestamp FROM {} WHERE hash_id = ?;'.format( current_files_table_name ), ( hash_id, ) ).fetchone()
+        result = self._Execute( 'SELECT timestamp FROM {} WHERE hash_id = ?;'.format( current_files_table_name ), ( hash_id, ) ).fetchone()
         
         if result is None:
             
@@ -395,7 +410,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( deleted_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( deleted_files_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -405,7 +420,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     def GetDeletionStatus( self, service_id, hash_id ):
         
         # can have a value here and just be in trash, so we fetch it whatever the end result
-        result = self._c.execute( 'SELECT reason_id FROM local_file_deletion_reasons WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        result = self._Execute( 'SELECT reason_id FROM local_file_deletion_reasons WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
         if result is None:
             
@@ -423,7 +438,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         is_deleted = False
         timestamp = None
         
-        result = self._c.execute( 'SELECT timestamp FROM {} WHERE hash_id = ?;'.format( deleted_files_table_name ), ( hash_id, ) ).fetchone()
+        result = self._Execute( 'SELECT timestamp FROM {} WHERE hash_id = ?;'.format( deleted_files_table_name ), ( hash_id, ) ).fetchone()
         
         if result is not None:
             
@@ -452,7 +467,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             
             current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
             
-            for hash_id in self._STI( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) ):
+            for hash_id in self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) ):
                 
                 hash_ids_to_current_file_service_ids[ hash_id ].append( service_id )
                 
@@ -472,22 +487,22 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             
             ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
             
-            for ( hash_id, timestamp ) in self._c.execute( 'SELECT hash_id, timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ):
+            for ( hash_id, timestamp ) in self._Execute( 'SELECT hash_id, timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ):
                 
                 hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ].append( ( service_id, timestamp ) )
                 
             
-            for ( hash_id, timestamp, original_timestamp ) in self._c.execute( 'SELECT hash_id, timestamp, original_timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, deleted_files_table_name ) ):
+            for ( hash_id, timestamp, original_timestamp ) in self._Execute( 'SELECT hash_id, timestamp, original_timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, deleted_files_table_name ) ):
                 
                 hash_ids_to_deleted_file_service_ids_and_timestamps[ hash_id ].append( ( service_id, timestamp, original_timestamp ) )
                 
             
-            for hash_id in self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ):
+            for hash_id in self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ):
                 
                 hash_ids_to_pending_file_service_ids[ hash_id ].append( service_id )
                 
             
-            for hash_id in self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, petitioned_files_table_name ) ):
+            for hash_id in self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, petitioned_files_table_name ) ):
                 
                 hash_ids_to_petitioned_file_service_ids[ hash_id ].append( service_id )
                 
@@ -506,7 +521,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         combined_local_current_files_table_name = GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
         
-        ( num_local, ) = self._c.execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( current_files_table_name, combined_local_current_files_table_name ) ).fetchone()
+        ( num_local, ) = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( current_files_table_name, combined_local_current_files_table_name ) ).fetchone()
         
         return num_local
         
@@ -515,7 +530,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( pending_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( pending_files_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -526,7 +541,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         petitioned_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PETITIONED )
         
-        result = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( petitioned_files_table_name ) ).fetchone()
+        result = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( petitioned_files_table_name ) ).fetchone()
         
         ( count, ) = result
         
@@ -535,7 +550,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     
     def GetServiceIdCounts( self, hash_ids ) -> typing.Dict[ int, int ]:
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
             service_ids_to_counts = {}
             
@@ -544,7 +559,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
                 current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
                 
                 # temp hashes to files
-                ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ).fetchone()
+                ( count, ) = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ).fetchone()
                 
                 service_ids_to_counts[ service_id ] = count
                 
@@ -557,7 +572,7 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         petitioned_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PETITIONED )
         
-        petitioned_rows = list( HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM {} ORDER BY reason_id LIMIT 100;'.format( petitioned_files_table_name ) ) ).items() )
+        petitioned_rows = list( HydrusData.BuildKeyToListDict( self._Execute( 'SELECT reason_id, hash_id FROM {} ORDER BY reason_id LIMIT 100;'.format( petitioned_files_table_name ) ) ).items() )
         
         return petitioned_rows
         
@@ -588,9 +603,9 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            rows = self._c.execute( 'SELECT hash_id, original_timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, deleted_files_table_name ) ).fetchall()
+            rows = self._Execute( 'SELECT hash_id, original_timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, deleted_files_table_name ) ).fetchall()
             
         
         return rows
@@ -600,16 +615,16 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
         
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( pending_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( pending_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
     def PetitionFiles( self, service_id, reason_id, hash_ids ):
         
         petitioned_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PETITIONED )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id, reason_id ) VALUES ( ?, ? );'.format( petitioned_files_table_name ), ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id, reason_id ) VALUES ( ?, ? );'.format( petitioned_files_table_name ), ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
         
     
     def RecordDeleteFiles( self, service_id, insert_rows ):
@@ -618,12 +633,12 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         now = HydrusData.GetNow()
         
-        self._c.executemany(
+        self._ExecuteMany(
             'INSERT OR IGNORE INTO {} ( hash_id, timestamp, original_timestamp ) VALUES ( ?, ?, ? );'.format( deleted_files_table_name ),
             ( ( hash_id, now, original_timestamp ) for ( hash_id, original_timestamp ) in insert_rows )
         )
         
-        num_new_deleted_files = HydrusDB.GetRowCount( self._c )
+        num_new_deleted_files = self._GetRowCount()
         
         return num_new_deleted_files
         
@@ -632,25 +647,25 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( pending_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( pending_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
     def RescindPetitionFiles( self, service_id, hash_ids ):
         
         petitioned_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PETITIONED )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
     def RemoveFiles( self, service_id, hash_ids ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( current_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( current_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
-        pending_changed = HydrusDB.GetRowCount( self._c ) > 0
+        pending_changed = self._GetRowCount() > 0
         
         return pending_changed
         
@@ -659,5 +674,5 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         
         reason_id = self.modules_texts.GetTextId( reason )
         
-        self._c.executemany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
+        self._ExecuteMany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
         

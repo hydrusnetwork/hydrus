@@ -1,3 +1,4 @@
+import collections
 import itertools
 import os
 import sqlite3
@@ -13,6 +14,7 @@ from hydrus.core.networking import HydrusNetwork
 from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenance
+from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBServices
 
@@ -37,11 +39,13 @@ def GenerateRepositoryTagDefinitionTableName( service_id: int ):
     
     return tag_id_map_table_name
     
-def GenerateRepositoryUpdatesTableName( service_id: int ):
+def GenerateRepositoryUpdatesTableNames( service_id: int ):
     
     repository_updates_table_name = 'repository_updates_{}'.format( service_id )
+    repository_unregistered_updates_table_name = 'repository_unregistered_updates_{}'.format( service_id )
+    repository_updates_processed_table_name = 'repository_updates_processed_{}'.format( service_id )
     
-    return repository_updates_table_name
+    return ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name )
     
 class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
     
@@ -51,6 +55,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         cursor_transaction_wrapper: HydrusDB.DBCursorTransactionWrapper,
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
+        modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags,
         modules_files_maintenance: ClientDBFilesMaintenance.ClientDBFilesMaintenance
@@ -63,9 +68,32 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
         self.modules_services = modules_services
         self.modules_files_storage = modules_files_storage
+        self.modules_files_metadata_basic = modules_files_metadata_basic
         self.modules_files_maintenance = modules_files_maintenance
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_tags_local_cache = modules_tags_local_cache
+        
+        self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
+        
+    
+    def _ClearOutstandingWorkCache( self, service_id, content_type = None ):
+        
+        if service_id not in self._service_ids_to_content_types_to_outstanding_local_processing:
+            
+            return
+            
+        
+        if content_type is None:
+            
+            del self._service_ids_to_content_types_to_outstanding_local_processing[ service_id ]
+            
+        else:
+            
+            if content_type in self._service_ids_to_content_types_to_outstanding_local_processing[ service_id ]:
+                
+                del self._service_ids_to_content_types_to_outstanding_local_processing[ service_id ][ content_type ]
+                
+            
         
     
     def _GetInitialIndexGenerationTuples( self ):
@@ -77,7 +105,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
     
     def _HandleCriticalRepositoryDefinitionError( self, service_id, name, bad_ids ):
         
-        self._ReprocessRepository( service_id, ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) )
+        self._ReprocessRepository( service_id, ( HC.CONTENT_TYPE_DEFINITIONS, ) )
         
         self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
         self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
@@ -91,27 +119,74 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         raise Exception( message )
         
     
-    def _ReprocessRepository( self, service_id, update_mime_types ):
+    def _RegisterUpdates( self, service_id, hash_ids = None ):
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        update_hash_ids = set()
-        
-        for update_mime_type in update_mime_types:
+        if hash_ids is None:
             
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( update_mime_type, True ) ) )
+            hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_unregistered_updates_table_name ) ) )
             
-            update_hash_ids.update( hash_ids )
+        else:
+            
+            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, repository_unregistered_updates_table_name ) ) )
+                
             
         
-        self._c.executemany( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( False, hash_id ) for hash_id in update_hash_ids ) )
+        if len( hash_ids ) > 0:
+            
+            self._ClearOutstandingWorkCache( service_id )
+            
+            service_type = self.modules_services.GetService( service_id ).GetServiceType()
+            
+            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                hash_ids_to_mimes = { hash_id : mime for ( hash_id, mime ) in self._Execute( 'SELECT hash_id, mime FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
+                
+            
+            if len( hash_ids_to_mimes ) > 0:
+                
+                inserts = []
+                processed = False
+                
+                for ( hash_id, mime ) in hash_ids_to_mimes.items():
+                    
+                    if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+                        
+                        content_types = ( HC.CONTENT_TYPE_DEFINITIONS, )
+                        
+                    else:
+                        
+                        content_types = tuple( HC.REPOSITORY_CONTENT_TYPES[ service_type ] )
+                        
+                    
+                    inserts.extend( ( ( hash_id, content_type, processed ) for content_type in content_types ) )
+                    
+                
+                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), inserts )
+                self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids_to_mimes.keys() ) )
+                
+            
+        
+    
+    def _ReprocessRepository( self, service_id, content_types ):
+        
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+        
+        self._ExecuteMany( 'UPDATE {} SET processed = ? WHERE content_type = ?;'.format( repository_updates_processed_table_name ), ( ( False, content_type ) for content_type in content_types ) )
+        
+        self._ClearOutstandingWorkCache( service_id )
         
     
     def _ScheduleRepositoryUpdateFileMaintenance( self, service_id, job_type ):
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        update_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
+        table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
+        
+        update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
         self.modules_files_maintenance.AddJobs( update_hash_ids, job_type )
         
@@ -120,23 +195,25 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        processed = False
-        
         inserts = []
         
         for ( update_index, update_hashes ) in metadata_slice.GetUpdateIndicesAndHashes():
             
-            for update_hash in update_hashes:
-                
-                hash_id = self.modules_hashes_local_cache.GetHashId( update_hash )
-                
-                inserts.append( ( update_index, hash_id, processed ) )
-                
+            hash_ids = self.modules_hashes_local_cache.GetHashIds( update_hashes )
+            
+            inserts.extend( ( ( update_index, hash_id ) for hash_id in hash_ids ) )
             
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        if len( inserts ) > 0:
+            
+            ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+            
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
+            
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
+            
         
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_table_name ), inserts )
+        self._RegisterUpdates( service_id )
         
     
     def CreateInitialTables( self ):
@@ -146,27 +223,44 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
     
     def DropRepositoryTables( self, service_id: int ):
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_unregistered_updates_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_processed_table_name ) )
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
         
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( hash_id_map_table_name ) )
-        self._c.execute( 'DROP TABLE IF EXISTS {};'.format( tag_id_map_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( hash_id_map_table_name ) )
+        self._Execute( 'DROP TABLE IF EXISTS {};'.format( tag_id_map_table_name ) )
+        
+        self._ClearOutstandingWorkCache( service_id )
+        
+    
+    def DoOutstandingUpdateRegistration( self ):
+        
+        for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
+            
+            self._RegisterUpdates( service_id )
+            
         
     
     def GenerateRepositoryTables( self, service_id: int ):
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( update_index, hash_id ) );'.format( repository_updates_table_name ) )
-        self._CreateIndex( repository_updates_table_name, [ 'hash_id' ] )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, PRIMARY KEY ( update_index, hash_id ) );'.format( repository_updates_table_name ) )
+        self._CreateIndex( repository_updates_table_name, [ 'hash_id' ] )   
+        
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( repository_unregistered_updates_table_name ) )
+        
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, content_type INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( hash_id, content_type ) );'.format( repository_updates_processed_table_name ) )
+        self._CreateIndex( repository_updates_processed_table_name, [ 'content_type' ] )
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( service_hash_id INTEGER PRIMARY KEY, hash_id INTEGER );'.format( hash_id_map_table_name ) )
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS {} ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );'.format( tag_id_map_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( service_hash_id INTEGER PRIMARY KEY, hash_id INTEGER );'.format( hash_id_map_table_name ) )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );'.format( tag_id_map_table_name ) )
         
     
     def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
@@ -181,135 +275,142 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        ( num_updates, ) = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( repository_updates_table_name ) ).fetchone()
-        
-        ( num_processed_updates, ) = self._c.execute( 'SELECT COUNT( * ) FROM {} WHERE processed = ?;'.format( repository_updates_table_name ), ( True, ) ).fetchone()
+        ( num_updates, ) = self._Execute( 'SELECT COUNT( * ) FROM {}'.format( repository_updates_table_name ) ).fetchone()
         
         table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
         
-        ( num_local_updates, ) = self._c.execute( 'SELECT COUNT( * ) FROM {};'.format( table_join ) ).fetchone()
+        ( num_local_updates, ) = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( table_join ) ).fetchone()
         
-        return ( num_local_updates, num_processed_updates, num_updates )
+        content_types_to_num_updates = collections.Counter( dict( self._Execute( 'SELECT content_type, COUNT( * ) FROM {} GROUP BY content_type;'.format( repository_updates_processed_table_name ) ) ) )
+        content_types_to_num_processed_updates = collections.Counter( dict( self._Execute( 'SELECT content_type, COUNT( * ) FROM {} WHERE processed = ? GROUP BY content_type;'.format( repository_updates_processed_table_name ), ( True, ) ) ) )
+        
+        # little helpful thing that pays off later
+        for content_type in content_types_to_num_updates:
+            
+            if content_type not in content_types_to_num_processed_updates:
+                
+                content_types_to_num_processed_updates[ content_type ] = 0
+                
+            
+        
+        return ( num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates )
         
     
-    def GetRepositoryUpdateHashesICanProcess( self, service_key: bytes ):
+    def GetRepositoryUpdateHashesICanProcess( self, service_key: bytes, content_types_to_process ):
         
         # it is important that we use lists and sort by update index!
         # otherwise add/delete actions can occur in the wrong order
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        result = self._c.execute( 'SELECT 1 FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, True ) ).fetchone()
+        result = self._Execute( 'SELECT 1 FROM {} WHERE content_type = ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( HC.CONTENT_TYPE_DEFINITIONS, True ) ).fetchone()
         
         this_is_first_definitions_work = result is None
         
-        result = self._c.execute( 'SELECT 1 FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_CONTENT, True ) ).fetchone()
+        result = self._Execute( 'SELECT 1 FROM {} WHERE content_type != ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( HC.CONTENT_TYPE_DEFINITIONS, True ) ).fetchone()
         
         this_is_first_content_work = result is None
         
-        update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( self._c.execute( 'SELECT update_index, hash_id FROM {} WHERE processed = ?;'.format( repository_updates_table_name ), ( False, ) ) )
+        min_unregistered_update_index = None
         
-        unprocessed_hash_ids = list( itertools.chain.from_iterable( update_indices_to_unprocessed_hash_ids.values() ) )
+        result = self._Execute( 'SELECT MIN( update_index ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( repository_unregistered_updates_table_name, repository_updates_table_name ) ).fetchone()
         
-        definition_hashes = []
-        content_hashes = []
+        if result is not None:
+            
+            ( min_unregistered_update_index, ) = result
+            
         
-        if len( unprocessed_hash_ids ) > 0:
+        predicate_phrase = 'processed = False AND content_type IN {}'.format( HydrusData.SplayListForDB( content_types_to_process ) )
+        
+        if min_unregistered_update_index is not None:
             
-            local_hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.local_update_service_id, unprocessed_hash_ids )
+            # can't process an update if any of its files are as yet unregistered (these are both unprocessed and unavailable)
+            # also, we mustn't skip any update indices, so if there is an invalid one, we won't do any after that!
             
-            hash_ids_i_can_process = []
+            predicate_phrase = '{} AND update_index < {}'.format( predicate_phrase, min_unregistered_update_index )
             
-            update_indices = sorted( update_indices_to_unprocessed_hash_ids.keys() )
+        
+        query = 'SELECT update_index, hash_id, content_type FROM {} CROSS JOIN {} USING ( hash_id ) WHERE {};'.format( repository_updates_processed_table_name, repository_updates_table_name, predicate_phrase )
+        
+        rows = self._Execute( query ).fetchall()
+        
+        update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( ( ( update_index, hash_id ) for ( update_index, hash_id, content_type ) in rows ) )
+        hash_ids_to_content_types_to_process = HydrusData.BuildKeyToSetDict( ( ( hash_id, content_type ) for ( update_index, hash_id, content_type ) in rows ) )
+        
+        all_hash_ids = set( hash_ids_to_content_types_to_process.keys() )
+        
+        all_local_hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.local_update_service_id, all_hash_ids )
+        
+        for sorted_update_index in sorted( update_indices_to_unprocessed_hash_ids.keys() ):
             
-            for update_index in update_indices:
-                
-                this_update_unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
-                
-                if local_hash_ids.issuperset( this_update_unprocessed_hash_ids ):
-                    
-                    # if we have all the updates, we can process this index
-                    
-                    hash_ids_i_can_process.extend( this_update_unprocessed_hash_ids )
-                    
-                else:
-                    
-                    # if we don't have them all, we shouldn't do any more
-                    
-                    break
-                    
-                
+            unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ sorted_update_index ]
             
-            if len( hash_ids_i_can_process ) > 0:
+            if not unprocessed_hash_ids.issubset( all_local_hash_ids ):
                 
-                with HydrusDB.TemporaryIntegerTable( self._c, hash_ids_i_can_process, 'hash_id' ) as temp_hash_ids_table_name:
-                    
-                    hash_ids_to_hashes_and_mimes = { hash_id : ( hash, mime ) for ( hash_id, hash, mime ) in self._c.execute( 'SELECT hash_id, hash, mime FROM {} CROSS JOIN hashes USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
-                    
+                # can't process an update if any of its unprocessed files are not local
+                # normally they'll always be available if registered, but just in case a user deletes one manually etc...
+                # also, we mustn't skip any update indices, so if there is an invalid one, we won't do any after that!
                 
-                if len( hash_ids_to_hashes_and_mimes ) < len( hash_ids_i_can_process ):
-                    
-                    self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
-                    self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                    
-                    self._cursor_transaction_wrapper.CommitAndBegin()
-                    
-                    raise Exception( 'An error was discovered during repository processing--some update files are missing file info or hashes. A maintenance routine will try to scan these files and fix this problem, but it may be more complicated to fix. Please contact hydev and let him know the details!' )
-                    
+                update_indices_to_unprocessed_hash_ids = { update_index : unprocessed_hash_ids for ( update_index, unprocessed_hash_ids ) in update_indices_to_unprocessed_hash_ids.items() if update_index < sorted_update_index }
                 
-                for hash_id in hash_ids_i_can_process:
-                    
-                    ( hash, mime ) = hash_ids_to_hashes_and_mimes[ hash_id ]
-                    
-                    if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
-                        
-                        definition_hashes.append( hash )
-                        
-                    elif mime == HC.APPLICATION_HYDRUS_UPDATE_CONTENT:
-                        
-                        content_hashes.append( hash )
-                        
-                    
+                break
                 
             
         
-        return ( this_is_first_definitions_work, definition_hashes, this_is_first_content_work, content_hashes )
+        # all the hashes are now good to go
+        
+        all_hash_ids = set( itertools.chain.from_iterable( update_indices_to_unprocessed_hash_ids.values() ) )
+        
+        hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = all_hash_ids )
+        
+        definition_hashes_and_content_types = []
+        content_hashes_and_content_types = []
+        
+        definitions_content_types = { HC.CONTENT_TYPE_DEFINITIONS }
+        
+        if len( update_indices_to_unprocessed_hash_ids ) > 0:
+            
+            for update_index in sorted( update_indices_to_unprocessed_hash_ids.keys() ):
+                
+                unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
+                
+                definition_hash_ids = { hash_id for hash_id in unprocessed_hash_ids if hash_ids_to_content_types_to_process[ hash_id ] == definitions_content_types }
+                content_hash_ids = { hash_id for hash_id in unprocessed_hash_ids if hash_id not in definition_hash_ids }
+                
+                for ( hash_ids, hashes_and_content_types ) in [
+                    ( definition_hash_ids, definition_hashes_and_content_types ),
+                    ( content_hash_ids, content_hashes_and_content_types )
+                ]:
+                    
+                    hashes_and_content_types.extend( ( ( hash_ids_to_hashes[ hash_id ], hash_ids_to_content_types_to_process[ hash_id ] ) for hash_id in hash_ids ) )
+                    
+                
+            
+        
+        return ( this_is_first_definitions_work, definition_hashes_and_content_types, this_is_first_content_work, content_hashes_and_content_types )
         
     
     def GetRepositoryUpdateHashesIDoNotHave( self, service_key: bytes ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        desired_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} ORDER BY update_index ASC;'.format( repository_updates_table_name ) ) )
+        all_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} ORDER BY update_index ASC;'.format( repository_updates_table_name ) ) )
         
         table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
         
-        existing_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
+        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
-        needed_hash_ids = [ hash_id for hash_id in desired_hash_ids if hash_id not in existing_hash_ids ]
+        needed_hash_ids = [ hash_id for hash_id in all_hash_ids if hash_id not in existing_hash_ids ]
         
         needed_hashes = self.modules_hashes_local_cache.GetHashes( needed_hash_ids )
         
         return needed_hashes
-        
-    
-    def GetRepositoryUpdateHashesUnprocessed( self, service_key: bytes ):
-        
-        service_id = self.modules_services.GetServiceId( service_key )
-        
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
-        
-        unprocessed_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} WHERE processed = ?;'.format( repository_updates_table_name ), ( False, ) ) )
-        
-        hashes = self.modules_hashes_local_cache.GetHashes( unprocessed_hash_ids )
-        
-        return hashes
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
@@ -320,7 +421,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
             for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
                 
-                repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+                ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
                 hash_id_map_table_name = GenerateRepositoryFileDefinitionTableName( service_id )
                 
                 tables_and_columns.extend( [
@@ -344,11 +445,35 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         return tables_and_columns
         
     
+    def HasLotsOfOutstandingLocalProcessing( self, service_id, content_types ):
+        
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+        
+        content_types_to_outstanding_local_processing = self._service_ids_to_content_types_to_outstanding_local_processing[ service_id ]
+        
+        for content_type in content_types:
+            
+            if content_type not in content_types_to_outstanding_local_processing:
+                
+                result = self._STL( self._Execute( 'SELECT 1 FROM {} WHERE content_type = ? AND processed = ?;'.format( repository_updates_processed_table_name ), ( content_type, False ) ).fetchmany( 20 ) )
+                
+                content_types_to_outstanding_local_processing[ content_type ] = len( result ) >= 20
+                
+            
+            if content_types_to_outstanding_local_processing[ content_type ]:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def NormaliseServiceHashId( self, service_id: int, service_hash_id: int ) -> int:
         
         hash_id_map_table_name = GenerateRepositoryFileDefinitionTableName( service_id )
         
-        result = self._c.execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
+        result = self._Execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
         
         if result is None:
             
@@ -364,10 +489,10 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         hash_id_map_table_name = GenerateRepositoryFileDefinitionTableName( service_id )
         
-        with HydrusDB.TemporaryIntegerTable( self._c, service_hash_ids, 'service_hash_id' ) as temp_table_name:
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_table_name:
             
             # temp service hashes to lookup
-            hash_ids_potentially_dupes = self._STL( self._c.execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_table_name, hash_id_map_table_name ) ) )
+            hash_ids_potentially_dupes = self._STL( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_table_name, hash_id_map_table_name ) ) )
             
         
         # every service_id can only exist once, but technically a hash_id could be mapped to two service_ids
@@ -377,7 +502,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
             for service_hash_id in service_hash_ids:
                 
-                result = self._c.execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
+                result = self._Execute( 'SELECT hash_id FROM {} WHERE service_hash_id = ?;'.format( hash_id_map_table_name ), ( service_hash_id, ) ).fetchone()
                 
                 if result is None:
                     
@@ -397,7 +522,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         tag_id_map_table_name = GenerateRepositoryTagDefinitionTableName( service_id )
         
-        result = self._c.execute( 'SELECT tag_id FROM {} WHERE service_tag_id = ?;'.format( tag_id_map_table_name ), ( service_tag_id, ) ).fetchone()
+        result = self._Execute( 'SELECT tag_id FROM {} WHERE service_tag_id = ?;'.format( tag_id_map_table_name ), ( service_tag_id, ) ).fetchone()
         
         if result is None:
             
@@ -409,7 +534,17 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         return tag_id
         
     
-    def ProcessRepositoryDefinitions( self, service_key: bytes, definition_hash: bytes, definition_iterator_dict, job_key, work_time ):
+    def NotifyUpdatesImported( self, hash_ids ):
+        
+        for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
+            
+            self._RegisterUpdates( service_id, hash_ids )
+            
+        
+    
+    def ProcessRepositoryDefinitions( self, service_key: bytes, definition_hash: bytes, definition_iterator_dict, content_types, job_key, work_time ):
+        
+        # ignore content_types for now
         
         service_id = self.modules_services.GetServiceId( service_key )
         
@@ -434,7 +569,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                     inserts.append( ( service_hash_id, hash_id ) )
                     
                 
-                self._c.executemany( 'REPLACE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
+                self._ExecuteMany( 'REPLACE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
                 
                 num_rows_processed += len( inserts )
                 
@@ -471,7 +606,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                     inserts.append( ( service_tag_id, tag_id ) )
                     
                 
-                self._c.executemany( 'REPLACE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
+                self._ExecuteMany( 'REPLACE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
                 
                 num_rows_processed += len( inserts )
                 
@@ -484,16 +619,16 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             del definition_iterator_dict[ 'service_tag_ids_to_tags' ]
             
         
-        self.SetUpdateProcessed( service_id, definition_hash )
+        self.SetUpdateProcessed( service_id, definition_hash, ( HC.CONTENT_TYPE_DEFINITIONS, ) )
         
         return num_rows_processed
         
     
-    def ReprocessRepository( self, service_key: bytes, update_mime_types: typing.Collection[ int ] ):
+    def ReprocessRepository( self, service_key: bytes, content_types: typing.Collection[ int ] ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        self._ReprocessRepository( service_id, update_mime_types )
+        self._ReprocessRepository( service_id, content_types )
         
     
     def ScheduleRepositoryUpdateFileMaintenance( self, service_key, job_type ):
@@ -507,15 +642,17 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        current_update_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
+        current_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
         
         all_future_update_hash_ids = self.modules_hashes_local_cache.GetHashIds( metadata.GetUpdateHashes() )
         
         deletee_hash_ids = current_update_hash_ids.difference( all_future_update_hash_ids )
         
-        self._c.executemany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
         
         inserts = []
         
@@ -525,32 +662,36 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                 
                 hash_id = self.modules_hashes_local_cache.GetHashId( update_hash )
                 
-                result = self._c.execute( 'SELECT processed FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( hash_id, ) ).fetchone()
-                
-                if result is None:
+                if hash_id in current_update_hash_ids:
                     
-                    processed = False
-                    
-                    inserts.append( ( update_index, hash_id, processed ) )
+                    self._Execute( 'UPDATE {} SET update_index = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( update_index, hash_id ) )
                     
                 else:
                     
-                    ( processed, ) = result
-                    
-                    self._c.execute( 'UPDATE {} SET update_index = ?, processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( update_index, processed, hash_id ) )
+                    inserts.append( ( update_index, hash_id ) )
                     
                 
             
         
-        self._c.executemany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_table_name ), inserts )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
+        
+        self._RegisterUpdates( service_id )
+        
+        self._ClearOutstandingWorkCache( service_id )
         
     
-    def SetUpdateProcessed( self, service_id, update_hash: bytes ):
+    def SetUpdateProcessed( self, service_id: int, update_hash: bytes, content_types: typing.Collection[ int ] ):
         
-        repository_updates_table_name = GenerateRepositoryUpdatesTableName( service_id )
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
         update_hash_id = self.modules_hashes_local_cache.GetHashId( update_hash )
         
-        self._c.execute( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( True, update_hash_id ) )
+        self._ExecuteMany( 'UPDATE {} SET processed = ? WHERE hash_id = ? AND content_type = ?;'.format( repository_updates_processed_table_name ), ( ( True, update_hash_id, content_type ) for content_type in content_types ) )
+        
+        for content_type in content_types:
+            
+            self._ClearOutstandingWorkCache( service_id, content_type )
+            
         
     

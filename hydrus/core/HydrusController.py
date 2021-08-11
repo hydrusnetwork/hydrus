@@ -644,6 +644,41 @@ class HydrusController( object ):
             
         
     
+    def PrintQueryPlan( self, query, plan_lines ):
+        
+        pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( HG.query_planner_start_time ) )
+        
+        query_planner_log_filename = '{} query planner - {}.log'.format( self._name, pretty_timestamp )
+        
+        query_planner_log_path = os.path.join( self.db_dir, query_planner_log_filename )
+        
+        with open( query_planner_log_path, 'a', encoding = 'utf-8' ) as f:
+            
+            prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
+            
+            if ' ' in query:
+                
+                first_word = query.split( ' ', 1 )[0]
+                
+            else:
+                
+                first_word = 'unknown'
+                
+            
+            f.write( prefix + first_word )
+            f.write( os.linesep )
+            f.write( query )
+            
+            if len( plan_lines ) > 0:
+                
+                f.write( os.linesep )
+                f.write( os.linesep.join( ( str( p ) for p in plan_lines ) ) )
+                
+            
+            f.write( os.linesep * 2 )
+            
+        
+    
     def Read( self, action, *args, **kwargs ):
         
         return self._Read( action, *args, **kwargs )

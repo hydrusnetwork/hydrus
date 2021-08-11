@@ -100,7 +100,7 @@ class HydrusTagArchive( object ):
         if not os.path.exists( self._path ): create_db = True
         else: create_db = False
         
-        self._InitDBCursor()
+        self._InitDBConnection()
         
         if create_db: self._InitDB()
         
@@ -129,7 +129,7 @@ class HydrusTagArchive( object ):
         self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
         
     
-    def _InitDBCursor( self ):
+    def _InitDBConnection( self ):
         
         self._db = sqlite3.connect( self._path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
@@ -496,7 +496,7 @@ class HydrusTagPairArchive( object ):
         
         is_new_db = not os.path.exists( self._path )
         
-        self._InitDBCursor()
+        self._InitDBConnection()
         
         if is_new_db:
             
@@ -525,7 +525,7 @@ class HydrusTagPairArchive( object ):
         self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
         
     
-    def _InitDBCursor( self ):
+    def _InitDBConnection( self ):
         
         self._db = sqlite3.connect( self._path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         

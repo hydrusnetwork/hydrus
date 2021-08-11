@@ -1,4 +1,5 @@
 import collections
+import itertools
 import threading
 import time
 import typing
@@ -1553,11 +1554,16 @@ class ContentUpdate( HydrusSerialisable.SerialisableBase ):
         return self._GetContent( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD )
         
     
-    def GetNumRows( self ):
+    def GetNumRows( self, content_types_to_count = None ):
         
         num = 0
         
         for content_type in self._content_data:
+            
+            if content_types_to_count is not None and content_type not in content_types_to_count:
+                
+                continue
+                
             
             for action in self._content_data[ content_type ]:
                 
@@ -1896,6 +1902,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         self._next_update_due = next_update_due
         
         self._update_hashes = set()
+        self._update_hashes_ordered = []
         
         self._biggest_end = self._CalculateBiggestEnd()
         
@@ -1964,10 +1971,22 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             self._metadata[ update_index ] = ( update_hashes, begin, end )
             
-            self._update_hashes.update( update_hashes )
-            
+        
+        self._RecalcHashes()
         
         self._biggest_end = self._CalculateBiggestEnd()
+        
+    
+    def _RecalcHashes( self ):
+        
+        self._update_hashes = set()
+        self._update_hashes_ordered = []
+        
+        for ( update_index, ( update_hashes, begin, end ) ) in sorted( self._metadata.items() ):
+            
+            self._update_hashes.update( update_hashes )
+            self._update_hashes_ordered.extend( update_hashes )
+            
         
     
     def AppendUpdate( self, update_hashes, begin, end, next_update_due ):
@@ -1979,6 +1998,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             self._metadata[ update_index ] = ( update_hashes, begin, end )
             
             self._update_hashes.update( update_hashes )
+            self._update_hashes_ordered.extend( update_hashes )
             
             self._next_update_due = next_update_due
             
@@ -2007,9 +2027,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            data = sorted( self._metadata.items() )
-            
-            for ( update_index, ( update_hashes, begin, end ) ) in data:
+            for ( update_index, ( update_hashes, begin, end ) ) in sorted( self._metadata.items() ):
                 
                 if HydrusData.SetsIntersect( hashes, update_hashes ):
                     
@@ -2078,9 +2096,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in self._metadata.values() ) )
-            
-            return num_update_hashes
+            return len( self._update_hashes )
             
         
     
@@ -2100,20 +2116,11 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             if update_index is None:
                 
-                all_update_hashes = set()
-                
-                for ( update_hashes, begin, end ) in self._metadata.values():
-                    
-                    all_update_hashes.update( update_hashes )
-                    
-                
-                return all_update_hashes
+                return set( self._update_hashes )
                 
             else:
                 
-                update_hashes = self._GetUpdateHashes( update_index )
-                
-                return update_hashes
+                return set( self._GetUpdateHashes( update_index ) )
                 
             
         
@@ -2179,6 +2186,18 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SortContentHashesAndContentTypes( self, content_hashes_and_content_types ):
+        
+        with self._lock:
+            
+            content_hashes_to_content_types = dict( content_hashes_and_content_types )
+            
+            content_hashes_and_content_types = [ ( update_hash, content_hashes_to_content_types[ update_hash ] ) for update_hash in self._update_hashes_ordered if update_hash in content_hashes_to_content_types ]
+            
+            return content_hashes_and_content_types
+            
+        
+    
     def UpdateASAP( self ):
         
         with self._lock:
@@ -2213,6 +2232,8 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             self._next_update_due = new_next_update_due
             self._biggest_end = self._CalculateBiggestEnd()
+            
+            self._RecalcHashes()
             
         
     
