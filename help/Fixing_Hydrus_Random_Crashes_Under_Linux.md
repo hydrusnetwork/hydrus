@@ -1,14 +1,14 @@
-### Virtual Memory Under Linux
+# Virtual Memory Under Linux
 
-# Why does hydrus keep crashing under Linux when it has lots of virtual memory?
+## Why does hydrus keep crashing under Linux when it has lots of virtual memory?
 
-## Symptoms
+### Symptoms
 - Hydrus crashes without a crash log
 - Standard error reads `Killed`
 - System logs say OOMKiller
 - Programs appear to havevery high virtual memory utilization despite low real memory.
 
-## tl;dr :: The fix
+### tl;dr :: The fix
 
 Add the followng line to the end of `/etc/sysctl.conf`. You will need admin, so use
 
@@ -40,7 +40,7 @@ You may add as many swapfiles as you like, and should add a new swapfile before 
 
 Reboot for all changes to take effect, or use `sysctl` to set `vm` variables.
 
-## Details
+### Details
 Linux's memory allocator is lazy and does not perform opportunistic reclaim.  This means that the system will continue to give your process memory from the real and virtual memory pool(swap) until there is none left.
 
 Linux will only cleanup if the available total real and virtual memory falls below the **watermark** as defined in the system control configuration file `/etc/sysctl.conf`.
@@ -54,20 +54,16 @@ If `vm.min_free_kbytes` is less than the ammount requested and there is no virtu
 
 Increase the `vm.min_free_kbytes` value to prevent this scenario.
 
-### The OOM Killer
+#### The OOM Killer
 The OOM kill decides which program to kill to reclaim memory, since hydrus loves memory it is usually picked first, even if another program asking for memory caused the OOM condition.  Setting the minimum free kilobytes higher will avoid the running of the OOMkiller which is always preferable, and almost always preventable.
 
-### Memory Overcommmit
+#### Memory Overcommmit
 We mentioned that Linux will keep giving out memory, but actually it's possible for Linux to launch the OOM killer if it just feel like our program is aking for too much memory too quickly.  Since hydrus is a heavyweight scientific processing package we need to turn this feature off.  To turn it off change the value of `vm.overcommit_memory` which defaults to `2`.
 
 Set `vm.overcommit_memory=1` this prevents the OS from using a heuristic and it will just always give memory to anyone who asks for it.
 
-### What about swappiness?
+#### What about swappiness?
 Swapiness is a setting you might have seen, but it only determines Linux's desire to spend a little bit of time moving memory you haven't touched in a while out of real memory and into virtual memory, it will not prevent the OOM condition it just determines how much time to use for moving things into swap.
-
-
-
-### Virtual Memory Under Linux 2: The rememoryning
 
 # Why does my Linux system studder or become unresponsive when hydrus has been running a while?
 
@@ -88,8 +84,6 @@ https://www.kernel.org/doc/Documentation/sysctl/vm.txt
 
 
 
-### Virtual Memory Under Linux 3: The return of the memory
-
 # Why does everything become clunky for a bit if I have tuned all of the above settings?
 
 The kernel launches a process called `kswapd` to swap and reclaim memory pages, its behaviour is goverened by the following two values
@@ -109,6 +103,7 @@ i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB 
 
 An example /etc/sysctl.conf section for virtual memory settings.
 
+```ini
 ########
 # virtual memory
 ########
@@ -133,3 +128,4 @@ vm.watermark_scale_factor=70
 #Have the kernel prefer to reclaim I/O pages at 110% of the rate at which it frees other pages.
 #Don't set this value much over 100 or the kernel will spend all its time reclaiming I/O pages
 vm.vfs_cache_pressure=110
+```
