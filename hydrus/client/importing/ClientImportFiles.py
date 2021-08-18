@@ -139,21 +139,11 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job starting work.' )
             
         
-        if status_hook is not None:
-            
-            status_hook( 'calculating pre-import status' )
-            
-        
-        self.GeneratePreImportHashAndStatus()
+        self.GeneratePreImportHashAndStatus( status_hook = status_hook )
         
         if self._pre_import_file_status.ShouldImport( self._file_import_options ):
             
-            if status_hook is not None:
-                
-                status_hook( 'generating metadata' )
-                
-            
-            self.GenerateInfo()
+            self.GenerateInfo( status_hook = status_hook )
             
             try:
                 
@@ -178,14 +168,14 @@ class FileImportJob( object ):
                 
                 if status_hook is not None:
                     
-                    status_hook( 'copying file' )
+                    status_hook( 'copying file into file storage' )
                     
                 
                 HG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
                 
                 if status_hook is not None:
                     
-                    status_hook( 'updating database' )
+                    status_hook( 'importing to database' )
                     
                 
                 self._post_import_file_status = HG.client_controller.WriteSynchronous( 'import_file', self )
@@ -210,15 +200,25 @@ class FileImportJob( object ):
         return self._post_import_file_status
         
     
-    def GeneratePreImportHashAndStatus( self ):
+    def GeneratePreImportHashAndStatus( self, status_hook = None ):
         
         HydrusImageHandling.ConvertToPNGIfBMP( self._temp_path )
+        
+        if status_hook is not None:
+            
+            status_hook( 'calculating hash' )
+            
         
         hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
         
         if HG.file_import_report_mode:
             
             HydrusData.ShowText( 'File import job hash: {}'.format( hash.hex() ) )
+            
+        
+        if status_hook is not None:
+            
+            status_hook( 'checking for file status' )
             
         
         self._pre_import_file_status = HG.client_controller.Read( 'hash_status', 'sha256', hash, prefix = 'file recognised' )
@@ -234,9 +234,14 @@ class FileImportJob( object ):
             
         
     
-    def GenerateInfo( self ):
+    def GenerateInfo( self, status_hook = None ):
         
         if self._pre_import_file_status.mime is None:
+            
+            if status_hook is not None:
+                
+                status_hook( 'generating filetype' )
+                
             
             mime = HydrusFileHandling.GetMime( self._temp_path )
             
@@ -272,6 +277,11 @@ class FileImportJob( object ):
                 
             
         
+        if status_hook is not None:
+            
+            status_hook( 'generating file metadata' )
+            
+        
         self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime )
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
@@ -282,6 +292,11 @@ class FileImportJob( object ):
             
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            if status_hook is not None:
+                
+                status_hook( 'generating thumbnail' )
+                
             
             if HG.file_import_report_mode:
                 
@@ -306,6 +321,11 @@ class FileImportJob( object ):
         
         if mime in HC.MIMES_WE_CAN_PHASH:
             
+            if status_hook is not None:
+                
+                status_hook( 'generating similar files metadata' )
+                
+            
             if HG.file_import_report_mode:
                 
                 HydrusData.ShowText( 'File import job generating phashes' )
@@ -322,6 +342,11 @@ class FileImportJob( object ):
         if HG.file_import_report_mode:
             
             HydrusData.ShowText( 'File import job generating other hashes' )
+            
+        
+        if status_hook is not None:
+            
+            status_hook( 'generating additional hashes' )
             
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )

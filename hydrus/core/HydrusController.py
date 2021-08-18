@@ -646,6 +646,13 @@ class HydrusController( object ):
     
     def PrintQueryPlan( self, query, plan_lines ):
         
+        if query in HG.queries_planned:
+            
+            return
+            
+        
+        HG.queries_planned.add( query )
+        
         pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( HG.query_planner_start_time ) )
         
         query_planner_log_filename = '{} query planner - {}.log'.format( self._name, pretty_timestamp )

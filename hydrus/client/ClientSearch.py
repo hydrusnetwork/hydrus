@@ -366,7 +366,7 @@ class FileSystemPredicates( object ):
                     
                     ( years, months, days, hours ) = age_value
                     
-                    age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                    age = ( years * 365 * 86400 ) + ( ( ( ( ( months * 30 ) + days ) * 24 ) + hours ) * 3600 )
                     
                     now = HydrusData.GetNow()
                     
@@ -2176,7 +2176,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         DAY = 86400
                         MONTH = DAY * 30
-                        YEAR = MONTH * 12
+                        YEAR = DAY * 365
                         
                         time_delta = 0
                         

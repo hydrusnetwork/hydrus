@@ -952,6 +952,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._potential_file_search_currently_happening = False
         self._maintenance_numbers_need_redrawing = True
         
+        self._potential_duplicates_count = 0
+        
         self._have_done_first_maintenance_numbers_show = False
         
         new_options = self._controller.new_options
@@ -1277,7 +1279,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._dupe_count_numbers_dirty = True
             
-            self._ShowRandomPotentialDupes()
+            if self._potential_duplicates_count > 1:
+                
+                self._ShowRandomPotentialDupes()
+                
+            else:
+                
+                self._ShowPotentialDupes( [] )
+                
             
         
     
@@ -1288,28 +1297,40 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._UpdateMaintenanceStatus()
         
     
-    def _ShowRandomPotentialDupes( self ):
+    def _ShowPotentialDupes( self, hashes ):
         
         ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
         
         file_service_key = file_search_context.GetFileServiceKey()
         
-        hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context, both_files_match )
-        
-        if len( hashes ) == 0:
+        if len( hashes ) > 0:
             
-            QW.QMessageBox.critical( self, 'Error', 'No files were found. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
+            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            return
+        else:
             
-        
-        media_results = self._controller.Read( 'media_results', hashes, sorted = True )
+            media_results = []
+            
         
         panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
         panel.SetEmptyPageStatusOverride( 'no dupes found' )
         
         self._page.SwapMediaPanel( panel )
+        
+    
+    def _ShowRandomPotentialDupes( self ):
+        
+        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        
+        hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context, both_files_match )
+        
+        if len( hashes ) == 0:
+            
+            HydrusData.ShowText( 'No files were found. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
+            
+        
+        self._ShowPotentialDupes( hashes )
         
     
     def _UpdateMaintenanceStatus( self ):
@@ -1408,9 +1429,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _UpdatePotentialDuplicatesCount( self, potential_duplicates_count ):
         
+        self._potential_duplicates_count = potential_duplicates_count
+        
         self._num_potential_duplicates.setText( '{} potential pairs.'.format( HydrusData.ToHumanInt( potential_duplicates_count ) ) )
         
-        if potential_duplicates_count > 0:
+        if self._potential_duplicates_count > 0:
             
             self._show_some_dupes.setEnabled( True )
             self._launch_filter.setEnabled( True )

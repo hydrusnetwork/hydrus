@@ -1710,6 +1710,8 @@ class MediaList( object ):
         
         self._sorted_media.sort( sort_key = sort_key, reverse = reverse )
         
+        self._RecalcHashes()
+        
     
 FILE_FILTER_ALL = 0
 FILE_FILTER_NOT_SELECTED = 1

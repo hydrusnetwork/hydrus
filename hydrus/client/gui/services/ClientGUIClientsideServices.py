@@ -2566,7 +2566,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         #
         
-        content_types = tuple( HC.REPOSITORY_CONTENT_TYPES[ self._service.GetServiceType() ] )
+        content_types = tuple( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ self._service.GetServiceType() ] )
         
         self._content_types_to_gauges_and_buttons = {}
         

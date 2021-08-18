@@ -197,7 +197,7 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         
         index_generation_tuples = []
         
-        index_generation_tuples.append( ( 'external_caches.shape_perceptual_hash_map', [ 'hash_id' ], False ) )
+        index_generation_tuples.append( ( 'external_master.shape_perceptual_hash_map', [ 'hash_id' ], False ) )
         index_generation_tuples.append( ( 'external_caches.shape_vptree', [ 'parent_id' ], False ) )
         
         return index_generation_tuples
@@ -406,15 +406,15 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
     
     def CreateInitialTables( self ):
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_vptree ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );' )
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
         
     
     def DisassociatePHashes( self, hash_id, phash_ids ):

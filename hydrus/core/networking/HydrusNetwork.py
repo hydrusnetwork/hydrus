@@ -17,7 +17,7 @@ MIN_UPDATE_PERIOD = 600
 MAX_UPDATE_PERIOD = 100000 * 100 # three months or so jej
 
 MIN_NULLIFICATION_PERIOD = 86400
-MAX_NULLIFICATION_PERIOD = 86400 * 360
+MAX_NULLIFICATION_PERIOD = 86400 * 365
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -1060,7 +1060,7 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
         
         if service_type in HC.REPOSITORIES:
             
-            for content_type in HC.REPOSITORY_CONTENT_TYPES:
+            for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ]:
                 
                 permissions[ content_type ] = HC.PERMISSION_ACTION_MODERATE
                 

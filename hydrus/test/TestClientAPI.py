@@ -24,6 +24,7 @@ from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -1809,6 +1810,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # search files
         
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
         sample_hash_ids = set( random.sample( hash_ids, 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
@@ -1833,9 +1836,30 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_answer )
         
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
         # sort
         
         # this just tests if it parses, we don't have a full test for read params yet
+        
+        HG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( hash_ids, 3 ) )
         
@@ -1855,9 +1879,28 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_FRAMERATE ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
         # sort
         
-        # this just tests if it parses, we don't have a full test for read params yet
+        HG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( hash_ids, 3 ) )
         
@@ -1877,9 +1920,28 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_FRAMERATE ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
         # file domain
         
-        # this just tests if it parses, we don't have a full test for read params yet
+        HG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( hash_ids, 3 ) )
         
@@ -1904,9 +1966,28 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetFileServiceKey(), CC.TRASH_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_FRAMERATE ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
         # file and tag domain
         
-        # this just tests if it parses, we don't have a full test for read params yet
+        HG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( hash_ids, 3 ) )
         
@@ -1931,6 +2012,25 @@ class TestClientAPI( unittest.TestCase ):
         text = str( data, 'utf-8' )
         
         self.assertEqual( response.status, 200 )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetFileServiceKey(), CC.TRASH_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_FRAMERATE ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
         
         # file and tag domain
         

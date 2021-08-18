@@ -292,7 +292,9 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
     duration_in_ms = int( duration * 1000 )
     
-    return ( resolution, duration_in_ms, num_frames )
+    has_audio = VideoHasAudio( path, lines_for_first_second )
+    
+    return ( resolution, duration_in_ms, num_frames, has_audio )
     
 def GetMime( path ):
     
@@ -748,6 +750,72 @@ def ParseFFMPEGVideoResolution( lines ):
     except:
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Error parsing resolution!' )
+        
+    
+def VideoHasAudio( path, info_lines ):
+    
+    ( audio_found, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( info_lines )
+    
+    if not audio_found:
+        
+        return False
+        
+    
+    # just because video metadata has an audio stream doesn't mean it has audio. some vids have silent audio streams lmao
+    # so, let's read it as PCM and see if there is any noise
+    # this obviously only works for single audio stream vids, we'll adapt this if someone discovers a multi-stream mkv with a silent channel that doesn't work here
+    
+    cmd = [ FFMPEG_PATH ]
+    
+    # this is perhaps not sensible for eventual playback and I should rather go for wav file-like and feed into python 'wave' in order to maintain stereo/mono and so on and have easy chunk-reading
+    
+    cmd.extend( [ '-i', path,
+        '-loglevel', 'quiet',
+        '-f', 's16le',
+        '-' ] )
+        
+    
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    
+    HydrusData.CheckProgramIsNotShuttingDown()
+    
+    try:
+        
+        process = subprocess.Popen( cmd, bufsize = 65536, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        
+    except FileNotFoundError as e:
+        
+        HydrusData.ShowText( 'Cannot render audio--FFMPEG not found!' )
+        
+        raise
+        
+    
+    # silent PCM data is just 00 bytes
+    # every now and then, you'll get a couple ffs for some reason, but this is not legit audio data
+    
+    try:
+        
+        chunk_of_pcm_data = process.stdout.read( 65536 )
+        
+        while len( chunk_of_pcm_data ) > 0:
+            
+            # iterating over bytes gives you ints, recall
+            if True in ( b != 0 and b != 255 for b in chunk_of_pcm_data ):
+                
+                return True
+                
+            
+            chunk_of_pcm_data = process.stdout.read( 65536 )
+            
+        
+        return False
+        
+    finally:
+        
+        process.terminate()
+        
+        process.stdout.close()
+        process.stderr.close()
         
     
 # This was built from moviepy's FFMPEG_VideoReader

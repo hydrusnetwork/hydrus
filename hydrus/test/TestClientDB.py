@@ -1515,14 +1515,253 @@ class TestClientDB( unittest.TestCase ):
     
     def test_nums_pending( self ):
         
+        TestClientDB._clear_db()
+        
         result = self._read( 'nums_pending' )
         
         self.assertEqual( result, {} )
         
-        # we can do more testing when I add repo service to this testing framework
+        #
+        
+        services = list( self._read( 'services' ) )
+        
+        tag_sk = HydrusData.GenerateKey()
+        file_sk = HydrusData.GenerateKey()
+        ipfs_sk = HydrusData.GenerateKey()
+        
+        services.append( ClientServices.GenerateService( tag_sk, HC.TAG_REPOSITORY, 'test tag repo' ) )
+        services.append( ClientServices.GenerateService( file_sk, HC.FILE_REPOSITORY, 'test file repo' ) )
+        services.append( ClientServices.GenerateService( ipfs_sk, HC.IPFS, 'test ipfs' ) )
+        
+        self._write( 'update_services', services )
+        
+        #
+        
+        result = self._read( 'nums_pending' )
+        
+        expected_result = {
+            tag_sk: {
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS : 0,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS : 0,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS : 0
+            },
+            file_sk: {
+                HC.SERVICE_INFO_NUM_PENDING_FILES: 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES: 0
+            },
+            ipfs_sk: {
+                HC.SERVICE_INFO_NUM_PENDING_FILES: 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES: 0
+            }
+        }
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        hashes = [ os.urandom( 32 ) for i in range( 64 ) ]
+        
+        tags = [ 'this', 'is', 'a:test' ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in tags ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        hashes = [ os.urandom( 32 ) for i in range( 64 ) ]
+        
+        tags = [ 'bad tag', 'bad' ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, hashes ) ) for tag in tags ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, hashes ), reason = 'yo' ) for tag in tags ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        pairs = [
+            ( 'sib tag 1a', 'sib tag 1b' ),
+            ( 'sib tag 2a', 'sib tag 2b' ),
+            ( 'sib tag 3a', 'sib tag 3b' ),
+            ( 'sib tag 4a', 'sib tag 4b' )
+        ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = 'good sibling m8' ) for pair in pairs ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        pairs = [
+            ( 'samus aran', 'princess peach' ),
+            ( 'lara croft', 'princess peach' )
+        ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = 'mistake' ) for pair in pairs ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        pairs = [
+            ( 'par tag 1a', 'par tag 1b' ),
+            ( 'par tag 2a', 'par tag 2b' ),
+            ( 'par tag 3a', 'par tag 3b' )
+        ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = 'good parent m8' ) for pair in pairs ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        pairs = [
+            ( 'ayanami rei', 'zelda' )
+        ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = 'mistake' ) for pair in pairs ]
+        
+        service_keys_to_content_updates = { tag_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        hashes = [ os.urandom( 32 ) for i in range( 15 ) ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ]
+        
+        service_keys_to_content_updates = { file_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        hashes = [ os.urandom( 32 ) for i in range( 20 ) ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ]
+        
+        service_keys_to_content_updates = { ipfs_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        test_files = {
+            '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444' : 'muh_jpg.jpg',
+            'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49' : 'muh_png.png',
+            '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3' : 'muh_apng.png'
+        }
+        
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
+        for ( hash, filename ) in test_files.items():
+            
+            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            
+            path = os.path.join( HC.STATIC_DIR, 'testing', filename )
+            
+            file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+            
+            file_import_job.GeneratePreImportHashAndStatus()
+            
+            file_import_job.GenerateInfo()
+            
+            file_import_status = self._write( 'import_file', file_import_job )
+            
+        
+        hashes = list( [ bytes.fromhex( hh ) for hh in test_files.keys() ] )
+        
+        media_results = self._read( 'media_results', hashes )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), 100 ) ) for mr in media_results ]
+        
+        service_keys_to_content_updates = { file_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), os.urandom( 16 ).hex() ) ) for mr in media_results ]
+        
+        service_keys_to_content_updates = { ipfs_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'nope' ) ]
+        
+        service_keys_to_content_updates = { file_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes ) ]
+        
+        service_keys_to_content_updates = { ipfs_sk : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        result = self._read( 'nums_pending' )
+        
+        expected_result = {
+            tag_sk: {
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS : 64 * 3,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS : 64 * 2,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS : 4,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS : 2,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS : 3,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS : 1
+            },
+            file_sk: {
+                HC.SERVICE_INFO_NUM_PENDING_FILES: 15,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES: 3
+            },
+            ipfs_sk: {
+                HC.SERVICE_INFO_NUM_PENDING_FILES: 20,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES: 3
+            }
+        }
+        
+        self.assertEqual( result, expected_result )
         
     
     def test_pending( self ):
+        
+        TestClientDB._clear_db()
         
         service_key = HydrusData.GenerateKey()
         
@@ -1560,7 +1799,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        self._write( 'update_services', old_services )
+        TestClientDB._clear_db()
         
     
     def test_pixiv_account( self ):
@@ -1580,6 +1819,8 @@ class TestClientDB( unittest.TestCase ):
         
     
     def test_services( self ):
+        
+        TestClientDB._clear_db()
         
         result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.LOCAL_TAG ) )
         

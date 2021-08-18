@@ -40,6 +40,7 @@ query_planner_mode = False
 
 query_planner_start_time = 0
 query_planner_query_count = 0
+queries_planned = set()
 profile_start_time = 0
 profile_slow_count = 0
 profile_fast_count = 0

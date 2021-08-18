@@ -96,7 +96,7 @@ def GetDefaultCheckerOptions( name ):
         
     elif name == 'slow tag subscription':
         
-        return ClientImportOptions.CheckerOptions( intended_files_per_check = 1, never_faster_than = 7 * 86400, never_slower_than = 180 * 86400, death_file_velocity = ( 1, 360 * 86400 ) )
+        return ClientImportOptions.CheckerOptions( intended_files_per_check = 1, never_faster_than = 7 * 86400, never_slower_than = 180 * 86400, death_file_velocity = ( 1, 365 * 86400 ) )
         
     
 def GetDefaultHentaiFoundryInfo():

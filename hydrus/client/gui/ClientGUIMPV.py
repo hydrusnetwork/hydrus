@@ -218,7 +218,9 @@ class mpvWidget( QW.QWidget ):
                 return
                 
             
-            if self._media is not None and self._player.time_pos <= 1.0:
+            current_timestamp_s = self._player.time_pos
+            
+            if self._media is not None and current_timestamp_s is not None and current_timestamp_s <= 1.0:
                 
                 self._current_seek_to_start_count += 1
                 

@@ -285,7 +285,7 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
         HOUR = 60 * MINUTE
         DAY = 24 * HOUR
         MONTH = 30 * DAY
-        YEAR = 12 * MONTH
+        YEAR = 365 * DAY
         
         lines = []
         

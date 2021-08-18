@@ -148,7 +148,7 @@ class DBBase( object ):
     
     def _Execute( self, query, *args ) -> sqlite3.Cursor:
         
-        if HG.query_planner_mode:
+        if HG.query_planner_mode and query not in HG.queries_planned:
             
             plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), *args ).fetchall()
             
@@ -162,15 +162,18 @@ class DBBase( object ):
     
     def _ExecuteMany( self, query, args_iterator ):
         
-        if HG.query_planner_mode:
+        if HG.query_planner_mode and query not in HG.queries_planned:
             
             args_iterator = list( args_iterator )
             
-            plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), args_iterator[0] ).fetchall()
-            
-            HG.query_planner_query_count += 1
-            
-            HG.client_controller.PrintQueryPlan( query, plan_lines )
+            if len( args_iterator ) > 0:
+                
+                plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), args_iterator[0] ).fetchall()
+                
+                HG.query_planner_query_count += 1
+                
+                HG.client_controller.PrintQueryPlan( query, plan_lines )
+                
             
         
         self._c.executemany( query, args_iterator )

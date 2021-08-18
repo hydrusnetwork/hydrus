@@ -130,7 +130,7 @@ def THREADUploadPending( service_key ):
         
         nums_pending_for_this_service = nums_pending[ service_key ]
         
-        content_types_for_this_service = set( HC.REPOSITORY_CONTENT_TYPES[ service_type ] )
+        content_types_for_this_service = set( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
         
         if service_type in HC.REPOSITORIES:
             
@@ -3754,7 +3754,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if result == QW.QDialog.Accepted:
             
-            self._controller.Write( 'regenerate_tag_siblings_cache' )
+            self._controller.Write( 'regenerate_tag_siblings_and_parents_cache' )
             
         
     
@@ -4912,6 +4912,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             else:
                 
                 HG.query_planner_mode = False
+                
+                HG.queries_planned = set()
                 
                 HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusData.ToHumanInt( HG.query_planner_query_count ) ) )
                 
@@ -6397,7 +6399,7 @@ Try to keep this below 10 million!'''
         
         services = self._controller.services_manager.GetServices()
         
-        petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
+        petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES ]
         
         repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
         

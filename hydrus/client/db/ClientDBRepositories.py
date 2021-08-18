@@ -159,7 +159,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
                         
                     else:
                         
-                        content_types = tuple( HC.REPOSITORY_CONTENT_TYPES[ service_type ] )
+                        content_types = tuple( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
                         
                     
                     inserts.extend( ( ( hash_id, content_type, processed ) for content_type in content_types ) )
@@ -324,7 +324,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             ( min_unregistered_update_index, ) = result
             
         
-        predicate_phrase = 'processed = False AND content_type IN {}'.format( HydrusData.SplayListForDB( content_types_to_process ) )
+        predicate_phrase = 'processed = ? AND content_type IN {}'.format( HydrusData.SplayListForDB( content_types_to_process ) )
         
         if min_unregistered_update_index is not None:
             
@@ -336,7 +336,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         query = 'SELECT update_index, hash_id, content_type FROM {} CROSS JOIN {} USING ( hash_id ) WHERE {};'.format( repository_updates_processed_table_name, repository_updates_table_name, predicate_phrase )
         
-        rows = self._Execute( query ).fetchall()
+        rows = self._Execute( query, ( False, ) ).fetchall()
         
         update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( ( ( update_index, hash_id ) for ( update_index, hash_id, content_type ) in rows ) )
         hash_ids_to_content_types_to_process = HydrusData.BuildKeyToSetDict( ( ( hash_id, content_type ) for ( update_index, hash_id, content_type ) in rows ) )

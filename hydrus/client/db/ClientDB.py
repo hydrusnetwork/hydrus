@@ -42,6 +42,8 @@ from hydrus.client.db import ClientDBRepositories
 from hydrus.client.db import ClientDBSerialisable
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBSimilarFiles
+from hydrus.client.db import ClientDBTagParents
+from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
@@ -320,46 +322,6 @@ def GenerateSpecificTagsTableName( file_service_id, tag_service_id ):
     
     return tags_table_name
     
-def GenerateTagParentsLookupCacheTableName( display_type: int, service_id: int ):
-    
-    ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
-    
-    if display_type == ClientTags.TAG_DISPLAY_IDEAL:
-        
-        return cache_ideal_tag_parents_lookup_table_name
-        
-    elif display_type == ClientTags.TAG_DISPLAY_ACTUAL:
-        
-        return cache_actual_tag_parents_lookup_table_name
-        
-    
-def GenerateTagParentsLookupCacheTableNames( service_id ):
-    
-    cache_ideal_tag_parents_lookup_table_name = 'external_caches.ideal_tag_parents_lookup_cache_{}'.format( service_id )
-    cache_actual_tag_parents_lookup_table_name = 'external_caches.actual_tag_parents_lookup_cache_{}'.format( service_id )
-    
-    return ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name )
-    
-def GenerateTagSiblingsLookupCacheTableName( display_type: int, service_id: int ):
-    
-    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
-    
-    if display_type == ClientTags.TAG_DISPLAY_IDEAL:
-        
-        return cache_ideal_tag_siblings_lookup_table_name
-        
-    elif display_type == ClientTags.TAG_DISPLAY_ACTUAL:
-        
-        return cache_actual_tag_siblings_lookup_table_name
-        
-    
-def GenerateTagSiblingsLookupCacheTableNames( service_id ):
-    
-    cache_ideal_tag_siblings_lookup_table_name = 'external_caches.ideal_tag_siblings_lookup_cache_{}'.format( service_id )
-    cache_actual_tag_siblings_lookup_table_name = 'external_caches.actual_tag_siblings_lookup_cache_{}'.format( service_id )
-    
-    return ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name )
-    
 def WildcardHasFTS4SearchableCharacters( wildcard: str ):
     
     # fts4 says it can do alphanumeric or unicode with a value >= 128
@@ -502,13 +464,6 @@ class DB( HydrusDB.HydrusDB ):
         self._regen_tags_managers_hash_ids = set()
         self._regen_tags_managers_tag_ids = set()
         
-        self._service_ids_to_sibling_applicable_service_ids = None
-        self._service_ids_to_sibling_interested_service_ids = None
-        self._service_ids_to_parent_applicable_service_ids = None
-        self._service_ids_to_parent_interested_service_ids = None
-        
-        self._service_ids_to_display_application_status = {}
-        
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
     
@@ -627,16 +582,8 @@ class DB( HydrusDB.HydrusDB ):
                 self._CacheTagsGenerate( file_service_id, service_id )
                 
             
-            self._Execute( 'INSERT OR IGNORE INTO tag_sibling_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', ( service_id, 0, service_id ) )
-            self._Execute( 'INSERT OR IGNORE INTO tag_parent_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', ( service_id, 0, service_id ) )
-            
-            self._service_ids_to_sibling_applicable_service_ids = None
-            self._service_ids_to_sibling_interested_service_ids = None
-            self._service_ids_to_parent_applicable_service_ids = None
-            self._service_ids_to_parent_interested_service_ids = None
-            
-            self._AddServiceCreateTagParents( service_id )
-            self._AddServiceCreateTagSiblings( service_id )
+            self.modules_tag_parents.Generate( service_id )
+            self.modules_tag_siblings.Generate( service_id )
             
         
         self._AddServiceCreateMappings( service_id, service_type )
@@ -684,46 +631,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._CacheSpecificMappingsGenerate( file_service_id, service_id )
                 
-            
-        
-    
-    def _AddServiceCreateTagParents( self, service_id ):
-        
-        self._CacheTagParentsGenerate( service_id )
-        
-    
-    def _AddServiceCreateTagSiblings( self, service_id ):
-        
-        self._CacheTagSiblingsGenerate( service_id )
-        
-    
-    def _AddTagParents( self, service_id, pairs, defer_cache_update = False ):
-        
-        self._ExecuteMany( 'DELETE FROM tag_parents WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( ( service_id, child_tag_id, parent_tag_id ) for ( child_tag_id, parent_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_PENDING ) for ( child_tag_id, parent_tag_id ) in pairs )  )
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_tag_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( child_tag_id, parent_tag_id ) in pairs ) )
-        
-        tag_ids = set( itertools.chain.from_iterable( pairs ) )
-        
-        if not defer_cache_update:
-            
-            self._CacheTagParentsParentsChanged( service_id, tag_ids )
-            
-        
-    
-    def _AddTagSiblings( self, service_id, pairs, defer_cache_update = False ):
-        
-        self._ExecuteMany( 'DELETE FROM tag_siblings WHERE service_id = ? AND bad_tag_id = ?;', ( ( service_id, bad_tag_id ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, HC.CONTENT_STATUS_PENDING ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        
-        tag_ids = set( itertools.chain.from_iterable( pairs ) )
-        
-        if not defer_cache_update:
-            
-            self._CacheTagSiblingsSiblingsChanged( service_id, tag_ids )
             
         
     
@@ -2505,11 +2412,11 @@ class DB( HydrusDB.HydrusDB ):
     def _CacheTagDisplayFilterChained( self, display_type, tag_service_id, tag_ids ):
         
         # we are not passing ideal_tag_ids here, but that's ok, we are testing sibling chains in one second
-        parents_chained_tag_ids = self._CacheTagParentsFilterChained( display_type, tag_service_id, tag_ids )
+        parents_chained_tag_ids = self.modules_tag_parents.FilterChained( display_type, tag_service_id, tag_ids )
         
         unknown_tag_ids = set( tag_ids ).difference( parents_chained_tag_ids )
         
-        sibling_chained_tag_ids = self._CacheTagSiblingsFilterChained( display_type, tag_service_id, unknown_tag_ids )
+        sibling_chained_tag_ids = self.modules_tag_siblings.FilterChained( display_type, tag_service_id, unknown_tag_ids )
         
         chained_tag_ids = set( parents_chained_tag_ids ).union( sibling_chained_tag_ids )
         
@@ -2518,82 +2425,19 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheTagDisplayGetApplication( self ):
         
-        if self._service_ids_to_sibling_applicable_service_ids is None:
-            
-            self._CacheTagSiblingsGenerateApplicationDicts()
-            
-        
-        service_ids_to_service_keys = {}
-        
-        service_keys_to_sibling_applicable_service_keys = {}
-        
-        for ( master_service_id, applicable_service_ids ) in self._service_ids_to_sibling_applicable_service_ids.items():
-            
-            all_service_ids = [ master_service_id ] + list( applicable_service_ids )
-            
-            for service_id in all_service_ids:
-                
-                if service_id not in service_ids_to_service_keys:
-                    
-                    service_ids_to_service_keys[ service_id ] = self.modules_services.GetService( service_id ).GetServiceKey()
-                    
-                
-            
-            service_keys_to_sibling_applicable_service_keys[ service_ids_to_service_keys[ master_service_id ] ] = [ service_ids_to_service_keys[ service_id ] for service_id in applicable_service_ids ]
-            
-        
-        if self._service_ids_to_parent_applicable_service_ids is None:
-            
-            self._CacheTagParentsGenerateApplicationDicts()
-            
-        
-        service_keys_to_parent_applicable_service_keys = {}
-        
-        for ( master_service_id, applicable_service_ids ) in self._service_ids_to_parent_applicable_service_ids.items():
-            
-            all_service_ids = [ master_service_id ] + list( applicable_service_ids )
-            
-            for service_id in all_service_ids:
-                
-                if service_id not in service_ids_to_service_keys:
-                    
-                    service_ids_to_service_keys[ service_id ] = self.modules_services.GetService( service_id ).GetServiceKey()
-                    
-                
-            
-            service_keys_to_parent_applicable_service_keys[ service_ids_to_service_keys[ master_service_id ] ] = [ service_ids_to_service_keys[ service_id ] for service_id in applicable_service_ids ]
-            
+        service_keys_to_sibling_applicable_service_keys = self.modules_tag_siblings.GetApplication()
+        service_keys_to_parent_applicable_service_keys = self.modules_tag_parents.GetApplication()
         
         return ( service_keys_to_sibling_applicable_service_keys, service_keys_to_parent_applicable_service_keys )
         
     
     def _CacheTagDisplayGetApplicationStatus( self, service_id ):
         
-        if service_id not in self._service_ids_to_display_application_status:
-            
-            ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
-            
-            actual_sibling_rows = set( self._Execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) )
-            ideal_sibling_rows = set( self._Execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_ideal_tag_siblings_lookup_table_name ) ) )
-            
-            sibling_rows_to_remove = actual_sibling_rows.difference( ideal_sibling_rows )
-            sibling_rows_to_add = ideal_sibling_rows.difference( actual_sibling_rows )
-            
-            ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
-            
-            actual_parent_rows = set( self._Execute( 'SELECT child_tag_id, ancestor_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) )
-            ideal_parent_rows = set( self._Execute( 'SELECT child_tag_id, ancestor_tag_id FROM {};'.format( cache_ideal_tag_parents_lookup_table_name ) ) )
-            
-            parent_rows_to_remove = actual_parent_rows.difference( ideal_parent_rows )
-            parent_rows_to_add = ideal_parent_rows.difference( actual_parent_rows )
-            
-            num_actual_rows = len( actual_sibling_rows ) + len( actual_parent_rows )
-            num_ideal_rows = len( ideal_sibling_rows ) + len( ideal_parent_rows )
-            
-            self._service_ids_to_display_application_status[ service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
-            
+        ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_sibling_rows, num_ideal_sibling_rows ) = self.modules_tag_siblings.GetApplicationStatus( service_id )
+        ( parent_rows_to_add, parent_rows_to_remove, num_actual_parent_rows, num_ideal_parent_rows ) = self.modules_tag_parents.GetApplicationStatus( service_id )
         
-        ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ service_id ]
+        num_actual_rows = num_actual_sibling_rows + num_actual_parent_rows
+        num_ideal_rows = num_ideal_sibling_rows + num_ideal_parent_rows
         
         return ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
         
@@ -2614,8 +2458,8 @@ class DB( HydrusDB.HydrusDB ):
         status[ 'waiting_on_tag_repos' ] = []
         
         for ( applicable_service_ids, content_type ) in [
-            ( self._CacheTagParentsGetApplicableServiceIds( service_id ), HC.CONTENT_TYPE_TAG_PARENTS ),
-            ( self._CacheTagSiblingsGetApplicableServiceIds( service_id ), HC.CONTENT_TYPE_TAG_SIBLINGS )
+            ( self.modules_tag_parents.GetApplicableServiceIds( service_id ), HC.CONTENT_TYPE_TAG_PARENTS ),
+            ( self.modules_tag_siblings.GetApplicableServiceIds( service_id ), HC.CONTENT_TYPE_TAG_SIBLINGS )
         ]:
             
             for applicable_service_id in applicable_service_ids:
@@ -2637,7 +2481,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheTagDisplayGetApplicableServiceIds( self, tag_service_id ):
         
-        return set( self._CacheTagSiblingsGetApplicableServiceIds( tag_service_id ) ).union( self._CacheTagParentsGetApplicableServiceIds( tag_service_id ) )
+        return set( self.modules_tag_siblings.GetApplicableServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetApplicableServiceIds( tag_service_id ) )
         
     
     def _CacheTagDisplayGetChainsMembers( self, display_type, tag_service_id, tag_ids ):
@@ -2649,15 +2493,15 @@ class DB( HydrusDB.HydrusDB ):
             
             with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_ideal_tag_ids_table_name:
                 
-                self._CacheTagSiblingsGetIdealsIntoTable( display_type, tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
+                self.modules_tag_siblings.GetIdealsIntoTable( display_type, tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
                 
                 with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_parent_chain_members_table_name:
                     
-                    self._CacheTagParentsGetChainsMembersTables( display_type, tag_service_id, temp_ideal_tag_ids_table_name, temp_parent_chain_members_table_name )
+                    self.modules_tag_parents.GetChainsMembersTables( display_type, tag_service_id, temp_ideal_tag_ids_table_name, temp_parent_chain_members_table_name )
                     
                     with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_chain_members_table_name:
                         
-                        self._CacheTagSiblingsGetChainsMembersFromIdealsTables( display_type, tag_service_id, temp_parent_chain_members_table_name, temp_chain_members_table_name )
+                        self.modules_tag_siblings.GetChainsMembersFromIdealsTables( display_type, tag_service_id, temp_parent_chain_members_table_name, temp_chain_members_table_name )
                         
                         return self._STS( self._Execute( 'SELECT tag_id FROM {};'.format( temp_chain_members_table_name ) ) )
                         
@@ -2668,7 +2512,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheTagDisplayGetImpliedBy( self, display_type, tag_service_id, tag_id ):
         
-        ideal_tag_id = self._CacheTagSiblingsGetIdeal( display_type, tag_service_id, tag_id )
+        ideal_tag_id = self.modules_tag_siblings.GetIdeal( display_type, tag_service_id, tag_id )
         
         if ideal_tag_id == tag_id:
             
@@ -2677,9 +2521,9 @@ class DB( HydrusDB.HydrusDB ):
             # and any of its or those descendants' siblings
             
             # these are all ideal siblings
-            self_and_descendant_ids = { tag_id }.union( self._CacheTagParentsGetDescendants( display_type, tag_service_id, ideal_tag_id ) )
+            self_and_descendant_ids = { tag_id }.union( self.modules_tag_parents.GetDescendants( display_type, tag_service_id, ideal_tag_id ) )
             
-            implication_ids = self._CacheTagSiblingsGetChainsMembersFromIdeals( display_type, tag_service_id, self_and_descendant_ids )
+            implication_ids = self.modules_tag_siblings.GetChainsMembersFromIdeals( display_type, tag_service_id, self_and_descendant_ids )
             
         else:
             
@@ -2695,18 +2539,18 @@ class DB( HydrusDB.HydrusDB ):
         
         # a tag implies its ideal sibling and any ancestors
         
-        ideal_tag_id = self._CacheTagSiblingsGetIdeal( display_type, tag_service_id, tag_id )
+        ideal_tag_id = self.modules_tag_siblings.GetIdeal( display_type, tag_service_id, tag_id )
         
         implies = { ideal_tag_id }
         
-        implies.update( self._CacheTagParentsGetAncestors( display_type, tag_service_id, ideal_tag_id ) )
+        implies.update( self.modules_tag_parents.GetAncestors( display_type, tag_service_id, ideal_tag_id ) )
         
         return implies
         
     
     def _CacheTagDisplayGetInterestedServiceIds( self, tag_service_id ):
         
-        return set( self._CacheTagSiblingsGetInterestedServiceIds( tag_service_id ) ).union( self._CacheTagParentsGetInterestedServiceIds( tag_service_id ) )
+        return set( self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetInterestedServiceIds( tag_service_id ) )
         
     
     def _CacheTagDisplayGetSiblingsAndParentsForTags( self, tags ):
@@ -2735,14 +2579,14 @@ class DB( HydrusDB.HydrusDB ):
             
             existing_tag_ids = { self.modules_tags.GetTagId( tag ) for tag in existing_tags }
             
-            tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+            tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
             
             ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
             
-            ideal_tag_ids_to_sibling_chain_ids = self._CacheTagSiblingsGetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_sibling_chain_ids = self.modules_tag_siblings.GetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
             
-            ideal_tag_ids_to_descendant_tag_ids = self._CacheTagParentsGetTagsToDescendants( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
-            ideal_tag_ids_to_ancestor_tag_ids = self._CacheTagParentsGetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_descendant_tag_ids = self.modules_tag_parents.GetTagsToDescendants( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
             
             all_tag_ids = set()
             
@@ -2783,7 +2627,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            tag_ids_to_ideals = self._CacheTagSiblingsGetTagsToIdeals( display_type, tag_service_id, tag_ids )
+            tag_ids_to_ideals = self.modules_tag_siblings.GetTagsToIdeals( display_type, tag_service_id, tag_ids )
             
             tag_ids_that_exist_in_display = set()
             
@@ -2804,13 +2648,13 @@ class DB( HydrusDB.HydrusDB ):
         
         # tags are implied by descendants, and their siblings
         
-        tag_ids_to_descendants = self._CacheTagParentsGetTagsToDescendants( display_type, tag_service_id, tag_ids_that_exist_in_display )
+        tag_ids_to_descendants = self.modules_tag_parents.GetTagsToDescendants( display_type, tag_service_id, tag_ids_that_exist_in_display )
         
         all_tags_and_descendants = set( tag_ids_that_exist_in_display )
         all_tags_and_descendants.update( itertools.chain.from_iterable( tag_ids_to_descendants.values() ) )
         
         # these are all ideal_tag_ids
-        all_tags_and_descendants_to_chains = self._CacheTagSiblingsGetIdealsToChains( display_type, tag_service_id, all_tags_and_descendants )
+        all_tags_and_descendants_to_chains = self.modules_tag_siblings.GetIdealsToChains( display_type, tag_service_id, all_tags_and_descendants )
         
         for ( tag_id, descendants ) in tag_ids_to_descendants.items():
             
@@ -2829,11 +2673,11 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_implies = collections.defaultdict( set )
         
-        tag_ids_to_ideals = self._CacheTagSiblingsGetTagsToIdeals( display_type, tag_service_id, tag_ids )
+        tag_ids_to_ideals = self.modules_tag_siblings.GetTagsToIdeals( display_type, tag_service_id, tag_ids )
         
         ideal_tag_ids = set( tag_ids_to_ideals.values() )
         
-        ideal_tag_ids_to_ancestors = self._CacheTagParentsGetTagsToAncestors( display_type, tag_service_id, ideal_tag_ids )
+        ideal_tag_ids_to_ancestors = self.modules_tag_parents.GetTagsToAncestors( display_type, tag_service_id, ideal_tag_ids )
         
         for ( tag_id, ideal_tag_id ) in tag_ids_to_ideals.items():
             
@@ -2861,13 +2705,13 @@ class DB( HydrusDB.HydrusDB ):
         
         existing_tag_ids = { self.modules_tags.GetTagId( tag ) for tag in existing_tags }
         
-        existing_tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+        existing_tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
         
         ideal_tag_ids = set( existing_tag_ids_to_ideal_tag_ids.values() )
         
         interesting_tag_ids_to_ideal_tag_ids = { tag_id : ideal_tag_id for ( tag_id, ideal_tag_id ) in existing_tag_ids_to_ideal_tag_ids.items() if tag_id != ideal_tag_id }
         
-        ideal_tag_ids_to_ancestor_tag_ids = self._CacheTagParentsGetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+        ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
         
         existing_tag_ids_to_ancestor_tag_ids = { existing_tag_id : ideal_tag_ids_to_ancestor_tag_ids[ existing_tag_ids_to_ideal_tag_ids[ existing_tag_id ] ] for existing_tag_id in existing_tag_ids }
         
@@ -2915,110 +2759,58 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheTagDisplayIsChained( self, display_type, tag_service_id, tag_id ):
         
-        return self._CacheTagParentsIsChained( display_type, tag_service_id, tag_id ) or self._CacheTagSiblingsIsChained( display_type, tag_service_id, tag_id )
+        return self.modules_tag_parents.IsChained( display_type, tag_service_id, tag_id ) or self.modules_tag_siblings.IsChained( display_type, tag_service_id, tag_id )
+        
+    
+    def _CacheTagDisplayNotifyParentsChanged( self, tag_service_id_that_changed, tag_ids_that_changed ):
+        
+        if len( tag_ids_that_changed ) == 0:
+            
+            return
+            
+        
+        # the parents for tag_ids have changed for tag_service_id
+        # therefore any service that is interested in tag_service_ids's parents needs to regen the respective chains for these tags
+        
+        interested_tag_service_ids = self.modules_tag_parents.GetInterestedServiceIds( tag_service_id_that_changed )
+        
+        self.modules_tag_parents.RegenChains( interested_tag_service_ids, tag_ids_that_changed )
+        
+    
+    def _CacheTagDisplayNotifySiblingsChanged( self, tag_service_id_that_changed, tag_ids_that_changed ):
+        
+        if len( tag_ids_that_changed ) == 0:
+            
+            return
+            
+        
+        # the siblings for tag_ids have changed for tag_service_id
+        # therefore any service that is interested in tag_service_ids's siblings needs to regen the respective chains for these tags
+        
+        interested_tag_service_ids = self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id_that_changed )
+        
+        self.modules_tag_siblings.RegenChains( interested_tag_service_ids, tag_ids_that_changed )
+        
+        # since siblings just changed, parents can as well! any interested service that has any of these tag_ids in its parent structure may need new ids, so let's regen
+        
+        self.modules_tag_parents.RegenChains( interested_tag_service_ids, tag_ids_that_changed )
+        
+        #for interested_tag_service_id in interested_tag_service_ids:
+            
+            #self._CacheTagDisplayNotifyParentsChanged( interested_tag_service_id, tag_ids_that_changed )
+            
         
     
     def _CacheTagDisplaySetApplication( self, service_keys_to_sibling_applicable_service_keys, service_keys_to_parent_applicable_service_keys ):
         
-        if self._service_ids_to_sibling_applicable_service_ids is None:
-            
-            self._CacheTagSiblingsGenerateApplicationDicts()
-            
+        sibling_service_ids_to_sync = self.modules_tag_siblings.SetApplication( service_keys_to_sibling_applicable_service_keys )
+        parent_service_ids_to_sync = self.modules_tag_parents.SetApplication( service_keys_to_parent_applicable_service_keys )
         
-        new_service_ids_to_sibling_applicable_service_ids = collections.defaultdict( list )
-        
-        service_ids_to_sync = set()
-        
-        for ( master_service_key, applicable_service_keys ) in service_keys_to_sibling_applicable_service_keys.items():
-            
-            master_service_id = self.modules_services.GetServiceId( master_service_key )
-            applicable_service_ids = [ self.modules_services.GetServiceId( service_key ) for service_key in applicable_service_keys ]
-            
-            new_service_ids_to_sibling_applicable_service_ids[ master_service_id ] = applicable_service_ids
-            
-        
-        old_and_new_master_service_ids = set( self._service_ids_to_sibling_applicable_service_ids.keys() )
-        old_and_new_master_service_ids.update( new_service_ids_to_sibling_applicable_service_ids.keys() )
-        
-        inserts = []
-        
-        for master_service_id in old_and_new_master_service_ids:
-            
-            if master_service_id in new_service_ids_to_sibling_applicable_service_ids:
-                
-                applicable_service_ids = new_service_ids_to_sibling_applicable_service_ids[ master_service_id ]
-                
-                inserts.extend( ( ( master_service_id, i, applicable_service_id ) for ( i, applicable_service_id ) in enumerate( applicable_service_ids ) ) )
-                
-                if applicable_service_ids != self._service_ids_to_sibling_applicable_service_ids[ master_service_id ]:
-                    
-                    service_ids_to_sync.add( master_service_id )
-                    
-                
-            else:
-                
-                service_ids_to_sync.add( master_service_id )
-                
-            
-        
-        self._Execute( 'DELETE FROM tag_sibling_application;' )
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_sibling_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', inserts )
-        
-        self._service_ids_to_sibling_applicable_service_ids = None
-        self._service_ids_to_sibling_interested_service_ids = None
+        service_ids_to_sync = sibling_service_ids_to_sync.union( parent_service_ids_to_sync )
         
         #
         
-        if self._service_ids_to_parent_applicable_service_ids is None:
-            
-            self._CacheTagParentsGenerateApplicationDicts()
-            
-        
-        new_service_ids_to_parent_applicable_service_ids = collections.defaultdict( list )
-        
-        for ( master_service_key, applicable_service_keys ) in service_keys_to_parent_applicable_service_keys.items():
-            
-            master_service_id = self.modules_services.GetServiceId( master_service_key )
-            applicable_service_ids = [ self.modules_services.GetServiceId( service_key ) for service_key in applicable_service_keys ]
-            
-            new_service_ids_to_parent_applicable_service_ids[ master_service_id ] = applicable_service_ids
-            
-        
-        old_and_new_master_service_ids = set( self._service_ids_to_parent_applicable_service_ids.keys() )
-        old_and_new_master_service_ids.update( new_service_ids_to_parent_applicable_service_ids.keys() )
-        
-        inserts = []
-        
-        for master_service_id in old_and_new_master_service_ids:
-            
-            if master_service_id in new_service_ids_to_parent_applicable_service_ids:
-                
-                applicable_service_ids = new_service_ids_to_parent_applicable_service_ids[ master_service_id ]
-                
-                inserts.extend( ( ( master_service_id, i, applicable_service_id ) for ( i, applicable_service_id ) in enumerate( applicable_service_ids ) ) )
-                
-                if applicable_service_ids != self._service_ids_to_parent_applicable_service_ids[ master_service_id ]:
-                    
-                    service_ids_to_sync.add( master_service_id )
-                    
-                
-            else:
-                
-                service_ids_to_sync.add( master_service_id )
-                
-            
-        
-        self._Execute( 'DELETE FROM tag_parent_application;' )
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parent_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', inserts )
-        
-        self._service_ids_to_parent_applicable_service_ids = None
-        self._service_ids_to_parent_interested_service_ids = None
-        
-        #
-        
-        self._RegenerateTagSiblingsCache( only_these_service_ids = service_ids_to_sync )
+        self._RegenerateTagSiblingsAndParentsCache( only_these_service_ids = service_ids_to_sync )
         
         self.pub_after_job( 'notify_new_tag_display_application' )
         
@@ -3117,8 +2909,8 @@ class DB( HydrusDB.HydrusDB ):
             # However, if we try that strategy when adding, we actually increase max job time, as those delayed big jobs only have the option of staying the same or getting bigger! We get zoom speed and then clunk mode.
             # Therefore, when adding, to limit max work time for the whole migration, we want to actually choose the largest jobs first! That work has to be done, and it doesn't get easier!
             
-            ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-            ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
+            ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
+            ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( tag_service_id )
             
             def GetWeightedSiblingRow( sibling_rows, index ):
                 
@@ -3164,7 +2956,7 @@ class DB( HydrusDB.HydrusDB ):
             # first up, the removees. what is in actual but not ideal
             
             some_removee_sibling_rows = HydrusData.SampleSetByGettingFirst( sibling_rows_to_remove, 20 )
-            some_removee_parent_rows = HydrusData.SampleSetByGettingFirst(  parent_rows_to_remove, 20 )
+            some_removee_parent_rows = HydrusData.SampleSetByGettingFirst( parent_rows_to_remove, 20 )
             
             if len( some_removee_sibling_rows ) + len( some_removee_parent_rows ) > 0:
                 
@@ -3219,7 +3011,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, possibly_affected_tag_ids )
                     
-                    sibling_rows_to_remove.discard( smallest_sibling_row )
+                    self.modules_tag_siblings.NotifySiblingDeleteRowSynced( tag_service_id, smallest_sibling_row )
                     
                 
                 if smallest_parent_row is not None:
@@ -3241,10 +3033,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, possibly_affected_tag_ids )
                     
-                    parent_rows_to_remove.discard( smallest_parent_row )
+                    self.modules_tag_parents.NotifyParentDeleteRowSynced( tag_service_id, smallest_parent_row )
                     
-                
-                num_actual_rows -= 1
                 
             else:
                 
@@ -3286,7 +3076,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if largest_sibling_row is not None:
                         
-                        
                         # the only things changed here are those implied by or that imply one of these values
                         
                         ( a, b ) = largest_sibling_row
@@ -3304,7 +3093,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, possibly_affected_tag_ids )
                         
-                        sibling_rows_to_add.discard( largest_sibling_row )
+                        self.modules_tag_siblings.NotifySiblingAddRowSynced( tag_service_id, largest_sibling_row )
                         
                     
                     if largest_parent_row is not None:
@@ -3326,14 +3115,10 @@ class DB( HydrusDB.HydrusDB ):
                         
                         after_chain_tag_ids_to_implied_by = self._CacheTagDisplayGetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, possibly_affected_tag_ids )
                         
-                        parent_rows_to_add.discard( largest_parent_row )
+                        self.modules_tag_parents.NotifyParentAddRowSynced( tag_service_id, largest_parent_row )
                         
                     
-                    num_actual_rows += 1
-                    
                 else:
-                    
-                    del self._service_ids_to_display_application_status[ tag_service_id ]
                     
                     break
                     
@@ -3400,7 +3185,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._CacheCombinedFilesDisplayMappingsAddImplications( tag_service_id, implication_tag_ids, tag_id )
                 
             
-            self._service_ids_to_display_application_status[ tag_service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
+            ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._CacheTagDisplayGetApplicationStatus( tag_service_id )
             
         
         if len( all_tag_ids_altered ) > 0:
@@ -3415,431 +3200,6 @@ class DB( HydrusDB.HydrusDB ):
         still_needs_work = len( sibling_rows_to_add ) + len( sibling_rows_to_remove ) + len( parent_rows_to_add ) + len( parent_rows_to_remove ) > 0
         
         return still_needs_work
-        
-    
-    def _CacheTagParentsDrop( self, tag_service_id ):
-        
-        ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
-        
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_actual_tag_parents_lookup_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_ideal_tag_parents_lookup_table_name ) )
-        
-    
-    def _CacheTagParentsFilterChained( self, display_type, tag_service_id, ideal_tag_ids ):
-        
-        if len( ideal_tag_ids ) == 0:
-            
-            return set()
-            
-        elif len( ideal_tag_ids ) == 1:
-            
-            ( ideal_tag_id, ) = ideal_tag_ids
-            
-            if self._CacheTagParentsIsChained( display_type, tag_service_id, ideal_tag_id ):
-                
-                return { ideal_tag_id }
-                
-            else:
-                
-                return set()
-                
-            
-        
-        # get the tag_ids that are part of a parent chain
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( ideal_tag_ids, 'tag_id' ) as temp_table_name:
-            
-            # keep these separate--older sqlite can't do cross join to an OR ON
-            
-            # temp tags to lookup
-            chain_tag_ids = self._STS( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} ON ( child_tag_id = tag_id );'.format( temp_table_name, cache_tag_parents_lookup_table_name ) ) )
-            chain_tag_ids.update( self._STI( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} ON ( ancestor_tag_id = tag_id );'.format( temp_table_name, cache_tag_parents_lookup_table_name ) ) ) )
-            
-        
-        return chain_tag_ids
-        
-    
-    def _CacheTagParentsGenerate( self, tag_service_id ):
-        
-        ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );'.format( cache_actual_tag_parents_lookup_table_name ) )
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );'.format( cache_ideal_tag_parents_lookup_table_name ) )
-        
-        self._CreateIndex( cache_actual_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
-        self._CreateIndex( cache_ideal_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
-        
-        self.modules_db_maintenance.AnalyzeTable( cache_actual_tag_parents_lookup_table_name )
-        self.modules_db_maintenance.AnalyzeTable( cache_ideal_tag_parents_lookup_table_name )
-        
-        self._CacheTagParentsRegen( ( tag_service_id, ) )
-        
-    
-    def _CacheTagParentsGenerateApplicationDicts( self ):
-        
-        unsorted_dict = HydrusData.BuildKeyToListDict( ( master_service_id, ( index, application_service_id ) ) for ( master_service_id, index, application_service_id ) in self._Execute( 'SELECT master_service_id, service_index, application_service_id FROM tag_parent_application;' ) )
-        
-        self._service_ids_to_parent_applicable_service_ids = collections.defaultdict( list )
-        
-        self._service_ids_to_parent_applicable_service_ids.update( { master_service_id : [ application_service_id for ( index, application_service_id ) in sorted( index_and_applicable_service_ids ) ] for ( master_service_id, index_and_applicable_service_ids ) in unsorted_dict.items() } )
-        
-        self._service_ids_to_parent_interested_service_ids = collections.defaultdict( set )
-        
-        for ( master_service_id, application_service_ids ) in self._service_ids_to_parent_applicable_service_ids.items():
-            
-            for application_service_id in application_service_ids:
-                
-                self._service_ids_to_parent_interested_service_ids[ application_service_id ].add( master_service_id )
-                
-            
-        
-    
-    def _CacheTagParentsGetAncestors( self, display_type: int, tag_service_id: int, ideal_tag_id: int ):
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        ancestor_ids = self._STS( self._Execute( 'SELECT ancestor_tag_id FROM {} WHERE child_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ) ) )
-        
-        return ancestor_ids
-        
-    
-    def _CacheTagParentsGetApplicableServiceIds( self, tag_service_id ):
-        
-        if self._service_ids_to_parent_applicable_service_ids is None:
-            
-            self._CacheTagParentsGenerateApplicationDicts()
-            
-        
-        return self._service_ids_to_parent_applicable_service_ids[ tag_service_id ]
-        
-    
-    def _CacheTagParentsGetChainsMembers( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
-        
-        if len( ideal_tag_ids ) == 0:
-            
-            return set()
-            
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        chain_tag_ids = set( ideal_tag_ids )
-        we_have_looked_up = set()
-        next_search_tag_ids = set( ideal_tag_ids )
-        
-        while len( next_search_tag_ids ) > 0:
-            
-            if len( next_search_tag_ids ) == 1:
-                
-                ( ideal_tag_id, ) = next_search_tag_ids
-                
-                round_of_tag_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} WHERE ancestor_tag_id = ? UNION ALL SELECT ancestor_tag_id FROM {} WHERE child_tag_id = ?;'.format( cache_tag_parents_lookup_table_name, cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ideal_tag_id ) ) )
-                
-            else:
-                
-                with self._MakeTemporaryIntegerTable( next_search_tag_ids, 'tag_id' ) as temp_next_search_tag_ids_table_name:
-                    
-                    round_of_tag_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} CROSS JOIN {} ON ( ancestor_tag_id = tag_id ) UNION ALL SELECT ancestor_tag_id FROM {} CROSS JOIN {} ON ( child_tag_id = tag_id );'.format( temp_next_search_tag_ids_table_name, cache_tag_parents_lookup_table_name, temp_next_search_tag_ids_table_name, cache_tag_parents_lookup_table_name ) ) )
-                    
-                
-            
-            chain_tag_ids.update( round_of_tag_ids )
-            
-            we_have_looked_up.update( next_search_tag_ids )
-            
-            next_search_tag_ids = round_of_tag_ids.difference( we_have_looked_up )
-            
-        
-        return chain_tag_ids
-        
-    
-    def _CacheTagParentsGetChainsMembersTables( self, display_type: int, tag_service_id: int, ideal_tag_ids_table_name: str, results_table_name: str ):
-        
-        # if it isn't crazy, I should write this whole lad to be one or two recursive queries
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        first_ideal_tag_ids = self._STS( self._Execute( 'SELECT ideal_tag_id FROM {};'.format( ideal_tag_ids_table_name ) ) )
-        
-        chain_tag_ids = set( first_ideal_tag_ids )
-        we_have_looked_up = set()
-        next_search_tag_ids = set( first_ideal_tag_ids )
-        
-        while len( next_search_tag_ids ) > 0:
-            
-            if len( next_search_tag_ids ) == 1:
-                
-                ( ideal_tag_id, ) = next_search_tag_ids
-                
-                round_of_tag_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} WHERE ancestor_tag_id = ? UNION ALL SELECT ancestor_tag_id FROM {} WHERE child_tag_id = ?;'.format( cache_tag_parents_lookup_table_name, cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ideal_tag_id ) ) )
-                
-            else:
-                
-                with self._MakeTemporaryIntegerTable( next_search_tag_ids, 'tag_id' ) as temp_next_search_tag_ids_table_name:
-                    
-                    round_of_tag_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} CROSS JOIN {} ON ( ancestor_tag_id = tag_id ) UNION ALL SELECT ancestor_tag_id FROM {} CROSS JOIN {} ON ( child_tag_id = tag_id );'.format( temp_next_search_tag_ids_table_name, cache_tag_parents_lookup_table_name, temp_next_search_tag_ids_table_name, cache_tag_parents_lookup_table_name ) ) )
-                    
-                
-            
-            new_tag_ids = round_of_tag_ids.difference( chain_tag_ids )
-            
-            if len( new_tag_ids ) > 0:
-                
-                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( tag_id ) VALUES ( ? );', ( ( tag_id, ) for tag_id in round_of_tag_ids.difference( new_tag_ids ) ) )
-                
-                chain_tag_ids.update( new_tag_ids )
-                
-            
-            we_have_looked_up.update( next_search_tag_ids )
-            
-            next_search_tag_ids = round_of_tag_ids.difference( we_have_looked_up )
-            
-        
-    
-    def _CacheTagParentsGetDescendants( self, display_type: int, tag_service_id: int, ideal_tag_id: int ):
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        descendant_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} WHERE ancestor_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ) ) )
-        
-        return descendant_ids
-        
-    
-    def _CacheTagParentsGetInterestedServiceIds( self, tag_service_id ):
-        
-        if self._service_ids_to_parent_interested_service_ids is None:
-            
-            self._CacheTagParentsGenerateApplicationDicts()
-            
-        
-        return self._service_ids_to_parent_interested_service_ids[ tag_service_id ]
-        
-    
-    def _CacheTagParentsGetTagsToAncestors( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
-        
-        if len( ideal_tag_ids ) == 0:
-            
-            return {}
-            
-        elif len( ideal_tag_ids ) == 1:
-            
-            ( ideal_tag_id, ) = ideal_tag_ids
-            
-            ancestors = self._CacheTagParentsGetAncestors( display_type, tag_service_id, ideal_tag_id )
-            
-            return { ideal_tag_id : ancestors }
-            
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( ideal_tag_ids, 'child_tag_id' ) as temp_table_name:
-            
-            tag_ids_to_ancestors = HydrusData.BuildKeyToSetDict( self._Execute( 'SELECT child_tag_id, ancestor_tag_id FROM {} CROSS JOIN {} USING ( child_tag_id );'.format( temp_table_name, cache_tag_parents_lookup_table_name ) ) )
-            
-        
-        for tag_id in ideal_tag_ids:
-            
-            if tag_id not in tag_ids_to_ancestors:
-                
-                tag_ids_to_ancestors[ tag_id ] = set()
-                
-            
-        
-        return tag_ids_to_ancestors
-        
-    
-    def _CacheTagParentsGetTagsToDescendants( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
-        
-        if len( ideal_tag_ids ) == 0:
-            
-            return {}
-            
-        elif len( ideal_tag_ids ) == 1:
-            
-            ( ideal_tag_id, ) = ideal_tag_ids
-            
-            descendants = self._CacheTagParentsGetDescendants( display_type, tag_service_id, ideal_tag_id )
-            
-            return { ideal_tag_id : descendants }
-            
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( ideal_tag_ids, 'ancestor_tag_id' ) as temp_table_name:
-            
-            tag_ids_to_descendants = HydrusData.BuildKeyToSetDict( self._Execute( 'SELECT ancestor_tag_id, child_tag_id FROM {} CROSS JOIN {} USING ( ancestor_tag_id );'.format( temp_table_name, cache_tag_parents_lookup_table_name ) ) )
-            
-        
-        for ideal_tag_id in ideal_tag_ids:
-            
-            if ideal_tag_id not in tag_ids_to_descendants:
-                
-                tag_ids_to_descendants[ ideal_tag_id ] = set()
-                
-            
-        
-        return tag_ids_to_descendants
-        
-    
-    def _CacheTagParentsIdealiseStatusesToPairIds( self, tag_service_id, unideal_statuses_to_pair_ids ):
-        
-        all_tag_ids = set( itertools.chain.from_iterable( ( itertools.chain.from_iterable( pair_ids ) for pair_ids in unideal_statuses_to_pair_ids.values() ) ) )
-        
-        tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, all_tag_ids )
-        
-        ideal_statuses_to_pair_ids = collections.defaultdict( list )
-        
-        for ( status, pair_ids ) in unideal_statuses_to_pair_ids.items():
-            
-            ideal_pair_ids = sorted( ( ( tag_ids_to_ideal_tag_ids[ child_tag_id ], tag_ids_to_ideal_tag_ids[ parent_tag_id ] ) for ( child_tag_id, parent_tag_id ) in pair_ids ) )
-            
-            ideal_statuses_to_pair_ids[ status ] = ideal_pair_ids
-            
-        
-        return ideal_statuses_to_pair_ids
-        
-    
-    def _CacheTagParentsIsChained( self, display_type, tag_service_id, ideal_tag_id ):
-        
-        cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
-        
-        return self._Execute( 'SELECT 1 FROM {} WHERE child_tag_id = ? OR ancestor_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ideal_tag_id ) ).fetchone() is not None
-        
-    
-    def _CacheTagParentsRegen( self, tag_service_ids ):
-        
-        for tag_service_id in tag_service_ids:
-            
-            cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id )
-            
-            self._Execute( 'DELETE FROM {};'.format( cache_tag_parents_lookup_table_name ) )
-            
-            applicable_service_ids = self._CacheTagParentsGetApplicableServiceIds( tag_service_id )
-            
-            tps = ClientTagsHandling.TagParentsStructure()
-            
-            for applicable_service_id in applicable_service_ids:
-                
-                unideal_statuses_to_pair_ids = self._GetTagParentsIds( service_id = applicable_service_id )
-                
-                # we have to collapse the parent ids according to siblings
-                
-                ideal_statuses_to_pair_ids = self._CacheTagParentsIdealiseStatusesToPairIds( tag_service_id, unideal_statuses_to_pair_ids )
-                
-                #
-                
-                petitioned_fast_lookup = set( ideal_statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-                for ( child_tag_id, parent_tag_id ) in ideal_statuses_to_pair_ids[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    if ( child_tag_id, parent_tag_id ) in petitioned_fast_lookup:
-                        
-                        continue
-                        
-                    
-                    tps.AddPair( child_tag_id, parent_tag_id )
-                    
-                
-                for ( child_tag_id, parent_tag_id ) in ideal_statuses_to_pair_ids[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    tps.AddPair( child_tag_id, parent_tag_id )
-                    
-                
-            
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( child_tag_id, ancestor_tag_id ) VALUES ( ?, ? );'.format( cache_tag_parents_lookup_table_name ), tps.IterateDescendantAncestorPairs() )
-            
-            if tag_service_id in self._service_ids_to_display_application_status:
-                
-                del self._service_ids_to_display_application_status[ tag_service_id ]
-                
-            
-        
-    
-    def _CacheTagParentsRegenChains( self, tag_service_ids, tag_ids ):
-        
-        if len( tag_ids ) == 0:
-            
-            return
-            
-        
-        for tag_service_id in tag_service_ids:
-            
-            cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id )
-            
-            # it is possible that the parents cache currently contains non-ideal tag_ids
-            # so, to be safe, we'll also get all sibling chain members
-            
-            tag_ids_to_clear_and_regen = set( tag_ids )
-            
-            ideal_tag_ids = self._CacheTagSiblingsGetIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
-            
-            tag_ids_to_clear_and_regen.update( self._CacheTagSiblingsGetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
-            
-            # and now all possible current parent chains based on this
-            
-            tag_ids_to_clear_and_regen.update( self._CacheTagParentsGetChainsMembers( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids_to_clear_and_regen ) )
-            
-            # this should now contain all possible tag_ids that could be in tag parents right now related to what we were given
-            
-            self._ExecuteMany( 'DELETE FROM {} WHERE child_tag_id = ? OR ancestor_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_clear_and_regen ) )
-            
-            # we wipe them
-            
-            applicable_tag_service_ids = self._CacheTagParentsGetApplicableServiceIds( tag_service_id )
-            
-            tps = ClientTagsHandling.TagParentsStructure()
-            
-            for applicable_tag_service_id in applicable_tag_service_ids:
-                
-                service_key = self.modules_services.GetService( applicable_tag_service_id ).GetServiceKey()
-                
-                unideal_statuses_to_pair_ids = self._GetTagParentsIdsChains( applicable_tag_service_id, tag_ids_to_clear_and_regen )
-                
-                ideal_statuses_to_pair_ids = self._CacheTagParentsIdealiseStatusesToPairIds( tag_service_id, unideal_statuses_to_pair_ids )
-                
-                #
-                
-                petitioned_fast_lookup = set( ideal_statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-                for ( child_tag_id, parent_tag_id ) in ideal_statuses_to_pair_ids[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    if ( child_tag_id, parent_tag_id ) in petitioned_fast_lookup:
-                        
-                        continue
-                        
-                    
-                    tps.AddPair( child_tag_id, parent_tag_id )
-                    
-                
-                for ( child_tag_id, parent_tag_id ) in ideal_statuses_to_pair_ids[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    tps.AddPair( child_tag_id, parent_tag_id )
-                    
-                
-            
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( child_tag_id, ancestor_tag_id ) VALUES ( ?, ? );'.format( cache_tag_parents_lookup_table_name ), tps.IterateDescendantAncestorPairs() )
-            
-            if tag_service_id in self._service_ids_to_display_application_status:
-                
-                del self._service_ids_to_display_application_status[ tag_service_id ]
-                
-            
-        
-    
-    def _CacheTagParentsParentsChanged( self, tag_service_id_that_changed, tag_ids_that_changed ):
-        
-        if len( tag_ids_that_changed ) == 0:
-            
-            return
-            
-        
-        # the parents for tag_ids have changed for tag_service_id
-        # therefore any service that is interested in tag_service_ids's siblings needs to regen the respective chains for these tags
-        
-        interested_tag_service_ids = self._CacheTagParentsGetInterestedServiceIds( tag_service_id_that_changed )
-        
-        self._CacheTagParentsRegenChains( interested_tag_service_ids, tag_ids_that_changed )
         
     
     def _CacheTagsAddTags( self, file_service_id, tag_service_id, tag_ids ):
@@ -4088,8 +3448,8 @@ class DB( HydrusDB.HydrusDB ):
     def _CacheTagsPopulate( self, file_service_id, tag_service_id, status_hook = None ):
         
         ac_cache_table_name = self._CacheMappingsGetACCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
-        siblings_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
-        parents_table_name = GenerateTagParentsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        siblings_table_name = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        parents_table_name = ClientDBTagParents.GenerateTagParentsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
         
         queries = [
             'SELECT tag_id FROM {}'.format( ac_cache_table_name ),
@@ -4100,8 +3460,6 @@ class DB( HydrusDB.HydrusDB ):
         ]
         
         query = ' UNION '.join( queries ) + ';'
-        
-        queries = [ query ]
         
         BLOCK_SIZE = 10000
         
@@ -4267,534 +3625,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-        
-    
-    def _CacheTagSiblingsDrop( self, tag_service_id ):
-        
-        ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-        
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_actual_tag_siblings_lookup_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_ideal_tag_siblings_lookup_table_name ) )
-        
-    
-    def _CacheTagSiblingsFilterChained( self, display_type, tag_service_id, tag_ids ):
-        
-        if len( tag_ids ) == 0:
-            
-            return set()
-            
-        elif len( tag_ids ) == 1:
-            
-            ( tag_id, ) = tag_ids
-            
-            if self._CacheTagSiblingsIsChained( display_type, tag_service_id, tag_id ):
-                
-                return { tag_id }
-                
-            else:
-                
-                return set()
-                
-            
-        
-        # get the tag_ids that are part of a sibling chain
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_table_name:
-            
-            # keep these separate--older sqlite can't do cross join to an OR ON
-            
-            # temp tags to lookup
-            chain_tag_ids = self._STS( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) )
-            chain_tag_ids.update( self._STI( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} ON ( ideal_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) ) )
-            
-        
-        return chain_tag_ids
-        
-    
-    def _CacheTagSiblingsFilterChainedIdealsIntoTable( self, display_type, tag_service_id, tag_ids_table_name, results_table_name ):
-        
-        # get the tag_ids that are part of a sibling chain
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        # keep these separate--older sqlite can't do cross join to an OR ON
-        
-        # temp tags to lookup
-        self._Execute( 'INSERT OR IGNORE INTO {} SELECT ideal_tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
-        self._STI( self._Execute( 'INSERT OR IGNORE INTO {} SELECT tag_id FROM {} CROSS JOIN {} ON ( ideal_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) ) )
-        
-    
-    def _CacheTagSiblingsFilterChainedIntoTable( self, display_type, tag_service_id, tag_ids_table_name, results_table_name ):
-        
-        # get the tag_ids that are part of a sibling chain
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        # keep these separate--older sqlite can't do cross join to an OR ON
-        
-        # temp tags to lookup
-        self._Execute( 'INSERT OR IGNORE INTO {} SELECT tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
-        self._STI( self._Execute( 'INSERT OR IGNORE INTO {} SELECT tag_id FROM {} CROSS JOIN {} ON ( ideal_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) ) )
-        
-    
-    def _CacheTagSiblingsGenerate( self, tag_service_id ):
-        
-        ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );'.format( cache_actual_tag_siblings_lookup_table_name ) )
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );'.format( cache_ideal_tag_siblings_lookup_table_name ) )
-        
-        self._CreateIndex( cache_actual_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
-        self._CreateIndex( cache_ideal_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
-        
-        self.modules_db_maintenance.AnalyzeTable( cache_actual_tag_siblings_lookup_table_name )
-        self.modules_db_maintenance.AnalyzeTable( cache_ideal_tag_siblings_lookup_table_name )
-        
-        self._CacheTagSiblingsRegen( ( tag_service_id, ) )
-        
-    
-    def _CacheTagSiblingsGenerateApplicationDicts( self ):
-        
-        unsorted_dict = HydrusData.BuildKeyToListDict( ( master_service_id, ( index, application_service_id ) ) for ( master_service_id, index, application_service_id ) in self._Execute( 'SELECT master_service_id, service_index, application_service_id FROM tag_sibling_application;' ) )
-        
-        self._service_ids_to_sibling_applicable_service_ids = collections.defaultdict( list )
-        
-        self._service_ids_to_sibling_applicable_service_ids.update( { master_service_id : [ application_service_id for ( index, application_service_id ) in sorted( index_and_applicable_service_ids ) ] for ( master_service_id, index_and_applicable_service_ids ) in unsorted_dict.items() } )
-        
-        self._service_ids_to_sibling_interested_service_ids = collections.defaultdict( set )
-        
-        for ( master_service_id, application_service_ids ) in self._service_ids_to_sibling_applicable_service_ids.items():
-            
-            for application_service_id in application_service_ids:
-                
-                self._service_ids_to_sibling_interested_service_ids[ application_service_id ].add( master_service_id )
-                
-            
-        
-    
-    def _CacheTagSiblingsGetChainMembersFromIdeal( self, display_type, tag_service_id, ideal_tag_id ) -> typing.Set[ int ]:
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        sibling_tag_ids = self._STS( self._Execute( 'SELECT bad_tag_id FROM {} WHERE ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( ideal_tag_id, ) ) )
-        
-        sibling_tag_ids.add( ideal_tag_id )
-        
-        return sibling_tag_ids
-        
-    
-    def _CacheTagSiblingsGetChainsMembersFromIdeals( self, display_type, tag_service_id, ideal_tag_ids ) -> typing.Set[ int ]:
-        
-        if len( ideal_tag_ids ) == 0:
-            
-            return set()
-            
-        elif len( ideal_tag_ids ) == 1:
-            
-            ( ideal_tag_id, ) = ideal_tag_ids
-            
-            return self._CacheTagSiblingsGetChainMembersFromIdeal( display_type, tag_service_id, ideal_tag_id )
-            
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( ideal_tag_ids, 'ideal_tag_id' ) as temp_table_name:
-            
-            # temp tags to lookup
-            sibling_tag_ids = self._STS( self._Execute( 'SELECT bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) )
-            
-        
-        sibling_tag_ids.update( ideal_tag_ids )
-        
-        return sibling_tag_ids
-        
-    
-    def _CacheTagSiblingsGetChainsMembersFromIdealsTables( self, display_type, tag_service_id, ideal_tag_ids_table_name, results_table_name ) -> typing.Set[ int ]:
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        self._Execute( 'INSERT OR IGNORE INTO {} ( tag_id ) SELECT ideal_tag_id FROM {};'.format( results_table_name, ideal_tag_ids_table_name ) )
-        
-        # tags to lookup
-        self._Execute( 'INSERT OR IGNORE INTO {} ( tag_id ) SELECT bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( results_table_name, ideal_tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
-        
-    
-    def _CacheTagSiblingsGetApplicableServiceIds( self, tag_service_id ):
-        
-        if self._service_ids_to_sibling_applicable_service_ids is None:
-            
-            self._CacheTagSiblingsGenerateApplicationDicts()
-            
-        
-        return self._service_ids_to_sibling_applicable_service_ids[ tag_service_id ]
-        
-    
-    def _CacheTagSiblingsGetIdeal( self, display_type, tag_service_id, tag_id ) -> int:
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        result = self._Execute( 'SELECT ideal_tag_id FROM {} WHERE bad_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( tag_id, ) ).fetchone()
-        
-        if result is None:
-            
-            return tag_id
-            
-        else:
-            
-            ( ideal_tag_id, ) = result
-            
-            return ideal_tag_id
-            
-        
-    
-    def _CacheTagSiblingsGetIdeals( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
-        
-        if not isinstance( tag_ids, set ):
-            
-            tag_ids = set( tag_ids )
-            
-        
-        if len( tag_ids ) == 0:
-            
-            return set()
-            
-        elif len( tag_ids ) == 1:
-            
-            ( tag_id, ) = tag_ids
-            
-            return { self._CacheTagSiblingsGetIdeal( display_type, tag_service_id, tag_id ) }
-            
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
-            
-            magic_case = 'CASE WHEN ideal_tag_id NOT NULL THEN ideal_tag_id ELSE tag_id END'
-            
-            cursor = self._Execute(
-                'SELECT {} FROM {} LEFT OUTER JOIN {} ON ( tag_id = bad_tag_id );'.format(
-                    magic_case,
-                    temp_tag_ids_table_name,
-                    cache_tag_siblings_lookup_table_name
-                )
-            )
-            
-            return self._STS( cursor )
-            
-        
-        '''
-        no_ideal_found_tag_ids = set( tag_ids )
-        ideal_tag_ids = set()
-        
-        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_table_name:
-            
-            # temp tags to lookup
-            for ( tag_id, ideal_tag_id ) in self._Execute( 'SELECT tag_id, ideal_tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ):
-                
-                no_ideal_found_tag_ids.discard( tag_id )
-                ideal_tag_ids.add( ideal_tag_id )
-                
-            
-            ideal_tag_ids.update( no_ideal_found_tag_ids )
-            
-        
-        return ideal_tag_ids
-        '''
-        
-    
-    def _CacheTagSiblingsGetIdealsIntoTable( self, display_type, tag_service_id, tag_ids_table_name, results_table_name ):
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        magic_case = 'CASE WHEN ideal_tag_id NOT NULL THEN ideal_tag_id ELSE tag_id END'
-        
-        cursor = self._Execute(
-            'INSERT OR IGNORE INTO {} ( ideal_tag_id ) SELECT {} FROM {} LEFT OUTER JOIN {} ON ( tag_id = bad_tag_id );'.format(
-                results_table_name,
-                magic_case,
-                tag_ids_table_name,
-                cache_tag_siblings_lookup_table_name
-            )
-        )
-        
-        return self._STS( cursor )
-        
-    
-    def _CacheTagSiblingsGetIdealsToChains( self, display_type, tag_service_id, ideal_tag_ids ):
-        
-        # this only takes ideal_tag_ids
-        
-        if len( ideal_tag_ids ) == 0:
-            
-            return {}
-            
-        elif len( ideal_tag_ids ) == 1:
-            
-            ( ideal_tag_id, ) = ideal_tag_ids
-            
-            chain_tag_ids = self._CacheTagSiblingsGetChainMembersFromIdeal( display_type, tag_service_id, ideal_tag_id )
-            
-            return { ideal_tag_id : chain_tag_ids }
-            
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        with self._MakeTemporaryIntegerTable( ideal_tag_ids, 'ideal_tag_id' ) as temp_table_name:
-            
-            # temp tags to lookup
-            ideal_tag_ids_to_chain_members = HydrusData.BuildKeyToSetDict( self._Execute( 'SELECT ideal_tag_id, bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ) )
-            
-        
-        # this returns ideal in the chain, and chains of size 1
-        
-        for ideal_tag_id in ideal_tag_ids:
-            
-            ideal_tag_ids_to_chain_members[ ideal_tag_id ].add( ideal_tag_id )
-            
-        
-        return ideal_tag_ids_to_chain_members
-        
-    
-    def _CacheTagSiblingsGetInterestedServiceIds( self, tag_service_id ):
-        
-        if self._service_ids_to_sibling_interested_service_ids is None:
-            
-            self._CacheTagSiblingsGenerateApplicationDicts()
-            
-        
-        return self._service_ids_to_sibling_interested_service_ids[ tag_service_id ]
-        
-    
-    def _CacheTagSiblingsGetTagSiblingsForTags( self, service_key, tags ):
-        
-        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-        else:
-            
-            tag_service_ids = ( self.modules_services.GetServiceId( service_key ), )
-            
-        
-        existing_tags = { tag for tag in tags if self.modules_tags.TagExists( tag ) }
-        
-        existing_tag_ids = { self.modules_tags.GetTagId( tag ) for tag in existing_tags }
-        
-        tag_ids_to_chain_tag_ids = collections.defaultdict( set )
-        
-        for tag_service_id in tag_service_ids:
-            
-            tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
-            
-            ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
-            
-            ideal_tag_ids_to_chain_tag_ids = self._CacheTagSiblingsGetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
-            
-            for tag_id in existing_tag_ids:
-                
-                chain_tag_ids = ideal_tag_ids_to_chain_tag_ids[ tag_ids_to_ideal_tag_ids[ tag_id ] ]
-                
-                tag_ids_to_chain_tag_ids[ tag_id ].update( chain_tag_ids )
-                
-            
-        
-        all_tag_ids = set( tag_ids_to_chain_tag_ids.keys() )
-        all_tag_ids.update( itertools.chain.from_iterable( tag_ids_to_chain_tag_ids.values() ) )
-        
-        tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = all_tag_ids )
-        
-        tags_to_siblings = { tag_ids_to_tags[ tag_id ] : { tag_ids_to_tags[ chain_tag_id ] for chain_tag_id in chain_tag_ids } for ( tag_id, chain_tag_ids ) in tag_ids_to_chain_tag_ids.items() }
-        
-        for tag in tags:
-            
-            if tag not in existing_tags:
-                
-                tags_to_siblings[ tag ] = { tag }
-                
-            
-        
-        return tags_to_siblings
-        
-    
-    def _CacheTagSiblingsGetTagSiblingsIdeals( self, service_key ):
-        
-        tag_service_id = self.modules_services.GetServiceId( service_key )
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
-        
-        pair_ids = self._Execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_tag_siblings_lookup_table_name ) ).fetchall()
-        
-        all_tag_ids = set( itertools.chain.from_iterable( pair_ids ) )
-        
-        tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = all_tag_ids )
-        
-        tags_to_ideals = { tag_ids_to_tags[ bad_tag_id ] : tag_ids_to_tags[ good_tag_id ] for ( bad_tag_id, good_tag_id ) in pair_ids }
-        
-        return tags_to_ideals
-        
-    
-    def _CacheTagSiblingsGetTagsToIdeals( self, display_type, tag_service_id, tag_ids ):
-        
-        if not isinstance( tag_ids, set ):
-            
-            tag_ids = set( tag_ids )
-            
-        
-        if len( tag_ids ) == 0:
-            
-            return {}
-            
-        elif len( tag_ids ) == 1:
-            
-            ( tag_id, ) = tag_ids
-            
-            return { tag_id : self._CacheTagSiblingsGetIdeal( display_type, tag_service_id, tag_id ) }
-            
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        no_ideal_found_tag_ids = set( tag_ids )
-        tag_ids_to_ideal_tag_ids = {}
-        
-        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_table_name:
-            
-            # temp tags to lookup
-            for ( tag_id, ideal_tag_id ) in self._Execute( 'SELECT tag_id, ideal_tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ):
-                
-                no_ideal_found_tag_ids.discard( tag_id )
-                tag_ids_to_ideal_tag_ids[ tag_id ] = ideal_tag_id
-                
-            
-            tag_ids_to_ideal_tag_ids.update( { tag_id : tag_id for tag_id in no_ideal_found_tag_ids } )
-            
-        
-        return tag_ids_to_ideal_tag_ids
-        
-    
-    def _CacheTagSiblingsIsChained( self, display_type, tag_service_id, tag_id ):
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        return self._Execute( 'SELECT 1 FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( tag_id, tag_id ) ).fetchone() is not None
-        
-    
-    def _CacheTagSiblingsRegen( self, tag_service_ids ):
-        
-        for tag_service_id in tag_service_ids:
-            
-            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id )
-            
-            self._Execute( 'DELETE FROM {};'.format( cache_tag_siblings_lookup_table_name ) )
-            
-            applicable_service_ids = self._CacheTagSiblingsGetApplicableServiceIds( tag_service_id )
-            
-            tss = ClientTagsHandling.TagSiblingsStructure()
-            
-            for applicable_service_id in applicable_service_ids:
-                
-                statuses_to_pair_ids = self._GetTagSiblingsIds( service_id = applicable_service_id )
-                
-                petitioned_fast_lookup = set( statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-                for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    if ( bad_tag_id, good_tag_id ) in petitioned_fast_lookup:
-                        
-                        continue
-                        
-                    
-                    tss.AddPair( bad_tag_id, good_tag_id )
-                    
-                
-                for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    tss.AddPair( bad_tag_id, good_tag_id )
-                    
-                
-            
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_tag_siblings_lookup_table_name ), tss.GetBadTagsToIdealTags().items() )
-            
-            if tag_service_id in self._service_ids_to_display_application_status:
-                
-                del self._service_ids_to_display_application_status[ tag_service_id ]
-                
-            
-        
-    
-    def _CacheTagSiblingsRegenChains( self, tag_service_ids, tag_ids ):
-        
-        if len( tag_ids ) == 0:
-            
-            return
-            
-        
-        for tag_service_id in tag_service_ids:
-            
-            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id )
-            
-            tag_ids_to_clear_and_regen = set( tag_ids )
-            
-            ideal_tag_ids = self._CacheTagSiblingsGetIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
-            
-            tag_ids_to_clear_and_regen.update( self._CacheTagSiblingsGetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
-            
-            self._ExecuteMany( 'DELETE FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_clear_and_regen ) )
-            
-            applicable_tag_service_ids = self._CacheTagSiblingsGetApplicableServiceIds( tag_service_id )
-            
-            tss = ClientTagsHandling.TagSiblingsStructure()
-            
-            for applicable_tag_service_id in applicable_tag_service_ids:
-                
-                service_key = self.modules_services.GetService( applicable_tag_service_id ).GetServiceKey()
-                
-                statuses_to_pair_ids = self._GetTagSiblingsIdsChains( applicable_tag_service_id, tag_ids_to_clear_and_regen )
-                
-                petitioned_fast_lookup = set( statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-                for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    if ( bad_tag_id, good_tag_id ) in petitioned_fast_lookup:
-                        
-                        continue
-                        
-                    
-                    tss.AddPair( bad_tag_id, good_tag_id )
-                    
-                
-                for ( bad_tag_id, good_tag_id ) in statuses_to_pair_ids[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    tss.AddPair( bad_tag_id, good_tag_id )
-                    
-                
-            
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_tag_siblings_lookup_table_name ), tss.GetBadTagsToIdealTags().items() )
-            
-            if tag_service_id in self._service_ids_to_display_application_status:
-                
-                del self._service_ids_to_display_application_status[ tag_service_id ]
-                
-            
-            # as siblings may have changed for these tags, parents may have as well
-            self._CacheTagParentsRegenChains( ( tag_service_id, ), tag_ids_to_clear_and_regen )
-            
-        
-    
-    def _CacheTagSiblingsSiblingsChanged( self, tag_service_id_that_changed, tag_ids_that_changed ):
-        
-        if len( tag_ids_that_changed ) == 0:
-            
-            return
-            
-        
-        # the siblings for tag_ids have changed for tag_service_id
-        # therefore any service that is interested in tag_service_ids's siblings needs to regen the respective chains for these tags
-        
-        interested_tag_service_ids = self._CacheTagSiblingsGetInterestedServiceIds( tag_service_id_that_changed )
-        
-        self._CacheTagSiblingsRegenChains( interested_tag_service_ids, tag_ids_that_changed )
         
     
     def _CheckDBIntegrity( self ):
@@ -4998,11 +3828,11 @@ class DB( HydrusDB.HydrusDB ):
         
         # main
         
-        self.modules_db_maintenance.CreateInitialTables()
-        self.modules_db_maintenance.CreateInitialIndices()
-        
-        self.modules_services.CreateInitialTables()
-        self.modules_services.CreateInitialIndices()
+        for module in self._modules:
+            
+            module.CreateInitialTables()
+            module.CreateInitialIndices()
+            
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS alternate_file_groups ( alternates_group_id INTEGER PRIMARY KEY );' )
         
@@ -5026,21 +3856,9 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'CREATE TABLE IF NOT EXISTS confirmed_alternate_pairs ( smaller_media_id INTEGER, larger_media_id INTEGER, PRIMARY KEY ( smaller_media_id, larger_media_id ) );' )
         self._CreateIndex( 'confirmed_alternate_pairs', [ 'larger_media_id', 'smaller_media_id' ], unique = True )
         
-        self.modules_files_storage.CreateInitialTables()
-        self.modules_files_storage.CreateInitialIndices()
-        
-        self.modules_files_metadata_basic.CreateInitialTables()
-        self.modules_files_metadata_basic.CreateInitialIndices()
-        
-        self.modules_files_maintenance.CreateInitialTables()
-        self.modules_files_maintenance.CreateInitialIndices()
-        
         self._Execute( 'CREATE TABLE file_notes ( hash_id INTEGER, name_id INTEGER, note_id INTEGER, PRIMARY KEY ( hash_id, name_id ) );' )
         self._CreateIndex( 'file_notes', [ 'note_id' ] )
         self._CreateIndex( 'file_notes', [ 'name_id' ] )
-        
-        self.modules_serialisable.CreateInitialTables()
-        self.modules_serialisable.CreateInitialIndices()
         
         self._Execute( 'CREATE TABLE local_ratings ( service_id INTEGER, hash_id INTEGER, rating REAL, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'local_ratings', [ 'hash_id' ] )
@@ -5069,22 +3887,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._Execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT UNIQUE );' )
         
-        self._Execute( 'CREATE TABLE tag_parents ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
-        self._CreateIndex( 'tag_parents', [ 'service_id', 'parent_tag_id' ] )
-        
-        self._Execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
-        self._CreateIndex( 'tag_parent_petitions', [ 'service_id', 'parent_tag_id' ] )
-        
-        self._Execute( 'CREATE TABLE tag_parent_application ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );' )
-        
-        self._Execute( 'CREATE TABLE tag_siblings ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
-        self._CreateIndex( 'tag_siblings', [ 'service_id', 'good_tag_id' ] )
-        
-        self._Execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
-        self._CreateIndex( 'tag_sibling_petitions', [ 'service_id', 'good_tag_id' ] )
-        
-        self._Execute( 'CREATE TABLE tag_sibling_application ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );' )
-        
         self._Execute( 'CREATE TABLE url_map ( hash_id INTEGER, url_id INTEGER, PRIMARY KEY ( hash_id, url_id ) );' )
         self._CreateIndex( 'url_map', [ 'url_id' ] )
         
@@ -5096,35 +3898,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._Execute( 'CREATE TABLE version ( version INTEGER );' )
         
-        # caches
-        
-        self.modules_similar_files.CreateInitialTables()
-        self.modules_similar_files.CreateInitialIndices()
-        
-        self._CreateDBCaches()
-        
-        # master
-        
-        self.modules_hashes.CreateInitialTables()
-        self.modules_hashes.CreateInitialIndices()
-        
-        self.modules_tags.CreateInitialTables()
-        self.modules_tags.CreateInitialIndices()
-        
-        self.modules_urls.CreateInitialTables()
-        self.modules_urls.CreateInitialIndices()
-        
-        self.modules_texts.CreateInitialTables()
-        self.modules_texts.CreateInitialIndices()
-        
-        # caches
-        
-        self.modules_hashes_local_cache.CreateInitialTables()
-        self.modules_hashes_local_cache.CreateInitialIndices()
-
-        self.modules_tags_local_cache.CreateInitialTables()
-        self.modules_tags_local_cache.CreateInitialIndices()
-
         # inserts
         
         location = HydrusPaths.ConvertAbsPathToPortablePath( client_files_default )
@@ -5268,11 +4041,6 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
         
         self._ExecuteMany( 'INSERT INTO json_dumps_named VALUES ( ?, ?, ?, ?, ? );', ClientDefaults.GetDefaultScriptRows() )
-        
-    
-    def _CreateDBCaches( self ):
-        
-        pass
         
     
     def _CullFileViewingStatistics( self ):
@@ -5536,26 +4304,17 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in HC.REAL_TAG_SERVICES:
             
-            self._DeleteServiceDropTagParents( service_id )
-            
-            self._DeleteServiceDropTagSiblings( service_id )
-            
             interested_service_ids = set( self._CacheTagDisplayGetInterestedServiceIds( service_id ) )
             
             interested_service_ids.discard( service_id ) # lmao, not any more!
             
-            # we have to do this after the above since we need to know _what_ to regen with these new application rules in a sec
-            self._Execute( 'DELETE FROM tag_sibling_application WHERE master_service_id = ? OR application_service_id = ?;', ( service_id, service_id ) )
-            self._Execute( 'DELETE FROM tag_parent_application WHERE master_service_id = ? OR application_service_id = ?;', ( service_id, service_id ) )
+            self.modules_tag_parents.Drop( service_id )
             
-            self._service_ids_to_sibling_applicable_service_ids = None
-            self._service_ids_to_sibling_interested_service_ids = None
-            self._service_ids_to_parent_applicable_service_ids = None
-            self._service_ids_to_parent_interested_service_ids = None
+            self.modules_tag_siblings.Drop( service_id )
             
             if len( interested_service_ids ) > 0:
                 
-                self._RegenerateTagSiblingsCache( only_these_service_ids = interested_service_ids )
+                self._RegenerateTagSiblingsAndParentsCache( only_these_service_ids = interested_service_ids )
                 
             
             self._CacheTagsDrop( self.modules_services.combined_file_service_id, service_id )
@@ -5642,22 +4401,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _DeleteServiceDropTagParents( self, service_id ):
-        
-        self._Execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
-        self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
-        
-        self._CacheTagParentsDrop( service_id )
-        
-    
-    def _DeleteServiceDropTagSiblings( self, service_id ):
-        
-        self._Execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
-        self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
-        
-        self._CacheTagSiblingsDrop( service_id )
-        
-    
     def _DeleteServiceInfo( self, service_key = None, types_to_delete = None ):
         
         predicates = []
@@ -5686,36 +4429,6 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'DELETE FROM service_info{};'.format( predicates_string ) )
         
         self.pub_after_job( 'notify_new_pending' )
-        
-    
-    def _DeleteTagParents( self, service_id, pairs, defer_cache_update = False ):
-        
-        self._ExecuteMany( 'DELETE FROM tag_parents WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( ( service_id, child_tag_id, parent_tag_id ) for ( child_tag_id, parent_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_PETITIONED ) for ( child_tag_id, parent_tag_id ) in pairs )  )
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_tag_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_DELETED ) for ( child_tag_id, parent_tag_id ) in pairs ) )
-        
-        tag_ids = set( itertools.chain.from_iterable( pairs ) )
-        
-        if not defer_cache_update:
-            
-            self._CacheTagParentsParentsChanged( service_id, tag_ids )
-            
-        
-    
-    def _DeleteTagSiblings( self, service_id, pairs, defer_cache_update = False ):
-        
-        self._ExecuteMany( 'DELETE FROM tag_siblings WHERE service_id = ? AND bad_tag_id = ?;', ( ( service_id, bad_tag_id ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, HC.CONTENT_STATUS_PETITIONED ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_DELETED ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        
-        tag_ids = set( itertools.chain.from_iterable( pairs ) )
-        
-        if not defer_cache_update:
-            
-            self._CacheTagSiblingsSiblingsChanged( service_id, tag_ids )
-            
         
     
     def _DisplayCatastrophicError( self, text ):
@@ -7664,23 +6377,23 @@ class DB( HydrusDB.HydrusDB ):
             
             if display_tag_service_id != self.modules_services.combined_tag_service_id:
                 
-                tag_ids_to_ideal_tag_ids = self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids )
+                tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids )
                 
-                tag_ids_that_are_sibling_chained = self._CacheTagSiblingsFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids )
+                tag_ids_that_are_sibling_chained = self.modules_tag_siblings.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids )
                 
                 tag_ids_to_ideal_tag_ids_for_siblings = { tag_id : ideal_tag_id for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids.items() if tag_id in tag_ids_that_are_sibling_chained }
                 
-                ideal_tag_ids_to_sibling_chain_tag_ids = self._CacheTagSiblingsGetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_ideal_tag_ids_for_siblings.values() ) )
+                ideal_tag_ids_to_sibling_chain_tag_ids = self.modules_tag_siblings.GetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_ideal_tag_ids_for_siblings.values() ) )
                 
                 #
                 
                 ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
                 
-                ideal_tag_ids_that_are_parent_chained = self._CacheTagParentsFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, ideal_tag_ids )
+                ideal_tag_ids_that_are_parent_chained = self.modules_tag_parents.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, ideal_tag_ids )
                 
                 tag_ids_to_ideal_tag_ids_for_parents = { tag_id : ideal_tag_id for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids.items() if ideal_tag_id in ideal_tag_ids_that_are_parent_chained }
                 
-                ideal_tag_ids_to_ancestor_tag_ids = self._CacheTagParentsGetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_ideal_tag_ids_for_parents.values() ) )
+                ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_ideal_tag_ids_for_parents.values() ) )
                 
             else:
                 
@@ -7762,13 +6475,13 @@ class DB( HydrusDB.HydrusDB ):
             
             for search_tag_service_id in search_tag_service_ids:
                 
-                tag_ids_that_are_sibling_chained = self._CacheTagSiblingsFilterChained( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, tag_ids )
+                tag_ids_that_are_sibling_chained = self.modules_tag_siblings.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, tag_ids )
                 
-                tag_ids_to_ideal_tag_ids_for_siblings = self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, tag_ids_that_are_sibling_chained )
+                tag_ids_to_ideal_tag_ids_for_siblings = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, tag_ids_that_are_sibling_chained )
                 
                 ideal_tag_ids = set( tag_ids_to_ideal_tag_ids_for_siblings.values() )
                 
-                ideal_tag_ids_to_sibling_chain_tag_ids = self._CacheTagSiblingsGetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, ideal_tag_ids )
+                ideal_tag_ids_to_sibling_chain_tag_ids = self.modules_tag_siblings.GetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, ideal_tag_ids )
                 
                 for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids_for_siblings.items():
                     
@@ -8185,11 +6898,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                     with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_ideal_tag_ids_table_name:
                         
-                        self._CacheTagSiblingsFilterChainedIdealsIntoTable( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
+                        self.modules_tag_siblings.FilterChainedIdealsIntoTable( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
                         
                         with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_chained_tag_ids_table_name:
                             
-                            self._CacheTagSiblingsGetChainsMembersFromIdealsTables( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, temp_ideal_tag_ids_table_name, temp_chained_tag_ids_table_name )
+                            self.modules_tag_siblings.GetChainsMembersFromIdealsTables( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, temp_ideal_tag_ids_table_name, temp_chained_tag_ids_table_name )
                             
                             tag_ids.update( self._STI( self._Execute( 'SELECT tag_id FROM {};'.format( temp_chained_tag_ids_table_name ) ) ) )
                             
@@ -8209,12 +6922,12 @@ class DB( HydrusDB.HydrusDB ):
                     return set()
                     
                 
-                ideal_tag_ids = self._CacheTagSiblingsGetIdeals( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, batch_of_tag_ids )
+                ideal_tag_ids = self.modules_tag_siblings.GetIdeals( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, batch_of_tag_ids )
                 
                 ideal_tag_ids.difference_update( seen_ideal_tag_ids[ sibling_tag_service_id ] )
                 seen_ideal_tag_ids[ sibling_tag_service_id ].update( ideal_tag_ids )
                 
-                tag_ids.update( self._CacheTagSiblingsGetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, ideal_tag_ids ) )
+                tag_ids.update( self.modules_tag_siblings.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_ACTUAL, sibling_tag_service_id, ideal_tag_ids ) )
                 
             
         '''
@@ -8720,7 +7433,7 @@ class DB( HydrusDB.HydrusDB ):
             
             seen_service_ids_to_seen_tag_ids = HydrusData.BuildKeyToSetDict( ( ( tag_service_id, tag_id ) for ( hash_id, ( tag_service_id, status, tag_id ) ) in display_tag_data ) )
             
-            seen_service_ids_to_tag_ids_to_ideal_tag_ids = { tag_service_id : self._CacheTagSiblingsGetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids ) for ( tag_service_id, tag_ids ) in seen_service_ids_to_seen_tag_ids.items() }
+            seen_service_ids_to_tag_ids_to_ideal_tag_ids = { tag_service_id : self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids ) for ( tag_service_id, tag_ids ) in seen_service_ids_to_seen_tag_ids.items() }
             
             display_tag_data = [ ( hash_id, ( tag_service_id, status, seen_service_ids_to_tag_ids_to_ideal_tag_ids[ tag_service_id ][ tag_id ] ) ) for ( hash_id, ( tag_service_id, status, tag_id ) ) in display_tag_data ]
             
@@ -12177,192 +10890,6 @@ class DB( HydrusDB.HydrusDB ):
         return final_result_tag_ids
         
     
-    def _GetTagParents( self, service_key ):
-        
-        service_id = self.modules_services.GetServiceId( service_key )
-        
-        statuses_to_pair_ids = self._GetTagParentsIds( service_id )
-        
-        all_tag_ids = set()
-        
-        for pair_ids in statuses_to_pair_ids.values():
-            
-            for ( child_tag_id, parent_tag_id ) in pair_ids:
-                
-                all_tag_ids.add( child_tag_id )
-                all_tag_ids.add( parent_tag_id )
-                
-            
-        
-        tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = all_tag_ids )
-        
-        statuses_to_pairs = collections.defaultdict( set )
-        
-        statuses_to_pairs.update( { status : { ( tag_ids_to_tags[ child_tag_id ], tag_ids_to_tags[ parent_tag_id ] ) for ( child_tag_id, parent_tag_id ) in pair_ids } for ( status, pair_ids ) in statuses_to_pair_ids.items() } )
-        
-        return statuses_to_pairs
-        
-    
-    def _GetTagParentsIds( self, service_id ):
-        
-        statuses_and_pair_ids = self._Execute( 'SELECT status, child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? UNION SELECT status, child_tag_id, parent_tag_id FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( child_tag_id, parent_tag_id ) ) for ( status, child_tag_id, parent_tag_id ) in statuses_and_pair_ids )
-        
-        statuses_to_pair_ids = collections.defaultdict( list )
-        
-        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
-        
-        return statuses_to_pair_ids
-        
-    
-    def _GetTagParentsIdsChains( self, service_id, tag_ids ):
-        
-        # I experimented with one or two recursive queries, and for siblings, but it mostly ended up hellmode index efficiency. I think ( service_id, integer ) did it in
-        
-        # note that this has to do sibling lookup as well to fetch pairs that are only connected to our chain by sibling relationships, and we are assuming here that the sibling lookup cache is valid
-        
-        searched_tag_ids = set()
-        next_tag_ids = set( tag_ids )
-        result_rows = set()
-        
-        while len( next_tag_ids ) > 0:
-            
-            tag_ids_seen_this_round = set()
-            
-            ideal_tag_ids = self._CacheTagSiblingsGetIdeals( ClientTags.TAG_DISPLAY_IDEAL, service_id, next_tag_ids )
-            
-            tag_ids_seen_this_round.update( self._CacheTagSiblingsGetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, service_id, ideal_tag_ids ) )
-            
-            with self._MakeTemporaryIntegerTable( next_tag_ids, 'tag_id' ) as temp_next_tag_ids_table_name:
-                
-                searched_tag_ids.update( next_tag_ids )
-                
-                # keep these separate--older sqlite can't do cross join to an OR ON
-                
-                # temp tag_ids to parents
-                queries = [
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( child_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( parent_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( child_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( parent_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name )
-                ]
-                
-                query = ' UNION '.join( queries )
-                
-                for row in self._Execute( query, ( service_id, service_id, service_id, service_id ) ):
-                    
-                    result_rows.add( row )
-                    
-                    ( status, child_tag_id, parent_tag_id ) = row
-                    
-                    tag_ids_seen_this_round.update( ( child_tag_id, parent_tag_id ) )
-                    
-                
-            
-            next_tag_ids = tag_ids_seen_this_round.difference( searched_tag_ids )
-            
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( child_tag_id, parent_tag_id ) ) for ( status, child_tag_id, parent_tag_id ) in result_rows )
-        
-        statuses_to_pair_ids = collections.defaultdict( list )
-        
-        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
-        
-        return statuses_to_pair_ids
-        
-    
-    def _GetTagSiblings( self, service_key ):
-        
-        service_id = self.modules_services.GetServiceId( service_key )
-        
-        statuses_to_pair_ids = self._GetTagSiblingsIds( service_id )
-        
-        all_tag_ids = set()
-        
-        for pair_ids in statuses_to_pair_ids.values():
-            
-            for ( bad_tag_id, good_tag_id ) in pair_ids:
-                
-                all_tag_ids.add( bad_tag_id )
-                all_tag_ids.add( good_tag_id )
-                
-            
-        
-        tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = all_tag_ids )
-        
-        statuses_to_pairs = collections.defaultdict( set )
-        
-        statuses_to_pairs.update( { status : { ( tag_ids_to_tags[ bad_tag_id ], tag_ids_to_tags[ good_tag_id ] ) for ( bad_tag_id, good_tag_id ) in pair_ids } for ( status, pair_ids ) in statuses_to_pair_ids.items() } )
-        
-        return statuses_to_pairs
-        
-    
-    def _GetTagSiblingsIds( self, service_id ):
-        
-        statuses_and_pair_ids = self._Execute( 'SELECT status, bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? UNION SELECT status, bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( bad_tag_id, good_tag_id ) ) for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids )
-        
-        statuses_to_pair_ids = collections.defaultdict( list )
-        
-        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
-        
-        return statuses_to_pair_ids
-        
-    
-    def _GetTagSiblingsIdsChains( self, service_id, tag_ids ):
-        
-        done_tag_ids = set()
-        next_tag_ids = set( tag_ids )
-        result_rows = set()
-        
-        while len( next_tag_ids ) > 0:
-            
-            with self._MakeTemporaryIntegerTable( next_tag_ids, 'tag_id' ) as temp_next_tag_ids_table_name:
-                
-                done_tag_ids.update( next_tag_ids )
-                
-                next_tag_ids = set()
-                
-                # keep these separate--older sqlite can't do cross join to an OR ON
-                
-                # temp tag_ids to siblings
-                queries = [
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( bad_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( good_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( bad_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( good_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name )
-                ]
-                
-                query = ' UNION '.join( queries )
-                
-                for row in self._Execute( query, ( service_id, service_id, service_id, service_id ) ):
-                    
-                    result_rows.add( row )
-                    
-                    ( status, bad_tag_id, good_tag_id ) = row
-                    
-                    for tag_id in ( bad_tag_id, good_tag_id ):
-                        
-                        if tag_id not in done_tag_ids:
-                            
-                            next_tag_ids.add( tag_id )
-                            
-                        
-                    
-                
-            
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( bad_tag_id, good_tag_id ) ) for ( status, bad_tag_id, good_tag_id ) in result_rows )
-        
-        statuses_to_pair_ids = collections.defaultdict( list )
-        
-        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
-        
-        return statuses_to_pair_ids
-        
-    
     def _GetTrashHashes( self, limit = None, minimum_age = None ):
         
         if limit is None:
@@ -13100,6 +11627,14 @@ class DB( HydrusDB.HydrusDB ):
         
         self._modules.append( self.modules_mappings_storage )
         
+        self.modules_tag_siblings = ClientDBTagSiblings.ClientDBTagSiblings( self._c, self.modules_services, self.modules_tags, self.modules_tags_local_cache )
+        
+        self._modules.append( self.modules_tag_siblings )
+        
+        self.modules_tag_parents = ClientDBTagParents.ClientDBTagParents( self._c, self.modules_services, self.modules_tags_local_cache, self.modules_tag_siblings )
+        
+        self._modules.append( self.modules_tag_parents )
+        
         #
         
         self.modules_similar_files = ClientDBSimilarFiles.ClientDBSimilarFiles( self._c, self.modules_services, self.modules_files_storage )
@@ -13820,25 +12355,16 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if action == HC.CONTENT_UPDATE_ADD:
                                 
-                                self._AddTagParents( service_id, pairs, defer_cache_update = True )
+                                self.modules_tag_parents.AddTagParents( service_id, pairs )
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
                                 
-                                self._DeleteTagParents( service_id, pairs, defer_cache_update = True )
+                                self.modules_tag_parents.DeleteTagParents( service_id, pairs )
                                 
                             
                             changed_parent_tag_ids.update( ( child_tag_id, parent_tag_id ) )
                             
                         elif action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
-                            
-                            if action == HC.CONTENT_UPDATE_PEND:
-                                
-                                new_status = HC.CONTENT_STATUS_PENDING
-                                
-                            elif action == HC.CONTENT_UPDATE_PETITION:
-                                
-                                new_status = HC.CONTENT_STATUS_PETITIONED
-                                
                             
                             ( child_tag, parent_tag ) = row
                             
@@ -13857,24 +12383,22 @@ class DB( HydrusDB.HydrusDB ):
                             
                             reason_id = self.modules_texts.GetTextId( reason )
                             
-                            self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( service_id, child_tag_id, parent_tag_id ) )
+                            triples = ( ( child_tag_id, parent_tag_id, reason_id ), )
                             
-                            self._Execute( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_tag_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, child_tag_id, parent_tag_id, reason_id, new_status ) )
+                            if action == HC.CONTENT_UPDATE_PEND:
+                                
+                                self.modules_tag_parents.PendTagParents( service_id, triples )
+                                
+                            elif action == HC.CONTENT_UPDATE_PETITION:
+                                
+                                self.modules_tag_parents.PetitionTagParents( service_id, triples )
+                                
                             
                             changed_parent_tag_ids.update( ( child_tag_id, parent_tag_id ) )
                             
                             notify_new_pending = True
                             
                         elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
-                            
-                            if action == HC.CONTENT_UPDATE_RESCIND_PEND:
-                                
-                                deletee_status = HC.CONTENT_STATUS_PENDING
-                                
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                                
-                                deletee_status = HC.CONTENT_STATUS_PETITIONED
-                                
                             
                             ( child_tag, parent_tag ) = row
                             
@@ -13889,7 +12413,16 @@ class DB( HydrusDB.HydrusDB ):
                                 continue
                                 
                             
-                            self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_tag_id, parent_tag_id, deletee_status ) )
+                            pairs = ( ( child_tag_id, parent_tag_id ), )
+                            
+                            if action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                                
+                                self.modules_tag_parents.RescindPendingTagParents( service_id, pairs )
+                                
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                                
+                                self.modules_tag_parents.RescindPetitionedTagParents( service_id, pairs )
+                                
                             
                             changed_parent_tag_ids.update( ( child_tag_id, parent_tag_id ) )
                             
@@ -13919,25 +12452,16 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if action == HC.CONTENT_UPDATE_ADD:
                                 
-                                self._AddTagSiblings( service_id, pairs, defer_cache_update = True )
+                                self.modules_tag_siblings.AddTagSiblings( service_id, pairs )
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
                                 
-                                self._DeleteTagSiblings( service_id, pairs, defer_cache_update = True )
+                                self.modules_tag_siblings.DeleteTagSiblings( service_id, pairs )
                                 
                             
                             changed_sibling_tag_ids.update( ( bad_tag_id, good_tag_id ) )
                             
                         elif action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
-                            
-                            if action == HC.CONTENT_UPDATE_PEND:
-                                
-                                new_status = HC.CONTENT_STATUS_PENDING
-                                
-                            elif action == HC.CONTENT_UPDATE_PETITION:
-                                
-                                new_status = HC.CONTENT_STATUS_PETITIONED
-                                
                             
                             ( bad_tag, good_tag ) = row
                             
@@ -13956,24 +12480,22 @@ class DB( HydrusDB.HydrusDB ):
                             
                             reason_id = self.modules_texts.GetTextId( reason )
                             
-                            self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ?;', ( service_id, bad_tag_id, good_tag_id ) )
+                            triples = ( ( bad_tag_id, good_tag_id, reason_id ), )
                             
-                            self._Execute( 'INSERT OR IGNORE INTO tag_sibling_petitions ( service_id, bad_tag_id, good_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, bad_tag_id, good_tag_id, reason_id, new_status ) )
+                            if action == HC.CONTENT_UPDATE_PEND:
+                                
+                                self.modules_tag_siblings.PendTagSiblings( service_id, triples )
+                                
+                            elif action == HC.CONTENT_UPDATE_PETITION:
+                                
+                                self.modules_tag_siblings.PetitionTagSiblings( service_id, triples )
+                                
                             
                             changed_sibling_tag_ids.update( ( bad_tag_id, good_tag_id ) )
                             
                             notify_new_pending = True
                             
                         elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
-                            
-                            if action == HC.CONTENT_UPDATE_RESCIND_PEND:
-                                
-                                deletee_status = HC.CONTENT_STATUS_PENDING
-                                
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                                
-                                deletee_status = HC.CONTENT_STATUS_PETITIONED
-                                
                             
                             ( bad_tag, good_tag ) = row
                             
@@ -13988,7 +12510,16 @@ class DB( HydrusDB.HydrusDB ):
                                 continue
                                 
                             
-                            self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND status = ?;', ( service_id, bad_tag_id, deletee_status ) )
+                            pairs = ( ( bad_tag_id, good_tag_id ), )
+                            
+                            if action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                                
+                                self.modules_tag_siblings.RescindPendingTagSiblings( service_id, pairs )
+                                
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                                
+                                self.modules_tag_siblings.RescindPetitionedTagSiblings( service_id, pairs )
+                                
                             
                             changed_sibling_tag_ids.update( ( bad_tag_id, good_tag_id ) )
                             
@@ -14097,12 +12628,12 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( changed_sibling_tag_ids ) > 0:
                 
-                self._CacheTagSiblingsSiblingsChanged( service_id, changed_sibling_tag_ids )
+                self._CacheTagDisplayNotifySiblingsChanged( service_id, changed_sibling_tag_ids )
                 
             
             if len( changed_parent_tag_ids ) > 0:
                 
-                self._CacheTagParentsParentsChanged( service_id, changed_parent_tag_ids )
+                self._CacheTagDisplayNotifyParentsChanged( service_id, changed_parent_tag_ids )
                 
             
         
@@ -14290,16 +12821,22 @@ class DB( HydrusDB.HydrusDB ):
                     for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         parent_ids = []
+                        tag_ids = set()
                         
                         for ( service_child_tag_id, service_parent_tag_id ) in chunk:
                             
                             child_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_child_tag_id )
                             parent_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_parent_tag_id )
                             
+                            tag_ids.add( child_tag_id )
+                            tag_ids.add( parent_tag_id )
+                            
                             parent_ids.append( ( child_tag_id, parent_tag_id ) )
                             
                         
-                        self._AddTagParents( service_id, parent_ids )
+                        self.modules_tag_parents.AddTagParents( service_id, parent_ids )
+                        
+                        self._CacheTagDisplayNotifyParentsChanged( service_id, tag_ids )
                         
                         parents_or_siblings_changed = True
                         
@@ -14323,16 +12860,22 @@ class DB( HydrusDB.HydrusDB ):
                     for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         parent_ids = []
+                        tag_ids = set()
                         
                         for ( service_child_tag_id, service_parent_tag_id ) in chunk:
                             
                             child_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_child_tag_id )
                             parent_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_parent_tag_id )
                             
+                            tag_ids.add( child_tag_id )
+                            tag_ids.add( parent_tag_id )
+                            
                             parent_ids.append( ( child_tag_id, parent_tag_id ) )
                             
                         
-                        self._DeleteTagParents( service_id, parent_ids )
+                        self.modules_tag_parents.DeleteTagParents( service_id, parent_ids )
+                        
+                        self._CacheTagDisplayNotifyParentsChanged( service_id, tag_ids )
                         
                         parents_or_siblings_changed = True
                         
@@ -14361,16 +12904,22 @@ class DB( HydrusDB.HydrusDB ):
                     for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         sibling_ids = []
+                        tag_ids = set()
                         
                         for ( service_bad_tag_id, service_good_tag_id ) in chunk:
                             
                             bad_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_bad_tag_id )
                             good_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_good_tag_id )
                             
+                            tag_ids.add( bad_tag_id )
+                            tag_ids.add( good_tag_id )
+                            
                             sibling_ids.append( ( bad_tag_id, good_tag_id ) )
                             
                         
-                        self._AddTagSiblings( service_id, sibling_ids )
+                        self.modules_tag_siblings.AddTagSiblings( service_id, sibling_ids )
+                        
+                        self._CacheTagDisplayNotifySiblingsChanged( service_id, tag_ids )
                         
                         parents_or_siblings_changed = True
                         
@@ -14396,16 +12945,22 @@ class DB( HydrusDB.HydrusDB ):
                     for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         sibling_ids = []
+                        tag_ids = set()
                         
                         for ( service_bad_tag_id, service_good_tag_id ) in chunk:
                             
                             bad_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_bad_tag_id )
                             good_tag_id = self.modules_repositories.NormaliseServiceTagId( service_id, service_good_tag_id )
                             
+                            tag_ids.add( bad_tag_id )
+                            tag_ids.add( good_tag_id )
+                            
                             sibling_ids.append( ( bad_tag_id, good_tag_id ) )
                             
                         
-                        self._DeleteTagSiblings( service_id, sibling_ids )
+                        self.modules_tag_siblings.DeleteTagSiblings( service_id, sibling_ids )
+                        
+                        self._CacheTagDisplayNotifySiblingsChanged( service_id, tag_ids )
                         
                         parents_or_siblings_changed = True
                         
@@ -14510,12 +13065,12 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
         elif action == 'tag_display_application': result = self._CacheTagDisplayGetApplication( *args, **kwargs )
         elif action == 'tag_display_maintenance_status': result = self._CacheTagDisplayGetApplicationStatusNumbers( *args, **kwargs )
-        elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
-        elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
-        elif action == 'tag_siblings_all_ideals': result = self._CacheTagSiblingsGetTagSiblingsIdeals( *args, **kwargs )
+        elif action == 'tag_parents': result = self.modules_tag_parents.GetTagParents( *args, **kwargs )
+        elif action == 'tag_siblings': result = self.modules_tag_siblings.GetTagSiblings( *args, **kwargs )
+        elif action == 'tag_siblings_all_ideals': result = self.modules_tag_siblings.GetTagSiblingsIdeals( *args, **kwargs )
         elif action == 'tag_display_decorators': result = self._CacheTagDisplayGetUIDecorators( *args, **kwargs )
         elif action == 'tag_siblings_and_parents_lookup': result = self._CacheTagDisplayGetSiblingsAndParentsForTags( *args, **kwargs )
-        elif action == 'tag_siblings_lookup': result = self._CacheTagSiblingsGetTagSiblingsForTags( *args, **kwargs )
+        elif action == 'tag_siblings_lookup': result = self.modules_tag_siblings.GetTagSiblingsForTags( *args, **kwargs )
         elif action == 'potential_duplicates_count': result = self._DuplicatesGetPotentialDuplicatesCount( *args, **kwargs )
         elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
         elif action == 'vacuum_data': result = self.modules_db_maintenance.GetVacuumData( *args, **kwargs )
@@ -14850,23 +13405,13 @@ class DB( HydrusDB.HydrusDB ):
                 # first off, we want to clear all the current siblings and parents so they will be reprocessed later
                 # we'll also have to catch up the tag definition cache to account for this
                 
-                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
-                
                 tag_ids_in_dispute = set()
                 
-                tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT DISTINCT bad_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
-                tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT ideal_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
-                tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT DISTINCT child_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
-                tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT DISTINCT ancestor_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
+                tag_ids_in_dispute.update( self.modules_tag_siblings.GetAllTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id ) )
+                tag_ids_in_dispute.update( self.modules_tag_parents.GetAllTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id ) )
                 
-                self._Execute( 'DELETE FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) )
-                self._Execute( 'DELETE FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) )
-                
-                if tag_service_id in self._service_ids_to_display_application_status:
-                    
-                    del self._service_ids_to_display_application_status[ tag_service_id ]
-                    
+                self.modules_tag_siblings.ClearActual( tag_service_id )
+                self.modules_tag_parents.ClearActual( tag_service_id )
                 
                 if len( tag_ids_in_dispute ) > 0:
                     
@@ -14929,8 +13474,6 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_2', '' )
             self._controller.frame_splash_status.SetSubtext( '' )
-            
-            self._service_ids_to_display_application_status = {}
             
         finally:
             
@@ -15050,16 +13593,8 @@ class DB( HydrusDB.HydrusDB ):
             
             for tag_service_id in tag_service_ids:
                 
-                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
-                
-                self._Execute( 'DELETE FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) )
-                self._Execute( 'DELETE FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) )
-                
-                if tag_service_id in self._service_ids_to_display_application_status:
-                    
-                    del self._service_ids_to_display_application_status[ tag_service_id ]
-                    
+                self.modules_tag_siblings.ClearActual( tag_service_id )
+                self.modules_tag_parents.ClearActual( tag_service_id )
                 
             
             time.sleep( 0.01 )
@@ -15146,7 +13681,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
         # as siblings may have changed, parents may have as well
-        self._CacheTagParentsRegen( tag_service_ids )
+        self.modules_tag_parents.Regen( tag_service_ids )
         
         self.pub_after_job( 'notify_new_tag_display_application' )
         
@@ -15232,7 +13767,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RegenerateTagSiblingsCache( self, only_these_service_ids = None ):
+    def _RegenerateTagSiblingsAndParentsCache( self, only_these_service_ids = None ):
         
         if only_these_service_ids is None:
             
@@ -15243,10 +13778,10 @@ class DB( HydrusDB.HydrusDB ):
             tag_service_ids = only_these_service_ids
             
         
-        self._CacheTagSiblingsRegen( tag_service_ids )
+        self.modules_tag_siblings.Regen( tag_service_ids )
         
         # as siblings may have changed, parents may have as well
-        self._CacheTagParentsRegen( tag_service_ids )
+        self.modules_tag_parents.Regen( tag_service_ids )
         
         self.pub_after_job( 'notify_new_tag_display_application' )
         
@@ -15397,11 +13932,8 @@ class DB( HydrusDB.HydrusDB ):
         
         main_cache_tables = set()
         
-        main_cache_tables.add( 'shape_perceptual_hashes' )
-        main_cache_tables.add( 'shape_perceptual_hash_map' )
         main_cache_tables.add( 'shape_vptree' )
         main_cache_tables.add( 'shape_maintenance_branch_regen' )
-        main_cache_tables.add( 'shape_search_cache' )
         
         missing_main_tables = sorted( main_cache_tables.difference( existing_cache_tables ) )
         
@@ -15417,8 +13949,6 @@ class DB( HydrusDB.HydrusDB ):
             
             BlockingSafeShowMessage( message )
             
-            self._CreateDBCaches()
-            
         
         if version >= 414:
             
@@ -15430,7 +13960,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for tag_service_id in tag_display_cache_service_ids:
                 
-                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
+                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
                 
                 actual_missing = cache_actual_tag_siblings_lookup_table_name.split( '.' )[1] not in existing_cache_tables
                 
@@ -15448,7 +13978,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if actual_missing or ideal_missing:
                     
-                    self._CacheTagSiblingsGenerate( tag_service_id )
+                    self.modules_tag_siblings.Generate( tag_service_id )
                     
                 
                 self._CreateIndex( cache_actual_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
@@ -15474,7 +14004,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for tag_service_id in tag_display_cache_service_ids:
                 
-                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
+                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( tag_service_id )
                 
                 actual_missing = cache_actual_tag_parents_lookup_table_name.split( '.' )[1] not in existing_cache_tables
                 
@@ -15492,7 +14022,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if actual_missing or ideal_missing:
                     
-                    self._CacheTagParentsGenerate( tag_service_id )
+                    self.modules_tag_parents.Generate( tag_service_id )
                     
                 
                 self._CreateIndex( cache_actual_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
@@ -16075,7 +14605,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._Execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
                 self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
                 
-                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
+                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( service_id )
                 
                 # do not delete from actual!
                 self._Execute( 'DELETE FROM {};'.format( cache_ideal_tag_parents_lookup_table_name ) )
@@ -16086,7 +14616,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._Execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
                 self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
                 
-                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
+                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( service_id )
                 
                 self._Execute( 'DELETE FROM {};'.format( cache_ideal_tag_siblings_lookup_table_name ) )
                 
@@ -16099,14 +14629,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 interested_service_ids = set( self._CacheTagDisplayGetInterestedServiceIds( service_id ) )
                 
-                self._service_ids_to_sibling_applicable_service_ids = None
-                self._service_ids_to_sibling_interested_service_ids = None
-                self._service_ids_to_parent_applicable_service_ids = None
-                self._service_ids_to_parent_interested_service_ids = None
-                
                 if len( interested_service_ids ) > 0:
                     
-                    self._RegenerateTagSiblingsCache( only_these_service_ids = interested_service_ids )
+                    self._RegenerateTagSiblingsAndParentsCache( only_these_service_ids = interested_service_ids )
                     
                 
             
@@ -16611,7 +15136,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     old_tag_siblings_lookup_name = 'external_caches.{}'.format( old_tag_siblings_lookup_base_name )
                     
-                    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
+                    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
                     
                     self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );'.format( cache_actual_tag_siblings_lookup_table_name ) )
                     self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );'.format( cache_ideal_tag_siblings_lookup_table_name ) )
@@ -16654,8 +15179,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for tag_service_id in tag_service_ids:
                     
-                    self._CacheTagParentsDrop( tag_service_id )
-                    self._CacheTagParentsGenerate( tag_service_id )
+                    self.modules_tag_parents.Drop( tag_service_id )
+                    self.modules_tag_parents.Generate( tag_service_id )
                     
                 
             
@@ -16819,7 +15344,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                self._RegenerateTagSiblingsCache()
+                self._RegenerateTagSiblingsAndParentsCache()
                 
             except Exception as e:
                 
@@ -17241,8 +15766,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._controller.frame_splash_status.SetSubtext( message )
                     
-                    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-                    ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
+                    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
+                    ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( tag_service_id )
                     
                     tag_ids_in_dispute = set()
                     
@@ -17904,6 +16429,34 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 450:
+            
+            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'shape_perceptual_hashes', ) ).fetchone()
+            
+            if result is not None:
+                
+                self._controller.frame_splash_status.SetSubtext( 'moving some similar file data around' )
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
+                self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
+                self._Execute( 'CREATE TABLE IF NOT EXISTS shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
+                
+                self._Execute( 'INSERT OR IGNORE INTO external_master.shape_perceptual_hashes SELECT phash_id, phash FROM external_caches.shape_perceptual_hashes;' )
+                self._Execute( 'INSERT OR IGNORE INTO external_master.shape_perceptual_hash_map SELECT phash_id, hash_id FROM external_caches.shape_perceptual_hash_map;' )
+                self._Execute( 'INSERT OR IGNORE INTO main.shape_search_cache SELECT hash_id, searched_distance FROM external_caches.shape_search_cache;' )
+                
+                self._Execute( 'DROP TABLE external_caches.shape_perceptual_hashes;' )
+                self._Execute( 'DROP TABLE external_caches.shape_perceptual_hash_map;' )
+                self._Execute( 'DROP TABLE external_caches.shape_search_cache;' )
+                
+                self._CreateIndex( 'external_master.shape_perceptual_hash_map', [ 'hash_id' ] )
+                
+                self.modules_db_maintenance.AnalyzeTable( 'external_master.shape_perceptual_hashes' )
+                self.modules_db_maintenance.AnalyzeTable( 'external_master.shape_perceptual_hash_map' )
+                self.modules_db_maintenance.AnalyzeTable( 'shape_search_cache' )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -18426,7 +16979,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_parents_cache': self._RegenerateTagParentsCache( *args, **kwargs )
         elif action == 'regenerate_tag_pending_mappings_cache': self._RegenerateTagPendingMappingsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_siblings_cache': self._RegenerateTagSiblingsCache( *args, **kwargs )
+        elif action == 'regenerate_tag_siblings_and_parents_cache': self._RegenerateTagSiblingsAndParentsCache( *args, **kwargs )
         elif action == 'register_shutdown_work': self.modules_db_maintenance.RegisterShutdownWork( *args, **kwargs )
         elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
         elif action == 'repopulate_tag_cache_missing_subtags': self._RepopulateTagCacheMissingSubtags( *args, **kwargs )

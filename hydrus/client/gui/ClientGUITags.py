@@ -3557,8 +3557,15 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._i_am_local_tag_service:
                 
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                    
+                
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+                    
                 
             else:
                 
@@ -3574,10 +3581,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 new_petitions = current_petitioned.difference( original_petitioned )
                 rescinded_petitions = original_petitioned.difference( current_petitioned )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
                 
             
             return ( self._service_key, content_updates )
@@ -4566,14 +4573,14 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._i_am_local_tag_service:
                 
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
-                    
-                
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
                     content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                    
+                
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
                     
                 
             else:
@@ -4590,10 +4597,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 new_petitions = current_petitioned.difference( original_petitioned )
                 rescinded_petitions = original_petitioned.difference( current_petitioned )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
                 
             
             return ( self._service_key, content_updates )

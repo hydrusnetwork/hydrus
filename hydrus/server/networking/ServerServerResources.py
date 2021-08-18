@@ -884,7 +884,7 @@ class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
         
         # further permissions checked in the db
         
-        request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ] )
+        request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ self._service.GetServiceType() ] ] )
         
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1129,7 +1129,7 @@ class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
             
             # further permissions checked in the db
             
-            request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_PETITION ) for content_type in HC.REPOSITORY_CONTENT_TYPES ] )
+            request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_PETITION ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ self._service.GetServiceType() ] ] )
             
         
     
@@ -1170,7 +1170,7 @@ class HydrusResourceRestrictedImmediateUpdate( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
-        request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ] )
+        request.hydrus_account.CheckAtLeastOnePermission( [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ self._service.GetServiceType() ] ] )
         
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):

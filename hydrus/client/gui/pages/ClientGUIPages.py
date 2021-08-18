@@ -110,9 +110,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         self._services = HG.client_controller.services_manager.GetServices()
         
-        repository_petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
-        
-        self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_petition_permissions ) ]
+        self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
         
         self._InitButtons( 'home' )
         
@@ -1595,8 +1593,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         click_over_tab = tab_index != -1
         
+        can_go_home = tab_index > 1
         can_go_left = tab_index > 0
         can_go_right = tab_index < end_index
+        can_go_end = tab_index < end_index - 1
         
         click_over_page_of_pages = False
         
@@ -1619,19 +1619,100 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             ClientGUIMenus.AppendMenuItem( menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             
-            if num_pages > 1:
+            if more_than_one_tab:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
+                if not can_go_left or not can_go_right:
+                    
+                    if num_pages == 2:
+                        
+                        label = 'close other page'
+                        description = 'Close the other page.'
+                        
+                    else:
+                        
+                        label = 'close other pages'
+                        description = 'Close all pages but this one.'
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( menu, label, description, self._CloseOtherPages, tab_index )
+                    
+                else:
+                    
+                    close_menu = QW.QMenu( menu )
+                    
+                    ClientGUIMenus.AppendMenuItem( close_menu, 'other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
+                    
+                    if can_go_left:
+                        
+                        ClientGUIMenus.AppendMenuItem( close_menu, 'pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
+                        
+                    
+                    if can_go_right:
+                        
+                        ClientGUIMenus.AppendMenuItem( close_menu, 'pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, close_menu, 'close' )
+                    
+                
+                #
+                
+                move_menu = QW.QMenu( menu )
+                
+                if can_go_home:
+                    
+                    ClientGUIMenus.AppendMenuItem( move_menu, 'to left end', 'Move this page all the way to the left.', self._ShiftPage, tab_index, new_index=0 )
+                    
                 
                 if can_go_left:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
+                    ClientGUIMenus.AppendMenuItem( move_menu, 'left', 'Move this page one to the left.', self._ShiftPage, tab_index, delta=-1 )
                     
                 
                 if can_go_right:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
+                    ClientGUIMenus.AppendMenuItem( move_menu, 'right', 'Move this page one to the right.', self._ShiftPage, tab_index, 1 )
                     
+                
+                if can_go_end:
+                    
+                    ClientGUIMenus.AppendMenuItem( move_menu, 'to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index=end_index )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, move_menu, 'move page' )
+                
+                #
+                
+                selection_index = self.currentIndex()
+                
+                can_select_home = selection_index > 1
+                can_select_left = selection_index > 0
+                can_select_right = selection_index < end_index
+                can_select_end = selection_index < end_index - 1
+                
+                select_menu = QW.QMenu( menu )
+                
+                if can_select_home:
+                    
+                    ClientGUIMenus.AppendMenuItem( select_menu, 'first page', 'Select the page at the start of these.', self.MoveSelectionEnd, -1 )
+                    
+                
+                if can_select_left:
+                    
+                    ClientGUIMenus.AppendMenuItem( select_menu, 'page to the left', 'Select the page to the left of this one.', self.MoveSelection, -1 )
+                    
+                
+                if can_select_right:
+                    
+                    ClientGUIMenus.AppendMenuItem( select_menu, 'page to the right', 'Select the page to the right of this one.', self.MoveSelection, 1 )
+                    
+                
+                if can_select_end:
+                    
+                    ClientGUIMenus.AppendMenuItem( select_menu, 'last page', 'Select the page at the end of these.', self.MoveSelectionEnd, 1 )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1650,33 +1731,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             ClientGUIMenus.AppendMenuItem( menu, 'duplicate page', 'Duplicate this page.', self._DuplicatePage, tab_index )
             
             if more_than_one_tab:
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                can_home = tab_index > 1
-                can_move_left = tab_index > 0
-                can_move_right = tab_index < end_index
-                can_end = tab_index < end_index - 1
-                
-                if can_home:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'move to left end', 'Move this page all the way to the left.', self._ShiftPage, tab_index, new_index=0 )
-                    
-                
-                if can_move_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'move left', 'Move this page one to the left.', self._ShiftPage, tab_index, delta=-1 )
-                    
-                
-                if can_move_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'move right', 'Move this page one to the right.', self._ShiftPage, tab_index, 1 )
-                    
-                
-                if can_end:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'move to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index=end_index )
-                    
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 

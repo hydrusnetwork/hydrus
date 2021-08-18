@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_451"><a href="#version_451">version 451</a></h3></li>
+				<ul>
+					<li>stupid anti-virus thing:</li>
+					<li>we have had several more anti-virus false positives just recently. we discovered that at least one testbed used by these companies was testing the 'open html help' checkbox in the installer, which then launched Edge on the testbed, and then launched the Windows Update process for Edge and Skype, which was somehow interacting with UAC and thus considered suspicious activity owned by the hydrus installer process, lmao. thereafter, it seems the installer exe's DNS requests were somehow being cross-connected with the client.exe scan as that was identified as connected with the installer. taking that checkbox out as a test produced a much cleaner scan. there is a limit to how much of this nonsense I will accomodate, but this week we are trying a release without that 'open help' link in the installer, let's see how it goes</li>
+					<li>semi-related, I brushed up the install path message in the installer and clarified help->help will open the help in the first-start welcome popup message</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>I fixed a critical bug in tag sibling storage when a 'bad' tag's mapping is removed (e.g. 'delete A->B') and added ('add A->C') in the same transaction, and in a heap of fun other situations besides, that mostly resulted in the newly added sibling being forgotten. the bug was worse when this was on a local tag service via the manage siblings dialog. this problem is likely the cause of some of our weird sibling issues on clients that processed certain repository updates extremely quickly. I will keep investigating here for more issues and trigger another sibling reset for everyone in the future</li>
+					<li>the 'show some random pairs' button on the duplicates page is nicer--the 'did not find any pairs' notification is a popup rather than an annoying error dialog, and when there is nothing found, it also clears the page of thumbs. it also tries to guess if you are at the end of the current search, and if so, it will not do an auto re-fetch and will clear the page without producing the popup message</li>
+					<li>fixed a bug that meant file order was not being saved correctly in sessions! sorry for the trouble!</li>
+					<li>import of videos is now a little faster as the ffmpeg call to check resolution and duration is now retained to check for presence of an audio channel</li>
+					<li>when files are imported, the status messages are now much more granular. large and CPU-heavy files should move noticeably from hash generation to filetype calculation to metadata to actual file copying</li>
+					<li>fixed a database query bug in the new processing progress tracking code that was affecting some (perhaps older) versions of sqlite</li>
+					<li>when you trash/untrash/etc... a file in the media viewer, the top hover text now updates to show the file location change</li>
+					<li>fixed a typo bug in the new content type tracking that broke ipfs pinning yet again, sorry for the trouble! (issue #955)</li>
+					<li>I fleshed out my database pending and num_pending tests significantly. now all uploadable content types are tested, so ipfs should not break at the _db_ level again</li>
+					<li>the page tab menu now clumps the 'close x pages' into a dynamic submenu when there are several options and excludes duplicates (e.g. 'close others' and 'close to the left' when you right-click the rightmost page)</li>
+					<li>the page tab menu also puts the 'move' actions under a submenu</li>
+					<li>the page tab menu now has 'select' submenu for navigating home/left/right/end like the shortcuts</li>
+					<li>fixed some repository content type checking problems: showing petition pages when the user has moderation privileges on a repository, permission check when fetching number of petitions, and permissions check when uploading files</li>
+					<li>fixed a typo in the 'running in wine' html that made the whole document big and bold</li>
+					<li>across the program, a 'year' for most date calculations like 'system:time imported: more than a year ago' is now 365 days (up from 12 x 30-day months). these will likely be calendar calculated correctly in future, but for now we'll just stick with simple but just a bit more accurate</li>
+					<li>fixed a bug in mpv loop-seek when the system lags for a moment just when the user closes the media viewer and the video loops back to start</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>expanded my testing system to handle more 'read' database parameter testing, and added some unit tests for the new client api file search code</li>
+					<li>fixed the 'file_sort_asc' in the new client api file search call. it was a stupid untested typo, thank you for the reports (issue #959)</li>
+					<li>fixed 'file_service_name' and 'tag_service_name' when they are GET parameters in the client api</li>
+					<li>I fleshed out the file search sort help to say what ascending/descending means for each file sort type</li>
+					<li>.</li>
+					<li>boring database cleanup:</li>
+					<li>to cut down on redundant spam, the new query planner profile mode only plans each unique query text once per run of the mode</li>
+					<li>also fixed an issue in the query planner with multiple-row queries with an empty list argument</li>
+					<li>refactored the tag sibling and parent database storage and lookup code out to separate db modules</li>
+					<li>untangled and optimised a couple of sibling/parent lookup chain regeneration calls</li>
+					<li>moved more sibling and parent responsibility to the new modules, clearing some inline hardcoding out of the main class</li>
+					<li>cleaned up a bunch of sibling, parent, and display code generally, and improved communication between these modules, particularly in regards to update interactions and display sync</li>
+					<li>the similar files data tables are migrated to more appropriate locations. previously, they were all in client.caches.db, now the phash definition and file mapping tables are in master, and the similar files search record is now in main</li>
+				</ul>
 				<li><h3 id="version_450"><a href="#version_450">version 450</a></h3></li>
 				<ul>
 					<li>misc:</li>

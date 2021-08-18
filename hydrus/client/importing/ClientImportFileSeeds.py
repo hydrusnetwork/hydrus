@@ -618,25 +618,37 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Source file does not exist!' )
                 
             
-            if limited_mimes is not None:
-                
-                mime = HydrusFileHandling.GetMime( path )
-                
-                if mime not in limited_mimes:
-                    
-                    raise HydrusExceptions.VetoException( 'Not in allowed mimes!' )
-                    
-                
-            
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
             try:
+                
+                if status_hook is not None:
+                    
+                    status_hook( 'copying file to temp location' )
+                    
                 
                 copied = HydrusPaths.MirrorFile( path, temp_path )
                 
                 if not copied:
                     
                     raise Exception( 'File failed to copy to temp path--see log for error.' )
+                    
+                
+                if limited_mimes is not None:
+                    
+                    # I think this thing should and will be rolled into file import options late
+                    
+                    if status_hook is not None:
+                        
+                        status_hook( 'testing file type' )
+                        
+                    
+                    mime = HydrusFileHandling.GetMime( temp_path )
+                    
+                    if mime not in limited_mimes:
+                        
+                        raise HydrusExceptions.VetoException( 'Not in allowed mimes!' )
+                        
                     
                 
                 self.Import( temp_path, file_import_options, status_hook = status_hook )

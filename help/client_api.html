@@ -1218,27 +1218,27 @@
 					</ul>
 					<p>More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.</p>
                                         <p>The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'my files' and 'all known tags', and you can use either key or name as in <a href="#get_services">GET /get_services</a>, whichever is easiest for your situation.</p>
-                                        <p>file_sort_type is an integer according to this enum (default is import time):</p>
+                                        <p>file_sort_asc is 'true' for ascending, and 'false' for descending. The default is descending.</p>
+                                        <p>file_sort_type is by default <i>import time</i>. It is an integer according to the following enum, and I have written the semantic (asc/desc) meaning for each type after:</p>
                                         <ul>
-                                            <li>0 - file size</li>
-                                            <li>1 - duration</li>
-                                            <li>2 - import time</li>
-                                            <li>3 - filetype</li>
-                                            <li>4 - random</li>
-                                            <li>5 - width</li>
-                                            <li>6 - height</li>
-                                            <li>7 - ratio</li>
-                                            <li>8 - number of pixels</li>
-                                            <li>9 - number of tags (on the current tag domain)</li>
-                                            <li>10 - number of media viewers</li>
-                                            <li>11 - total media viewtime</li>
-                                            <li>12 - approximate bitrate</li>
-                                            <li>13 - has audio</li>
-                                            <li>14 - modified time</li>
-                                            <li>15 - framerate</li>
-                                            <li>16 - number of frames</li>
+                                            <li>0 - file size (smallest first/largest first)</li>
+                                            <li>1 - duration (shortest first/longest first)</li>
+                                            <li>2 - import time (oldest first/newest first)</li>
+                                            <li>3 - filetype (N/A)</li>
+                                            <li>4 - random (N/A)</li>
+                                            <li>5 - width (slimmest first/widest first)</li>
+                                            <li>6 - height (shortest first/tallest first)</li>
+                                            <li>7 - ratio (tallest first/widest first)</li>
+                                            <li>8 - number of pixels (ascending/descending)</li>
+                                            <li>9 - number of tags (on the current tag domain) (ascending/descending)</li>
+                                            <li>10 - number of media views (ascending/descending)</li>
+                                            <li>11 - total media viewtime (ascending/descending)</li>
+                                            <li>12 - approximate bitrate (smallest first/largest first)</li>
+                                            <li>13 - has audio (audio first/silent first)</li>
+                                            <li>14 - modified time (oldest first/newest first)</li>
+                                            <li>15 - framerate (slowest first/fastest first)</li>
+                                            <li>16 - number of frames (smallest first/largest first)</li>
                                         </ul>
-                                        <p>file_sort_asc is 'true' for ascending, and 'false' for descending. The default is descending. What ascending or descending means in a context can be complicated (e.g. for ratio), so you might want to play around with it or double-check the UI in the client to figure it out.</p>
 					<p>Response description: The full list of numerical file ids that match the search.</p>
 					<li>
 						<p>Example response:</p>

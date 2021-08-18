@@ -39,7 +39,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
-CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain' }
+CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'file_service_name', 'tag_service_name' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple', 'file_sort_asc' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
@@ -1694,7 +1694,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
         sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
         
         # newest first
-        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', file_sort_type ), sort_order = CC.SORT_DESC )
+        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', file_sort_type ), sort_order = sort_order )
         
         hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by, apply_implicit_limit = False )
         

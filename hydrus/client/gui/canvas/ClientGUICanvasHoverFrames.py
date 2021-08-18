@@ -1123,6 +1123,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             if do_redraw:
                 
+                self._ResetText()
                 self._ResetButtons()
                 
             

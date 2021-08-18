@@ -193,6 +193,15 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     num_frames = None
     num_words = None
     
+    if mime in HC.MIMES_THAT_DEFINITELY_HAVE_AUDIO:
+        
+        has_audio = True
+        
+    else:
+        
+        has_audio = False
+        
+    
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
@@ -203,7 +212,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     elif mime in ( HC.IMAGE_APNG, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_REALMEDIA, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
         
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
+        ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
     elif mime == HC.APPLICATION_PDF:
         
@@ -220,19 +229,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         ( file_duration_in_s, stream_duration_in_s ) = HydrusVideoHandling.ParseFFMPEGDuration( ffmpeg_lines )
         
         duration = int( file_duration_in_s * 1000 )
-        
-    
-    if mime in HC.MIMES_THAT_DEFINITELY_HAVE_AUDIO:
-        
-        has_audio = True
-        
-    elif mime in HC.MIMES_THAT_MAY_HAVE_AUDIO:
-        
-        has_audio = HydrusAudioHandling.VideoHasAudio( path )
-        
-    else:
-        
-        has_audio = False
         
     
     if width is not None and width < 0:

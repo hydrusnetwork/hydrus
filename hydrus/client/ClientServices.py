@@ -58,7 +58,7 @@ def GenerateDefaultServiceDictionary( service_type ):
                 dictionary[ 'update_downloading_paused' ] = False
                 dictionary[ 'update_processing_paused' ] = False
                 
-                content_types = tuple( HC.REPOSITORY_CONTENT_TYPES[ service_type ] )
+                content_types = tuple( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
                 
                 dictionary[ 'update_processing_content_types_paused' ] = [ [ content_type, False ] for content_type in content_types ]
                 
@@ -1514,7 +1514,7 @@ class ServiceRepository( ServiceRestricted ):
         
         if 'update_processing_content_types_paused' not in dictionary:
             
-            content_types = tuple( HC.REPOSITORY_CONTENT_TYPES[ self._service_type ] )
+            content_types = tuple( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ self._service_type ] )
             
             dictionary[ 'update_processing_content_types_paused' ] = [ [ content_type, False ] for content_type in content_types ]
             

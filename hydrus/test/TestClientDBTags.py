@@ -2256,7 +2256,7 @@ class TestClientDBTags( unittest.TestCase ):
                     
                     if do_regen_sibs:
                         
-                        self._write( 'regenerate_tag_siblings_cache' )
+                        self._write( 'regenerate_tag_siblings_and_parents_cache' )
                         
                         self._sync_display()
                         
@@ -2485,7 +2485,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 if do_regen_sibs:
                     
-                    self._write( 'regenerate_tag_siblings_cache' )
+                    self._write( 'regenerate_tag_siblings_and_parents_cache' )
                     
                     self._sync_display()
                     
@@ -2603,7 +2603,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 if do_regen_sibs:
                     
-                    self._write( 'regenerate_tag_siblings_cache' )
+                    self._write( 'regenerate_tag_siblings_and_parents_cache' )
                     
                     self._sync_display()
                     
