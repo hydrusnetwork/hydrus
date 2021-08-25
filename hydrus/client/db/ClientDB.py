@@ -8001,7 +8001,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for table_name in table_names:
                     
-                    import_timestamp_hash_ids.update( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ) ) )
+                    import_timestamp_hash_ids.update( self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ) ) ) )
                     
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, import_timestamp_hash_ids )
