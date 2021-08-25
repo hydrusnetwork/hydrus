@@ -4282,7 +4282,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
             
             t += 0.25
             
@@ -4290,23 +4290,23 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
             
             t += 0.25
             
@@ -4362,11 +4362,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.5
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_MEDIA_FOCUS ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SET_MEDIA_FOCUS ) )
             
             t += 0.5
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_SEARCH_FOCUS ) )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SET_SEARCH_FOCUS ) )
             
             t += 0.5
             
@@ -6391,7 +6391,7 @@ Try to keep this below 10 million!'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE ) )
         
         #
         
@@ -6441,10 +6441,10 @@ Try to keep this below 10 million!'''
         
         download_menu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
         
         ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
         
@@ -6465,8 +6465,8 @@ Try to keep this below 10 million!'''
         
         special_menu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
-        ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
         
         ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
         
@@ -6863,11 +6863,9 @@ Try to keep this below 10 million!'''
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_EXIT_APPLICATION:
                 

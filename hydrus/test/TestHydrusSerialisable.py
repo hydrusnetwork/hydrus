@@ -136,12 +136,14 @@ class TestSerialisables( unittest.TestCase ):
             
             self.assertEqual( obj.GetCommandType(), dupe_obj.GetCommandType() )
             
-            self.assertEqual( obj.GetData(), dupe_obj.GetData() )
+            self.assertSequenceEqual( tuple( obj._data ), tuple( dupe_obj._data ) )
             
         
         acs = []
         
-        acs.append( ( CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_ARCHIVE_FILE ), 'archive file' ) )
+        acs.append( ( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ), 'archive file' ) )
+        acs.append( ( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MEDIA_SEEK_DELTA, simple_data = ( -1, 2500 ) ), 'seek media (back 2.5 seconds)' ) )
+        acs.append( ( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MEDIA_SEEK_DELTA, simple_data = ( 1, 800 ) ), 'seek media (forwards 800 milliseconds)' ) )
         acs.append( ( CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) ), 'flip on/off mappings "test" for unknown service!' ) )
         acs.append( ( CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) ), 'flip on/off mappings "test" for my tags' ) )
         acs.append( ( CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_SET, 0.4 ) ), 'set ratings uncertain rating, "0.4" for unknown service!' ) )
@@ -430,7 +432,7 @@ class TestSerialisables( unittest.TestCase ):
             
             for ( shortcut, command ) in obj:
                 
-                self.assertEqual( dupe_obj.GetCommand( shortcut ).GetData(), command.GetData() )
+                self.assertEqual( dupe_obj.GetCommand( shortcut ), command )
                 
             
         
@@ -441,7 +443,7 @@ class TestSerialisables( unittest.TestCase ):
             self._dump_and_load_and_test( shortcuts, test )
             
         
-        command_1 = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_ARCHIVE_FILE )
+        command_1 = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE )
         command_2 = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) )
         command_3 = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) )
         
@@ -467,11 +469,11 @@ class TestSerialisables( unittest.TestCase ):
         
         self._dump_and_load_and_test( shortcut_set, test )
         
-        self.assertEqual( shortcut_set.GetCommand( k_shortcut_1 ).GetData(), command_1.GetData() )
+        self.assertEqual( tuple( shortcut_set.GetCommand( k_shortcut_1 )._data ), tuple( command_1._data ) )
         
         shortcut_set.SetCommand( k_shortcut_1, command_3 )
         
-        self.assertEqual( shortcut_set.GetCommand( k_shortcut_1 ).GetData(), command_3.GetData() )
+        self.assertEqual( tuple( shortcut_set.GetCommand( k_shortcut_1 )._data ), tuple( command_3._data ) )
         
     
     def test_SERIALISABLE_TYPE_SUBSCRIPTION( self ):

@@ -356,13 +356,57 @@ class SimpleSubPanel( QW.QWidget ):
             self._simple_actions.addItem( display_string, data )
             
         
+        self._seek_panel = QW.QWidget( self )
+        
+        choices = [
+            ( 'back', -1 ),
+            ( 'forwards', 1 )
+        ]
+        
+        self._seek_direction = ClientGUICommon.BetterRadioBox( self._seek_panel, choices = choices )
+        
+        self._seek_duration_s = QP.MakeQSpinBox( self._seek_panel, max=3599, width = 60 )
+        self._seek_duration_ms = QP.MakeQSpinBox( self._seek_panel, max=999, width = 60 )
+        
+        #
+        
+        self._seek_duration_s.setValue( 5 )
+        self._seek_duration_ms.setValue( 0 )
+        
+        self._seek_duration_s.value() * 1000 + self._seek_duration_ms.value()
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._seek_direction, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._seek_duration_s, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._seek_panel, label = 's' ), CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._seek_duration_ms, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._seek_panel, label = 'ms' ), CC.FLAGS_CENTER )
+        hbox.addStretch( 1 )
+        
+        self._seek_panel.setLayout( hbox )
+        
         #
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._simple_actions, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
+        
+        self._simple_actions.currentIndexChanged.connect( self._UpdateControls )
+        
+        self._UpdateControls()
+        
+    
+    def _UpdateControls( self ):
+        
+        action = self._simple_actions.GetValue()
+        
+        self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
         
     
     def GetValue( self ):
@@ -375,13 +419,45 @@ class SimpleSubPanel( QW.QWidget ):
             
         else:
             
-            return CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, action )
+            if action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+                
+                direction = self._seek_direction.GetValue()
+                
+                s = self._seek_duration_s.value()
+                ms = self._seek_duration_ms.value() + ( 1000 * s )
+                
+                simple_data = ( direction, ms )
+                
+            else:
+                
+                simple_data = None
+                
+            
+            return CAC.ApplicationCommand.STATICCreateSimpleCommand( action, simple_data = simple_data )
             
         
     
-    def SetValue( self, value ):
+    def SetValue( self, command: CAC.ApplicationCommand ):
         
-        self._simple_actions.SetValue( value )
+        action = command.GetSimpleAction()
+        
+        self._simple_actions.SetValue( action )
+        
+        if action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+            
+            ( direction, ms ) = command.GetSimpleData()
+            
+            self._seek_direction.SetValue( direction )
+            
+            s = ms // 1000
+            
+            ms = ms % 1000
+            
+            self._seek_duration_s.setValue( s )
+            self._seek_duration_ms.setValue( ms )
+            
+        
+        self._UpdateControls()
         
     
 class TagSubPanel( QW.QWidget ):
@@ -533,13 +609,9 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
-            
-            self._simple_sub_panel.SetValue( action )
+            self._simple_sub_panel.SetValue( command )
             
             self._panel_choice.SetValue( self.PANEL_SIMPLE )
             

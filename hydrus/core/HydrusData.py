@@ -1213,7 +1213,7 @@ def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
         
         output.seek( 0 )
         
-        details = output.read()
+        profile_text = output.read()
         
         with HG.profile_counter_lock:
             
@@ -1225,7 +1225,7 @@ def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
             ShowText( summary )
             
         
-        HG.controller.PrintProfile( summary, details )
+        HG.controller.PrintProfile( summary, profile_text = profile_text )
         
     else:
         
@@ -1236,7 +1236,7 @@ def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
         
         if show_summary:
             
-            HG.controller.PrintProfile( summary, details )
+            HG.controller.PrintProfile( summary )
             
         
     

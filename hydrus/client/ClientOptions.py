@@ -346,6 +346,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_resolution' ] = 50
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_more_tags' ] = 8
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 4
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_nicer_ratio' ] = 10
         
         self._dictionary[ 'integers' ][ 'image_tile_cache_size' ] = 1024 * 1024 * 256
         

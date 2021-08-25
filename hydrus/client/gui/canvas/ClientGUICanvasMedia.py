@@ -211,7 +211,7 @@ class Animation( QW.QWidget ):
         return ( self._current_frame_index, self._current_timestamp_ms, self._paused, buffer_indices )
         
     
-    def GotoFrame( self, frame_index ):
+    def GotoFrame( self, frame_index, pause_afterwards = True ):
         
         if self._video_container is not None and self._video_container.IsInitialised():
             
@@ -227,7 +227,30 @@ class Animation( QW.QWidget ):
                 self._current_frame_drawn = False
                 
             
-            self._paused = True
+            if pause_afterwards:
+                
+                self._paused = True
+                
+            
+        
+    
+    def GotoTimestamp( self, timestamp_ms, round_direction, pause_afterwards = True ):
+        
+        if self._video_container is not None and self._video_container.IsInitialised():
+            
+            frame_index = self._video_container.GetFrameIndex( timestamp_ms )
+            
+            if frame_index == self._current_frame_index:
+                
+                frame_index += round_direction
+                
+            
+            if frame_index > self._media.GetNumFrames() - 1:
+                
+                frame_index = 0
+                
+            
+            self.GotoFrame( frame_index, pause_afterwards = pause_afterwards )
             
         
     
@@ -279,11 +302,9 @@ class Animation( QW.QWidget ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_PAUSE_MEDIA:
                 
@@ -292,6 +313,12 @@ class Animation( QW.QWidget ):
             elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
                 self.PausePlay()
+                
+            elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+                
+                ( direction, duration_ms ) = command.GetSimpleData()
+                
+                self.SeekDelta( direction, duration_ms )
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
@@ -376,6 +403,16 @@ class Animation( QW.QWidget ):
                         
                     
                 
+            
+        
+    
+    def SeekDelta( self, direction, duration_ms ):
+        
+        if self._video_container is not None and self._video_container.IsInitialised():
+            
+            new_ts = self._current_timestamp_ms + ( direction * duration_ms )
+            
+            self.GotoTimestamp( new_ts, direction, pause_afterwards = False )
             
         
     
@@ -1335,6 +1372,17 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def SeekDelta( self, direction, duration_ms ):
+        
+        if self._media is not None:
+            
+            if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+                
+                self._media_window.SeekDelta( direction, duration_ms )
+                
+            
+        
+    
     def SetEmbedButton( self ):
         
         self._HideAnimationBar()
@@ -1869,11 +1917,9 @@ class StaticImage( QW.QWidget ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 

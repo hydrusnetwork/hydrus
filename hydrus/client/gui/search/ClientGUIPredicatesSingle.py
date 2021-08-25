@@ -1800,7 +1800,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num = QP.MakeQSpinBox( self, min=-99999999, max=99999999 )
+        self._num = QP.MakeQSpinBox( self, min=-(2**31), max=(2**31)-1 )
         
         #
         

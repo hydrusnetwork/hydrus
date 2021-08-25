@@ -7,6 +7,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBModule
 
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBServices
 
@@ -45,6 +47,44 @@ def GenerateFilesTableName( service_id: int, status: int ) -> str:
         return petitioned_files_table_name
         
     
+class DBLocationSearchContext( object ):
+    
+    def __init__( self, location_search_context: ClientSearch.LocationSearchContext ):
+        
+        self.location_search_context = location_search_context
+        
+        self.files_table_name = None
+        
+    
+    def GetLocationSearchContext( self ) -> ClientSearch.LocationSearchContext:
+        
+        return self.location_search_context
+        
+    
+    def GetFileIteratorTableJoin( self, table_phrase: str ):
+        
+        if self.location_search_context.IsAllKnownFiles():
+            
+            return table_phrase
+            
+        else:
+            
+            return '{} CROSS JOIN {} USING ( hash_id )'.format( self.files_table_name, table_phrase )
+            
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ):
+        
+        if self.location_search_context.IsAllKnownFiles():
+            
+            return table_phrase
+            
+        else:
+            
+            return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.files_table_name )
+            
+        
+    
 class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_texts: ClientDBMaster.ClientDBMasterTexts ):
@@ -53,6 +93,8 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         self.modules_texts = modules_texts
         
         HydrusDBModule.HydrusDBModule.__init__( self, 'client files storage', cursor )
+        
+        self.temp_file_storage_table_name = None
         
     
     def _GetInitialIndexGenerationTuples( self ):
@@ -448,6 +490,73 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             
         
         return ( is_deleted, timestamp, file_deletion_reason )
+        
+    
+    def GetDBLocationSearchContext( self, location_search_context: ClientSearch.LocationSearchContext ):
+        
+        if not location_search_context.SearchesAnything():
+            
+            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ] )
+            
+        
+        db_location_search_context = DBLocationSearchContext( location_search_context )
+        
+        if location_search_context.IsAllKnownFiles():
+            
+            # no table set, obviously
+            
+            return db_location_search_context
+            
+        
+        table_names = []
+        
+        for current_service_key in location_search_context.current_service_keys:
+            
+            service_id = self.modules_services.GetServiceId( current_service_key )
+            
+            table_names.append( GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT ) )
+            
+        
+        for deleted_service_key in location_search_context.deleted_service_keys:
+            
+            service_id = self.modules_services.GetServiceId( deleted_service_key )
+            
+            table_names.append( GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED ) )
+            
+        
+        if len( table_names ) == 1:
+            
+            table_name = table_names[0]
+            
+            db_location_search_context.files_table_name = table_name
+            
+        else:
+            
+            # while I could make a VIEW of the UNION SELECT, we'll populate an indexed single column table to help query planner later on
+            # we're hardcoding the name to this class for now, so a limit of one db_location_search_context at a time _for now_
+            # we make change this in future to use wrapper temp int tables, we'll see
+            
+            # maybe I should stick this guy in 'temp' to live through db connection resets, but we'll see I guess. it is generally ephemeral, not going to linger through weird vacuum maintenance or anything right?
+            
+            if self.temp_file_storage_table_name is None:
+                
+                self.temp_file_storage_table_name = 'mem.temp_file_storage_hash_id'
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( self.temp_file_storage_table_name ) )
+                
+            else:
+                
+                self._Execute( 'DELETE FROM {};'.format( self.temp_file_storage_table_name ) )
+                
+            
+            select_query = ' UNION '.join( ( 'SELECT hash_id FROM {}'.format( table_name ) for table_name in table_names ) )
+            
+            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( self.temp_file_storage_table_name, select_query ) )
+            
+            db_location_search_context.files_table_name = self.temp_file_storage_table_name
+            
+        
+        return db_location_search_context
         
     
     def GetExpectedTableNames( self ) -> typing.Collection[ str ]:

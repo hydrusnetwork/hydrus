@@ -90,11 +90,9 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_EXIT_APPLICATION:
                 

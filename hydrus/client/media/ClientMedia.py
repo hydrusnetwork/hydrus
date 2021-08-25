@@ -87,6 +87,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     duplicate_comparison_score_much_higher_resolution = new_options.GetInteger( 'duplicate_comparison_score_much_higher_resolution' )
     duplicate_comparison_score_more_tags = new_options.GetInteger( 'duplicate_comparison_score_more_tags' )
     duplicate_comparison_score_older = new_options.GetInteger( 'duplicate_comparison_score_older' )
+    duplicate_comparison_score_nicer_ratio = new_options.GetInteger( 'duplicate_comparison_score_nicer_ratio' )
     
     #
     
@@ -302,12 +303,12 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             elif s_nice:
                 
                 operator = '>'
-                score = 10
+                score = duplicate_comparison_score_nicer_ratio
                 
             elif c_nice:
                 
                 operator = '<'
-                score = -10
+                score = -duplicate_comparison_score_nicer_ratio
                 
             
             if s_string == c_string:

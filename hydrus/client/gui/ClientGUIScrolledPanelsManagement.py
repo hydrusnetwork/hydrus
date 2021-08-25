@@ -656,14 +656,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             weights_panel = ClientGUICommon.StaticBox( self, 'duplicate filter comparison score weights' )
             
-            self._duplicate_comparison_score_higher_jpeg_quality = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_much_higher_jpeg_quality = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_higher_filesize = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_much_higher_filesize = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_higher_resolution = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_much_higher_resolution = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_more_tags = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
-            self._duplicate_comparison_score_older = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
+            self._duplicate_comparison_score_higher_jpeg_quality = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_much_higher_jpeg_quality = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_higher_filesize = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_much_higher_filesize = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_higher_resolution = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_much_higher_resolution = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_more_tags = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_older = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_nicer_ratio = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            
+            self._duplicate_comparison_score_nicer_ratio.setToolTip( 'For instance, 16:9 vs 640:357.')
             
             self._duplicate_filter_max_batch_size = QP.MakeQSpinBox( self, min = 10, max = 1024 )
             
@@ -677,6 +680,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_much_higher_resolution.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_resolution' ) )
             self._duplicate_comparison_score_more_tags.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_more_tags' ) )
             self._duplicate_comparison_score_older.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_older' ) )
+            self._duplicate_comparison_score_nicer_ratio.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_nicer_ratio' ) )
             
             self._duplicate_filter_max_batch_size.setValue( self._new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
             
@@ -692,10 +696,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Score for file with significantly higher resolution (as num pixels):', self._duplicate_comparison_score_much_higher_resolution ) )
             rows.append( ( 'Score for file with more tags:', self._duplicate_comparison_score_more_tags ) )
             rows.append( ( 'Score for file with non-trivially earlier import time:', self._duplicate_comparison_score_older ) )
+            rows.append( ( 'Score for file with \'nicer\' resolution ratio:', self._duplicate_comparison_score_nicer_ratio ) )
             
             gridbox = ClientGUICommon.WrapInGrid( weights_panel, rows )
             
             label = 'When processing potential duplicate pairs in the duplicate filter, the client tries to present the \'best\' file first. It judges the two files on a variety of potential differences, each with a score. The file with the greatest total score is presented first. Here you can tinker with these scores.'
+            label += os.linesep * 2
+            label += 'I recommend you leave all these as positive numbers, but if you wish, you can set a negative number to reduce the score.'
             
             st = ClientGUICommon.BetterStaticText( weights_panel, label )
             st.setWordWrap( True )
@@ -731,6 +738,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_resolution', self._duplicate_comparison_score_much_higher_resolution.value() )
             self._new_options.SetInteger( 'duplicate_comparison_score_more_tags', self._duplicate_comparison_score_more_tags.value() )
             self._new_options.SetInteger( 'duplicate_comparison_score_older', self._duplicate_comparison_score_older.value() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_nicer_ratio', self._duplicate_comparison_score_nicer_ratio.value() )
             
             self._new_options.SetInteger( 'duplicate_filter_max_batch_size', self._duplicate_filter_max_batch_size.value() )
             
@@ -3996,11 +4004,9 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_MANAGE_FILE_URLS:
                 

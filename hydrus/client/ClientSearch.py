@@ -951,9 +951,9 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def GetFileServiceKey( self ):
         
-        if len( self._location_search_context.current_service_keys ) > 0:
+        if self._location_search_context.SearchesAnything():
             
-            return self._location_search_context.current_service_keys[0]
+            return self._location_search_context.GetFileServiceKey()
             
         else:
             
@@ -1080,14 +1080,33 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
         self.deleted_service_keys = services_manager.FilterValidServiceKeys( self.deleted_service_keys )
         
     
+    def GetFileServiceKey( self ):
+        
+        if not self.IsOneDomain():
+            
+            raise Exception( 'Location context was asked for specific file domain, but it did not have a single domain' )
+            
+        
+        if len( self.current_service_keys ) > 0:
+            
+            ( service_key, ) = self.current_service_keys
+            
+        else:
+            
+            ( service_key, ) = self.deleted_service_keys
+            
+        
+        return service_key
+        
+    
     def IsAllKnownFiles( self ):
         
-        return len( self.deleted_service_keys ) == 0 and len( self.current_service_keys ) == 1 and CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
+        return self.IsOneDomain() and CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
         
     
     def IsAllLocalFiles( self ):
         
-        return len( self.deleted_service_keys ) == 0 and len( self.current_service_keys ) == 1 and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
+        return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
         
     
     def IsOneDomain( self ):
@@ -1098,6 +1117,16 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
     def SearchesAnything( self ):
         
         return len( self.current_service_keys ) + len( self.deleted_service_keys ) > 0
+        
+    
+    def SearchesCurrent( self ):
+        
+        return len( self.current_service_keys ) > 0
+        
+    
+    def SearchesDeleted( self ):
+        
+        return len( self.deleted_service_keys ) > 0
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT ] = LocationSearchContext
@@ -1158,6 +1187,11 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
             
             self.service_key = CC.COMBINED_TAG_SERVICE_KEY
             
+        
+    
+    def IsAllKnownTags( self ):
+        
+        return self.service_key == CC.COMBINED_TAG_SERVICE_KEY
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT ] = TagSearchContext

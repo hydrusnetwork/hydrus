@@ -116,11 +116,9 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_MANAGE_FILE_RATINGS:
                 

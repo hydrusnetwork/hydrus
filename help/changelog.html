@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_452"><a href="#version_452">version 452</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>my 'simple' shortcut commands can now store additional variables. to start things off, I have finally added 'seek video' shortcut commands that have back/forwards and second+millisecond values. these should work on the native video viewer and mpv, audio and video. existing users will have to add their own (do it to the 'media viewers - all' set), but new users will get ctrl+left/right for 2.5s back and 5s forwards as the new defaults. let me know if you have any trouble!</li>
+					<li>the maximum number tracked by 'tag as number' system predicate is expanded from -99999999->99999999 to -2^63 -> 2^63 - 1. tag caches will be regenerated on update to store these, it will take a few minutes. the input ui for the system predicate is temporarily limited to -/+2^31, but I'll expand it</li>
+					<li>subscriptions now have a checkbox for 'do not worry about subscription gaps'. if you have a subscription that gets files randomly, or gets an intentionally small sample, this will disable the 'hey, there was a gap, click here to fill it in' popup messages</li>
+					<li>you can now set negative values for the duplicate score weights in options->duplicates</li>
+					<li>also added a weight for the 'nice ratio' duplicate comparison</li>
+					<li>vastly improved the cancel speed for searches in the realm of 'get the files that have any xxx tag', be that all tags or a namespace wildcard, and also some important search setup for various 'all known files' search pages. if you have ever tried to search the PTR raw and run into a three minute uncancellable initial setup lag, it should be gone now!</li>
+					<li>when you right-click on files in a specific local file domain (e.g. trash or my files), the 'view this file's dupes' number check is now run on 'all local files' as well, and if the numbers differ, a second menu is shown for all local files. this should make it easier to chase dupes of trashed files that are still untrashed while also allowing a trash-only search</li>
+					<li>fixed a critical bug in repository mapping processing that was not adding mappings to certain caches for files imported before the repo was added, and/or the new repository 'per content type' processing reset. this mostly manifested as these files not showing up in search results despite the tag being there. there is more work to do here, so it is top priority next week, and likely some maintenance to regen the bad caches</li>
+					<li>.</li>
+					<li>boring rewrites for multiple local file services:</li>
+					<li>many users have asked for the ability, when multiple local file domains are available, to search multiple file domains at once. I spent time this week doing background work to support this, and a related concept of searching 'deleted' files, which is a current gap in the program and not always covered by 'all known files'. nothing significant changes, but almost all the file search code now works on n file domains rather than 1, but for now n=1 lmao</li>
+					<li>made a new 'database search context' object to handle a virtualised but still simple and fast file 'location view' at the database level</li>
+					<li>the primary file search call is converted to use this object. references to a single file service are replaced with the view or its components</li>
+					<li>all duplicate file search code is moved to the new location search context</li>
+					<li>searching by 'system:import time' now works over multiple domains, although it is a little muddled. in future, import time predicate will have an optional specific file service and do 'import time' vs 'deleted time'</li>
+					<li>'system:local' and 'system:not local' is adapted so it can still work fast with multiple file domains, sped up worst case 'local' time, and a new optimisation lets it run fast for 'deleted from local files' too</li>
+					<li>sorting search files by import time is now only supported if the search domain is just one domain</li>
+				</ul>
 				<li><h3 id="version_451"><a href="#version_451">version 451</a></h3></li>
 				<ul>
 					<li>stupid anti-virus thing:</li>

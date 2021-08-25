@@ -208,11 +208,9 @@ class EditSingleCtrlPanel( EditPanel ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action in self._ok_on_these_commands:
                 

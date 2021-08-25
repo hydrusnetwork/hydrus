@@ -148,6 +148,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         ( name, gug_key_and_name, query_headers, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
+        this_is_a_random_sample_sub = subscription.ThisIsARandomSampleSubscription()
         
         self._query_panel = ClientGUICommon.StaticBox( self, 'site and queries' )
         
@@ -202,6 +203,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._periodic_file_limit = QP.MakeQSpinBox( self._file_limits_panel, min=1, max=limits_max )
         self._periodic_file_limit.setToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
         
+        self._this_is_a_random_sample_sub = QW.QCheckBox( self._file_limits_panel )
+        self._this_is_a_random_sample_sub.setToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' )
+        
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
         
         self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'presentation' )
@@ -245,6 +249,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._initial_file_limit.setValue( initial_file_limit )
         self._periodic_file_limit.setValue( periodic_file_limit )
+        self._this_is_a_random_sample_sub.setChecked( this_is_a_random_sample_sub )
         
         ( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ) = subscription.GetPresentationOptions()
         
@@ -267,6 +272,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
         rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
+        rows.append( ( 'do not worry about subscription gaps: ', self._this_is_a_random_sample_sub ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._file_limits_panel, rows )
         
@@ -1077,11 +1083,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         file_import_options = self._file_import_options.GetValue()
         tag_import_options = self._tag_import_options.GetValue()
         
-        query_headers = self._query_headers.GetData()
-        
         subscription.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
-        subscription.SetQueryHeaders( query_headers )
+        subscription.SetThisIsARandomSampleSubscription( self._this_is_a_random_sample_sub.isChecked() )
+        
+        subscription.SetQueryHeaders( self._query_headers.GetData() )
         
         show_a_popup_while_working = self._show_a_popup_while_working.isChecked()
         publish_files_to_popup_button = self._publish_files_to_popup_button.isChecked()

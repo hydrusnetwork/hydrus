@@ -28,7 +28,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION
     SERIALISABLE_NAME = 'Subscription'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, name, gug_key_and_name = None ):
         
@@ -57,6 +57,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self._periodic_file_limit = 100
+        
+        self._this_is_a_random_sample_sub = False
+        
         self._paused = False
         
         self._file_import_options = new_options.GetDefaultFileImportOptions( 'quiet' )
@@ -168,6 +171,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             serialisable_checker_options,
             self._initial_file_limit,
             self._periodic_file_limit,
+            self._this_is_a_random_sample_sub,
             self._paused,
             serialisable_file_import_options,
             serialisable_tag_import_options,
@@ -189,6 +193,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             serialisable_checker_options,
             self._initial_file_limit,
             self._periodic_file_limit,
+            self._this_is_a_random_sample_sub,
             self._paused,
             serialisable_file_import_options,
             serialisable_tag_import_options,
@@ -231,6 +236,557 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         job_key.SetUserCallable( call )
         
         HG.client_controller.pub( 'message', job_key )
+        
+    
+    def _SyncQueries( self, job_key ):
+        
+        self._have_made_an_initial_sync_bandwidth_notification = False
+        
+        gug = HG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
+        
+        if gug is None:
+            
+            self._paused = True
+            
+            HydrusData.ShowText( 'The subscription "{}" could not find a Gallery URL Generator for "{}"! The sub has paused!'.format( self._name, self._gug_key_and_name[1] ) )
+            
+            return
+            
+        
+        try:
+            
+            gug.CheckFunctional()
+            
+        except HydrusExceptions.ParseException as e:
+            
+            self._paused = True
+            
+            message = 'The subscription "{}"\'s Gallery URL Generator, "{}" seems not to be functional! The sub has paused! The given reason was:'.format( self._name, self._gug_key_and_name[1] )
+            message += os.linesep * 2
+            message += str( e )
+            
+            HydrusData.ShowText( message )
+            
+            return
+            
+        
+        self._gug_key_and_name = gug.GetGUGKeyAndName() # just a refresher, to keep up with any changes
+        
+        query_headers = self._GetQueryHeadersForProcessing()
+        
+        query_headers = [ query_header for query_header in query_headers if query_header.IsSyncDue() ]
+        
+        num_queries = len( query_headers )
+        
+        for ( i, query_header ) in enumerate( query_headers ):
+            
+            status_prefix = 'synchronising'
+            
+            query_name = query_header.GetHumanName()
+            
+            if query_name != self._name:
+                
+                status_prefix += ' "' + query_name + '"'
+                
+            
+            status_prefix += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
+            
+            try:
+                
+                query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
+                
+            except HydrusExceptions.DBException as e:
+                
+                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                    
+                    self._DealWithMissingQueryLogContainerError( query_header )
+                    
+                    break
+                    
+                else:
+                    
+                    raise
+                    
+                
+            
+            try:
+                
+                self._SyncQuery( job_key, gug, query_header, query_log_container, status_prefix )
+                
+            except HydrusExceptions.CancelledException:
+                
+                break
+                
+            finally:
+                
+                HG.client_controller.WriteSynchronous( 'serialisable', query_log_container )
+                
+            
+        
+    
+    def _SyncQueriesCanDoWork( self ):
+        
+        result = True in ( query_header.IsSyncDue() for query_header in self._query_headers )
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Subscription "{}" checking if any sync work due: {}'.format( self._name, result ) )
+            
+        
+        return result
+        
+    
+    def _SyncQuery(
+        self,
+        job_key: ClientThreading.JobKey,
+        gug: ClientNetworkingDomain.GalleryURLGenerator, # not actually correct for an ngug, but _whatever_
+        query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader,
+        query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer,
+        status_prefix: str
+        ):
+        
+        query_text = query_header.GetQueryText()
+        query_name = query_header.GetHumanName()
+        
+        file_seed_cache = query_log_container.GetFileSeedCache()
+        gallery_seed_log = query_log_container.GetGallerySeedLog()
+        
+        this_is_initial_sync = query_header.IsInitialSync()
+        num_master_file_seeds_at_start = file_seed_cache.GetApproxNumMasterFileSeeds()
+        total_new_urls_for_this_sync = 0
+        total_already_in_urls_for_this_sync = 0
+        
+        gallery_urls_seen_this_sync = set()
+        
+        if this_is_initial_sync:
+            
+            file_limit_for_this_sync = self._initial_file_limit
+            
+        else:
+            
+            file_limit_for_this_sync = self._periodic_file_limit
+            
+        
+        file_seeds_to_add_in_this_sync = set()
+        file_seeds_to_add_in_this_sync_ordered = []
+        
+        stop_reason = 'unknown stop reason'
+        
+        job_key.SetVariable( 'popup_text_1', status_prefix )
+        
+        initial_search_urls = gug.GenerateGalleryURLs( query_text )
+        
+        if len( initial_search_urls ) == 0:
+            
+            self._paused = True
+            
+            HydrusData.ShowText( 'The subscription "' + self._name + '"\'s Gallery URL Generator, "' + self._gug_key_and_name[1] + '" did not generate any URLs! The sub has paused!' )
+            
+            raise HydrusExceptions.CancelledException( 'Bad GUG.' )
+            
+        
+        gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = True ) for url in initial_search_urls ]
+        
+        gallery_seed_log.AddGallerySeeds( gallery_seeds )
+        
+        try:
+            
+            while gallery_seed_log.WorkToDo():
+                
+                p1 = not self._CanDoWorkNow()
+                ( login_ok, login_reason ) = query_header.GalleryLoginOK( HG.client_controller.network_engine, self._name )
+                
+                if p1 or not login_ok:
+                    
+                    if not login_ok:
+                        
+                        if not self._paused:
+                            
+                            message = 'Query "{}" for subscription "{}" seemed to have an invalid login. The reason was:'.format( query_header.GetHumanName(), self._name )
+                            message += os.linesep * 2
+                            message += login_reason
+                            message += os.linesep * 2
+                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                            
+                            HydrusData.ShowText( message )
+                            
+                            self._DelayWork( 300, login_reason )
+                            
+                            self._paused = True
+                            
+                        
+                    
+                    raise HydrusExceptions.CancelledException( 'A problem, so stopping.' )
+                    
+                
+                if job_key.IsCancelled():
+                    
+                    stop_reason = 'gallery parsing cancelled, likely by user'
+                    
+                    self._DelayWork( 600, stop_reason )
+                    
+                    raise HydrusExceptions.CancelledException( 'User cancelled.' )
+                    
+                
+                gallery_seed = gallery_seed_log.GetNextGallerySeed( CC.STATUS_UNKNOWN )
+                
+                if gallery_seed is None:
+                    
+                    stop_reason = 'thought there was a page to check, but apparently there was not!'
+                    
+                    break
+                    
+                
+                def status_hook( text ):
+                    
+                    if len( text ) > 0:
+                        
+                        text = text.splitlines()[0]
+                        
+                    
+                    job_key.SetVariable( 'popup_text_1', status_prefix + ': ' + text )
+                    
+                
+                def title_hook( text ):
+                    
+                    pass
+                    
+                
+                def file_seeds_callable( gallery_page_of_file_seeds ):
+                    
+                    num_urls_added = 0
+                    num_urls_already_in_file_seed_cache = 0
+                    can_search_for_more_files = True
+                    stop_reason = 'unknown stop reason'
+                    current_contiguous_num_urls_already_in_file_seed_cache = 0
+                    num_file_seeds_in_this_page = len( gallery_page_of_file_seeds )
+                    
+                    for file_seed in gallery_page_of_file_seeds:
+                        
+                        if file_seed in file_seeds_to_add_in_this_sync:
+                            
+                            # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
+                            # we don't want to count these 'seen before this run' urls in the 'caught up to last time' count
+                            
+                            continue
+                            
+                        
+                        # When are we caught up? This is not a trivial problem. Tags are not always added when files are uploaded, so the order we find files is not completely reliable.
+                        # Ideally, we want to search a _bit_ deeper than the first already-seen.
+                        # And since we have a page of urls here and now, there is no point breaking early if there might be some new ones at the end.
+                        # Current rule is "We are caught up if the final X contiguous files are 'already in'". X is 5 for now.
+                        
+                        if file_seed_cache.HasFileSeed( file_seed ):
+                            
+                            num_urls_already_in_file_seed_cache += 1
+                            current_contiguous_num_urls_already_in_file_seed_cache += 1
+                            
+                            if current_contiguous_num_urls_already_in_file_seed_cache >= 100:
+                                
+                                can_search_for_more_files = False
+                                stop_reason = 'saw 100 previously seen urls in a row, so assuming this is a large gallery'
+                                
+                                break
+                                
+                            
+                        else:
+                            
+                            num_urls_added += 1
+                            current_contiguous_num_urls_already_in_file_seed_cache = 0
+                            
+                            file_seeds_to_add_in_this_sync.add( file_seed )
+                            file_seeds_to_add_in_this_sync_ordered.append( file_seed )
+                            
+                        
+                        if file_limit_for_this_sync is not None:
+                            
+                            if total_new_urls_for_this_sync + num_urls_added >= file_limit_for_this_sync:
+                                
+                                # we have found enough new files this sync, so should stop adding files and new gallery pages
+                                
+                                if this_is_initial_sync:
+                                    
+                                    stop_reason = 'hit initial file limit'
+                                    
+                                else:
+                                    
+                                    if total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache > 0:
+                                        
+                                        # this sync produced some knowns, so it is likely we have stepped through a mix of old and tagged-late new files
+                                        # this is no reason to go crying to the user
+                                        
+                                        stop_reason = 'hit periodic file limit after seeing several already-seen files'
+                                        
+                                    else:
+                                        
+                                        # this page had all entirely new files
+                                        
+                                        if self._this_is_a_random_sample_sub:
+                                            
+                                            stop_reason = 'hit periodic file limit'
+                                            
+                                        else:
+                                            
+                                            self._ShowHitPeriodicFileLimitMessage( query_name, query_text, file_limit_for_this_sync )
+                                            
+                                            stop_reason = 'hit periodic file limit without seeing any already-seen files!'
+                                            
+                                        
+                                    
+                                
+                                can_search_for_more_files = False
+                                
+                                break
+                                
+                            
+                        
+                        if not this_is_initial_sync:
+                            
+                            # ok, there are a couple of situations where we don't want to go steamroll past a certain point:
+                            
+                            # if the user set 5 initial file limit but 100 periodic limit, then on the first few syncs, we'll want to notice that situation and not steamroll through that first five (or ~seven on third sync)
+                            # if 'X' is new and get, 'A' is already in, and '-' is new and don't get, the page should be:
+                            # XXXAAAAA----------------------------------
+                            
+                            # the pixiv situation, where a single gallery page may have hundreds of results (and/or multi-file results that will pad out the file cache with more items)
+                            # super large gallery pages interfere with the compaction system, adding results that were removed again and making WE_HIT_OLD_GROUND_THRESHOLD test not work correct
+                            # similar to above:
+                            # XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                            # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                            # AAAAAAAAAAAAAAAAAAAA-----------------------------------
+                            # -------------------------------------------------------
+                            # ----------------------
+                            
+                            # I had specific logic targeting both these cases, but in making those, I make the num_master_file_seeds_at_start, which is actually the better thing to test
+                            # If the sub has seen basically everything it started with, we are by definition caught up and should stop immediately!
+                            
+                            excuse_the_odd_deleted_file_coefficient = 0.95
+                            
+                            # we found all the 'A's
+                            we_have_seen_everything_we_already_got = total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache >= num_master_file_seeds_at_start * excuse_the_odd_deleted_file_coefficient
+                            
+                            if we_have_seen_everything_we_already_got:
+                                
+                                stop_reason = 'saw everything I had previously (probably large gallery page or small recent initial sync), so assuming I caught up'
+                                
+                                can_search_for_more_files = False
+                                
+                                break
+                                
+                            
+                        
+                    
+                    WE_HIT_OLD_GROUND_THRESHOLD = 5
+                    
+                    if can_search_for_more_files:
+                        
+                        if current_contiguous_num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
+                            
+                            # this gallery page has caught up to before, so it should not spawn any more gallery pages
+                            
+                            can_search_for_more_files = False
+                            stop_reason = 'saw {} contiguous previously seen urls at end of page, so assuming we caught up'.format( HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) )
+                            
+                        
+                        if num_urls_added == 0:
+                            
+                            can_search_for_more_files = False
+                            stop_reason = 'no new urls found'
+                            
+                        
+                    
+                    return ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason )
+                    
+                
+                job_key.SetVariable( 'popup_text_1', status_prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
+                
+                try:
+                    
+                    ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
+                    
+                except HydrusExceptions.CancelledException as e:
+                    
+                    stop_reason = 'gallery network job cancelled, likely by user'
+                    
+                    self._DelayWork( 600, stop_reason )
+                    
+                    raise HydrusExceptions.CancelledException( 'User cancelled.' )
+                    
+                except Exception as e:
+                    
+                    stop_reason = str( e )
+                    
+                    raise
+                    
+                
+                total_new_urls_for_this_sync += num_urls_added
+                total_already_in_urls_for_this_sync += num_urls_already_in_file_seed_cache
+                
+                if file_limit_for_this_sync is not None and total_new_urls_for_this_sync >= file_limit_for_this_sync:
+                    
+                    # we have found enough new files this sync, so stop and cancel any outstanding gallery urls
+                    
+                    if this_is_initial_sync:
+                        
+                        stop_reason = 'hit initial file limit'
+                        
+                    else:
+                        
+                        stop_reason = 'hit periodic file limit'
+                        
+                    
+                    break
+                    
+                
+            
+        finally:
+            
+            # now clean up any lingering gallery seeds
+            
+            while gallery_seed_log.WorkToDo():
+                
+                gallery_seed = gallery_seed_log.GetNextGallerySeed( CC.STATUS_UNKNOWN )
+                
+                if gallery_seed is None:
+                    
+                    break
+                    
+                
+                gallery_seed.SetStatus( CC.STATUS_VETOED, note = stop_reason )
+                
+            
+        
+        file_seeds_to_add_in_this_sync_ordered.reverse()
+        
+        # 'first' urls are now at the end, so the file_seed_cache should stay roughly in oldest->newest order
+        
+        file_seed_cache.AddFileSeeds( file_seeds_to_add_in_this_sync_ordered )
+        
+        query_header.RegisterSyncComplete( self._checker_options, query_log_container )
+        
+        #
+        
+        if query_header.IsDead():
+            
+            if this_is_initial_sync:
+                
+                HydrusData.ShowText( 'The query "{}" for subscription "{}" did not find any files on its first sync! Could the query text have a typo, like a missing underscore?'.format( query_name, self._name ) )
+                
+            else:
+                
+                death_file_velocity = self._checker_options.GetDeathFileVelocity()
+                
+                ( death_files_found, death_time_delta ) = death_file_velocity
+                
+                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusData.TimeDeltaToPrettyTimeDelta( death_time_delta ) ) )
+                
+            
+        else:
+            
+            if this_is_initial_sync:
+                
+                if not query_header.FileBandwidthOK( HG.client_controller.network_engine.bandwidth_manager, self._name ) and not self._have_made_an_initial_sync_bandwidth_notification:
+                    
+                    HydrusData.ShowText( 'FYI: The query "{}" for subscription "{}" performed its initial sync ok, but it is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.'.format( query_name, self._name ) )
+                    
+                    self._have_made_an_initial_sync_bandwidth_notification = True
+                    
+                
+            
+        
+    
+    def _SyncQueryLogContainersCanDoWork( self ):
+        
+        result = True in ( query_header.WantsToResyncWithLogContainer() for query_header in self._query_headers )
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Subscription "{}" checking if any log containers need to be resynced: {}'.format( self._name, result ) )
+            
+        
+        return result
+        
+    
+    def _SyncQueryLogContainers( self ):
+        
+        query_headers_to_do = [ query_header for query_header in self._query_headers if query_header.WantsToResyncWithLogContainer() ]
+        
+        for query_header in self._query_headers:
+            
+            if not query_header.WantsToResyncWithLogContainer():
+                
+                continue
+                
+            
+            try:
+                
+                query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
+                
+            except HydrusExceptions.DBException as e:
+                
+                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                    
+                    self._DealWithMissingQueryLogContainerError( query_header )
+                    
+                    break
+                    
+                else:
+                    
+                    raise
+                    
+                
+            
+            query_header.SyncToQueryLogContainer( self._checker_options, query_log_container )
+            
+            # don't need to save the container back, we made no changes
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            (
+                serialisable_gug_key_and_name,
+                serialisable_query_headers,
+                serialisable_checker_options,
+                initial_file_limit,
+                periodic_file_limit,
+                paused,
+                serialisable_file_import_options,
+                serialisable_tag_import_options,
+                no_work_until,
+                no_work_until_reason,
+                show_a_popup_while_working,
+                publish_files_to_popup_button,
+                publish_files_to_page,
+                publish_label_override,
+                merge_query_publish_events
+            ) = old_serialisable_info
+            
+            this_is_a_random_sample_sub = False
+            
+            new_serialisable_info = (
+                serialisable_gug_key_and_name,
+                serialisable_query_headers,
+                serialisable_checker_options,
+                initial_file_limit,
+                periodic_file_limit,
+                this_is_a_random_sample_sub,
+                paused,
+                serialisable_file_import_options,
+                serialisable_tag_import_options,
+                no_work_until,
+                no_work_until_reason,
+                show_a_popup_while_working,
+                publish_files_to_popup_button,
+                publish_files_to_page,
+                publish_label_override,
+                merge_query_publish_events
+            )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def _WorkOnQueriesFiles( self, job_key ):
@@ -563,503 +1119,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ClientImporting.PublishPresentationHashes( publishing_label, presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
                 
-            
-        
-    
-    def _SyncQueries( self, job_key ):
-        
-        self._have_made_an_initial_sync_bandwidth_notification = False
-        
-        gug = HG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
-        
-        if gug is None:
-            
-            self._paused = True
-            
-            HydrusData.ShowText( 'The subscription "{}" could not find a Gallery URL Generator for "{}"! The sub has paused!'.format( self._name, self._gug_key_and_name[1] ) )
-            
-            return
-            
-        
-        try:
-            
-            gug.CheckFunctional()
-            
-        except HydrusExceptions.ParseException as e:
-            
-            self._paused = True
-            
-            message = 'The subscription "{}"\'s Gallery URL Generator, "{}" seems not to be functional! The sub has paused! The given reason was:'.format( self._name, self._gug_key_and_name[1] )
-            message += os.linesep * 2
-            message += str( e )
-            
-            HydrusData.ShowText( message )
-            
-            return
-            
-        
-        self._gug_key_and_name = gug.GetGUGKeyAndName() # just a refresher, to keep up with any changes
-        
-        query_headers = self._GetQueryHeadersForProcessing()
-        
-        query_headers = [ query_header for query_header in query_headers if query_header.IsSyncDue() ]
-        
-        num_queries = len( query_headers )
-        
-        for ( i, query_header ) in enumerate( query_headers ):
-            
-            status_prefix = 'synchronising'
-            
-            query_name = query_header.GetHumanName()
-            
-            if query_name != self._name:
-                
-                status_prefix += ' "' + query_name + '"'
-                
-            
-            status_prefix += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
-            
-            try:
-                
-                query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
-                
-            except HydrusExceptions.DBException as e:
-                
-                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
-                    
-                    self._DealWithMissingQueryLogContainerError( query_header )
-                    
-                    break
-                    
-                else:
-                    
-                    raise
-                    
-                
-            
-            try:
-                
-                self._SyncQuery( job_key, gug, query_header, query_log_container, status_prefix )
-                
-            except HydrusExceptions.CancelledException:
-                
-                break
-                
-            finally:
-                
-                HG.client_controller.WriteSynchronous( 'serialisable', query_log_container )
-                
-            
-        
-    
-    def _SyncQueriesCanDoWork( self ):
-        
-        result = True in ( query_header.IsSyncDue() for query_header in self._query_headers )
-        
-        if HG.subscription_report_mode:
-            
-            HydrusData.ShowText( 'Subscription "{}" checking if any sync work due: {}'.format( self._name, result ) )
-            
-        
-        return result
-        
-    
-    def _SyncQuery(
-        self,
-        job_key: ClientThreading.JobKey,
-        gug: ClientNetworkingDomain.GalleryURLGenerator, # not actually correct for an ngug, but _whatever_
-        query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader,
-        query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer,
-        status_prefix: str
-        ):
-        
-        query_text = query_header.GetQueryText()
-        query_name = query_header.GetHumanName()
-        
-        file_seed_cache = query_log_container.GetFileSeedCache()
-        gallery_seed_log = query_log_container.GetGallerySeedLog()
-        
-        this_is_initial_sync = query_header.IsInitialSync()
-        num_master_file_seeds_at_start = file_seed_cache.GetApproxNumMasterFileSeeds()
-        total_new_urls_for_this_sync = 0
-        total_already_in_urls_for_this_sync = 0
-        
-        gallery_urls_seen_this_sync = set()
-        
-        if this_is_initial_sync:
-            
-            file_limit_for_this_sync = self._initial_file_limit
-            
-        else:
-            
-            file_limit_for_this_sync = self._periodic_file_limit
-            
-        
-        file_seeds_to_add_in_this_sync = set()
-        file_seeds_to_add_in_this_sync_ordered = []
-        
-        stop_reason = 'unknown stop reason'
-        
-        job_key.SetVariable( 'popup_text_1', status_prefix )
-        
-        initial_search_urls = gug.GenerateGalleryURLs( query_text )
-        
-        if len( initial_search_urls ) == 0:
-            
-            self._paused = True
-            
-            HydrusData.ShowText( 'The subscription "' + self._name + '"\'s Gallery URL Generator, "' + self._gug_key_and_name[1] + '" did not generate any URLs! The sub has paused!' )
-            
-            raise HydrusExceptions.CancelledException( 'Bad GUG.' )
-            
-        
-        gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = True ) for url in initial_search_urls ]
-        
-        gallery_seed_log.AddGallerySeeds( gallery_seeds )
-        
-        try:
-            
-            while gallery_seed_log.WorkToDo():
-                
-                p1 = not self._CanDoWorkNow()
-                ( login_ok, login_reason ) = query_header.GalleryLoginOK( HG.client_controller.network_engine, self._name )
-                
-                if p1 or not login_ok:
-                    
-                    if not login_ok:
-                        
-                        if not self._paused:
-                            
-                            message = 'Query "{}" for subscription "{}" seemed to have an invalid login. The reason was:'.format( query_header.GetHumanName(), self._name )
-                            message += os.linesep * 2
-                            message += login_reason
-                            message += os.linesep * 2
-                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
-                            
-                            HydrusData.ShowText( message )
-                            
-                            self._DelayWork( 300, login_reason )
-                            
-                            self._paused = True
-                            
-                        
-                    
-                    raise HydrusExceptions.CancelledException( 'A problem, so stopping.' )
-                    
-                
-                if job_key.IsCancelled():
-                    
-                    stop_reason = 'gallery parsing cancelled, likely by user'
-                    
-                    self._DelayWork( 600, stop_reason )
-                    
-                    raise HydrusExceptions.CancelledException( 'User cancelled.' )
-                    
-                
-                gallery_seed = gallery_seed_log.GetNextGallerySeed( CC.STATUS_UNKNOWN )
-                
-                if gallery_seed is None:
-                    
-                    stop_reason = 'thought there was a page to check, but apparently there was not!'
-                    
-                    break
-                    
-                
-                def status_hook( text ):
-                    
-                    if len( text ) > 0:
-                        
-                        text = text.splitlines()[0]
-                        
-                    
-                    job_key.SetVariable( 'popup_text_1', status_prefix + ': ' + text )
-                    
-                
-                def title_hook( text ):
-                    
-                    pass
-                    
-                
-                def file_seeds_callable( gallery_page_of_file_seeds ):
-                    
-                    num_urls_added = 0
-                    num_urls_already_in_file_seed_cache = 0
-                    can_search_for_more_files = True
-                    stop_reason = 'unknown stop reason'
-                    current_contiguous_num_urls_already_in_file_seed_cache = 0
-                    num_file_seeds_in_this_page = len( gallery_page_of_file_seeds )
-                    
-                    for file_seed in gallery_page_of_file_seeds:
-                        
-                        if file_seed in file_seeds_to_add_in_this_sync:
-                            
-                            # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
-                            # we don't want to count these 'seen before this run' urls in the 'caught up to last time' count
-                            
-                            continue
-                            
-                        
-                        # When are we caught up? This is not a trivial problem. Tags are not always added when files are uploaded, so the order we find files is not completely reliable.
-                        # Ideally, we want to search a _bit_ deeper than the first already-seen.
-                        # And since we have a page of urls here and now, there is no point breaking early if there might be some new ones at the end.
-                        # Current rule is "We are caught up if the final X contiguous files are 'already in'". X is 5 for now.
-                        
-                        if file_seed_cache.HasFileSeed( file_seed ):
-                            
-                            num_urls_already_in_file_seed_cache += 1
-                            current_contiguous_num_urls_already_in_file_seed_cache += 1
-                            
-                            if current_contiguous_num_urls_already_in_file_seed_cache >= 100:
-                                
-                                can_search_for_more_files = False
-                                stop_reason = 'saw 100 previously seen urls in a row, so assuming this is a large gallery'
-                                
-                                break
-                                
-                            
-                        else:
-                            
-                            num_urls_added += 1
-                            current_contiguous_num_urls_already_in_file_seed_cache = 0
-                            
-                            file_seeds_to_add_in_this_sync.add( file_seed )
-                            file_seeds_to_add_in_this_sync_ordered.append( file_seed )
-                            
-                        
-                        if file_limit_for_this_sync is not None:
-                            
-                            if total_new_urls_for_this_sync + num_urls_added >= file_limit_for_this_sync:
-                                
-                                # we have found enough new files this sync, so should stop adding files and new gallery pages
-                                
-                                if this_is_initial_sync:
-                                    
-                                    stop_reason = 'hit initial file limit'
-                                    
-                                else:
-                                    
-                                    if total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache > 0:
-                                        
-                                        # this sync produced some knowns, so it is likely we have stepped through a mix of old and tagged-late new files
-                                        # this is no reason to go crying to the user
-                                        
-                                        stop_reason = 'hit periodic file limit after seeing several already-seen files'
-                                        
-                                    else:
-                                        
-                                        # this page had all entirely new files
-                                        
-                                        self._ShowHitPeriodicFileLimitMessage( query_name, query_text, file_limit_for_this_sync )
-                                        
-                                        stop_reason = 'hit periodic file limit without seeing any already-seen files!'
-                                        
-                                    
-                                
-                                can_search_for_more_files = False
-                                
-                                break
-                                
-                            
-                        
-                        if not this_is_initial_sync:
-                            
-                            # ok, there are a couple of situations where we don't want to go steamroll past a certain point:
-                            
-                            # if the user set 5 initial file limit but 100 periodic limit, then on the first few syncs, we'll want to notice that situation and not steamroll through that first five (or ~seven on third sync)
-                            # if 'X' is new and get, 'A' is already in, and '-' is new and don't get, the page should be:
-                            # XXXAAAAA----------------------------------
-                            
-                            # the pixiv situation, where a single gallery page may have hundreds of results (and/or multi-file results that will pad out the file cache with more items)
-                            # super large gallery pages interfere with the compaction system, adding results that were removed again and making WE_HIT_OLD_GROUND_THRESHOLD test not work correct
-                            # similar to above:
-                            # XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-                            # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-                            # AAAAAAAAAAAAAAAAAAAA-----------------------------------
-                            # -------------------------------------------------------
-                            # ----------------------
-                            
-                            # I had specific logic targeting both these cases, but in making those, I make the num_master_file_seeds_at_start, which is actually the better thing to test
-                            # If the sub has seen basically everything it started with, we are by definition caught up and should stop immediately!
-                            
-                            excuse_the_odd_deleted_file_coefficient = 0.95
-                            
-                            # we found all the 'A's
-                            we_have_seen_everything_we_already_got = total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache >= num_master_file_seeds_at_start * excuse_the_odd_deleted_file_coefficient
-                            
-                            if we_have_seen_everything_we_already_got:
-                                
-                                stop_reason = 'saw everything I had previously (probably large gallery page or small recent initial sync), so assuming I caught up'
-                                
-                                can_search_for_more_files = False
-                                
-                                break
-                                
-                            
-                        
-                    
-                    WE_HIT_OLD_GROUND_THRESHOLD = 5
-                    
-                    if can_search_for_more_files:
-                        
-                        if current_contiguous_num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
-                            
-                            # this gallery page has caught up to before, so it should not spawn any more gallery pages
-                            
-                            can_search_for_more_files = False
-                            stop_reason = 'saw {} contiguous previously seen urls at end of page, so assuming we caught up'.format( HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) )
-                            
-                        
-                        if num_urls_added == 0:
-                            
-                            can_search_for_more_files = False
-                            stop_reason = 'no new urls found'
-                            
-                        
-                    
-                    return ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason )
-                    
-                
-                job_key.SetVariable( 'popup_text_1', status_prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
-                
-                try:
-                    
-                    ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
-                    
-                except HydrusExceptions.CancelledException as e:
-                    
-                    stop_reason = 'gallery network job cancelled, likely by user'
-                    
-                    self._DelayWork( 600, stop_reason )
-                    
-                    raise HydrusExceptions.CancelledException( 'User cancelled.' )
-                    
-                except Exception as e:
-                    
-                    stop_reason = str( e )
-                    
-                    raise
-                    
-                
-                total_new_urls_for_this_sync += num_urls_added
-                total_already_in_urls_for_this_sync += num_urls_already_in_file_seed_cache
-                
-                if file_limit_for_this_sync is not None and total_new_urls_for_this_sync >= file_limit_for_this_sync:
-                    
-                    # we have found enough new files this sync, so stop and cancel any outstanding gallery urls
-                    
-                    if this_is_initial_sync:
-                        
-                        stop_reason = 'hit initial file limit'
-                        
-                    else:
-                        
-                        stop_reason = 'hit periodic file limit'
-                        
-                    
-                    break
-                    
-                
-            
-        finally:
-            
-            # now clean up any lingering gallery seeds
-            
-            while gallery_seed_log.WorkToDo():
-                
-                gallery_seed = gallery_seed_log.GetNextGallerySeed( CC.STATUS_UNKNOWN )
-                
-                if gallery_seed is None:
-                    
-                    break
-                    
-                
-                gallery_seed.SetStatus( CC.STATUS_VETOED, note = stop_reason )
-                
-            
-        
-        file_seeds_to_add_in_this_sync_ordered.reverse()
-        
-        # 'first' urls are now at the end, so the file_seed_cache should stay roughly in oldest->newest order
-        
-        file_seed_cache.AddFileSeeds( file_seeds_to_add_in_this_sync_ordered )
-        
-        query_header.RegisterSyncComplete( self._checker_options, query_log_container )
-        
-        #
-        
-        if query_header.IsDead():
-            
-            if this_is_initial_sync:
-                
-                HydrusData.ShowText( 'The query "{}" for subscription "{}" did not find any files on its first sync! Could the query text have a typo, like a missing underscore?'.format( query_name, self._name ) )
-                
-            else:
-                
-                death_file_velocity = self._checker_options.GetDeathFileVelocity()
-                
-                ( death_files_found, death_time_delta ) = death_file_velocity
-                
-                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusData.TimeDeltaToPrettyTimeDelta( death_time_delta ) ) )
-                
-            
-        else:
-            
-            if this_is_initial_sync:
-                
-                if not query_header.FileBandwidthOK( HG.client_controller.network_engine.bandwidth_manager, self._name ) and not self._have_made_an_initial_sync_bandwidth_notification:
-                    
-                    HydrusData.ShowText( 'FYI: The query "{}" for subscription "{}" performed its initial sync ok, but it is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.'.format( query_name, self._name ) )
-                    
-                    self._have_made_an_initial_sync_bandwidth_notification = True
-                    
-                
-            
-        
-    
-    def _SyncQueryLogContainersCanDoWork( self ):
-        
-        result = True in ( query_header.WantsToResyncWithLogContainer() for query_header in self._query_headers )
-        
-        if HG.subscription_report_mode:
-            
-            HydrusData.ShowText( 'Subscription "{}" checking if any log containers need to be resynced: {}'.format( self._name, result ) )
-            
-        
-        return result
-        
-    
-    def _SyncQueryLogContainers( self ):
-        
-        query_headers_to_do = [ query_header for query_header in self._query_headers if query_header.WantsToResyncWithLogContainer() ]
-        
-        for query_header in self._query_headers:
-            
-            if not query_header.WantsToResyncWithLogContainer():
-                
-                continue
-                
-            
-            try:
-                
-                query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
-                
-            except HydrusExceptions.DBException as e:
-                
-                if isinstance( e.db_e, HydrusExceptions.DataMissing ):
-                    
-                    self._DealWithMissingQueryLogContainerError( query_header )
-                    
-                    break
-                    
-                else:
-                    
-                    raise
-                    
-                
-            
-            query_header.SyncToQueryLogContainer( self._checker_options, query_log_container )
-            
-            # don't need to save the container back, we made no changes
             
         
     
@@ -1433,6 +1492,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._tag_import_options = tag_import_options.Duplicate()
         
     
+    def SetThisIsARandomSampleSubscription( self, value: bool ):
+        
+        self._this_is_a_random_sample_sub = value
+        
+    
     def SetTuple( self, gug_key_and_name, checker_options: ClientImportOptions.CheckerOptions, initial_file_limit, periodic_file_limit, paused, file_import_options: FileImportOptions.FileImportOptions, tag_import_options: TagImportOptions.TagImportOptions, no_work_until ):
         
         self._gug_key_and_name = gug_key_and_name
@@ -1537,6 +1601,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 job_key.Delete()
                 
             
+        
+    
+    def ThisIsARandomSampleSubscription( self ) -> bool:
+        
+        return self._this_is_a_random_sample_sub
         
     
     def ToTuple( self ):

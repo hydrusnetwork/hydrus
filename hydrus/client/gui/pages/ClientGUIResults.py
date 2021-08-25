@@ -1681,13 +1681,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _ShowDuplicatesInNewPage( self, hash, duplicate_type ):
+    def _ShowDuplicatesInNewPage( self, file_service_key, hash, duplicate_type ):
         
-        hashes = HG.client_controller.Read( 'file_duplicate_hashes', self._file_service_key, hash, duplicate_type )
+        hashes = HG.client_controller.Read( 'file_duplicate_hashes', file_service_key, hash, duplicate_type )
         
         if hashes is not None and len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
+            HG.client_controller.pub( 'new_page_query', file_service_key, initial_hashes = hashes )
             
         
     
@@ -1843,11 +1843,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_COPY_BMP:
                 
@@ -3703,6 +3701,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._file_service_key, focused_hash )
                 
+                if HG.client_controller.services_manager.GetService( self._file_service_key ).GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ):
+                    
+                    all_local_files_file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY, focused_hash )
+                    
+                else:
+                    
+                    all_local_files_file_duplicate_info = None
+                    
+                
             
             focus_is_in_duplicate_group = False
             focus_is_in_alternate_group = False
@@ -3716,21 +3723,33 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
-                file_duplicate_types_to_counts = file_duplicate_info[ 'counts' ]
+                view_duplicate_relations_jobs = []
                 
-                if len( file_duplicate_types_to_counts ) > 0:
+                if len( file_duplicate_info[ 'counts' ] ) > 0:
+                    
+                    view_duplicate_relations_jobs.append( ( self._file_service_key, file_duplicate_info ) )
+                    
+                
+                if all_local_files_file_duplicate_info is not None and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
+                    
+                    view_duplicate_relations_jobs.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, all_local_files_file_duplicate_info ) )
+                    
+                
+                for ( duplicates_file_service_key, this_file_duplicate_info ) in view_duplicate_relations_jobs:
+                    
+                    file_duplicate_types_to_counts = this_file_duplicate_info[ 'counts' ]
                     
                     duplicates_view_menu = QW.QMenu( duplicates_menu )
                     
                     if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
                         
-                        if file_duplicate_info[ 'is_king' ]:
+                        if this_file_duplicate_info[ 'is_king' ]:
                             
                             ClientGUIMenus.AppendMenuLabel( duplicates_view_menu, 'this is the best quality file of its group' )
                             
                         else:
 
-                            ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, focused_hash, HC.DUPLICATE_KING )
+                            ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, duplicates_file_service_key, focused_hash, HC.DUPLICATE_KING )
                             
                         
                         ClientGUIMenus.AppendSeparator( duplicates_view_menu )
@@ -3746,7 +3765,7 @@ class MediaPanelThumbnails( MediaPanel ):
                                 
                                 label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
                                 
-                                ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focused_hash, duplicate_type )
+                                ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, duplicates_file_service_key, focused_hash, duplicate_type )
                                 
                                 if duplicate_type == HC.DUPLICATE_MEMBER:
                                     
@@ -3768,7 +3787,14 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                         
                     
-                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, 'view this file\'s relations' )
+                    label = 'view this file\'s relations'
+                    
+                    if duplicates_file_service_key != self._file_service_key:
+                        
+                        label = '{} ({})'.format( label, HG.client_controller.services_manager.GetName( duplicates_file_service_key ) )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, label )
                     
                 
             
@@ -3790,7 +3816,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if not focus_is_definitely_king:
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
                         
                     
                 
@@ -3800,25 +3826,25 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     label = 'set this file as better than the ' + HydrusData.ToHumanInt( num_selected - 1 ) + ' other selected'
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
+                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
                     
                     num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
                     
                     num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
+                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
                     
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
+                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
+                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
                     
                     if collections_selected:
                         
                         ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
                         
                     
                     #
@@ -3843,7 +3869,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
+                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
                     
                 
                 if dissolution_actions_available:
@@ -3854,34 +3880,34 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if focus_can_be_searched:
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
                         
                     
                     if focus_has_potentials:
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
                         
                     
                     if focus_is_in_duplicate_group:
                         
                         if not focus_is_definitely_king:
                             
-                            ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
+                            ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
                             
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
                         
                     
                     if focus_is_in_alternate_group:
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
                         
                     
                     if focus_has_fps:
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
                         
                     
                     ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
@@ -3893,11 +3919,11 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         duplicates_multiple_dissolution_menu = QW.QMenu( duplicates_action_submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
+                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
                         
                         ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for all selected' )
                         

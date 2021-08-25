@@ -1891,7 +1891,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( shortcut, command ) in shortcuts:
                 
-                self.assertEqual( result.GetCommand( shortcut ).GetData(), command.GetData() )
+                self.assertEqual( tuple( result.GetCommand( shortcut )._data ), tuple( command._data ) )
                 
             
             #

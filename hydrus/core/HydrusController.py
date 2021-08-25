@@ -626,7 +626,7 @@ class HydrusController( object ):
         self._MaintainCallToThreads()
         
     
-    def PrintProfile( self, summary, profile_text ):
+    def PrintProfile( self, summary, profile_text = None ):
         
         pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( HG.profile_start_time ) )
         
@@ -639,8 +639,12 @@ class HydrusController( object ):
             prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
             
             f.write( prefix + summary )
-            f.write( os.linesep * 2 )
-            f.write( profile_text )
+            
+            if profile_text is not None:
+                
+                f.write( os.linesep * 2 )
+                f.write( profile_text )
+                
             
         
     

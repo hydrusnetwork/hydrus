@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 
 class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
@@ -178,6 +179,27 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         return []
+        
+    
+    def LocationSearchContextIsCoveredByCombinedLocalFiles( self, location_search_context: ClientSearch.LocationSearchContext ):
+        
+        if location_search_context.SearchesDeleted():
+            
+            return False
+            
+        
+        file_location_is_all_local = False
+        
+        service_ids = { self.GetServiceId( service_key ) for service_key in location_search_context.current_service_keys }
+        
+        service_types = { self.GetService( service_id ).GetServiceType() for service_id in service_ids }
+        
+        if False not in ( service_type in HC.LOCAL_FILE_SERVICES for service_type in service_types ):
+            
+            file_location_is_all_local = True
+            
+        
+        return file_location_is_all_local
         
     
     def UpdateService( self, service: ClientServices.Service ):

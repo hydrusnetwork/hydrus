@@ -784,7 +784,7 @@ class Canvas( QW.QWidget ):
                     
                     child.activateWindow()
                     
-                    command = CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SET_SEARCH_FOCUS )
+                    command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SET_SEARCH_FOCUS )
                     
                     panel.ProcessApplicationCommand( command )
                     
@@ -1034,6 +1034,16 @@ class Canvas( QW.QWidget ):
         hash = self._current_media.GetHash()
         
         HG.client_controller.file_viewing_stats_manager.FinishViewing( viewtype, hash, viewtime_delta )
+        
+    
+    def _SeekDeltaCurrentMedia( self, direction, duration_ms ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        self._media_container.SeekDelta( direction, duration_ms )
         
     
     def _ShowMediaInNewPage( self ):
@@ -1492,11 +1502,9 @@ class Canvas( QW.QWidget ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_MANAGE_FILE_RATINGS:
                 
@@ -1602,6 +1610,12 @@ class Canvas( QW.QWidget ):
             elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
                 self._PausePlayCurrentMedia()
+                
+            elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+                
+                ( direction, ms ) = command.GetSimpleData()
+                
+                self._SeekDeltaCurrentMedia( direction, ms )
                 
             elif action == CAC.SIMPLE_MOVE_ANIMATION_TO_PREVIOUS_FRAME:
                 
@@ -2552,11 +2566,9 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER:
                 
@@ -3278,11 +3290,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER:
                 
@@ -3893,11 +3903,9 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action in ( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP, CAC.SIMPLE_ARCHIVE_FILE ):
                 
@@ -4005,11 +4013,9 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_REMOVE_FILE_FROM_VIEW:
                 
@@ -4231,11 +4237,9 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW:
                 

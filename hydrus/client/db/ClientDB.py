@@ -144,9 +144,9 @@ from hydrus.client.networking import ClientNetworkingBandwidthLegacy
 #▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓██▓▓▓▒▒▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓        ▒░▓░  ░░ ▒▓▒▒▒▒▒▒
 #▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░▒▒░░▓▓▒▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓  ░▒▒▒▒       ▓████▒     ▒▒▒▒▒▒▒▒
 
-# Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1, but the user won't be searching that distance, so np
-MIN_CACHED_INTEGER = -99999999
-MAX_CACHED_INTEGER = 99999999
+# Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1
+MIN_CACHED_INTEGER = - ( 2 ** 63 )
+MAX_CACHED_INTEGER = ( 2 ** 63 ) - 1
 
 def BlockingSafeShowMessage( message ):
     
@@ -1253,10 +1253,10 @@ class DB( HydrusDB.HydrusDB ):
                 self._CacheTagsAddTags( file_service_id, tag_service_id, new_tag_ids )
                 
             
-        
-        if len( new_local_tag_ids ) > 0:
-            
-            self.modules_tags_local_cache.AddTagIdsToCache( new_local_tag_ids )
+            if len( new_local_tag_ids ) > 0:
+                
+                self.modules_tags_local_cache.AddTagIdsToCache( new_local_tag_ids )
+                
             
         
     
@@ -1331,12 +1331,11 @@ class DB( HydrusDB.HydrusDB ):
                 self._CacheTagsDeleteTags( file_service_id, tag_service_id, deleted_tag_ids )
                 
             
-        
-        if len( deleted_local_tag_ids ) > 0:
+            if len( deleted_local_tag_ids ) > 0:
+                
+                self._CacheLocalTagIdsPotentialDelete( deleted_local_tag_ids )
+                
             
-            self._CacheLocalTagIdsPotentialDelete( deleted_local_tag_ids )
-            
-        
     
     def _CacheMappingsUpdateACCounts( self, tag_display_type, file_service_id, tag_service_id, ac_cache_changes ):
         
@@ -2261,6 +2260,7 @@ class DB( HydrusDB.HydrusDB ):
             with self._MakeTemporaryIntegerTable( block_of_hash_ids, 'hash_id' ) as temp_hash_id_table_name:
                 
                 self._CacheSpecificMappingsAddFiles( file_service_id, tag_service_id, block_of_hash_ids, temp_hash_id_table_name )
+                
             
         
         self.modules_db_maintenance.AnalyzeTable( cache_files_table_name )
@@ -2274,18 +2274,15 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsGetFilteredHashesGenerator( self, file_service_ids, tag_service_id, hash_ids ):
         
-        # we have a fast 'does this file exist on this specific domain' cache, so let's filter hashes by that
-        
         file_service_ids_to_valid_hash_ids = collections.defaultdict( set )
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_table_name:
             
             for file_service_id in file_service_ids:
                 
-                cache_files_table_name = GenerateSpecificFilesTableName( file_service_id, tag_service_id )
+                table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( file_service_id, temp_table_name )
                 
-                # temp hashes to files
-                valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_table_name, cache_files_table_name ) ) )
+                valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
                 
                 file_service_ids_to_valid_hash_ids[ file_service_id ] = valid_hash_ids
                 
@@ -2296,8 +2293,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsGetFilteredMappingsGenerator( self, file_service_ids, tag_service_id, mappings_ids ):
         
-        # we have a fast 'does this file exist on this specific domain' cache, so let's filter mappings by that
-        
         all_hash_ids = set( itertools.chain.from_iterable( ( hash_ids for ( tag_id, hash_ids ) in mappings_ids ) ) )
         
         file_service_ids_to_valid_hash_ids = collections.defaultdict( set )
@@ -2306,10 +2301,9 @@ class DB( HydrusDB.HydrusDB ):
             
             for file_service_id in file_service_ids:
                 
-                cache_files_table_name = GenerateSpecificFilesTableName( file_service_id, tag_service_id )
+                table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( file_service_id, temp_table_name )
                 
-                # temp hashes to files
-                valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_table_name, cache_files_table_name ) ) )
+                valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
                 
                 file_service_ids_to_valid_hash_ids[ file_service_id ] = valid_hash_ids
                 
@@ -4790,9 +4784,9 @@ class DB( HydrusDB.HydrusDB ):
         return media_ids
         
     
-    def _DuplicatesGetBestKingId( self, media_id, file_service_id, allowed_hash_ids = None, preferred_hash_ids = None ):
+    def _DuplicatesGetBestKingId( self, media_id, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext, allowed_hash_ids = None, preferred_hash_ids = None ):
         
-        media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id )
+        media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, db_location_search_context = db_location_search_context )
         
         if allowed_hash_ids is not None:
             
@@ -4829,31 +4823,29 @@ class DB( HydrusDB.HydrusDB ):
         return None
         
     
-    def _DuplicatesGetDuplicateHashIds( self, media_id, file_service_id = None ):
+    def _DuplicatesGetDuplicateHashIds( self, media_id, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext = None ):
         
-        if file_service_id is None or file_service_id == self.modules_services.combined_file_service_id:
+        table_join = 'duplicate_file_members'
+        
+        if db_location_search_context is not None:
             
-            hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM duplicate_file_members WHERE media_id = ?;', ( media_id, ) ) )
+            table_join = db_location_search_context.GetTableJoinLimitedByFileDomain( table_join )
             
-        else:
-            
-            table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( file_service_id, 'duplicate_file_members' )
-            
-            hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE media_id = ?;'.format( table_join ), ( media_id, ) ) )
-            
+        
+        hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE media_id = ?;'.format( table_join ), ( media_id, ) ) )
         
         return hash_ids
         
     
-    def _DuplicatesGetDuplicatesHashIds( self, media_ids, file_service_id = None ):
+    def _DuplicatesGetDuplicatesHashIds( self, media_ids, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext = None ):
         
         with self._MakeTemporaryIntegerTable( media_ids, 'media_id' ) as temp_media_ids_table_name:
             
             table_join = '{} CROSS JOIN {} USING ( media_id )'.format( temp_media_ids_table_name, 'duplicate_file_members' )
             
-            if file_service_id is not None and file_service_id != self.modules_services.combined_file_service_id:
+            if db_location_search_context is not None:
             
-                table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( file_service_id, table_join )
+                table_join = db_location_search_context.GetTableJoinLimitedByFileDomain( table_join )
                 
             
             hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
@@ -4891,7 +4883,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if media_id is not None:
             
-            table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( file_service_key )
+            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+            
+            db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( location_search_context )
+            
+            table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
             
             ( num_potentials, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} WHERE smaller_media_id = ? OR larger_media_id = ? );'.format( table_join ), ( media_id, media_id, ) ).fetchone()
             
@@ -4904,9 +4900,7 @@ class DB( HydrusDB.HydrusDB ):
             
             result_dict[ 'is_king' ] = king_hash_id == hash_id
             
-            file_service_id = self.modules_services.GetServiceId( file_service_key )
-            
-            media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id )
+            media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, db_location_search_context = db_location_search_context )
             
             num_other_dupe_members = len( media_hash_ids ) - 1
             
@@ -4925,7 +4919,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for alt_media_id in alt_media_ids:
                     
-                    alt_hash_ids = self._DuplicatesGetDuplicateHashIds( alt_media_id, file_service_id = file_service_id )
+                    alt_hash_ids = self._DuplicatesGetDuplicateHashIds( alt_media_id, db_location_search_context = db_location_search_context )
                     
                     if len( alt_hash_ids ) > 0:
                         
@@ -4953,7 +4947,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     for fp_media_id in fp_media_ids:
                         
-                        fp_hash_ids = self._DuplicatesGetDuplicateHashIds( fp_media_id, file_service_id = file_service_id )
+                        fp_hash_ids = self._DuplicatesGetDuplicateHashIds( fp_media_id, db_location_search_context = db_location_search_context )
                         
                         if len( fp_hash_ids ) > 0:
                             
@@ -4973,7 +4967,9 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+        
+        db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( location_search_context )
         
         dupe_hash_ids = set()
         
@@ -5000,7 +4996,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     for false_positive_media_id in false_positive_media_ids:
                         
-                        best_king_hash_id = self._DuplicatesGetBestKingId( false_positive_media_id, file_service_id, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                        best_king_hash_id = self._DuplicatesGetBestKingId( false_positive_media_id, db_location_search_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
                         
                         if best_king_hash_id is not None:
                             
@@ -5026,7 +5022,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     for alternates_media_id in alternates_media_ids:
                         
-                        best_king_hash_id = self._DuplicatesGetBestKingId( alternates_media_id, file_service_id, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                        best_king_hash_id = self._DuplicatesGetBestKingId( alternates_media_id, db_location_search_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
                         
                         if best_king_hash_id is not None:
                             
@@ -5042,7 +5038,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if media_id is not None:
                 
-                media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id )
+                media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, db_location_search_context = db_location_search_context )
                 
                 if allowed_hash_ids is not None:
                     
@@ -5058,7 +5054,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if media_id is not None:
                 
-                best_king_hash_id = self._DuplicatesGetBestKingId( media_id, file_service_id, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                best_king_hash_id = self._DuplicatesGetBestKingId( media_id, db_location_search_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
                 
                 if best_king_hash_id is not None:
                     
@@ -5072,7 +5068,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if media_id is not None:
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( file_service_key )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
                 
                 for ( smaller_media_id, larger_media_id ) in self._Execute( 'SELECT smaller_media_id, larger_media_id FROM {} WHERE smaller_media_id = ? OR larger_media_id = ?;'.format( table_join ), ( media_id, media_id ) ).fetchall():
                     
@@ -5085,7 +5081,7 @@ class DB( HydrusDB.HydrusDB ):
                         potential_media_id = larger_media_id
                         
                     
-                    best_king_hash_id = self._DuplicatesGetBestKingId( potential_media_id, file_service_id, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                    best_king_hash_id = self._DuplicatesGetBestKingId( potential_media_id, db_location_search_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
                     
                     if best_king_hash_id is not None:
                         
@@ -5106,7 +5102,7 @@ class DB( HydrusDB.HydrusDB ):
         return dupe_hashes
         
     
-    def _DuplicatesGetHashIdsFromDuplicateCountPredicate( self, file_service_key, operator, num_relationships, dupe_type ):
+    def _DuplicatesGetHashIdsFromDuplicateCountPredicate( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext, operator, num_relationships, dupe_type ):
         
         # doesn't work for '= 0' or '< 1'
         
@@ -5146,8 +5142,6 @@ class DB( HydrusDB.HydrusDB ):
         
         if dupe_type == HC.DUPLICATE_FALSE_POSITIVE:
             
-            file_service_id = self.modules_services.GetServiceId( file_service_key )
-            
             alternates_group_ids_to_valid_for_file_domain = {}
             alternates_group_ids_to_false_positives = collections.defaultdict( list )
             
@@ -5173,7 +5167,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         for fp_media_id in fp_media_ids:
                             
-                            fp_hash_ids = self._DuplicatesGetDuplicateHashIds( fp_media_id, file_service_id = file_service_id )
+                            fp_hash_ids = self._DuplicatesGetDuplicateHashIds( fp_media_id, db_location_search_context = db_location_search_context )
                             
                             if len( fp_hash_ids ) > 0:
                                 
@@ -5196,13 +5190,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                     media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
                     
-                    hash_ids = self._DuplicatesGetDuplicatesHashIds( media_ids, file_service_id = file_service_id )
+                    hash_ids = self._DuplicatesGetDuplicatesHashIds( media_ids, db_location_search_context = db_location_search_context )
                     
                 
             
         elif dupe_type == HC.DUPLICATE_ALTERNATE:
-            
-            file_service_id = self.modules_services.GetServiceId( file_service_key )
             
             query = 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;'
             
@@ -5218,7 +5210,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for media_id in media_ids:
                     
-                    media_id_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id )
+                    media_id_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, db_location_search_context = db_location_search_context )
                     
                     if len( media_id_hash_ids ) == 0:
                         
@@ -5239,16 +5231,7 @@ class DB( HydrusDB.HydrusDB ):
             
         elif dupe_type == HC.DUPLICATE_MEMBER:
             
-            file_service_id = self.modules_services.GetServiceId( file_service_key )
-            
-            if file_service_id == self.modules_services.combined_file_service_id:
-                
-                table_join = 'duplicate_file_members'
-                
-            else:
-                
-                table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( file_service_id, 'duplicate_file_members' )
-                
+            table_join = db_location_search_context.GetTableJoinLimitedByFileDomain( 'duplicate_file_members' )
             
             query = 'SELECT media_id, COUNT( * ) FROM {} GROUP BY media_id;'.format( table_join )
             
@@ -5264,16 +5247,14 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            hash_ids = self._DuplicatesGetDuplicatesHashIds( media_ids, file_service_id = file_service_id )
+            hash_ids = self._DuplicatesGetDuplicatesHashIds( media_ids, db_location_search_context = db_location_search_context )
             
         elif dupe_type == HC.DUPLICATE_POTENTIAL:
             
-            table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( file_service_key )
+            table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
             
             smaller_query = 'SELECT smaller_media_id, COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} ) GROUP BY smaller_media_id;'.format( table_join )
             larger_query = 'SELECT larger_media_id, COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} ) GROUP BY larger_media_id;'.format( table_join )
-            
-            file_service_id = self.modules_services.GetServiceId( file_service_key )
             
             media_ids_to_counts = collections.Counter()
             
@@ -5289,7 +5270,7 @@ class DB( HydrusDB.HydrusDB ):
             
             media_ids = [ media_id for ( media_id, count ) in media_ids_to_counts.items() if filter_func( count ) ]
             
-            hash_ids = self._DuplicatesGetDuplicatesHashIds( media_ids, file_service_id = file_service_id )
+            hash_ids = self._DuplicatesGetDuplicatesHashIds( media_ids, db_location_search_context = db_location_search_context )
             
         
         return hash_ids
@@ -5327,30 +5308,23 @@ class DB( HydrusDB.HydrusDB ):
         return media_id
         
     
-    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( self, file_service_key ):
+    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext ):
         
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+        if db_location_search_context.location_search_context.IsAllKnownFiles():
             
             table_join = 'potential_duplicate_pairs'
             
         else:
             
-            service_id = self.modules_services.GetServiceId( file_service_key )
+            files_table_name = db_location_search_context.files_table_name
             
-            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-            
-            table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, {} AS current_files_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS current_files_larger ON ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = current_files_smaller.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = current_files_larger.hash_id )'.format( current_files_table_name, current_files_table_name )
+            table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, {} AS current_files_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS current_files_larger ON ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = current_files_smaller.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = current_files_larger.hash_id )'.format( files_table_name, files_table_name )
             
         
         return table_join
         
     
-    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, file_service_key, results_table_name, both_files_match ):
-        
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-            
-            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-            
+    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext, results_table_name, both_files_match ):
         
         if both_files_match:
             
@@ -5358,21 +5332,26 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            service_id = self.modules_services.GetServiceId( file_service_key )
-            
-            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-            
-            table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS results_table_for_this_query, {} AS current_files_for_this_query ON ( ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = current_files_for_this_query.hash_id ) OR ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = current_files_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id ) )'.format( results_table_name, current_files_table_name )
+            if db_location_search_context.location_search_context.IsAllKnownFiles():
+                
+                table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS results_table_for_this_query ON ( ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id ) OR ( smaller_media_id = duplicate_file_members_smaller.media_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id ) )'.format( results_table_name )
+                
+            else:
+                
+                files_table_name = db_location_search_context.files_table_name
+                
+                table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS results_table_for_this_query, {} AS current_files_for_this_query ON ( ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = current_files_for_this_query.hash_id ) OR ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = current_files_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id ) )'.format( results_table_name, files_table_name )
+                
             
         
         return table_join
         
     
-    def _DuplicatesGetRandomPotentialDuplicateHashes( self, file_search_context, both_files_match ):
+    def _DuplicatesGetRandomPotentialDuplicateHashes( self, file_search_context: ClientSearch.FileSearchContext, both_files_match ):
         
         file_service_key = file_search_context.GetFileServiceKey()
         
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( file_search_context.GetLocationSearchContext() )
         
         is_complicated_search = False
         
@@ -5385,7 +5364,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( file_service_key )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
                 
             else:
                 
@@ -5406,7 +5385,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( file_service_key, temp_table_name, both_files_match )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match )
                 
             
             potential_media_ids = set()
@@ -5433,7 +5412,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for potential_media_id in potential_media_ids:
                 
-                best_king_hash_id = self._DuplicatesGetBestKingId( potential_media_id, file_service_id, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                best_king_hash_id = self._DuplicatesGetBestKingId( potential_media_id, db_location_search_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
                 
                 if best_king_hash_id is not None:
                     
@@ -5463,16 +5442,14 @@ class DB( HydrusDB.HydrusDB ):
         return self._DuplicatesGetFileHashesByDuplicateType( file_service_key, hash, HC.DUPLICATE_POTENTIAL, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
         
     
-    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context: ClientSearch.FileSearchContext, both_files_match ):
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
         # we also want to maximise per-decision value
         
         # now we will fetch some unknown pairs
         
-        file_service_key = file_search_context.GetFileServiceKey()
-        
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( file_search_context.GetLocationSearchContext() )
         
         with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
             
@@ -5481,7 +5458,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( file_service_key )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
                 
             else:
                 
@@ -5500,7 +5477,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( file_service_key, temp_table_name, both_files_match )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match )
                 
             
             # distinct important here for the search results table join
@@ -5594,7 +5571,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for media_id in seen_media_ids:
             
-            best_king_hash_id = self._DuplicatesGetBestKingId( media_id, file_service_id, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+            best_king_hash_id = self._DuplicatesGetBestKingId( media_id, db_location_search_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
             
             if best_king_hash_id is not None:
                 
@@ -5615,13 +5592,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context, both_files_match ):
         
-        file_service_key = file_search_context.GetFileServiceKey()
+        db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( file_search_context.GetLocationSearchContext() )
         
         with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
             
             if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( file_service_key )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
                 
             else:
                 
@@ -5631,7 +5608,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( file_service_key, temp_table_name, both_files_match )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match )
                 
             
             # distinct important here for the search results table join
@@ -7145,7 +7122,11 @@ class DB( HydrusDB.HydrusDB ):
         total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;' ) if count > 1 ) )
         total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( 'SELECT media_id, COUNT( * ) FROM duplicate_file_members GROUP BY media_id;' ) if count > 1 ) )
         
-        table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] )
+        
+        db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( location_search_context )
+        
+        table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
         
         ( total_potential_pairs, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} );'.format( table_join ) ).fetchone()
         
@@ -7654,7 +7635,7 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids = set( query_hash_ids )
             
         
-        have_cross_referenced_file_service = False
+        have_cross_referenced_file_locations = False
         
         self._controller.ResetIdleTimer()
         
@@ -7710,6 +7691,8 @@ class DB( HydrusDB.HydrusDB ):
             deleted_file_service_ids.add( deleted_file_service_id )
             
         
+        db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( location_search_context )
+        
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         
         try:
@@ -7722,10 +7705,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return set()
             
-        
-        file_service = self.modules_services.GetService( file_service_id )
-        
-        file_service_type = file_service.GetServiceType()
         
         tags_to_include = file_search_context.GetTagsToInclude()
         tags_to_exclude = file_search_context.GetTagsToExclude()
@@ -7971,7 +7950,7 @@ class DB( HydrusDB.HydrusDB ):
             
             query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
             
-            have_cross_referenced_file_service = True
+            have_cross_referenced_file_locations = True
             
             done_or_predicates = True
             
@@ -8002,6 +7981,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if need_file_domain_cross_reference:
             
+            # in future we will hang an explicit service off this predicate and specify import/deleted time
+            # for now we'll wangle a compromise and just check all, and if domain is deleted, then search deletion time
+            
             import_timestamp_predicates = []
             
             if 'min_import_timestamp' in simple_preds: import_timestamp_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_import_timestamp' ] ) )
@@ -8011,13 +7993,20 @@ class DB( HydrusDB.HydrusDB ):
                 
                 pred_string = ' AND '.join( import_timestamp_predicates )
                 
-                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
+                table_names = []
+                table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_CURRENT ) for service_key in location_search_context.current_service_keys ) )
+                table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_DELETED ) for service_key in location_search_context.deleted_service_keys ) )
                 
-                import_timestamp_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( current_files_table_name, pred_string ) ) )
+                import_timestamp_hash_ids = set()
+                
+                for table_name in table_names:
+                    
+                    import_timestamp_hash_ids.update( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ) ) )
+                    
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, import_timestamp_hash_ids )
                 
-                have_cross_referenced_file_service = True
+                have_cross_referenced_file_locations = True
                 
             
         
@@ -8139,11 +8128,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                dupe_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( file_service_key, operator, num_relationships, dupe_type )
+                dupe_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( db_location_search_context, operator, num_relationships, dupe_type )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, dupe_hash_ids )
                 
-                have_cross_referenced_file_service = True
+                have_cross_referenced_file_locations = True
                 
             
         
@@ -8203,7 +8192,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, tag_query_hash_ids )
                 
-                have_cross_referenced_file_service = True
+                have_cross_referenced_file_locations = True
                 
                 if query_hash_ids == set():
                     
@@ -8229,7 +8218,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, namespace_query_hash_ids )
                 
-                have_cross_referenced_file_service = True
+                have_cross_referenced_file_locations = True
                 
                 if query_hash_ids == set():
                     
@@ -8255,7 +8244,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, wildcard_query_hash_ids )
                 
-                have_cross_referenced_file_service = True
+                have_cross_referenced_file_locations = True
                 
                 if query_hash_ids == set():
                     
@@ -8271,7 +8260,7 @@ class DB( HydrusDB.HydrusDB ):
             
             query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
             
-            have_cross_referenced_file_service = True
+            have_cross_referenced_file_locations = True
             
             done_or_predicates = True
             
@@ -8281,7 +8270,7 @@ class DB( HydrusDB.HydrusDB ):
         done_files_info_predicates = False
         
         we_need_some_results = query_hash_ids is None
-        we_need_to_cross_reference = need_file_domain_cross_reference and not have_cross_referenced_file_service
+        we_need_to_cross_reference = need_file_domain_cross_reference and not have_cross_referenced_file_locations
         
         if we_need_some_results or we_need_to_cross_reference:
             
@@ -8291,22 +8280,22 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
-                
                 if len( files_info_predicates ) == 0:
                     
                     files_info_predicates.insert( 0, '1=1' )
                     
                 
+                files_table_name = db_location_search_context.files_table_name
+                
                 if query_hash_ids is None:
                     
-                    query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE {};'.format( current_files_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE {};'.format( files_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
                     
                 else:
                     
                     if is_inbox and len( query_hash_ids ) == len( self.modules_files_metadata_basic.inbox_hash_ids ):
                         
-                        query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN {} NATURAL JOIN files_info WHERE {};'.format( 'file_inbox', current_files_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
+                        query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN {} NATURAL JOIN files_info WHERE {};'.format( 'file_inbox', files_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
                         
                     else:
                         
@@ -8314,12 +8303,12 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._AnalyzeTempTable( temp_table_name )
                             
-                            query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN {} NATURAL JOIN files_info WHERE {};'.format( temp_table_name, current_files_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
+                            query_hash_ids = intersection_update_qhi( query_hash_ids, self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN {} NATURAL JOIN files_info WHERE {};'.format( temp_table_name, files_table_name, ' AND '.join( files_info_predicates ) ) ) ) )
                             
                         
                     
                 
-                have_cross_referenced_file_service = True
+                have_cross_referenced_file_locations = True
                 done_files_info_predicates = True
                 
             
@@ -8504,17 +8493,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if only_do_zero:
                 
-                nonzero_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( file_service_key, '>', 0, dupe_type )
+                nonzero_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( db_location_search_context, '>', 0, dupe_type )
                 
                 query_hash_ids.difference_update( nonzero_hash_ids )
                 
             elif include_zero:
                 
-                nonzero_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( file_service_key, '>', 0, dupe_type )
+                nonzero_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( db_location_search_context, '>', 0, dupe_type )
                 
                 zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
                 
-                accurate_except_zero_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( file_service_key, operator, num_relationships, dupe_type )
+                accurate_except_zero_hash_ids = self._DuplicatesGetHashIdsFromDuplicateCountPredicate( db_location_search_context, operator, num_relationships, dupe_type )
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
@@ -8620,25 +8609,37 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
+        file_location_is_all_local = self.modules_services.LocationSearchContextIsCoveredByCombinedLocalFiles( location_search_context )
+        file_location_is_all_non_local = location_search_context.IsOneDomain() and CC.LOCAL_FILE_SERVICE_KEY in location_search_context.deleted_service_keys
+        
         must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
         must_not_be_local = system_predicates.MustNotBeLocal()
         
-        if file_service_type in HC.LOCAL_FILE_SERVICES:
+        if file_location_is_all_local:
+            
+            # if must be all local, we are great already
             
             if must_not_be_local:
                 
                 query_hash_ids = set()
                 
             
-        elif must_be_local or must_not_be_local:
-            
-            local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+        elif file_location_is_all_non_local:
             
             if must_be_local:
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, local_hash_ids )
+                query_hash_ids = set()
+                
+            
+        elif must_be_local or must_not_be_local:
+            
+            if must_be_local:
+                
+                query_hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.combined_local_file_service_id, query_hash_ids )
                 
             elif must_not_be_local:
+                
+                local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
                 
                 query_hash_ids.difference_update( local_hash_ids )
                 
@@ -8752,7 +8753,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, namespace, num, '>', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                ( good_hash_ids, was_file_location_cross_referenced ) = self._GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace, num, '>', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -8766,7 +8767,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                good_hash_ids = self._GetHashIdsThatHaveTagAsNum( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, namespace, num, '<', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                ( good_hash_ids, was_file_location_cross_referenced ) = self._GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace, num, '<', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -8794,9 +8795,9 @@ class DB( HydrusDB.HydrusDB ):
         
         did_sort = False
         
-        if sort_by is not None and file_service_id != self.modules_services.combined_file_service_id:
+        if sort_by is not None and not location_search_context.IsAllKnownFiles():
             
-            ( did_sort, query_hash_ids ) = self._TryToSortHashIds( file_service_id, query_hash_ids, sort_by )
+            ( did_sort, query_hash_ids ) = self._TryToSortHashIds( location_search_context, query_hash_ids, sort_by )
             
         
         #
@@ -9162,11 +9163,20 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+            cancelled_hook = None
+            
+            if job_key is not None:
+                
+                cancelled_hook = job_key.IsCancelled
+                
+            
             nonzero_tag_hash_ids = set()
             
             for query in queries:
                 
-                nonzero_tag_hash_ids.update( self._STI( self._Execute( query ) ) )
+                cursor = self._Execute( query )
+                
+                nonzero_tag_hash_ids.update( self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 10240, cancelled_hook ) ) )
                 
                 if job_key is not None and job_key.IsCancelled():
                     
@@ -9178,7 +9188,77 @@ class DB( HydrusDB.HydrusDB ):
         return nonzero_tag_hash_ids
         
     
-    def _GetHashIdsThatHaveTagAsNum( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def _ConvertLocationAndTagContextToCoveringCachePairs( self, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext ):
+        
+        # a way to support deleted efficiently is to have deleted file tag caches
+        # but that is so silly, given how rare deleted file tag searches will be, that we should just swallow 'all known files' searches
+        
+        tag_search_contexts = [ tag_search_context ]
+        
+        if location_search_context.SearchesCurrent() and not location_search_context.SearchesDeleted():
+            
+            file_location_needs_cross_referencing = not location_search_context.IsAllKnownFiles()
+            
+            file_service_keys = list( location_search_context.current_service_keys )
+            
+        else:
+            
+            file_location_needs_cross_referencing = False
+            
+            file_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ]
+            
+            if tag_search_context.IsAllKnownTags() == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                tag_search_contexts = []
+                
+                for tag_service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ):
+                    
+                    tsc = tag_search_context.Duplicate()
+                    
+                    tsc.service_key = tag_service.GetServiceKey()
+                    
+                    tag_search_contexts.append( tsc )
+                    
+                
+            
+        
+        return ( list( itertools.product( file_service_keys, tag_search_contexts ) ), file_location_needs_cross_referencing )
+        
+    
+    def _GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+        
+        if not location_search_context.SearchesAnything():
+            
+            return set()
+            
+        
+        ( file_and_tag_domain_pairs, file_location_is_cross_referenced ) = self._ConvertLocationAndTagContextToCoveringCachePairs( location_search_context, tag_search_context )
+        
+        if not file_location_is_cross_referenced and hash_ids_table_name is not None:
+            
+            file_location_is_cross_referenced = True
+            
+        
+        results = set()
+        
+        for ( file_service_key, tag_search_context ) in file_and_tag_domain_pairs:
+            
+            some_results = self._GetHashIdsThatHaveTagAsNumSimpleLocation( tag_display_type, file_service_key, tag_search_context, namespace, num, operator, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+            
+            if len( results ) == 0:
+                
+                results = some_results
+                
+            else:
+                
+                results.update( some_results )
+                
+            
+        
+        return ( results, file_location_is_cross_referenced )
+        
+    
+    def _GetHashIdsThatHaveTagAsNumSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
@@ -14752,7 +14832,7 @@ class DB( HydrusDB.HydrusDB ):
         self._ExecuteMany( 'INSERT INTO service_directory_file_map ( service_id, directory_id, hash_id ) VALUES ( ?, ?, ? );', ( ( service_id, directory_id, hash_id ) for hash_id in hash_ids ) )
         
     
-    def _TryToSortHashIds( self, file_service_id, hash_ids, sort_by: ClientMedia.MediaSort ):
+    def _TryToSortHashIds( self, location_search_context: ClientSearch.LocationSearchContext, hash_ids, sort_by: ClientMedia.MediaSort ):
         
         did_sort = False
         
@@ -14784,9 +14864,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
                     
-                    current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
-                    
-                    query = 'SELECT hash_id, timestamp FROM {} WHERE hash_id = ?;'.format( current_files_table_name )
+                    if location_search_context.IsOneDomain():
+                        
+                        file_service_key = location_search_context.GetFileServiceKey()
+                        
+                        file_service_id = self.modules_services.GetServiceId( file_service_key )
+                        
+                        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
+                        
+                        query = 'SELECT hash_id, timestamp FROM {} WHERE hash_id = ?;'.format( current_files_table_name )
+                        
                     
                 elif sort_data == CC.SORT_FILES_BY_FILESIZE:
                     
@@ -15591,7 +15678,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for shortcut in shortcuts:
                     
-                    tags_autocomplete.SetCommand( shortcut, CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_SIMPLE, CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH ) )
+                    tags_autocomplete.SetCommand( shortcut, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH ) )
                     
                     main_gui.DeleteShortcut( shortcut )
                     
@@ -16454,6 +16541,68 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_db_maintenance.AnalyzeTable( 'external_master.shape_perceptual_hashes' )
                 self.modules_db_maintenance.AnalyzeTable( 'external_master.shape_perceptual_hash_map' )
                 self.modules_db_maintenance.AnalyzeTable( 'shape_search_cache' )
+                
+            
+        
+        if version == 451:
+            
+            self.modules_services.combined_file_service_id = self.modules_services.GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
+            
+            file_service_ids = list( self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES ) )
+            file_service_ids.append( self.modules_services.combined_file_service_id )
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                if file_service_id == self.modules_services.combined_file_service_id:
+                    
+                    self._controller.frame_splash_status.SetText( 'working on combined tags cache - {}'.format( tag_service_id ) )
+                    
+                else:
+                    
+                    self._controller.frame_splash_status.SetText( 'working on specific tags cache - {} {}'.format( file_service_id, tag_service_id ) )
+                    
+                
+                tags_table_name = self._CacheTagsGetTagsTableName( file_service_id, tag_service_id )
+                integer_subtags_table_name = self._CacheTagsGetIntegerSubtagsTableName( file_service_id, tag_service_id )
+                
+                query = 'SELECT subtag_id FROM {};'.format( tags_table_name )
+                
+                BLOCK_SIZE = 10000
+                
+                for ( group_of_subtag_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, query, BLOCK_SIZE ):
+                    
+                    message = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                    
+                    self._controller.frame_splash_status.SetSubtext( message )
+                    
+                    with self._MakeTemporaryIntegerTable( group_of_subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
+                        
+                        # temp subtag_ids to subtags
+                        subtag_ids_and_subtags = self._Execute( 'SELECT subtag_id, subtag FROM {} CROSS JOIN subtags USING ( subtag_id );'.format( temp_subtag_ids_table_name ) ).fetchall()
+                        
+                        for ( subtag_id, subtag ) in subtag_ids_and_subtags:
+                            
+                            if subtag.isdecimal():
+                                
+                                try:
+                                    
+                                    integer_subtag = int( subtag )
+                                    
+                                    if CanCacheInteger( integer_subtag ):
+                                        
+                                        self._Execute( 'INSERT OR IGNORE INTO {} ( subtag_id, integer_subtag ) VALUES ( ?, ? );'.format( integer_subtags_table_name ), ( subtag_id, integer_subtag ) )
+                                        
+                                    
+                                except ValueError:
+                                    
+                                    pass
+                                    
+                                
+                            
+                        
+                    
                 
             
         

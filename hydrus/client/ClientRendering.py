@@ -775,6 +775,39 @@ class RasterContainerVideo( RasterContainer ):
         return self._times_to_play_gif
         
     
+    def GetFrameIndex( self, timestamp_ms ):
+        
+        if self._media.GetMime() == HC.IMAGE_GIF:
+            
+            so_far = 0
+            
+            for ( frame_index, duration_ms ) in enumerate( self._durations ):
+                
+                so_far += duration_ms
+                
+                if so_far > timestamp_ms:
+                    
+                    result = frame_index
+                    
+                    if FrameIndexOutOfRange( result, 0, self.GetNumFrames() - 1 ):
+                        
+                        return 0
+                        
+                    else:
+                        
+                        return result
+                        
+                    
+                
+            
+            return 0
+            
+        else:
+            
+            return timestamp_ms // self._average_frame_duration
+            
+        
+    
     def GetTimestampMS( self, frame_index ):
         
         if self._media.GetMime() == HC.IMAGE_GIF:

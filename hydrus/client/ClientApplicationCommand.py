@@ -1,4 +1,5 @@
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
@@ -137,6 +138,7 @@ SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT = 130
 SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT = 131
 SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS = 132
 SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT = 133
+SIMPLE_MEDIA_SEEK_DELTA = 134
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -272,7 +274,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT : 'if input & results list are empty, move to left one service page',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT : 'if input & results list are empty, move to right one service page',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
-    SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media'
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
+    SIMPLE_MEDIA_SEEK_DELTA : 'seek media'
     }
 
 legacy_simple_str_to_enum_lookup = {
@@ -389,7 +392,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
     SERIALISABLE_NAME = 'Application Command'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, command_type = None, data = None ):
         
@@ -397,16 +400,28 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             command_type = APPLICATION_COMMAND_TYPE_SIMPLE
             
-        
-        if data is None:
-            
-            data = SIMPLE_ARCHIVE_FILE
+            data = ( SIMPLE_ARCHIVE_FILE, None )
             
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._command_type = command_type
         self._data = data
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, ApplicationCommand ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self._command_type, self._data ).__hash__()
         
     
     def __repr__( self ):
@@ -436,7 +451,14 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         
         if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            self._data = serialisable_data
+            ( simple_action, simple_data ) = serialisable_data
+            
+            if isinstance( simple_data, list ):
+                
+                simple_data = tuple( simple_data )
+                
+            
+            self._data = ( simple_action, simple_data )
             
         elif self._command_type == APPLICATION_COMMAND_TYPE_CONTENT:
             
@@ -490,15 +512,48 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( command_type, serialisable_data ) = old_serialisable_info
+            
+            if command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
+                
+                serialisable_data = ( serialisable_data, None )
+                
+            
+            new_serialisable_info = ( command_type, serialisable_data )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def GetCommandType( self ):
         
         return self._command_type
         
     
-    def GetData( self ):
+    def GetSimpleAction( self ) -> int:
         
-        return self._data
+        if self._command_type != APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            raise Exception( 'Not a simple command!' )
+            
+        
+        ( simple_action, simple_data ) = self._data
+        
+        return simple_action
+        
+    
+    def GetSimpleData( self ):
+        
+        if self._command_type != APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            raise Exception( 'Not a simple command!' )
+            
+        
+        ( simple_action, simple_data ) = self._data
+        
+        return simple_data
         
     
     def GetContentAction( self ):
@@ -551,7 +606,22 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         
         if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            return simple_enum_to_str_lookup[ self._data ]
+            action = self.GetSimpleAction()
+            
+            s = simple_enum_to_str_lookup[ action ]
+            
+            if action == SIMPLE_MEDIA_SEEK_DELTA:
+                
+                ( direction, ms ) = self.GetSimpleData()
+                
+                direction_s = 'back' if direction == -1 else 'forwards'
+                
+                ms_s = HydrusData.TimeDeltaToPrettyTimeDelta( ms / 1000 )
+                
+                s = '{} ({} {})'.format( s, direction_s, ms_s )
+                
+            
+            return s
             
         elif self._command_type == APPLICATION_COMMAND_TYPE_CONTENT:
             
@@ -614,6 +684,12 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             return ' '.join( components )
             
+        
+    
+    @staticmethod
+    def STATICCreateSimpleCommand( simple_action, simple_data = None ) -> "ApplicationCommand":
+        
+        return ApplicationCommand( APPLICATION_COMMAND_TYPE_SIMPLE, ( simple_action, simple_data ) )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND ] = ApplicationCommand

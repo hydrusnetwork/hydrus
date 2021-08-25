@@ -348,11 +348,9 @@ class mpvWidget( QW.QWidget ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_PAUSE_MEDIA:
                 
@@ -361,6 +359,12 @@ class mpvWidget( QW.QWidget ):
             elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
                 self.PausePlay()
+                
+            elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+                
+                ( direction, duration_ms ) = command.GetSimpleData()
+                
+                self.SeekDelta( direction, duration_ms )
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
@@ -390,22 +394,6 @@ class mpvWidget( QW.QWidget ):
         return command_processed
         
     
-    def SetCanvasType( self, canvas_type ):
-        
-        self._canvas_type = canvas_type
-        
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
-            
-            shortcut_set = 'media_viewer_media_window'
-            
-        else:
-            
-            shortcut_set = 'preview_media_window'
-            
-        
-        self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
-        
-    
     def Seek( self, time_index_ms ):
         
         if not self._file_is_loaded:
@@ -431,6 +419,41 @@ class mpvWidget( QW.QWidget ):
             # on some files, this seems to fail with a SystemError lmaoooo
             # with the same elegance, we will just pass all errors
             
+        
+    
+    def SeekDelta( self, direction, duration_ms ):
+        
+        if not self._file_is_loaded:
+            
+            return
+            
+        
+        current_timestamp_s = self._player.time_pos
+        
+        new_timestamp_ms = max( 0, ( current_timestamp_s * 1000 ) + ( direction * duration_ms ) )
+        
+        if new_timestamp_ms > self._media.GetDuration():
+            
+            new_timestamp_ms = 0
+            
+        
+        self.Seek( new_timestamp_ms )
+        
+    
+    def SetCanvasType( self, canvas_type ):
+        
+        self._canvas_type = canvas_type
+        
+        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            
+            shortcut_set = 'media_viewer_media_window'
+            
+        else:
+            
+            shortcut_set = 'preview_media_window'
+            
+        
+        self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
         
     
     def SetMedia( self, media, start_paused = False ):

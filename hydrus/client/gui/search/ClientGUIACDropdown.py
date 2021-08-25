@@ -1263,11 +1263,9 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_AUTOCOMPLETE_IME_MODE:
                 
@@ -2148,11 +2146,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         command_processed = True
         
-        data = command.GetData()
-        
         if self._can_intercept_unusual_key_events and command.IsSimpleCommand():
             
-            action = data
+            action = command.GetSimpleAction()
             
             if action == CAC.SIMPLE_SYNCHRONISED_WAIT_SWITCH:
                 
