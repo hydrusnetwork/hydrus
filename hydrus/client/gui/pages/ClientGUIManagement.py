@@ -857,13 +857,13 @@ class ManagementPanel( QW.QScrollArea ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key )
+        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key )
         
-        tags_box.SetTagsBox( self._current_selection_tags_list )
+        self._current_selection_tags_box.SetTagsBox( self._current_selection_tags_list )
         
-        QP.AddToLayout( sizer, tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( sizer, self._current_selection_tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def CheckAbleToClose( self ):
@@ -4773,11 +4773,20 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
         if self._search_enabled:
             
-            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key, tag_autocomplete = self._tag_autocomplete )
+            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key, tag_autocomplete = self._tag_autocomplete )
+            
+        else:
+            
+            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key )
+            
+        
+        self._current_selection_tags_box.SetTagsBox( self._current_selection_tags_list )
+        
+        if self._search_enabled:
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
@@ -4785,18 +4794,12 @@ class ManagementPanelQuery( ManagementPanel ):
             
             tag_service_key = file_search_context.GetTagSearchContext().service_key
             
-            self._current_selection_tags_list.SetTagServiceKey( tag_service_key )
+            self._current_selection_tags_box.SetTagServiceKey( tag_service_key )
             
-            self._tag_autocomplete.tagServiceChanged.connect( self._current_selection_tags_list.SetTagServiceKey )
-            
-        else:
-            
-            self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( tags_box, self._management_controller, self._page_key )
+            self._tag_autocomplete.tagServiceChanged.connect( self._current_selection_tags_box.SetTagServiceKey )
             
         
-        tags_box.SetTagsBox( self._current_selection_tags_list )
-        
-        QP.AddToLayout( sizer, tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( sizer, self._current_selection_tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def _RefreshQuery( self ):

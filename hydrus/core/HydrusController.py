@@ -914,15 +914,11 @@ class HydrusController( object ):
     
     def WaitUntilPubSubsEmpty( self ):
         
-        while True:
+        while self.CurrentlyPubSubbing():
             
             if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            elif not self.CurrentlyPubSubbing():
-                
-                return
                 
             else:
                 

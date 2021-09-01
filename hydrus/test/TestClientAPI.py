@@ -2167,6 +2167,34 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
         
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'green', [ 'red', 'blue' ], 'system:archive' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        
+        expected_predicates = []
+        
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
+        
+        expected_predicates.append(
+            ClientSearch.Predicate(
+                predicate_type = ClientSearch.PREDICATE_TYPE_OR_CONTAINER,
+                value = [
+                    ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'red' ),
+                    ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'blue' )
+                ]
+            )
+        )
+        
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+        self.assertEqual( { pred for pred in predicates if pred.GetType() != ClientSearch.PREDICATE_TYPE_OR_CONTAINER }, { pred for pred in expected_predicates if pred.GetType() != ClientSearch.PREDICATE_TYPE_OR_CONTAINER } )
+        self.assertEqual( { frozenset( pred.GetValue() ) for pred in predicates if pred.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER }, { frozenset( pred.GetValue() ) for pred in expected_predicates if pred.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER } )
+        
     
     def _test_file_metadata( self, connection, set_up_permissions ):
         
@@ -2417,6 +2445,18 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_metadata_result )
         
+        # fails on borked hashes
+        
+        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ 'deadbeef' ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 )
+        
         # metadata from hashes with detailed url info
         
         path = '/get_files/file_metadata?hashes={}&detailed_url_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
@@ -2434,6 +2474,29 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d, expected_detailed_known_urls_metadata_result )
+        
+        # failure on missing file_ids
+        
+        HG.test_controller.SetRead( 'media_results_from_ids', HydrusExceptions.DataMissing( 'test missing' ) )
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( [ 123456 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 404 )
+        self.assertIn( 'test missing', text )
         
     
     def _test_get_files( self, connection, set_up_permissions ):

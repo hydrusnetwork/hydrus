@@ -18,7 +18,7 @@ job_status_str_lookup = {}
 job_status_str_lookup[ JOB_STATUS_AWAITING_VALIDITY ] = 'waiting for validation'
 job_status_str_lookup[ JOB_STATUS_AWAITING_BANDWIDTH ] = 'waiting for bandwidth'
 job_status_str_lookup[ JOB_STATUS_AWAITING_LOGIN ] = 'waiting for login'
-job_status_str_lookup[ JOB_STATUS_AWAITING_SLOT ] = 'waiting for slot'
+job_status_str_lookup[ JOB_STATUS_AWAITING_SLOT ] = 'waiting for free work slot'
 job_status_str_lookup[ JOB_STATUS_RUNNING ] = 'running'
 
 class NetworkEngine( object ):
@@ -370,7 +370,7 @@ class NetworkEngine( object ):
                     
                 elif self._active_domains_counter[ job.GetSecondLevelDomain() ] >= self.MAX_JOBS_PER_DOMAIN:
                     
-                    job.SetStatus( 'waiting for a slot on this domain' )
+                    job.SetStatus( 'waiting for other jobs on this domain to finish' )
                     
                     job.Sleep( 2 )
                     
@@ -402,7 +402,7 @@ class NetworkEngine( object ):
                 
             else:
                 
-                job.SetStatus( 'waiting for a slot\u2026' )
+                job.SetStatus( 'waiting for other jobs to finish\u2026' )
                 
                 return True
                 

@@ -551,9 +551,9 @@ class TestNetworkingJob( unittest.TestCase ):
         
         self.assertTrue( job.IsAsleep() )
         
-        five_secs_from_now = HydrusData.GetNow() + 5
+        five_secs_from_now = HydrusData.GetNowFloat() + 5
         
-        with patch.object( HydrusData, 'GetNow', return_value = five_secs_from_now ):
+        with patch.object( HydrusData, 'GetNowFloat', return_value = five_secs_from_now ):
             
             self.assertFalse( job.IsAsleep() )
             

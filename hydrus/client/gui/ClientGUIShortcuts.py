@@ -182,12 +182,12 @@ shortcut_names_to_pretty_names[ 'global' ] = 'global'
 shortcut_names_to_pretty_names[ 'main_gui' ] = 'the main window'
 shortcut_names_to_pretty_names[ 'tags_autocomplete' ] = 'tag autocomplete'
 shortcut_names_to_pretty_names[ 'media' ] = 'media actions, either thumbnails or the viewer'
-shortcut_names_to_pretty_names[ 'media_viewer' ] = 'media viewers - all (zoom and pan)'
-shortcut_names_to_pretty_names[ 'media_viewer_browser' ] = 'media viewer - \'normal\' browser'
-shortcut_names_to_pretty_names[ 'archive_delete_filter' ] = 'media viewer - archive/delete filter'
-shortcut_names_to_pretty_names[ 'duplicate_filter' ] = 'media viewer - duplicate filter'
-shortcut_names_to_pretty_names[ 'preview_media_window' ] = 'media viewer - the preview window'
-shortcut_names_to_pretty_names[ 'media_viewer_media_window' ] = 'the actual media in a media viewer'
+shortcut_names_to_pretty_names[ 'media_viewer' ] = 'media viewers - all'
+shortcut_names_to_pretty_names[ 'media_viewer_browser' ] = 'media viewers - \'normal\' browser'
+shortcut_names_to_pretty_names[ 'archive_delete_filter' ] = 'media viewers - archive/delete filter'
+shortcut_names_to_pretty_names[ 'duplicate_filter' ] = 'media viewers - duplicate filter'
+shortcut_names_to_pretty_names[ 'preview_media_window' ] = 'the actual media in a preview window (mouse only)'
+shortcut_names_to_pretty_names[ 'media_viewer_media_window' ] = 'the actual media in a media viewer (mouse only)'
 
 shortcut_names_sorted = [
     'global',
@@ -212,8 +212,8 @@ shortcut_names_to_descriptions[ 'main_gui' ] = 'Actions to control pages in the 
 shortcut_names_to_descriptions[ 'tags_autocomplete' ] = 'Actions to control tag autocomplete when its input text box is focused.'
 shortcut_names_to_descriptions[ 'media_viewer_browser' ] = 'Navigation actions for the regular browsable media viewer.'
 shortcut_names_to_descriptions[ 'media_viewer' ] = 'Zoom and pan and player actions for any media viewer.'
-shortcut_names_to_descriptions[ 'media_viewer_media_window' ] = 'Actions for any video or audio player in a media viewer window.'
-shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any video or audio player in a preview window.'
+shortcut_names_to_descriptions[ 'media_viewer_media_window' ] = 'Actions for any video or audio player in a media viewer window. Mouse only!'
+shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any video or audio player in a preview window. Mouse only!'
 
 # shortcut commands
 

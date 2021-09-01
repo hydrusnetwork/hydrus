@@ -2342,7 +2342,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for page in self._GetPages():
             
-            page_info_dict = page.GetSessionAPIInfoDict( is_selected = is_selected )
+            page_is_selected = is_selected and page == current_page
+            
+            page_info_dict = page.GetSessionAPIInfoDict( is_selected = page_is_selected )
             
             my_pages_list.append( page_info_dict )
             

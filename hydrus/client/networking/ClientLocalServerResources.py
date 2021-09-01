@@ -43,6 +43,32 @@ CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'file_service_name', 'tag_
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple', 'file_sort_asc' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
+def CheckHashLength( hashes, hash_type = 'sha256' ):
+    
+    hash_types_to_length = {
+        'sha256' : 32,
+        'md5' : 16,
+        'sha1' : 20,
+        'sha512' : 64
+    }
+    
+    hash_length = hash_types_to_length[ hash_type ]
+    
+    for hash in hashes:
+        
+        if len( hash ) != hash_length:
+            
+            raise HydrusExceptions.BadRequestException(
+                'Sorry, one of the given hashes was the wrong length! {} hashes should be {} bytes long, but {} is {} bytes long!'.format(
+                    hash_type,
+                    hash_length,
+                    hash.hex(),
+                    len( hash )
+                )
+            )
+            
+        
+    
 def ParseLocalBooruGETArgs( requests_args ):
     
     args = HydrusNetworkVariableHandling.ParseTwistedRequestGETArgs( requests_args, LOCAL_BOORU_INT_PARAMS, LOCAL_BOORU_BYTE_PARAMS, LOCAL_BOORU_STRING_PARAMS, LOCAL_BOORU_JSON_PARAMS, LOCAL_BOORU_JSON_BYTE_LIST_PARAMS )
@@ -199,12 +225,43 @@ def ParseClientAPISearchPredicates( request ):
             
         
     
-    tags = request.parsed_request_args[ 'tags' ]
     system_inbox = request.parsed_request_args[ 'system_inbox' ]
     system_archive = request.parsed_request_args[ 'system_archive' ]
     
-    system_predicate_strings = [ tag for tag in tags if tag.startswith( 'system:' ) ]
-    tags = [ tag for tag in tags if not tag.startswith( 'system:' ) ]
+    tags = request.parsed_request_args[ 'tags' ]
+    
+    predicates = ConvertTagListToPredicates( request, tags )
+    
+    if len( predicates ) == 0:
+        
+        try:
+            
+            request.client_api_permissions.CheckCanSeeAllFiles()
+            
+        except HydrusExceptions.InsufficientCredentialsException:
+            
+            raise HydrusExceptions.InsufficientCredentialsException( 'Sorry, you do not have permission to see all files on this client. Please add a regular tag to your search.' )
+            
+        
+    
+    if system_inbox:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        
+    elif system_archive:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+    
+    return predicates
+    
+def ConvertTagListToPredicates( request, tag_list, do_permission_check = True ) -> list:
+    
+    or_tag_lists = [ tag for tag in tag_list if isinstance( tag, list ) ]
+    tag_strings = [ tag for tag in tag_list if isinstance( tag, str ) ]
+    
+    system_predicate_strings = [ tag for tag in tag_strings if tag.startswith( 'system:' ) ]
+    tags = [ tag for tag in tag_strings if not tag.startswith( 'system:' ) ]
     
     negated_tags = [ tag for tag in tags if tag.startswith( '-' ) ]
     tags = [ tag for tag in tags if not tag.startswith( '-' ) ]
@@ -212,15 +269,66 @@ def ParseClientAPISearchPredicates( request ):
     negated_tags = HydrusTags.CleanTags( negated_tags )
     tags = HydrusTags.CleanTags( tags )
     
-    # check positive tags, not negative!
-    request.client_api_permissions.CheckCanSearchTags( tags )
-    
-    search_tags = [ ( True, tag ) for tag in tags ]
-    search_tags.extend( ( ( False, tag ) for tag in negated_tags ) )
+    if do_permission_check:
+        
+        if len( tags ) == 0:
+            
+            if len( negated_tags ) > 0:
+                
+                try:
+                    
+                    request.client_api_permissions.CheckCanSeeAllFiles()
+                    
+                except HydrusExceptions.InsufficientCredentialsException:
+                    
+                    raise HydrusExceptions.InsufficientCredentialsException( 'Sorry, if you want to search negated tags without regular tags, you need permission to search everything!' )
+                    
+                
+            
+            if len( system_predicate_strings ) > 0:
+                
+                try:
+                    
+                    request.client_api_permissions.CheckCanSeeAllFiles()
+                    
+                except HydrusExceptions.InsufficientCredentialsException:
+                    
+                    raise HydrusExceptions.InsufficientCredentialsException( 'Sorry, if you want to search system predicates without regular tags, you need permission to search everything!' )
+                    
+                
+            
+            if len( or_tag_lists ) > 0:
+                
+                try:
+                    
+                    request.client_api_permissions.CheckCanSeeAllFiles()
+                    
+                except HydrusExceptions.InsufficientCredentialsException:
+                    
+                    raise HydrusExceptions.InsufficientCredentialsException( 'Sorry, if you want to search OR predicates without regular tags, you need permission to search everything!' )
+                    
+                
+            
+        else:
+            
+            # check positive tags, not negative!
+            request.client_api_permissions.CheckCanSearchTags( tags )
+            
+        
     
     predicates = []
     
+    for or_tag_list in or_tag_lists:
+        
+        or_preds = ConvertTagListToPredicates( request, or_tag_list, do_permission_check = False )
+        
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds ) )
+        
+    
     predicates.extend( ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( system_predicate_strings ) )
+    
+    search_tags = [ ( True, tag ) for tag in tags ]
+    search_tags.extend( ( ( False, tag ) for tag in negated_tags ) )
     
     for ( inclusive, tag ) in search_tags:
         
@@ -244,15 +352,6 @@ def ParseClientAPISearchPredicates( request ):
             
         
         predicates.append( ClientSearch.Predicate( predicate_type = predicate_type, value = tag, inclusive = inclusive ) )
-        
-    
-    if system_inbox:
-        
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
-        
-    elif system_archive:
-        
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
     
     return predicates
@@ -932,6 +1031,8 @@ class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClien
             hashes.update( more_hashes )
             
         
+        CheckHashLength( hashes )
+        
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes )
         
         service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
@@ -965,6 +1066,8 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
             
             hashes.update( more_hashes )
             
+        
+        CheckHashLength( hashes )
         
         # expand this to take file service and reason
         
@@ -1002,6 +1105,8 @@ class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceCli
             hashes.update( more_hashes )
             
         
+        CheckHashLength( hashes )
+        
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes )
         
         service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
@@ -1035,6 +1140,8 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
             
             hashes.update( more_hashes )
             
+        
+        CheckHashLength( hashes )
         
         # expand this to take file service, if and when we move to multiple trashes or whatever
         
@@ -1078,6 +1185,8 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
             
             hashes.update( more_hashes )
             
+        
+        CheckHashLength( hashes )
         
         if len( hashes ) == 0:
             
@@ -1363,6 +1472,8 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
             
             applicable_hashes.extend( hashes )
             
+        
+        CheckHashLength( applicable_hashes )
         
         if len( applicable_hashes ) == 0:
             
@@ -1792,6 +1903,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 request.client_api_permissions.CheckCanSeeAllFiles()
                 
                 hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+                
+                CheckHashLength( hashes )
                 
                 if only_return_identifiers:
                     
@@ -2245,6 +2358,8 @@ class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClient
         if 'hashes' in request.parsed_request_args:
             
             hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+            
+            CheckHashLength( hashes )
             
             media_results = HG.client_controller.Read( 'media_results', hashes )
             

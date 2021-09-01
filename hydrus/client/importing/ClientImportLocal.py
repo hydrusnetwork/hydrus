@@ -302,7 +302,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         self._files_repeating_job.SetThreadSlotType( 'misc' )
         
     
-    def REPEATINGWorkOnFiles( self, page_key ):
+    def CanDoFileWork( self, page_key ):
         
         with self._lock:
             
@@ -310,15 +310,37 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._files_repeating_job.Cancel()
                 
-                return
+                return False
                 
             
             paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
             
-            work_to_do = self._file_seed_cache.WorkToDo() and not ( paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+            if paused:
+                
+                return False
+                
+            
+            work_to_do = self._file_seed_cache.WorkToDo()
+            
+            if not work_to_do:
+                
+                return False
+                
+            
+            page_shown = not HG.client_controller.PageClosedButNotDestroyed( page_key )
+            
+            if not page_shown:
+                
+                return False
+                
             
         
-        while work_to_do:
+        return True
+        
+    
+    def REPEATINGWorkOnFiles( self, page_key ):
+        
+        while self.CanDoFileWork( page_key ):
             
             try:
                 
@@ -329,20 +351,6 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             except Exception as e:
                 
                 HydrusData.ShowException( e )
-                
-            
-            with self._lock:
-                
-                if ClientImporting.PageImporterShouldStopWorking( page_key ):
-                    
-                    self._files_repeating_job.Cancel()
-                    
-                    return
-                    
-                
-                paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
-                
-                work_to_do = self._file_seed_cache.WorkToDo() and not ( paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
                 
             
         

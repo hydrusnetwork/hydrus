@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_453"><a href="#version_453">version 453</a></h3></li>
+				<ul>
+					<li>qol and misc:</li>
+					<li>the network job status labels around waiting for 'subscription'/'download page'/'watcher' forced wait slots are reworded. now they just say a more plain 'waiting to work' with a time estimate, and if a job does not get a chance to work this check cycle, it says 'a different xxx got the chance to work' for a few seconds.</li>
+					<li>if a network job does not get bandwidth on a check cycle, it now says 'a different network job got the bandwidth' for a few seconds</li>
+					<li>when waiting on bandwidth or gallery work, network jobs should count down more smoothly, one second at a time, not skip a second so often</li>
+					<li>network job widgets are now better about updating the layout of their two text labels. the status text on the left should take all the available pixels much better, sharing with the '64KB/s' speed text as it changes width and disappear</li>
+					<li>added a new user-made darkmode QSS stylesheet called 'OledBlack' to default hydrus, try it out under _options->style_</li>
+					<li>if the tag domain in a search page is other than 'all known tags', the 'selection tags' box, which limits itself to the current domain's tags, now explicitly labels itself with that domain</li>
+					<li>consolidated and optimised the pre-work checks on all importers/downloaders in pages. pages with idling/finished/paused downloaders will consume just a little less CPU and need to talk to fewer important objects</li>
+					<li>renamed the shortcut sets for viewer/preview media windows and clarified that they are mouse only for now. the new seek command works with these, but you'd have to map ctrl+right-click or something</li>
+					<li>improved the system predicate unit tests to catch datatype problems like with last week's hotfix and system:time imported</li>
+					<li>advanced archive/delete stuff: wrote up a neat idea I had about using local parents applied to the PTR to make fast multi-tag processing workflows here: https://hydrusnetwork.github.io/hydrus/help/advanced_parents.html#parent_favourites</li>
+					<li>.</li>
+					<li>bug fixes:</li>
+					<li>an important tag search bug is fixed. for some users, files that were imported before a service was added were not appearing in some of that service's search results, or their tag counts were not added in certain tag autocomplete results. this file miscount is fixed, and holes will be filled on database update. it should not take too long to fix, although different users will have different situations</li>
+					<li>this bug was leading to artificially fast PTR processing speeds on some clients as their older files were being skipped. if you have used the client for a long time but only added the PTR recently, sorry if you notice it slow down! it is now working correct!</li>
+					<li>fixed an important bug in the image rendering system that was causing tile artifacts (little lines of double-pixel jank along tile borders) at a variety of regular zoom levels. the way ideal tile size was being calculated was often incorrect, so I have replaced it with a better calculation</li>
+					<li>the system predicate parser can now parse 'system:is not the best quality file of its duplicate group' (only 'isn't' was working, previously) (issue #954)</li>
+					<li>if the collect-by dropdown is fed garbage namespace data from the namespace sort options, it now recovers with a nicer error message (issue #904)</li>
+					<li>misc db code cleanup and minor refactoring</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>OR predicates are now supported in the client api! Just nest within the tag list, and it'll bundle the nested list into an OR. there's an example in the client api help</li>
+					<li>some permissions testing in file search is tightened up--now we have OR and system predicates, if you do not submit any regular positive tags, the search permissions have to be 'allow anything'</li>
+					<li>fixed an issue where the client api would let you ask about sha256 hashes of incorrect length (and would ultimately make a master database id for these borked hashes, even the empty string!!). now the client api throws a 400</li>
+					<li>fixed a bug in /manage_pages/get_pages where all pages were marked as 'selected'=true (issue #841)</li>
+					<li>in the client api, if you use missing file_id(s) on a request for a file, thumbnail, metadata about a file, or when trying to add a files to a page, it now gives 404 correctly (rather than 500) (issue #961)</li>
+					<li>added a section to the client api help on variable encoding, including an example of how to convert a python tag list to JSON+URL encoded string</li>
+					<li>added new unit tests for OR pred parsing and the hash length check</li>
+					<li>client api version is now 20</li>
+				</ul>
 				<li><h3 id="version_452"><a href="#version_452">version 452</a></h3></li>
 				<ul>
 					<li>misc:</li>

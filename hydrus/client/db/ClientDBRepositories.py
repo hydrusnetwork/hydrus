@@ -184,7 +184,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
+        table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.local_update_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
         
         update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
@@ -279,7 +279,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         ( num_updates, ) = self._Execute( 'SELECT COUNT( * ) FROM {}'.format( repository_updates_table_name ) ).fetchone()
         
-        table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
+        table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.local_update_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
         
         ( num_local_updates, ) = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( table_join ) ).fetchone()
         
@@ -402,7 +402,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         all_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} ORDER BY update_index ASC;'.format( repository_updates_table_name ) ) )
         
-        table_join = self.modules_files_storage.GetCurrentTableJoinPhrase( self.modules_services.local_update_service_id, repository_updates_table_name )
+        table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.local_update_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
         
         existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         

@@ -693,7 +693,14 @@ class Controller( object ):
             pass
             
         
-        return self._name_read_responses[ name ]
+        result = self._name_read_responses[ name ]
+        
+        if isinstance( result, Exception ):
+            
+            raise HydrusExceptions.DBException( result, str( result ), 'test trace' )
+            
+        
+        return result
         
     
     def RegisterUIUpdateWindow( self, window ):

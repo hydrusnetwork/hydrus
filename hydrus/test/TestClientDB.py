@@ -271,6 +271,11 @@ class TestClientDB( unittest.TestCase ):
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
+                for file_query_id in file_query_ids:
+                    
+                    self.assertEqual( type( file_query_id ), int )
+                    
+                
                 self.assertEqual( len( file_query_ids ), result )
                 
             
@@ -286,6 +291,11 @@ class TestClientDB( unittest.TestCase ):
                 search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
+                
+                for file_query_id in file_query_ids:
+                    
+                    self.assertEqual( type( file_query_id ), int )
+                    
                 
                 self.assertEqual( len( file_query_ids ), result )
                 
@@ -303,6 +313,11 @@ class TestClientDB( unittest.TestCase ):
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
+                for file_query_id in file_query_ids:
+                    
+                    self.assertEqual( type( file_query_id ), int )
+                    
+                
                 self.assertEqual( len( file_query_ids ), result )
                 
             
@@ -316,6 +331,11 @@ class TestClientDB( unittest.TestCase ):
                 search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
+                
+                for file_query_id in file_query_ids:
+                    
+                    self.assertEqual( type( file_query_id ), int )
+                    
                 
                 self.assertEqual( len( file_query_ids ), result )
                 

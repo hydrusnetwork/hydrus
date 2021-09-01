@@ -1,3 +1,4 @@
+import fractions
 import itertools
 import typing
 
@@ -1680,28 +1681,41 @@ class StaticImage( QW.QWidget ):
     
     def _ClearCanvasTileCache( self ):
         
-        if self._media is None:
+        if self._media is None or self.width() == 0 or self.height() == 0:
             
             self._zoom = 1.0
+            tile_dimension = 0
             
         else:
             
             self._zoom = self.width() / self._media.GetResolution()[ 0 ]
             
-        
-        # it is most convenient to have tiles that line up with the current zoom ratio
-        # 768 is a convenient size for meaty GPU blitting, but as a number it doesn't make for nice multiplication
-        
-        # a 'nice' size is one that divides nicely by our zoom, so that integer translations between canvas and native res aren't losing too much in the float remainder
-        
-        if self.width() == 0 or self.height() == 0:
+            # it is most convenient to have tiles that line up with the current zoom ratio
+            # 768 is a convenient size for meaty GPU blitting, but as a number it doesn't make for nice multiplication
             
-            tile_dimension = 0
+            # a 'nice' size is one that divides nicely by our zoom, so that integer translations between canvas and native res aren't losing too much in the float remainder
             
-        else:
+            # the trick of going ( 123456 // 16 ) * 16 to give you a nice multiple of 16 does not work with floats like 1.4 lmao.
+            # what we can do instead is phrase 1.4 as 7/5 and use 7 as our int. any number cleanly divisible by 7 is cleanly divisible by 1.4
             
-            # the max( x, 1 ) bit here ensures that superzoomed 1px things just get one tile
-            tile_dimension = round( max( ( 768 // self._zoom ), 1 ) * self._zoom )
+            ideal_tile_dimension = 768
+            
+            frac = fractions.Fraction( self._zoom ).limit_denominator( 100 )
+            
+            n = frac.numerator
+            
+            if n > ideal_tile_dimension:
+                
+                # we are in extreme zoom land. nice multiples are impossible with reasonable size tiles, so we'll have to settle for some problems
+                
+                tile_dimension = ideal_tile_dimension
+                
+            else:
+                
+                tile_dimension = ( ideal_tile_dimension // n ) * n
+                
+            
+            tile_dimension = max( min( tile_dimension, 2048 ), 1 )
             
         
         self._canvas_tile_size = QC.QSize( tile_dimension, tile_dimension )

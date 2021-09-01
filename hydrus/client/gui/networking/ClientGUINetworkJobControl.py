@@ -181,7 +181,7 @@ class NetworkJobControl( QW.QFrame ):
             
             if not self._network_job.TokensOK():
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'override gallery slot requirements for this job', 'Force-allow this download to proceed, ignoring the normal gallery wait times.', self._network_job.OverrideToken )
+                ClientGUIMenus.AppendMenuItem( menu, 'override forced gallery wait times for this job', 'Force-allow this download to proceed, ignoring the normal gallery wait times.', self._network_job.OverrideToken )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -226,23 +226,16 @@ class NetworkJobControl( QW.QFrame ):
         
         if self._network_job is None or self._network_job.NoEngineYet():
             
+            can_cancel = False
+            
             self._left_text.clear()
             self._right_text.clear()
             self._gauge.SetRange( 1 )
             self._gauge.SetValue( 0 )
             
-            can_cancel = False
-            
         else:
             
-            if self._network_job.IsDone():
-                
-                can_cancel = False
-                
-            else:
-                
-                can_cancel = True
-                
+            can_cancel = not self._network_job.IsDone()
             
             ( status_text, current_speed, bytes_read, bytes_to_read ) = self._network_job.GetStatus()
             
@@ -267,36 +260,40 @@ class NetworkJobControl( QW.QFrame ):
                     
                 
             
-            self._right_text.setText( speed_text )
+            show_right_text = speed_text != ''
             
-            right_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._right_text, len( speed_text ) )
-            
-            right_min_width = right_width
-            
-            if right_min_width != self._last_right_min_width:
+            if self._right_text.isVisible() != show_right_text:
                 
-                self._last_right_min_width = right_min_width
+                self._right_text.setVisible( show_right_text )
                 
-                self._right_text.setMinimumWidth( right_min_width )
+                self.updateGeometry()
+                
+            
+            if speed_text != '':
+                
+                self._right_text.setText( speed_text )
+                
+                right_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._right_text, len( speed_text ) )
+                
+                right_min_width = right_width
+                
+                if right_min_width != self._last_right_min_width:
+                    
+                    self._last_right_min_width = right_min_width
+                    
+                    self._right_text.setMinimumWidth( right_min_width )
+                    
+                    self.updateGeometry()
+                    
                 
             
             self._gauge.SetRange( bytes_to_read )
             self._gauge.SetValue( bytes_read )
             
         
-        if can_cancel:
+        if self._cancel_button.isEnabled() != can_cancel:
             
-            if not self._cancel_button.isEnabled():
-                
-                self._cancel_button.setEnabled( True )
-                
-            
-        else:
-            
-            if self._cancel_button.isEnabled():
-                
-                self._cancel_button.setEnabled( False )
-                
+            self._cancel_button.setEnabled( can_cancel )
             
         
     

@@ -2603,7 +2603,16 @@ class CollectComboCtrl( QW.QComboBox ):
             
             namespaces = media_sort.GetNamespaces()
             
-            text_and_data_tuples.update( namespaces )
+            try:
+                
+                text_and_data_tuples.update( namespaces )
+                
+            except:
+                
+                HydrusData.DebugPrint( 'Bad namespaces: {}'.format( namespaces ) )
+                
+                HydrusData.ShowText( 'Hey, your namespace-based sorts are likely damaged. Details have been written to the log, please let hydev know!' )
+                
             
         
         text_and_data_tuples = sorted( ( ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ) )
@@ -2614,8 +2623,8 @@ class CollectComboCtrl( QW.QComboBox ):
             
             text_and_data_tuples.append( ( ratings_service.GetName(), ('rating', ratings_service.GetServiceKey() ) ) )
             
-
-        for (text, data) in text_and_data_tuples:
+        
+        for ( text, data ) in text_and_data_tuples:
 
             self.Append( text, data )
             

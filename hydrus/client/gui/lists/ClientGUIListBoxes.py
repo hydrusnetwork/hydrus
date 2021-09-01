@@ -3732,6 +3732,10 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, title )
         
+        self._original_title = title
+        
+        self._tags_box = None
+        
         # make this its own panel
         self._tag_sort = ClientGUITagSorting.TagSortControl( self, HG.client_controller.new_options.GetDefaultTagSort(), show_siblings = show_siblings_sort )
         
@@ -3742,10 +3746,29 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
     
     def SetTagServiceKey( self, service_key ):
         
+        if self._tags_box is None:
+            
+            return
+            
+        
         self._tags_box.SetTagServiceKey( service_key )
+        
+        title = self._original_title
+        
+        if service_key != CC.COMBINED_TAG_SERVICE_KEY:
+            
+            title = '{} for {}'.format( title, HG.client_controller.services_manager.GetName( service_key ) )
+            
+        
+        self.SetTitle( title )
         
     
     def EventSort( self ):
+        
+        if self._tags_box is None:
+            
+            return
+            
         
         sort = self._tag_sort.GetValue()
         
@@ -3760,6 +3783,11 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         
     
     def SetTagsByMedia( self, media ):
+        
+        if self._tags_box is None:
+            
+            return
+            
         
         self._tags_box.SetTagsByMedia( media )
         

@@ -1827,6 +1827,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:no duration', "system:no duration" ),
             ( 'system:is the best quality file of its duplicate group', "system:is the best quality file  of its group" ),
             ( 'system:is not the best quality file of its duplicate group', "system:isn't the best quality file of its duplicate group" ),
+            ( 'system:is not the best quality file of its duplicate group', 'system:is not the best quality file of its duplicate group' ),
             ( 'system:has audio', "system:has_audio" ),
             ( 'system:no audio', "system:no audio" ),
             ( 'system:has tags', "system:has tags" ),

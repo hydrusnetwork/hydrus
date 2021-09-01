@@ -1339,18 +1339,19 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 return True
                 
             
-            number_of_errors = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
-            error_time_delta = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
-            
-            if number_of_errors == 0:
-                
-                return True
-                
-            
             # this will become flexible and customisable when I have domain profiles/status/ui
             # also should extend it to 'global', so if multiple domains are having trouble, we maybe assume the whole connection is down? it would really be nicer to have a better sockets-level check there
             
             if domain in self._second_level_domains_to_network_infrastructure_errors:
+                
+                number_of_errors = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
+                
+                if number_of_errors == 0:
+                    
+                    return True
+                    
+                
+                error_time_delta = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
                 
                 network_infrastructure_errors = self._second_level_domains_to_network_infrastructure_errors[ domain ]
                 

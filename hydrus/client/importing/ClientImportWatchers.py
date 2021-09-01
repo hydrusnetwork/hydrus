@@ -1553,7 +1553,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def REPEATINGWorkOnFiles( self ):
+    def CanDoFileWork( self ):
         
         with self._lock:
             
@@ -1565,15 +1565,55 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
             files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
-            work_pending = self._file_seed_cache.WorkToDo() and not files_paused
-            no_delays = HydrusData.TimeHasPassed( self._no_work_until )
-            page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
-            network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
-            ok_to_work = work_pending and no_delays and page_shown and network_engine_good
+            if files_paused:
+                
+                return False
+                
+            
+            work_to_do = self._file_seed_cache.WorkToDo()
+            
+            if not work_to_do:
+                
+                return False
+                
             
         
-        while ok_to_work:
+        return self.CanDoNetworkWork()
+        
+    
+    def CanDoNetworkWork( self ):
+        
+        with self._lock:
+            
+            no_delays = HydrusData.TimeHasPassed( self._no_work_until )
+            
+            if not no_delays:
+                
+                return False
+                
+            
+            page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+            
+            if not page_shown:
+                
+                return False
+                
+            
+            network_engine_good = not HG.client_controller.network_engine.IsBusy()
+            
+            if not network_engine_good:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def REPEATINGWorkOnFiles( self ):
+        
+        while self.CanDoFileWork():
             
             try:
                 
@@ -1586,27 +1626,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 HydrusData.ShowException( e )
                 
             
-            with self._lock:
-                
-                if ClientImporting.PageImporterShouldStopWorking( self._page_key ):
-                    
-                    self._files_repeating_job.Cancel()
-                    
-                    return
-                    
-                
-                files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
-                work_pending = self._file_seed_cache.WorkToDo() and not files_paused
-                no_delays = HydrusData.TimeHasPassed( self._no_work_until )
-                page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
-                network_engine_good = not HG.client_controller.network_engine.IsBusy()
-                
-                ok_to_work = work_pending and no_delays and page_shown and network_engine_good
-                
-            
         
     
-    def REPEATINGWorkOnChecker( self ):
+    def CanDoCheckerWork( self ):
         
         with self._lock:
             
@@ -1629,16 +1651,32 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             checking_paused = self._checking_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' )
             
-            able_to_check = self._checking_status == ClientImporting.CHECKER_STATUS_OK and self._HasURL() and not checking_paused
-            check_due = HydrusData.TimeHasPassed( self._next_check_time )
-            no_delays = HydrusData.TimeHasPassed( self._no_work_until )
-            page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
-            network_engine_good = not HG.client_controller.network_engine.IsBusy()
+            if checking_paused:
+                
+                return False
+                
             
-            time_to_check = able_to_check and check_due and no_delays and page_shown and network_engine_good
+            able_to_check = self._checking_status == ClientImporting.CHECKER_STATUS_OK and self._HasURL()
+            
+            if not able_to_check:
+                
+                return False
+                
+            
+            check_due = HydrusData.TimeHasPassed( self._next_check_time )
+            
+            if not check_due:
+                
+                return False
+                
             
         
-        if time_to_check:
+        return self.CanDoNetworkWork()
+        
+    
+    def REPEATINGWorkOnChecker( self ):
+        
+        if self.CanDoCheckerWork():
             
             try:
                 

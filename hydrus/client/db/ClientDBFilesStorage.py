@@ -61,7 +61,7 @@ class DBLocationSearchContext( object ):
         return self.location_search_context
         
     
-    def GetFileIteratorTableJoin( self, table_phrase: str ):
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ):
         
         if self.location_search_context.IsAllKnownFiles():
             
@@ -423,13 +423,6 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         return rows
         
     
-    def GetCurrentTableJoinPhrase( self, service_id, table_name ):
-        
-        current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-        
-        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_name, current_files_table_name )
-        
-    
     def GetCurrentTimestamp( self, service_id: int, hash_id: int ):
         
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
@@ -684,6 +677,20 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
         petitioned_rows = list( HydrusData.BuildKeyToListDict( self._Execute( 'SELECT reason_id, hash_id FROM {} ORDER BY reason_id LIMIT 100;'.format( petitioned_files_table_name ) ) ).items() )
         
         return petitioned_rows
+        
+    
+    def GetTableJoinIteratedByFileDomain( self, service_id, table_name, status ):
+        
+        files_table_name = GenerateFilesTableName( service_id, status )
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( files_table_name, table_name )
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, service_id, table_name, status ):
+        
+        files_table_name = GenerateFilesTableName( service_id, status )
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_name, files_table_name )
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

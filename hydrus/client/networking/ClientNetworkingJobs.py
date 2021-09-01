@@ -182,7 +182,7 @@ class NetworkJob( object ):
         self._connection_error_wake_time = 0
         self._serverside_bandwidth_wake_time = 0
         
-        self._wake_time = 0
+        self._wake_time_float = 0.0
         
         self._content_type = None
         
@@ -203,8 +203,10 @@ class NetworkJob( object ):
         
         self._gallery_token_name = None
         self._gallery_token_consumed = False
+        self._last_gallery_token_estimate = 0
         self._bandwidth_manual_override = False
         self._bandwidth_manual_override_delayed_timestamp = None
+        self._last_bandwidth_time_estimate = 0
         
         self._last_time_ongoing_bandwidth_failed = 0
         
@@ -556,9 +558,9 @@ class NetworkJob( object ):
         self._is_done_event.set()
         
     
-    def _Sleep( self, seconds ):
+    def _Sleep( self, seconds_float ):
         
-        self._wake_time = HydrusData.GetNow() + seconds
+        self._wake_time_float = HydrusData.GetNowFloat() + seconds_float
         
     
     def _SolveCloudFlare( self, response ):
@@ -981,7 +983,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            return not HydrusData.TimeHasPassed( self._wake_time )
+            return not HydrusData.TimeHasPassedFloat( self._wake_time_float )
             
         
     
@@ -1055,13 +1057,13 @@ class NetworkJob( object ):
                 
                 self._bandwidth_manual_override = True
                 
-                self._wake_time = 0
+                self._wake_time_float = 0.0
                 
             else:
                 
                 self._bandwidth_manual_override_delayed_timestamp = HydrusData.GetNow() + delay
                 
-                self._wake_time = min( self._wake_time, self._bandwidth_manual_override_delayed_timestamp + 1 )
+                self._wake_time_float = min( self._wake_time_float, self._bandwidth_manual_override_delayed_timestamp + 1.0 )
                 
             
         
@@ -1088,7 +1090,7 @@ class NetworkJob( object ):
             
             self._gallery_token_consumed = True
             
-            self._wake_time = 0
+            self._wake_time_float = 0.0
             
         
     
@@ -1417,15 +1419,24 @@ class NetworkJob( object ):
                 
                 if consumed:
                     
-                    self._status_text = 'slot consumed, starting soon'
+                    self._status_text = 'starting soon'
                     
                     self._gallery_token_consumed = True
                     
                 else:
                     
-                    self._status_text = 'waiting for a ' + self._gallery_token_name + ' slot: next ' + ClientData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 1 )
+                    if HydrusData.TimeHasPassed( self._last_gallery_token_estimate ) and not HydrusData.TimeHasPassed( self._last_gallery_token_estimate + 3 ):
+                        
+                        self._status_text = 'a different {} got the chance to work'.format( self._gallery_token_name )
+                        
+                    else:
+                        
+                        self._status_text = 'waiting to start: {}'.format( ClientData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 2, just_now_string = 'checking', no_prefix = True ) )
+                        
+                        self._last_gallery_token_estimate = next_timestamp
+                        
                     
-                    self._Sleep( 1 )
+                    self._Sleep( 0.8 )
                     
                     return False
                     
@@ -1474,7 +1485,18 @@ class NetworkJob( object ):
                         
                         waiting_duration = bandwidth_waiting_duration
                         
-                        waiting_str = 'bandwidth free ' + ClientData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                        bandwidth_time_estimate = HydrusData.GetNow() + waiting_duration
+                        
+                        if HydrusData.TimeHasPassed( self._last_bandwidth_time_estimate ) and not HydrusData.TimeHasPassed( self._last_bandwidth_time_estimate + 3 ):
+                            
+                            waiting_str = 'a different network job got the bandwidth'
+                            
+                        else:
+                            
+                            waiting_str = 'bandwidth free ' + ClientData.TimestampToPrettyTimeDelta( bandwidth_time_estimate, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                            
+                            self._last_bandwidth_time_estimate = bandwidth_time_estimate
+                            
                         
                     
                     waiting_str += '\u2026 (' + bandwidth_network_context.ToHumanString() + ')'
@@ -1491,7 +1513,7 @@ class NetworkJob( object ):
                         
                     elif waiting_duration > 10:
                         
-                        self._Sleep( 1 )
+                        self._Sleep( 0.8 )
                         
                     
                 
