@@ -46,6 +46,8 @@ profile_slow_count = 0
 profile_fast_count = 0
 profile_counter_lock = threading.Lock()
 
+canvas_tile_outline_mode = False
+
 db_ui_hang_relief_mode = False
 callto_report_mode = False
 db_report_mode = False

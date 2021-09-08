@@ -384,8 +384,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 self._gallery_paused = True
                 
             
-        
-        self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+        finally:
+            
+            self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+            
         
         return
         

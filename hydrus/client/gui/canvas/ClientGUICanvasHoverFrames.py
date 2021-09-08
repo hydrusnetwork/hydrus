@@ -722,37 +722,38 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             ( panel, st ) = self._comparison_statements_sts[ name ]
             
-            if name in statements_and_scores:
+            got_data = name in statements_and_scores
+            
+            show_panel = got_data
+            
+            if panel.isVisible() != show_panel:
+                
+                panel.setVisible( show_panel )
+                
+            
+            if got_data:
                 
                 ( statement, score ) = statements_and_scores[ name ]
-                
-                if not panel.isVisible():
-                    
-                    panel.show()
-                    
                 
                 st.setText( statement )
                 
                 if score > 0:
                     
-                    colour = ( 0, 128, 0 )
+                    object_name = 'HydrusValid'
                     
                 elif score < 0:
                     
-                    colour = ( 128, 0, 0 )
+                    object_name = 'HydrusInvalid'
                     
                 else:
                     
-                    colour = ( 0, 0, 128 )
+                    object_name = 'HydrusIndeterminate'
                     
                 
-                QP.SetForegroundColour( st, colour )
+                st.setObjectName( object_name )
                 
-            else:
+                st.style().polish( st )
                 
-                if panel.isVisible():
-                    
-                    panel.hide()
             
         
     

@@ -101,6 +101,8 @@ class ImageRenderer( object ):
     def _GetNumPyImage( self, clip_rect: QC.QRect, target_resolution: QC.QSize ):
         
         clip_size = clip_rect.size()
+        clip_width = clip_size.width()
+        clip_height = clip_size.height()
         
         ( my_width, my_height ) = self._resolution
         
@@ -119,27 +121,57 @@ class ImageRenderer( object ):
             
         else:
             
-            if target_resolution.width() > clip_size.width():
+            if target_resolution.width() > clip_width:
                 
-                # this is a tile that is being scaled!
-                # to reduce tiling artifacts, we want to oversample the clip for our tile so lanczos and friends can get good neighbour data and then crop it
+                # this is a tile that is being scaled up!
+                # to reduce tiling artifacts (disagreement at otherwise good borders), we want to oversample the clip for our tile so lanczos and friends can get good neighbour data and then crop it
                 # therefore, we'll figure out some padding for the clip, and then calculate what that means in the target end, and do a crop at the end
                 
                 # we want to pad. that means getting a larger resolution and keeping a record of the padding
-                # can't pad if we are at 0 for x or y, or up against width/height max
-                # but if we can pad, we will get a larger clip size and then _clip_ a better target endpoint. this is tricky.
+                # can't pad if we are at 0 for x or y, or up against width/height max, but no problem in that case obviously
                 
-                PADDING_AMOUNT = 4
+                # there is the float-int precision calculation problem again. we can't pick a padding of 3 in the clip if we are zooming by 150%--what do we clip off in the target: 4 or 5 pixels? whatever, we get warping
+                # first let's figure a decent zoom estimate:
                 
-                left_padding = min( PADDING_AMOUNT, clip_rect.x() )
-                top_padding = min( PADDING_AMOUNT, clip_rect.y() )
-                right_padding = min( PADDING_AMOUNT, my_width - clip_rect.bottomRight().x() )
-                bottom_padding = min( PADDING_AMOUNT, my_height - clip_rect.bottomRight().y() )
+                zoom_estimate = target_resolution.width() / clip_width if target_resolution.width() > target_resolution.height() else target_resolution.height() / clip_height
                 
-                clip_padding = QC.QMargins( left_padding, top_padding, right_padding, bottom_padding )
+                # now, if zoom is 150% (as a fraction, 3/2), we want a padding at the target of something that divides by 3 cleanly, or, since we are choosing at the clip in this case and will be multiplying, something that divides cleanly to 67%
                 
-                # this is ugly and super inaccurate
-                target_padding = clip_padding * ( target_resolution.width() / clip_size.width() )
+                zoom_estimate_for_clip_padding_multiplier = 1 / zoom_estimate
+                
+                # and we want a nice padding size limit, big enough to make clean numbers but not so big that we are rendering the 8 tiles in a square around the one we want
+                no_bigger_than = max( 4, ( clip_width + clip_height ) // 4 )
+                
+                nice_number = HydrusData.GetNicelyDivisibleNumberForZoom( zoom_estimate_for_clip_padding_multiplier, no_bigger_than )
+                
+                if nice_number != -1:
+                    
+                    # lanczos, I think, uses 4x4 neighbour grid to render. we'll say padding of 4 pixels to be safe for now, although 2 or 3 is probably correct???
+                    # however it works, numbers these small are not a big deal
+                    
+                    while nice_number < 4:
+                        
+                        nice_number *= 2
+                        
+                    
+                    PADDING_AMOUNT = nice_number
+                    
+                    # LIMITATION: There is still a problem here for the bottom and rightmost edges. These tiles are not squares, so the shorter/thinner dimension my be an unpleasant number and be warped _anyway_, regardless of nice padding
+                    # perhaps there is a way to boost left or top padding so we are rendering a full square tile but still cropping our target at the end, but with a little less warping
+                    # I played around with this idea but did not have much success
+                    
+                    LEFT_PADDING_AMOUNT = PADDING_AMOUNT
+                    TOP_PADDING_AMOUNT = PADDING_AMOUNT
+                    
+                    left_padding = min( LEFT_PADDING_AMOUNT, clip_rect.x() )
+                    top_padding = min( TOP_PADDING_AMOUNT, clip_rect.y() )
+                    right_padding = min( PADDING_AMOUNT, ( my_width - 1 ) - clip_rect.bottomRight().x() )
+                    bottom_padding = min( PADDING_AMOUNT, ( my_height - 1 ) - clip_rect.bottomRight().y() )
+                    
+                    clip_padding = QC.QMargins( left_padding, top_padding, right_padding, bottom_padding )
+                    
+                    target_padding = clip_padding * zoom_estimate
+                    
                 
             
             clip_rect_with_padding = clip_rect + clip_padding
@@ -876,6 +908,11 @@ class HydrusBitmap( object ):
             
         
         self._compressed = compressed
+        
+        if isinstance( data, memoryview ) and not data.c_contiguous:
+            
+            data = data.copy()
+            
         
         if self._compressed:
             

@@ -1195,6 +1195,7 @@ class TestClientAPI( unittest.TestCase ):
         expected_answer[ 'url_type_string' ] = 'unknown url'
         expected_answer[ 'match_name' ] = 'unknown url'
         expected_answer[ 'can_parse' ] = False
+        expected_answer[ 'cannot_parse_reason' ] = 'unknown url class'
         
         self.assertEqual( d, expected_answer )
         
@@ -2326,7 +2327,7 @@ class TestClientAPI( unittest.TestCase ):
             
             detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
                 {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
-                {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False}
+                {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False, 'cannot_parse_reason' : 'unknown url class'}
             ]
             
             detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )

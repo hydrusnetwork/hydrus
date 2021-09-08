@@ -547,7 +547,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToQt(self._splash, qt_code)
+            self.CallBlockingToQt( self._splash, qt_code )
             
             for i in range( 10, 0, -1 ):
                 

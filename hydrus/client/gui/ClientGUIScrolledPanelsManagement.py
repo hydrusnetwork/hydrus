@@ -2550,6 +2550,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( image_tile_cache_panel, min = 300, hours = True, minutes = True )
             self._image_tile_cache_timeout.setToolTip( 'The amount of time after which a rendered image tile in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
             
+            self._ideal_tile_dimension = QP.MakeQSpinBox( image_tile_cache_panel, min = 256, max = 4096 )
+            self._ideal_tile_dimension.setToolTip( 'This is the square size the system will aim for. Smaller tiles are more memory efficient but prone to warping and other artifacts. Extreme values may waste CPU.' )
+            
             #
             
             buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
@@ -2576,6 +2579,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_cache_timeout.SetValue( self._new_options.GetInteger( 'thumbnail_cache_timeout' ) )
             self._image_cache_timeout.SetValue( self._new_options.GetInteger( 'image_cache_timeout' ) )
             self._image_tile_cache_timeout.SetValue( self._new_options.GetInteger( 'image_tile_cache_timeout' ) )
+            
+            self._ideal_tile_dimension.setValue( self._new_options.GetInteger( 'ideal_tile_dimension' ) )
             
             self._video_buffer_size_mb.setValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
             
@@ -2689,6 +2694,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'MB memory reserved for image tile cache:', image_tiles_sizer ) )
             rows.append( ( 'Image tile cache timeout:', self._image_tile_cache_timeout ) )
+            rows.append( ( 'Ideal tile width/height px:', self._ideal_tile_dimension ) )
             
             gridbox = ClientGUICommon.WrapInGrid( image_tile_cache_panel, rows )
             
@@ -2829,6 +2835,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'thumbnail_cache_timeout', self._thumbnail_cache_timeout.GetValue() )
             self._new_options.SetInteger( 'image_cache_timeout', self._image_cache_timeout.GetValue() )
             self._new_options.SetInteger( 'image_tile_cache_timeout', self._image_tile_cache_timeout.GetValue() )
+            
+            self._new_options.SetInteger( 'ideal_tile_dimension', self._ideal_tile_dimension.value() )
             
             self._new_options.SetInteger( 'media_viewer_prefetch_delay_base_ms', self._media_viewer_prefetch_delay_base_ms.value() )
             self._new_options.SetInteger( 'media_viewer_prefetch_num_previous', self._media_viewer_prefetch_num_previous.value() )

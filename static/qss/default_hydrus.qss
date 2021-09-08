@@ -27,6 +27,33 @@ QTextEdit#HydrusValid
 	background-color: #80ff80;
 }
 
+QPlainTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+/* Duplicates 'middle' text colour */
+
+QLabel#HydrusIndeterminate
+{
+	color: #000080;
+}
+
+QLineEdit#HydrusIndeterminate
+{
+	background-color: #000080;
+}
+
+QTextEdit#HydrusIndeterminate
+{
+	background-color: #000080;
+}
+
+QPlainTextEdit#HydrusIndeterminate
+{
+	background-color: #000080;
+}
+
 /* Example: This regex is invalid */
 
 QLabel#HydrusInvalid
@@ -40,6 +67,11 @@ QLineEdit#HydrusInvalid
 }
 
 QTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QPlainTextEdit#HydrusInvalid
 {
 	background-color: #ff8080;
 }

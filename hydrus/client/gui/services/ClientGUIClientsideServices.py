@@ -1445,7 +1445,7 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this path remapping control -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this path remapping control -->', object_name = 'HydrusIndeterminate' )
         
         self._nocopy_abs_path_translations = ClientGUIStringControls.StringToStringDictControl( self, abs_initial_dict, key_name = 'hydrus path', value_name = 'ipfs path', allow_add_delete = False, edit_keys = False )
         

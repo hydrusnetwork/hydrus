@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_454"><a href="#version_454">version 454</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>when a downloader page fetch gives a 500 Server Error, it is now handled better, status numbers are updated to 'failed' quickly, and I believe the post-500 downloader deadlock issue (downloaders staying as 'pending', not 'working', after several of these 500s) should also be fixed (issue #898 maybe, but many other reports also)</li>
+					<li>when finishing a very large archive/delete filter, the UI should not hang so much to commit the changes. the changes may be delayed a second or more, if your client is currently chugging, so if you are a user who hits F5 real quick after committing archive/delete, let me know how you get on. I've tried to mitigate for your situation, but it may not be perfect.(issue #845)</li>
+					<li>the Edit URL Class dialog will now refuse to OK if the API Converter fails.</li>
+					<li>the Edit URL Class dialog will now put up an 'are you sure?' messagebox if the URL Class matches its own example API URL</li>
+					<li>fixed some gallery error handling when a gallery cannot be parsed</li>
+					<li>improved 'cannot parse' error reporting text to include more information</li>
+					<li>the client api /manage_pages/add_files command should now always preserve the sort of both the file_ids or hashes parameter</li>
+					<li>fixed an instance where image bitmaps were being handled incorrectly (issue #876)</li>
+					<li>the client will no longer report shutdown work due for a repository when the work is on a currently paused content type</li>
+					<li>fixed some logic related to the advanced tag option of 'fetch page even if url recognised and already in db'</li>
+					<li>improved the error message when an unlucky duplicate boot causes a locked database error</li>
+					<li>I rearranged and clarified a couple of links in the 'advanced' area of the help index page</li>
+					<li>added some help texts and tooltips to the edit checker options dialog and fixed some borked layout</li>
+					<li>did a quick hack to fix some db repair code that wasn't dealing with some missing module information. I will brush the repair code up in the near future so that modules can repair themselves</li>
+					<li>.</li>
+					<li>some text colour stuff:</li>
+					<li>the green/red/blue duplicate comparison statements on the duplicate filter's right-hand hover window are now coloured by QSS. a new 'HydrusIndeterminate' object name handles the blue.</li>
+					<li>the green/red background in the advanced OR input is now governed by HydrusValid and HydrusInvalid</li>
+					<li>the various 'help for this panel' blue texts are also now HydrusIndeterminate</li>
+					<li>I have added dark or light HydrusIndeterminate and more Valid/Invalid class definitions to all the default qss styles. they may need some updates, so if you wrote any of these QSS files, please fiddle with them and send me any updates to roll in!</li>
+					<li>added a new user created QSS style called 'Dark Blue', thank you for the submission!</li>
+					<li>all text colours are now dynamically set, either QSS or through (tag colour) options! there are no more hardcoded text colours!</li>
+					<li>.</li>
+					<li>media viewer's image tile renderer:</li>
+					<li>a new option in 'speed and memory' allows you to change the typical square dimensions of tiles in the tile renderer. default is 768 pixels. you can go bigger to improve accuracy, but it'll cost a little memory and CPU inefficiency</li>
+					<li>the new 'nice' tile size calculator now tests more potential tile sizes, improving precision and reducing stretch-warping along tile borders for unusual zooms</li>
+					<li>the new nice size calculator is now also used when figuring out tile padding, making padding widths that do not cause stretch-warps</li>
+					<li>there remain slight stretch-warps in some bottom-most and right-most tiles</li>
+					<li>a new canvas tile debug report mode now draws blue lines on tile edges in the media viewer and spams some tile number info to popups</li>
+					<li>improved tile coordinate safety checks for extremely small images (e.g. 1x1) when blown up to ridiculous zooms so there are more than one tile per pixel</li>
+					<li>this took a bunch of work, and I am happy that I figured out some solutions, but I believe it may be impossible to get perfect answers here. please try out this new version and let me know how it goes, particularly in the duplicate viewer where warping is obvious. I think ultimately I may replace this with a single tile system that goes over the borders of your screen, eliminating the stitching problems entirely, although this will eat more memory and CPU</li>
+				</ul>
 				<li><h3 id="version_453"><a href="#version_453">version 453</a></h3></li>
 				<ul>
 					<li>qol and misc:</li>

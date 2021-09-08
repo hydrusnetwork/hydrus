@@ -555,7 +555,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -1666,6 +1666,12 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     api_lookup_url = url_class.GetAPIURL( normalised )
                     
+                    if url_class.Matches( api_lookup_url ):
+                        
+                        self._example_url_classes.setText( 'Matches own API URL!' )
+                        self._example_url_classes.setObjectName( 'HydrusInvalid' )
+                        
+                    
                 else:
                     
                     api_lookup_url = 'none set'
@@ -1678,6 +1684,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 reason = str( e )
                 
                 self._api_url.setText( 'Could not convert - ' + reason )
+                
+                self._example_url_classes.setText( 'API URL Problem!' )
+                self._example_url_classes.setObjectName( 'HydrusInvalid' )
                 
             
             try:
@@ -1740,6 +1749,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 QW.QMessageBox.information( self, 'Information', message )
             
         
+    
     def EventURLTypeUpdate( self, event ):
         
         url_type = self._url_type.GetValue()
@@ -1760,16 +1770,63 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         url_class = self._GetValue()
         
+        example_url = self._example_url.text()
+        
         try:
             
-            url_class.Test( self._example_url.text() )
+            url_class.Test( example_url )
             
         except HydrusExceptions.URLClassException:
             
             raise HydrusExceptions.VetoException( 'Please enter an example url that matches the given rules!' )
             
         
+        if url_class.UsesAPIURL():
+            
+            try:
+                
+                api_lookup_url = url_class.GetAPIURL( example_url )
+                
+            except HydrusExceptions.StringConvertException as e:
+                
+                raise HydrusExceptions.VetoException( 'Problem making API URL!' )
+                
+            
+        
         return url_class
+        
+    
+    def UserIsOKToOK( self ):
+        
+        url_class = self._GetValue()
+        
+        example_url = self._example_url.text()
+        
+        if url_class.UsesAPIURL():
+            
+            try:
+                
+                api_lookup_url = url_class.GetAPIURL( example_url )
+                
+            except HydrusExceptions.StringConvertException as e:
+                
+                return True
+                
+            
+            if url_class.Matches( api_lookup_url ):
+                
+                message = 'This URL class matches its own API URL! This can break a downloader unless there is a more specific URL Class the matches the API URL before this. I recommend you fix this here, but you do not have to. Exit now?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.Accepted:
+                    
+                    return False
+                    
+                
+            
+        
+        return True
         
     
 class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1786,7 +1843,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         self._url_class_checker = QW.QLineEdit( self )
         self._url_class_checker.textChanged.connect( self.EventURLClassCheckerText )

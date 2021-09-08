@@ -1,5 +1,6 @@
 import collections
 import cProfile
+import fractions
 import io
 import itertools
 import os
@@ -626,6 +627,41 @@ def Get64BitHammingDistance( phash1, phash2 ):
     # you technically are going n & 0xFFFFFFFF00000000 at the end, but that's a no-op with the >> 32 afterwards, so can be omitted
     
     return n
+    
+def GetNicelyDivisibleNumberForZoom( zoom, no_bigger_than ):
+    
+    # it is most convenient to have tiles that line up with the current zoom ratio
+    # 768 is a convenient size for meaty GPU blitting, but as a number it doesn't make for nice multiplication
+    
+    # a 'nice' size is one that divides nicely by our zoom, so that integer translations between canvas and native res aren't losing too much in the float remainder
+    
+    # the trick of going ( 123456 // 16 ) * 16 to give you a nice multiple of 16 does not work with floats like 1.4 lmao.
+    # what we can do instead is phrase 1.4 as 7/5 and use 7 as our int. any number cleanly divisible by 7 is cleanly divisible by 1.4
+    
+    base_frac = fractions.Fraction( zoom )
+    
+    denominator_limit = 10000
+    
+    frac = base_frac
+    
+    while frac.numerator > no_bigger_than:
+        
+        frac = base_frac.limit_denominator( denominator_limit )
+        
+        denominator_limit //= 2
+        
+        if denominator_limit < 10:
+            
+            return -1
+            
+        
+    
+    if frac.numerator == 0:
+        
+        return -1
+        
+    
+    return frac.numerator
     
 def GetEmptyDataDict():
     

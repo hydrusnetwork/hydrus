@@ -680,7 +680,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type == HC.URL_TYPE_POST:
                 
@@ -706,7 +706,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     # if our given referral is a post url, we are most probably a multi-file url
                     
-                    ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
+                    ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
                     
                     if url_type == HC.URL_TYPE_POST:
                         
@@ -775,7 +775,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     url_file_import_status = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
                     
-                    url_file_import_status.AlreadyInDB()
+                
+                if url_file_import_status.AlreadyInDB():
+                    
+                    url_override = True
                     
                 
             
@@ -895,7 +898,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type == HC.URL_TYPE_FILE:
                 
@@ -909,7 +912,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if url_type == HC.URL_TYPE_UNKNOWN and self._referral_url is not None: # this is likely be a multi-file child of a post url file_seed
                 
-                ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
+                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
                 
                 if url_type == HC.URL_TYPE_POST: # we must have got here through parsing that m8, so let's assume this is an unrecognised file url
                     
@@ -927,7 +930,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type not in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                 
@@ -936,7 +939,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if url_type == HC.URL_TYPE_POST and not can_parse:
                 
-                raise HydrusExceptions.VetoException( 'Did not have a parser for this URL!' )
+                raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason ) )
                 
             
             tag_import_options = self._SetupTagImportOptions( tag_import_options )
@@ -985,7 +988,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if actual_fetched_url != url_to_check:
                         
-                        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                        ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                         
                         if url_type == HC.URL_TYPE_POST and can_parse:
                             
@@ -1095,7 +1098,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             desired_url = desired_urls[0]
                             
-                            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( desired_url )
+                            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( desired_url )
                             
                             if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                                 
@@ -1116,7 +1119,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                             else:
                                 
-                                raise HydrusExceptions.VetoException( 'Found a URL--{}--but could not understand/parse it!'.format( desired_url ) )
+                                if can_parse:
+                                    
+                                    raise HydrusExceptions.VetoException( 'Found a URL--{}--but could not understand it!'.format( desired_url ) )
+                                    
+                                else:
+                                    
+                                    raise HydrusExceptions.VetoException( 'Found a URL--{}--but could not parse it: {}'.format( desired_url, cannot_parse_reason ) )
+                                    
                                 
                             
                         else:
@@ -1232,8 +1242,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             time.sleep( 3 )
             
-        
-        file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
+        finally:
+            
+            file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
+            
         
         return did_substantial_work
         

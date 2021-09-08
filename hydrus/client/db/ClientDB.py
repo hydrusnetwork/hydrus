@@ -9575,7 +9575,7 @@ class DB( HydrusDB.HydrusDB ):
         return predicates
         
     
-    def _GetMediaResults( self, hash_ids: typing.Iterable[ int ] ):
+    def _GetMediaResults( self, hash_ids: typing.Iterable[ int ], sorted = False ):
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -9706,6 +9706,13 @@ class DB( HydrusDB.HydrusDB ):
         
         media_results = cached_media_results
         
+        if sorted:
+            
+            hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
+            
+            media_results = [ hash_ids_to_media_results[ hash_id ] for hash_id in hash_ids if hash_id in hash_ids_to_media_results ]
+            
+        
         return media_results
         
     
@@ -9723,6 +9730,11 @@ class DB( HydrusDB.HydrusDB ):
         media_results = self._GetMediaResults( query_hash_ids )
         
         if sorted:
+            
+            if len( hashes ) > len( query_hash_ids ):
+                
+                hashes = HydrusData.DedupeList( hashes )
+                
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
@@ -14127,6 +14139,9 @@ class DB( HydrusDB.HydrusDB ):
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
             BlockingSafeShowMessage( message )
+            
+            # quick hack
+            self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
             
             self._RegenerateTagMappingsCache()
             

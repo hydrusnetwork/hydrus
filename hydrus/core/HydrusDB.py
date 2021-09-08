@@ -637,6 +637,11 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
         except Exception as e:
             
+            if 'locked' in str( e ):
+                
+                raise HydrusExceptions.DBAccessException( 'Database appeared to be locked. Please ensure there is not another client already running on this database, and then try restarting the client.' )
+                
+            
             raise HydrusExceptions.DBAccessException( str( e ) )
             
         

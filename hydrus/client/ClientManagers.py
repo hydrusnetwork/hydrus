@@ -170,6 +170,11 @@ class BitmapManager( object ):
     
     def GetQtImageFromBuffer( self, width, height, depth, data ):
         
+        if isinstance( data, memoryview ) and not data.c_contiguous:
+            
+            data = data.copy()
+            
+        
         qt_image_format = self._GetQtImageFormat( depth )
         
         bytes_per_line = ( depth / 8 ) * width
@@ -187,6 +192,11 @@ class BitmapManager( object ):
         
     
     def GetQtPixmapFromBuffer( self, width, height, depth, data ):
+        
+        if isinstance( data, memoryview ) and not data.c_contiguous:
+            
+            data = data.copy()
+            
         
         qt_image_format = self._GetQtImageFormat( depth )
         

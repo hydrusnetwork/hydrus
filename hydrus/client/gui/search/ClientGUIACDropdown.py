@@ -2766,7 +2766,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         self._current_predicates = []
         
-        colour = ( 0, 0, 0 )
+        object_name = ''
         
         output = ''
         
@@ -2826,17 +2826,19 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                     
                 
                 output = os.linesep.join( ( pred.ToString() for pred in self._current_predicates ) )
-                colour = ( 0, 128, 0 )
+                object_name = 'HydrusValid'
                 
             except ValueError:
                 
                 output = 'Could not parse!'
-                colour = ( 128, 0, 0 )
+                object_name = 'HydrusInvalid'
                 
             
         
         self._result_preview.setPlainText( output )
-        QP.SetForegroundColour( self._result_preview, colour )
+        
+        self._result_preview.setObjectName( object_name )
+        self._result_preview.style().polish( self._result_preview )
         
     
     def EventUpdateText( self, text ):

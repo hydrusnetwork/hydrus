@@ -89,15 +89,15 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     return gridbox
     
-def WrapInText( control, parent, text, colour = None ):
+def WrapInText( control, parent, text, object_name = None ):
     
     hbox = QP.HBoxLayout()
     
     st = BetterStaticText( parent, text )
     
-    if colour is not None:
+    if object_name is not None:
         
-        QP.SetForegroundColour( st, colour )
+        st.setObjectName( object_name )
         
     
     QP.AddToLayout( hbox, st, CC.FLAGS_CENTER_PERPENDICULAR )

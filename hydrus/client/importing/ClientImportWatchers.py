@@ -707,8 +707,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             HydrusData.PrintException( e )
             
-        
-        self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+        finally:
+            
+            self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+            
         
         with self._lock:
             

@@ -1454,34 +1454,6 @@ def SetBackgroundColour( widget, colour ):
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, QG.QColor( colour ).name() ) )
         
     
-def SetForegroundColour( widget, colour ):
-    
-    widget.setAutoFillBackground( True )
-    
-    object_name = widget.objectName()
-
-    if not object_name:
-        
-        object_name = str( id( widget ) )
-        
-        widget.setObjectName( object_name )
-        
-
-    if isinstance( colour, QG.QColor ):
-
-        widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, colour.name()) )
-        
-    elif isinstance( colour, tuple ):
-        
-        colour = QG.QColor( *colour )
-        
-        widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, colour.name() ) )
-        
-    else:
-
-        widget.setStyleSheet( '#{} {{ color: {} }}'.format( object_name, QG.QColor( colour ).name() ) )
-        
-
 def SetStringSelection( combobox, string ):
     
     index = combobox.findText( string )

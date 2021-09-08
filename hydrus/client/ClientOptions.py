@@ -306,6 +306,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'serverside_bandwidth_wait_time' ] = 60
         
         self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
+        self._dictionary[ 'integers' ][ 'ideal_tile_dimension' ] = 768
         
         self._dictionary[ 'integers' ][ 'total_pages_warning' ] = 165
         

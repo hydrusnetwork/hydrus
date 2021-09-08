@@ -1666,7 +1666,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if url_class is None:
                 
-                return ( HC.URL_TYPE_UNKNOWN, 'unknown url', False )
+                return ( HC.URL_TYPE_UNKNOWN, 'unknown url', False, 'unknown url class' )
                 
             
             url_type = url_class.GetURLType()
@@ -1677,14 +1677,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 ( url_to_fetch, parser ) = self._GetURLToFetchAndParser( url )
                 
                 can_parse = True
+                cannot_parse_reason = ''
                 
-            except HydrusExceptions.URLClassException:
+            except HydrusExceptions.URLClassException as e:
                 
                 can_parse = False
+                cannot_parse_reason = str( e )
                 
             
         
-        return ( url_type, match_name, can_parse )
+        return ( url_type, match_name, can_parse, cannot_parse_reason )
         
     
     def GetURLToFetchAndParser( self, url ):
@@ -2604,7 +2606,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_url = self.GetExampleURL()
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
             
         except Exception as e:
             
@@ -2618,7 +2620,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         if not can_parse:
             
-            raise HydrusExceptions.ParseException( 'No Parser for the URL Class {}!'.format( match_name ) )
+            raise HydrusExceptions.ParseException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason ) )
             
         
     

@@ -24,7 +24,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( 'Show help regarding these checker options.' )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         from hydrus.client import ClientDefaults
         
@@ -73,16 +73,20 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
         
         self._intended_files_per_check = QP.MakeQSpinBox( self._reactive_check_panel, min=1, max=1000 )
+        self._intended_files_per_check.setToolTip( 'How many new files you want the checker to find on each check. If a source is producing about 2 files a day, and this is set to 6, you will probably get a check every three days. You probably want this to be a low number, like 1-4.' )
         
         self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )
+        self._never_faster_than.setToolTip( 'Even if the download source produces many new files, the checker will never ask for a check more often than this. This is a safety measure.' )
         
         self._never_slower_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_slower_than_min, days = True, hours = True, minutes = True, seconds = True )
+        self._never_slower_than.setToolTip( 'Even if the download source slows down significantly, the checker will make sure it checks at least this often anyway, just to catch a future wave in time.' )
         
         #
         
         self._static_check_panel = ClientGUICommon.StaticBox( self, 'static checking' )
         
         self._flat_check_period = TimeDeltaCtrl( self._static_check_panel, min = flat_check_period_min, days = True, hours = True, minutes = True, seconds = True )
+        self._flat_check_period.setToolTip( 'Always use the same check delay. It is based on the time the last check completed, not the time the last check was due. If you want once a day with no skips, try setting this to 23 hours.' )
         
         #
         
@@ -100,6 +104,12 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        label = 'This checks more or less frequently based on how fast the download source is producing new files.'
+        
+        st = ClientGUICommon.BetterStaticText( self._reactive_check_panel, label = label )
+        
+        st.setWordWrap( True )
+        
         rows = []
         
         rows.append( ( 'intended new files per check: ', self._intended_files_per_check ) )
@@ -108,6 +118,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._reactive_check_panel, rows )
         
+        self._reactive_check_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._reactive_check_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -131,7 +142,16 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        label = 'If you do not understand this panel, use the buttons! The defaults are fine for most purposes!'
+        
+        st = ClientGUICommon.BetterStaticText( self._reactive_check_panel, label = label )
+        
+        st.setWordWrap( True )
+        st.setObjectName( 'HydrusWarning' )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, defaults_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -149,6 +169,8 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._reactive_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._static_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         

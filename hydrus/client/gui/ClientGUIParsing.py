@@ -64,7 +64,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -418,7 +418,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             example_url = url_class.GetExampleURL()
             
-            ( url_type, match_name, can_parse ) = self._network_engine.domain_manager.GetURLParseCapability( example_url )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = self._network_engine.domain_manager.GetURLParseCapability( example_url )
             
             if can_parse:
                 
@@ -506,7 +506,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -738,7 +738,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -1185,7 +1185,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -1542,7 +1542,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -1777,7 +1777,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -2835,7 +2835,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         

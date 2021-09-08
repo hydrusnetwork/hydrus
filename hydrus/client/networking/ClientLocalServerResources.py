@@ -1564,7 +1564,7 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
             
             normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
             
         except HydrusExceptions.URLClassException as e:
             
@@ -1572,6 +1572,11 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
             
         
         body_dict = { 'normalised_url' : normalised_url, 'url_type' : url_type, 'url_type_string' : HC.url_type_string_lookup[ url_type ], 'match_name' : match_name, 'can_parse' : can_parse }
+        
+        if not can_parse:
+            
+            body_dict[ 'cannot_parse_reason' ] = cannot_parse_reason
+            
         
         body = json.dumps( body_dict )
         
@@ -1895,7 +1900,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     
                 else:
                     
-                    media_results = HG.client_controller.Read( 'media_results_from_ids', file_ids )
+                    media_results = HG.client_controller.Read( 'media_results_from_ids', file_ids, sorted = True )
                     
                 
             elif 'hashes' in request.parsed_request_args:
@@ -1912,7 +1917,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     
                 else:
                     
-                    media_results = HG.client_controller.Read( 'media_results', hashes )
+                    media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
                     
                 
             else:
@@ -1985,7 +1990,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                             
                             normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( known_url )
                             
-                            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
+                            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
                             
                         except HydrusExceptions.URLClassException as e:
                             
@@ -1993,6 +1998,11 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                             
                         
                         detailed_dict = { 'normalised_url' : normalised_url, 'url_type' : url_type, 'url_type_string' : HC.url_type_string_lookup[ url_type ], 'match_name' : match_name, 'can_parse' : can_parse }
+                        
+                        if not can_parse:
+                            
+                            detailed_dict[ 'cannot_parse_reason' ] = cannot_parse_reason
+                            
                         
                         detailed_known_urls.append( detailed_dict )
                         
@@ -2361,13 +2371,13 @@ class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClient
             
             CheckHashLength( hashes )
             
-            media_results = HG.client_controller.Read( 'media_results', hashes )
+            media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
             
         elif 'file_ids' in request.parsed_request_args:
             
             hash_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
             
-            media_results = HG.client_controller.Read( 'media_results_from_ids', hash_ids )
+            media_results = HG.client_controller.Read( 'media_results_from_ids', hash_ids, sorted = True )
             
         else:
             

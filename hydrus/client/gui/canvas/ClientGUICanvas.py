@@ -3703,6 +3703,64 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         
     
+def CommitArchiveDelete( page_key, kept_hashes, deleted_hashes ):
+    
+    if HC.options[ 'remove_filtered_files' ]:
+        
+        all_hashes = set()
+        
+        all_hashes.update( deleted_hashes )
+        all_hashes.update( kept_hashes )
+        
+        HG.client_controller.pub( 'remove_media', page_key, all_hashes )
+        
+    
+    if not isinstance( deleted_hashes, list ):
+        
+        deleted_hashes = list( deleted_hashes )
+        
+    
+    if not isinstance( kept_hashes, list ):
+        
+        kept_hashes = list( kept_hashes )
+        
+    
+    # we do a second set of removes to deal with late processing and a quick F5ing user
+    
+    for block_of_deleted_hashes in HydrusData.SplitListIntoChunks( deleted_hashes, 64 ):
+        
+        service_keys_to_content_updates = {}
+        
+        reason = 'Deleted in Archive/Delete filter.'
+        
+        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_hashes, reason = reason ) ]
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        if HC.options[ 'remove_filtered_files' ]:
+            
+            HG.client_controller.pub( 'remove_media', page_key, block_of_deleted_hashes )
+            
+        
+        HG.client_controller.WaitUntilViewFree()
+        
+    
+    for block_of_kept_hashes in HydrusData.SplitListIntoChunks( kept_hashes, 64 ):
+        
+        service_keys_to_content_updates = {}
+        
+        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, block_of_kept_hashes ) ]
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        if HC.options[ 'remove_filtered_files' ]:
+            
+            HG.client_controller.pub( 'remove_media', page_key, block_of_kept_hashes )
+            
+        
+        HG.client_controller.WaitUntilViewFree()
+        
+    
 class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
@@ -3777,41 +3835,12 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
             elif result == QW.QDialog.Accepted:
                 
-                service_keys_to_content_updates = {}
-                
-                if len( deleted_hashes ) > 0:
-                    
-                    reason = 'Deleted in Archive/Delete filter.'
-                    
-                    service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, deleted_hashes, reason = reason ) ]
-                    
-                
-                if len( kept_hashes ) > 0:
-                    
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, kept_hashes ) ]
-                    
-                
-                # do this in one go to ensure if the user hits F5 real quick, they won't see the files again
-                
-                if len( service_keys_to_content_updates ) > 0:
-                    
-                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                    
-                
                 self._kept = set()
                 self._deleted = set()
                 
                 self._current_media = self._GetFirst() # so the pubsub on close is better
                 
-                if HC.options[ 'remove_filtered_files' ]:
-                    
-                    all_hashes = set()
-                    
-                    all_hashes.update( deleted_hashes )
-                    all_hashes.update( kept_hashes )
-                    
-                    HG.client_controller.pub( 'remove_media', self._page_key, all_hashes )
-                    
+                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, kept_hashes, deleted_hashes )
                 
             
         

@@ -1688,7 +1688,9 @@ class StaticImage( QW.QWidget ):
             
         else:
             
-            self._zoom = self.width() / self._media.GetResolution()[ 0 ]
+            ( media_width, media_height ) = self._media.GetResolution()
+            
+            self._zoom = self.width() / media_width
             
             # it is most convenient to have tiles that line up with the current zoom ratio
             # 768 is a convenient size for meaty GPU blitting, but as a number it doesn't make for nice multiplication
@@ -1698,24 +1700,29 @@ class StaticImage( QW.QWidget ):
             # the trick of going ( 123456 // 16 ) * 16 to give you a nice multiple of 16 does not work with floats like 1.4 lmao.
             # what we can do instead is phrase 1.4 as 7/5 and use 7 as our int. any number cleanly divisible by 7 is cleanly divisible by 1.4
             
-            ideal_tile_dimension = 768
+            ideal_tile_dimension = HG.client_controller.new_options.GetInteger( 'ideal_tile_dimension' )
             
-            frac = fractions.Fraction( self._zoom ).limit_denominator( 100 )
+            nice_number = HydrusData.GetNicelyDivisibleNumberForZoom( self._zoom, ideal_tile_dimension )
             
-            n = frac.numerator
-            
-            if n > ideal_tile_dimension:
+            if nice_number == -1:
                 
                 # we are in extreme zoom land. nice multiples are impossible with reasonable size tiles, so we'll have to settle for some problems
+                # a future solution is to get a bigger zoom and scale down
+                # a future solution is to just make overlapping screen covering tiles and never deal with seams lmao
                 
                 tile_dimension = ideal_tile_dimension
                 
             else:
                 
-                tile_dimension = ( ideal_tile_dimension // n ) * n
+                tile_dimension = ( ideal_tile_dimension // nice_number ) * nice_number
                 
             
             tile_dimension = max( min( tile_dimension, 2048 ), 1 )
+            
+            if HG.canvas_tile_outline_mode:
+                
+                HydrusData.ShowText( '{} from zoom {} and nice number {}'.format( tile_dimension, self._zoom, nice_number ) )
+                
             
         
         self._canvas_tile_size = QC.QSize( tile_dimension, tile_dimension )
@@ -1750,6 +1757,14 @@ class StaticImage( QW.QWidget ):
         tile = self._tile_cache.GetTile( self._image_renderer, self._media, native_clip_rect, canvas_clip_rect.size() )
         
         painter.drawPixmap( 0, 0, tile.qt_pixmap )
+        
+        if HG.canvas_tile_outline_mode:
+            
+            painter.setPen( QG.QPen( QG.QColor( 0, 127, 255 ) ) )
+            painter.setBrush( QC.Qt.NoBrush )
+            
+            painter.drawRect( tile_pixmap.rect() )
+            
         
         self._canvas_tiles[ tile_coordinate ] = ( tile_pixmap, canvas_clip_rect.topLeft() )
         
@@ -1811,11 +1826,13 @@ class StaticImage( QW.QWidget ):
         
         if native_clip_rect.width() == 0:
             
+            native_clip_rect.setX( max( native_clip_rect.x() - 1, 0 ) )
             native_clip_rect.setWidth( 1 )
             
         
         if native_clip_rect.height() == 0:
             
+            native_clip_rect.setY( max( native_clip_rect.y() - 1, 0 ) )
             native_clip_rect.setHeight( 1 )
             
         

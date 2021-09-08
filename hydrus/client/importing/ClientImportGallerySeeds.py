@@ -288,7 +288,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     def WorksInNewSystem( self ):
         
-        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
+        ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
         
         if url_type == HC.URL_TYPE_GALLERY and can_parse:
             
@@ -322,7 +322,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             gallery_url = self.url
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
             
             if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
@@ -331,7 +331,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if not can_parse:
                 
-                raise HydrusExceptions.VetoException( 'Did not have a parser for this URL!' )
+                raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason) )
                 
             
             ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
@@ -372,7 +372,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if actual_fetched_url != url_to_check:
                 
-                ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                 
                 if url_type == HC.URL_TYPE_GALLERY:
                     
@@ -381,6 +381,12 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         gallery_url = actual_fetched_url
                         
                         ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+                        
+                    else:
+                        
+                        status = CC.STATUS_ERROR
+                        
+                        note = 'Could not parse {}: {}'.format( match_name, cannot_parse_reason )
                         
                     
                 else:
@@ -396,6 +402,10 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     file_seeds = [ file_seed ]
                     
                     all_parse_results = []
+                    
+                    status = CC.STATUS_SUCCESSFUL_AND_NEW
+                    
+                    note = 'was redirected to a non-gallery url, which has been queued as a file import'
                     
                 
             
@@ -416,168 +426,161 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, gallery_url, file_import_options )
                 
-            
-            title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
-            
-            if title is not None:
+                title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
                 
-                title_hook( title )
+                if title is not None:
+                    
+                    title_hook( title )
+                    
                 
-            
-            for file_seed in file_seeds:
+                for file_seed in file_seeds:
+                    
+                    file_seed.SetExternalFilterableTags( self._external_filterable_tags )
+                    file_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                    
                 
-                file_seed.SetExternalFilterableTags( self._external_filterable_tags )
-                file_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                num_urls_total = len( file_seeds )
                 
-            
-            num_urls_total = len( file_seeds )
-            
-            ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason ) = file_seeds_callable( file_seeds )
-            
-            status = CC.STATUS_SUCCESSFUL_AND_NEW
-            
-            if do_parse:
+                ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason ) = file_seeds_callable( file_seeds )
+                
+                status = CC.STATUS_SUCCESSFUL_AND_NEW
                 
                 note = HydrusData.ToHumanInt( num_urls_added ) + ' new urls found'
                 
-            else:
-                
-                note = 'was redirected to a non-gallery url, which has been queued as a file import'
-                
-            
-            if num_urls_already_in_file_seed_cache > 0:
-                
-                note += ' (' + HydrusData.ToHumanInt( num_urls_already_in_file_seed_cache ) + ' of page already in)'
-                
-            
-            if not can_search_for_more_files:
-                
-                note += ' - ' + stop_reason
-                
-            
-            if parser.CanOnlyGenerateGalleryURLs() or self._force_next_page_url_generation:
-                
-                can_add_more_gallery_urls = True
-                
-            else:
-                
-                # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
-                can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
-                
-            
-            flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
-            
-            sub_gallery_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_SUB_GALLERY, ), only_get_top_priority = True )
-            
-            sub_gallery_urls = HydrusData.DedupeList( sub_gallery_urls )
-            
-            new_sub_gallery_urls = [ sub_gallery_url for sub_gallery_url in sub_gallery_urls if sub_gallery_url not in gallery_urls_seen_before ]
-            
-            num_new_sub_gallery_urls = len( new_sub_gallery_urls )
-            
-            if num_new_sub_gallery_urls > 0:
-                
-                sub_gallery_seeds = [ GallerySeed( sub_gallery_url ) for sub_gallery_url in new_sub_gallery_urls ]
-                
-                for sub_gallery_seed in sub_gallery_seeds:
+                if num_urls_already_in_file_seed_cache > 0:
                     
-                    sub_gallery_seed.SetRunToken( self._run_token )
-                    sub_gallery_seed.SetExternalFilterableTags( self._external_filterable_tags )
-                    sub_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                    note += ' (' + HydrusData.ToHumanInt( num_urls_already_in_file_seed_cache ) + ' of page already in)'
                     
                 
-                gallery_seed_log.AddGallerySeeds( sub_gallery_seeds )
-                
-                added_new_gallery_pages = True
-                
-                gallery_urls_seen_before.update( sub_gallery_urls )
-                
-                note += ' - {} sub-gallery urls found'.format( HydrusData.ToHumanInt( num_new_sub_gallery_urls ) )
-                
-            
-            if self._can_generate_more_pages and can_add_more_gallery_urls:
-                
-                next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
-                
-                if self.url in next_page_urls:
+                if not can_search_for_more_files:
                     
-                    next_page_urls.remove( self.url )
+                    note += ' - ' + stop_reason
                     
                 
-                if url_to_check in next_page_urls:
+                if parser.CanOnlyGenerateGalleryURLs() or self._force_next_page_url_generation:
                     
-                    next_page_urls.remove( url_to_check )
-                    
-                
-                if len( next_page_urls ) > 0:
-                    
-                    next_page_generation_phrase = ' next gallery pages found'
+                    can_add_more_gallery_urls = True
                     
                 else:
                     
-                    # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
-                    
-                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url_to_check )
-                    
-                    if url_class is not None and url_class.CanGenerateNextGalleryPage():
-                        
-                        try:
-                            
-                            next_page_url = url_class.GetNextGalleryPage( url_to_check )
-                            
-                            next_page_urls = [ next_page_url ]
-                            
-                        except Exception as e:
-                            
-                            note += ' - Attempted to generate a next gallery page url, but failed!'
-                            note += os.linesep
-                            note += traceback.format_exc()
-                            
-                        
-                    
-                    next_page_generation_phrase = ' next gallery pages extrapolated from url class'
+                    # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
+                    can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
                     
                 
-                if len( next_page_urls ) > 0:
+                flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
+                
+                sub_gallery_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_SUB_GALLERY, ), only_get_top_priority = True )
+                
+                sub_gallery_urls = HydrusData.DedupeList( sub_gallery_urls )
+                
+                new_sub_gallery_urls = [ sub_gallery_url for sub_gallery_url in sub_gallery_urls if sub_gallery_url not in gallery_urls_seen_before ]
+                
+                num_new_sub_gallery_urls = len( new_sub_gallery_urls )
+                
+                if num_new_sub_gallery_urls > 0:
                     
-                    next_page_urls = HydrusData.DedupeList( next_page_urls )
+                    sub_gallery_seeds = [ GallerySeed( sub_gallery_url ) for sub_gallery_url in new_sub_gallery_urls ]
                     
-                    new_next_page_urls = [ next_page_url for next_page_url in next_page_urls if next_page_url not in gallery_urls_seen_before ]
+                    for sub_gallery_seed in sub_gallery_seeds:
+                        
+                        sub_gallery_seed.SetRunToken( self._run_token )
+                        sub_gallery_seed.SetExternalFilterableTags( self._external_filterable_tags )
+                        sub_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                        
                     
-                    duplicate_next_page_urls = gallery_urls_seen_before.intersection( new_next_page_urls )
+                    gallery_seed_log.AddGallerySeeds( sub_gallery_seeds )
                     
-                    num_new_next_page_urls = len( new_next_page_urls )
-                    num_dupe_next_page_urls = len( duplicate_next_page_urls )
+                    added_new_gallery_pages = True
                     
-                    if num_new_next_page_urls > 0:
+                    gallery_urls_seen_before.update( sub_gallery_urls )
+                    
+                    note += ' - {} sub-gallery urls found'.format( HydrusData.ToHumanInt( num_new_sub_gallery_urls ) )
+                    
+                
+                if self._can_generate_more_pages and can_add_more_gallery_urls:
+                    
+                    next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
+                    
+                    if self.url in next_page_urls:
                         
-                        next_gallery_seeds = [ GallerySeed( next_page_url ) for next_page_url in new_next_page_urls ]
+                        next_page_urls.remove( self.url )
                         
-                        for next_gallery_seed in next_gallery_seeds:
-                            
-                            next_gallery_seed.SetRunToken( self._run_token )
-                            next_gallery_seed.SetExternalFilterableTags( self._external_filterable_tags )
-                            next_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
-                            
+                    
+                    if url_to_check in next_page_urls:
                         
-                        gallery_seed_log.AddGallerySeeds( next_gallery_seeds )
+                        next_page_urls.remove( url_to_check )
                         
-                        added_new_gallery_pages = True
+                    
+                    if len( next_page_urls ) > 0:
                         
-                        gallery_urls_seen_before.update( new_next_page_urls )
-                        
-                        if num_dupe_next_page_urls == 0:
-                            
-                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase
-                            
-                        else:
-                            
-                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase + ', but ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
-                            
+                        next_page_generation_phrase = ' next gallery pages found'
                         
                     else:
                         
-                        note += ' - ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + next_page_generation_phrase + ', but they had already been visited this run and were not added'
+                        # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
+                        
+                        url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url_to_check )
+                        
+                        if url_class is not None and url_class.CanGenerateNextGalleryPage():
+                            
+                            try:
+                                
+                                next_page_url = url_class.GetNextGalleryPage( url_to_check )
+                                
+                                next_page_urls = [ next_page_url ]
+                                
+                            except Exception as e:
+                                
+                                note += ' - Attempted to generate a next gallery page url, but failed!'
+                                note += os.linesep
+                                note += traceback.format_exc()
+                                
+                            
+                        
+                        next_page_generation_phrase = ' next gallery pages extrapolated from url class'
+                        
+                    
+                    if len( next_page_urls ) > 0:
+                        
+                        next_page_urls = HydrusData.DedupeList( next_page_urls )
+                        
+                        new_next_page_urls = [ next_page_url for next_page_url in next_page_urls if next_page_url not in gallery_urls_seen_before ]
+                        
+                        duplicate_next_page_urls = gallery_urls_seen_before.intersection( new_next_page_urls )
+                        
+                        num_new_next_page_urls = len( new_next_page_urls )
+                        num_dupe_next_page_urls = len( duplicate_next_page_urls )
+                        
+                        if num_new_next_page_urls > 0:
+                            
+                            next_gallery_seeds = [ GallerySeed( next_page_url ) for next_page_url in new_next_page_urls ]
+                            
+                            for next_gallery_seed in next_gallery_seeds:
+                                
+                                next_gallery_seed.SetRunToken( self._run_token )
+                                next_gallery_seed.SetExternalFilterableTags( self._external_filterable_tags )
+                                next_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                                
+                            
+                            gallery_seed_log.AddGallerySeeds( next_gallery_seeds )
+                            
+                            added_new_gallery_pages = True
+                            
+                            gallery_urls_seen_before.update( new_next_page_urls )
+                            
+                            if num_dupe_next_page_urls == 0:
+                                
+                                note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase
+                                
+                            else:
+                                
+                                note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase + ', but ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
+                                
+                            
+                        else:
+                            
+                            note += ' - ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + next_page_generation_phrase + ', but they had already been visited this run and were not added'
+                            
                         
                     
                 
@@ -644,8 +647,10 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 raise
                 
             
-        
-        gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
+        finally:
+            
+            gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
+            
         
         return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason )
         

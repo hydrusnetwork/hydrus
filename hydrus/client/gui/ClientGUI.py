@@ -1990,11 +1990,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
-        ( url_type, match_name, can_parse ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
+        ( url_type, match_name, can_parse, cannot_parse_reason ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
         
         if url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and not can_parse:
             
-            message = 'This URL was recognised as a "{}" but this URL class does not yet have a parsing script linked to it!'.format( match_name )
+            message = 'This URL was recognised as a "{}" but it cannot be parsed: {}'.format( match_name, cannot_parse_reason )
             message += os.linesep * 2
             message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
             
@@ -4830,6 +4830,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.cache_report_mode = not HG.cache_report_mode
             
+        elif name == 'canvas_tile_outline_mode':
+            
+            HG.canvas_tile_outline_mode = not HG.canvas_tile_outline_mode
+            
         elif name == 'db_report_mode':
             
             HG.db_report_mode = not HG.db_report_mode
@@ -6051,8 +6055,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             report_modes = QW.QMenu( debug )
             
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'cache report mode', 'Have the image and thumb caches report their operation.', HG.cache_report_mode, self._SwitchBoolean, 'cache_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'canvas tile borders mode', 'Draw tile borders.', HG.canvas_tile_outline_mode, self._SwitchBoolean, 'canvas_tile_outline_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
